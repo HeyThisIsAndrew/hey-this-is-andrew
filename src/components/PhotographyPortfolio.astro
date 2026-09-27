@@ -45,6 +45,7 @@ const durations = [58, 74, 66, 82];
   </div>
 
   <div class="photo-stage-wrap">
+    <div class="photo-zoom-backdrop" aria-hidden="true"></div>
     <div id="camera-stage" class="camera-stage">
       <div class="photo-wall" role="region" aria-label="Photography portfolio, vertical image reels">
     {columns.map((col, ci) => (
@@ -186,7 +187,7 @@ const durations = [58, 74, 66, 82];
     padding: 0;
     border: 1px solid rgba(255, 255, 255, 0.12);
     background: #111;
-    cursor: zoom-in;
+    cursor: pointer;
     overflow: hidden;
     /* Photos keep natural aspect ratio — no forced crop. */
     transition: border-color 0.3s ease, transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -291,6 +292,22 @@ const durations = [58, 74, 66, 82];
     z-index: 50;
   }
 
+  .photo-zoom-backdrop {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #080808;
+    z-index: 45;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+  .photo-stage-wrap.is-zoomed .photo-zoom-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
   .camera-stage {
     transform-origin: center center;
     transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
@@ -300,7 +317,6 @@ const durations = [58, 74, 66, 82];
   }
 
   .camera-stage.is-zoomed {
-    cursor: zoom-out;
     z-index: 50;
   }
 
@@ -314,7 +330,7 @@ const durations = [58, 74, 66, 82];
   }
 
   .camera-stage.is-zoomed .photo-item {
-    cursor: zoom-out;
+    cursor: pointer;
   }
 
   .camera-stage.is-zoomed .photo-item img {
@@ -540,6 +556,10 @@ const durations = [58, 74, 66, 82];
     reels.forEach(measure);
     window.addEventListener('resize', () => reels.forEach(measure));
 
+    let currentScale = 1;
+    let currentTx = 0;
+    let currentTy = 0;
+
     // Attach explicit click listener directly to each visible photo item button
     const photoItems = Array.from(wall.querySelectorAll<HTMLElement>('.photo-item'));
     photoItems.forEach((item) => {
@@ -547,17 +567,27 @@ const durations = [58, 74, 66, 82];
         e.preventDefault();
         e.stopPropagation();
         if (isZoomed) {
-          resetZoom();
+          if (item === activeTarget) {
+            // Clicking the active photo resets zoom
+            resetZoom();
+          } else {
+            // Clicking another photo pans the camera directly to it!
+            panToElement(item);
+          }
         } else {
           zoomToElement(item);
         }
       });
     });
 
-    // ---- Stage-Transform Camera Dolly ----
+    // ---- Stage-Transform Camera Dolly & Pan ----
     function zoomToElement(target: HTMLElement) {
       if (isZoomed) {
-        resetZoom();
+        if (target === activeTarget) {
+          resetZoom();
+        } else {
+          panToElement(target);
+        }
         return;
       }
 
@@ -565,10 +595,8 @@ const durations = [58, 74, 66, 82];
       const column = target.closest<HTMLElement>('.photo-column');
       const targetReel = reels.find((r) => r.column === column) ?? null;
 
-      // 2. Freeze ONLY the selected item visually:
-      // By pausing only the target column's reel animation, the selected item
-      // stays anchored/frozen in place while neighboring reels to left and right
-      // remain active and part of the living environment.
+      // 2. Freeze ONLY the selected item's column:
+      // Neighboring columns continue moving smoothly.
       frozenReel = targetReel;
       if (targetReel?.anim && targetReel.anim.playState === 'running') {
         targetReel.anim.pause();
@@ -592,9 +620,12 @@ const durations = [58, 74, 66, 82];
       const targetScale = Math.max(2.2, Math.min(2.8, Math.max(scaleX * 0.82, scaleY * 0.82)));
 
       // Exact camera offset with center-origin math:
-      // scale(SCALE) translate(tx, ty) maps target center to viewport center
       const tx = (vpCX - stageCX) / targetScale - (imgCX - stageCX);
       const ty = (vpCY - stageCY) / targetScale - (imgCY - stageCY);
+
+      currentScale = targetScale;
+      currentTx = tx;
+      currentTy = ty;
 
       // 4. Mark state
       isZoomed = true;
@@ -608,14 +639,67 @@ const durations = [58, 74, 66, 82];
       document.body.style.overflow = 'hidden';
 
       // 6. Apply camera transform to entire stage
-      stage.style.transform = `scale(${targetScale}) translate(${tx}px, ${ty}px)`;
+      stage.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
+      stage.style.transform = `scale(${currentScale}) translate(${currentTx}px, ${currentTy}px)`;
+    }
+
+    function panToElement(newTarget: HTMLElement) {
+      if (!isZoomed) {
+        zoomToElement(newTarget);
+        return;
+      }
+
+      // 1. Identify new column & freeze it, while resuming previously frozen column
+      const column = newTarget.closest<HTMLElement>('.photo-column');
+      const targetReel = reels.find((r) => r.column === column) ?? null;
+
+      if (frozenReel && frozenReel !== targetReel) {
+        if (frozenReel.anim && frozenReel.anim.playState === 'paused') {
+          frozenReel.anim.play();
+        }
+      }
+      frozenReel = targetReel;
+      if (targetReel?.anim && targetReel.anim.playState === 'running') {
+        targetReel.anim.pause();
+      }
+
+      // 2. Switch active classes
+      if (activeTarget) {
+        activeTarget.classList.remove('is-active');
+      }
+      activeTarget = newTarget;
+      newTarget.classList.add('is-active');
+
+      // 3. Compute delta from newTarget current position to viewport center
+      const rect = newTarget.getBoundingClientRect();
+      const imgCX = rect.left + rect.width / 2;
+      const imgCY = rect.top + rect.height / 2;
+
+      const vpCX = window.innerWidth / 2;
+      const vpCY = window.innerHeight / 2;
+
+      const dx = vpCX - imgCX;
+      const dy = vpCY - imgCY;
+
+      // Shift camera translation in stage coordinates
+      currentTx += dx / currentScale;
+      currentTy += dy / currentScale;
+
+      // 4. Smooth camera pan without resetting or exiting
+      stage.style.transition = 'transform 0.65s cubic-bezier(0.25, 1, 0.5, 1)';
+      stage.style.transform = `scale(${currentScale}) translate(${currentTx}px, ${currentTy}px)`;
     }
 
     function resetZoom() {
       if (!isZoomed) return;
 
       isZoomed = false;
+      stage.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
       stage.style.transform = 'none';
+      currentScale = 1;
+      currentTx = 0;
+      currentTy = 0;
+
       stage.classList.remove('is-zoomed');
       stageWrap?.classList.remove('is-zoomed');
       photoSection?.classList.remove('is-zoomed');

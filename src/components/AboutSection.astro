@@ -14,23 +14,27 @@ const { full = false } = Astro.props;
     <!-- BE-style section bar: logo + title + categories + rule + link, one line.
          HEY_THISISANDREW is the logo (Syne 800 wordmark). Monochrome. -->
     <div class="about-bar">
-      {full ? (
-        <>
-          <span class="about-logo" aria-hidden="true">HEY_THISISANDREW</span>
-          <h2 class="about-bar-title" id="about-heading">About Andrew</h2>
-        </>
-      ) : (
-        <h2 class="about-bar-title" id="about-heading">Meet The</h2>
-      )}
-      <span class="about-bar-cats">Creator | Photographer | Coffee drinker</span>
+      <span class="about-bar-icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </span>
+      <h2 class="about-bar-title" id="about-heading">{full ? 'About Andrew' : 'Meet The Creator'}</h2>
+      <span class="about-bar-cats font-mono">Creator | Photographer | Coffee drinker</span>
       <span class="about-bar-rule" aria-hidden="true"></span>
+      {!full && (
+        <a class="about-bar-link font-mono" href="/about" data-route-zoom>
+          About Andrew <span aria-hidden="true">&rarr;</span>
+        </a>
+      )}
     </div>
 
     <div class="about-grid">
       <figure class="about-portrait">
         <span class="tape" aria-hidden="true"></span>
         <span class="headshot-crop">
-          <Image src={portraitImg} alt="Andrew Baxter" widths={[320, 480, 640]} sizes="(max-width: 767px) 60vw, 320px" format="webp" loading="lazy" decoding="async" class="headshot-img" />
+          <Image src={portraitImg} alt="Andrew Baxter" widths={[400, 600, 800]} sizes="(max-width: 767px) 80vw, 340px" format="webp" loading="lazy" decoding="async" class="headshot-img" />
         </span>
         <figcaption>
           <strong>Andrew Baxter</strong>
@@ -39,19 +43,11 @@ const { full = false } = Astro.props;
       </figure>
 
       <div class="about-copy">
-        <p>I'm a creator, photographer, coffee drinker, building in public and figuring it out as I go.</p>
-        {full ? (
-          <>
-            <p>For a long time I doubted myself. Now I'm just going for it. There are more tools available to us than ever before, and I'm going to use all of them to get where I want to be.</p>
-            <p>Right now I'm building three brands, and I'm documenting the whole journey. This site is the hub for all of it.</p>
-            <p><strong>BE Unconventional HQ</strong> is where I cover movies, TV, games, and events. I'm building it into a small press outlet.</p>
-            <p><strong>Capture Create Caffeinate</strong> is my beverage photography work for bars and restaurants.</p>
-            <p><strong>Sip the Magic</strong> is still in the works. More on that soon.</p>
-            <p>The best thing you can do is be yourself and put the work out there. We all have more potential than we think, and you'll never see how far it goes unless you try. So this is me trying, in public. Hope you'll follow along.</p>
-          </>
-        ) : (
-          <p>Right now I'm building three brands, and I'm documenting the whole journey. This site is the hub for all of it.</p>
-        )}
+        <h3 class="display about-headline">WHERE THE MESSY MIDDLE<br />GETS BUILT IN PUBLIC</h3>
+        <p>If you want to build something real, you have to show the work. Hey This Is Andrew is an independent hub for the creative process—where building three brands, commercial beverage photography, and creative automation happen out in the open. No shortcuts, no artificial templates: just honest documentation of the messy middle.</p>
+        <p>Founded and documented by Andrew Baxter. More than a decade across technology, creative production, and hospitality photography gives him a grounded, working knowledge of how ideas are actually built, tested, and shipped.</p>
+        <p class="about-punchline font-display">BE HONEST. BUILD IN PUBLIC. <strong>HEY THIS IS ANDREW.</strong></p>
+
         <div class="about-ctas">
           {full ? (
             <>
@@ -129,10 +125,30 @@ const { full = false } = Astro.props;
     .about-bar { gap: 0.75rem; }
   }
 
+  .about-bar-icon {
+    display: flex;
+    align-items: center;
+    color: var(--ink);
+  }
+  .about-bar-link {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.2s ease;
+  }
+  .about-bar-link:hover {
+    color: var(--ink);
+  }
+
   /* Kicker row: icon + title + tags + rule + link, HQ's "INSIDE THE HQ" bar. */
   .about-grid {
     display: grid;
-    grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
     gap: clamp(2rem, 5vw, 5rem);
     align-items: center;
   }
@@ -142,7 +158,7 @@ const { full = false } = Astro.props;
       gap: 2.25rem;
     }
     .about-portrait {
-      width: min(60vw, 260px);
+      width: min(75vw, 300px);
       max-width: none;
       margin-left: auto;
       margin-right: auto;
@@ -152,35 +168,33 @@ const { full = false } = Astro.props;
     .about-portrait figcaption { text-align: center; }
   }
 
-  /* Taped portrait frame, HQ style: 320px square headshot. The 16:9 source
-     has the face right-of-center with an out-of-focus hand across the lower
-     foreground, so a plain cover crop put the face half out of frame with
-     the hand dominating. This square window reproduces the BE headshot
-     framing (face fills the frame) from source box (1250,0)-(2950,1700):
-     width 3840/1700 = 225.9%, shifted left 1250/1700 = 73.5%. Astro's
-     resized variants keep the download small. */
+  /* Taped portrait frame, HQ style: vertical portrait format.
+     Shows Andrew's head, shoulders, and hands in perspective with dramatic
+     cinematic lighting — authentic composition matching BE HQ. */
   .about-portrait {
     position: relative;
     margin: 0;
-    max-width: 320px;
-    transform: rotate(-2deg);
+    max-width: 340px;
+    width: 100%;
+    transform: rotate(-1.5deg);
     border: 1px solid rgba(255, 255, 255, 0.25);
     background: #0b0b0b;
-    padding: 0.6rem 0.6rem 0;
+    padding: 0.65rem 0.65rem 0;
   }
   .headshot-crop {
     display: block;
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 3.8 / 5;
     overflow: hidden;
-    background: #0b0b0b;
+    background: #060606;
+    position: relative;
   }
   .headshot-img {
     display: block;
-    width: 225.9%;
-    max-width: none;
-    height: auto;
-    margin-left: -73.5%;
-    filter: grayscale(0.25) contrast(1.05);
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 52% 20%;
+    filter: grayscale(0.12) contrast(1.05);
   }
   .tape {
     position: absolute;
@@ -218,10 +232,12 @@ const { full = false } = Astro.props;
   }
 
   .about-headline {
-    font-size: clamp(2rem, 4.5vw, 3.25rem);
+    font-size: clamp(2rem, 3.8vw, 3.2rem);
     font-weight: 800;
     line-height: 1.05;
-    letter-spacing: 0.01em;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: var(--ink);
     margin: 0 0 1.5rem;
     text-wrap: balance;
   }
@@ -233,7 +249,17 @@ const { full = false } = Astro.props;
     max-width: 62ch;
   }
   .about-copy p strong { color: var(--ink); }
-  .about-copy .about-headline { color: var(--ink); }
+  .about-punchline {
+    font-size: 1.05rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.75rem 0 2rem;
+  }
+  .about-punchline strong {
+    color: var(--ink);
+    font-weight: 800;
+  }
   .about-ctas {
     display: flex;
     gap: 1rem;

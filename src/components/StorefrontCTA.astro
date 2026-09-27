@@ -1,22 +1,65 @@
 ---
+const PICKS = [
+  {
+    kicker: 'Storefront',
+    title: 'Shop my picks',
+    desc: 'The gear and everyday picks I actually recommend, collected in one place.',
+    cta: 'Visit the storefront',
+    url: 'https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh',
+  },
+  {
+    kicker: 'Mobile workflow',
+    title: 'Mint Mobile',
+    desc: 'Reliable, flexible cellular connectivity powering off-site shoots and mobile production.',
+    cta: 'Check out Mint Mobile',
+    url: 'https://mintmobile.com/',
+  },
+  {
+    kicker: 'Post-production',
+    title: 'DaVinci Resolve',
+    desc: 'Professional editing, color grading, and audio post for all long-form and commercial deliverables.',
+    cta: 'Explore DaVinci Resolve',
+    url: 'https://www.blackmagicdesign.com/products/davinciresolve',
+  },
+];
 ---
-<aside class="storefront" aria-label="Amazon influencer storefront">
-  <div class="storefront-copy">
-    <p class="kicker">Storefront</p>
-    <h3 class="display storefront-title">Shop my picks</h3>
-    <p>The gear and everyday picks I actually recommend, collected in one place.</p>
+<aside class="storefront" aria-label="Featured picks and recommendations" id="storefront-rotator">
+  <div class="storefront-slider">
+    {PICKS.map((pick, i) => (
+      <div class={`storefront-slide ${i === 0 ? 'is-active' : ''}`} data-slide-index={i}>
+        <div class="storefront-copy">
+          <p class="kicker font-mono">{pick.kicker}</p>
+          <h3 class="display storefront-title">{pick.title}</h3>
+          <p>{pick.desc}</p>
+        </div>
+        <a
+          class="btn btn-primary storefront-cta"
+          href={pick.url}
+          target="_blank"
+          rel="noopener"
+        >
+          {pick.cta}
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </div>
+    ))}
   </div>
-  <a
-    class="btn btn-primary"
-    href="https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh"
-    target="_blank"
-    rel="noopener"
-  >
-    Visit the storefront
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-      <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  </a>
+
+  <div class="storefront-nav">
+    <div class="storefront-dots" role="tablist" aria-label="Select storefront pick">
+      {PICKS.map((pick, i) => (
+        <button
+          type="button"
+          class={`storefront-dot ${i === 0 ? 'is-active' : ''}`}
+          data-dot-index={i}
+          aria-label={`Show ${pick.title}`}
+          aria-selected={i === 0 ? 'true' : 'false'}
+        ></button>
+      ))}
+    </div>
+  </div>
 </aside>
 
 <style>
@@ -26,13 +69,99 @@
     border-radius: 0;
     background: var(--surface);
     padding: clamp(1.25rem, 3vw, 2rem);
-    display: flex;
+    position: relative;
+    overflow: hidden;
+  }
+  .storefront-slider {
+    position: relative;
+    min-height: 100px;
+  }
+  .storefront-slide {
+    display: none;
     align-items: center;
     justify-content: space-between;
     gap: 1.5rem;
     flex-wrap: wrap;
+    opacity: 0;
+    transition: opacity 0.35s ease;
   }
-  .storefront .kicker { margin-bottom: 0.5rem; }
-  .storefront-title { font-size: clamp(1.6rem, 3.5vw, 2.4rem); margin: 0 0 0.5rem; }
+  .storefront-slide.is-active {
+    display: flex;
+    opacity: 1;
+  }
+  .storefront .kicker { margin-bottom: 0.5rem; font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+  .storefront-title { font-size: clamp(1.6rem, 3.5vw, 2.4rem); margin: 0 0 0.5rem; text-transform: uppercase; font-weight: 800; }
   .storefront-copy p:last-child { color: var(--muted); margin: 0; max-width: 52ch; }
+  .storefront-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+  }
+  .storefront-dots {
+    display: flex;
+    gap: 0.4rem;
+  }
+  .storefront-dot {
+    width: 24px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: background 0.25s ease;
+  }
+  .storefront-dot.is-active {
+    background: var(--ink);
+  }
 </style>
+
+<script>
+  (() => {
+    const root = document.getElementById('storefront-rotator');
+    if (!root) return;
+    const slides = Array.from(root.querySelectorAll<HTMLElement>('.storefront-slide'));
+    const dots = Array.from(root.querySelectorAll<HTMLElement>('.storefront-dot'));
+    if (slides.length <= 1) return;
+
+    let current = 0;
+    let timer: number | null = null;
+
+    const show = (idx: number) => {
+      slides.forEach((s, i) => {
+        s.classList.toggle('is-active', i === idx);
+      });
+      dots.forEach((d, i) => {
+        d.classList.toggle('is-active', i === idx);
+        d.setAttribute('aria-selected', i === idx ? 'true' : 'false');
+      });
+      current = idx;
+    };
+
+    const next = () => {
+      show((current + 1) % slides.length);
+    };
+
+    dots.forEach((dot, idx) => {
+      dot.addEventListener('click', () => {
+        show(idx);
+        restartTimer();
+      });
+    });
+
+    const startTimer = () => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      timer = window.setInterval(next, 7000);
+    };
+
+    const restartTimer = () => {
+      if (timer) clearInterval(timer);
+      startTimer();
+    };
+
+    root.addEventListener('mouseenter', () => { if (timer) clearInterval(timer); });
+    root.addEventListener('mouseleave', () => startTimer());
+
+    startTimer();
+  })();
+</script>
