@@ -37,6 +37,7 @@ import SectionHeader from './SectionHeader.astro';
             `brand-${brand.id}`,
             { active: isExpanded, 'is-coming-soon': brand.comingSoon }
           ]}
+          id={`brand-${brand.id}`}
           data-index={i}
           data-brand-id={brand.id}
           data-brand-url={brand.url ?? ''}
@@ -821,10 +822,16 @@ import SectionHeader from './SectionHeader.astro';
     border-color: rgba(0, 0, 0, 0.3);
   }
 
-  /* When zoomed, hide auxiliary progress and play button so the brand panel fills cleanly */
-  .brand-camera-viewport.is-zoomed .bottom-progress-bar,
-  .brand-camera-viewport.is-zoomed .active-edge,
-  .brand-camera-viewport.is-zoomed .accordion-play-pause {
+  /* Smooth transitions for UI elements during zoom & reverse dolly */
+  .bottom-progress-bar,
+  .active-edge,
+  .accordion-play-pause {
+    transition: opacity 0.5s ease;
+  }
+
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .bottom-progress-bar,
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .active-edge,
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-play-pause {
     opacity: 0 !important;
     pointer-events: none !important;
   }
@@ -835,6 +842,19 @@ import SectionHeader from './SectionHeader.astro';
 
   .brand-camera-viewport.is-zoomed .accordion-panel.active {
     cursor: default;
+  }
+
+  /* In full screen, the camera stage scales the panel optically.
+     Typography, line height, letter spacing, padding, and word positioning
+     must remain 100% identical in both views to prevent jarring text shift. */
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .content-inner,
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .headline,
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .deck,
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .expanded-content .kicker,
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .content-inner .btn,
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .inquiry-link,
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .content-logo {
+    /* Inherit base geometry and typography without reflow or shift */
   }
 
   /* Reduced Motion */
@@ -882,6 +902,18 @@ import SectionHeader from './SectionHeader.astro';
     }
 
     init() {
+      // Direct click on column triggers to switch active brand (STEP 1)
+      this.triggers.forEach((trigger, i) => {
+        trigger.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (this.activeIndex !== i) {
+            this.manualOverride = true;
+            this.goToPanel(i, true);
+          }
+        });
+      });
+
       // Check for reduced motion or mobile to disable auto-rotation
       const isMobile = window.innerWidth <= 767;
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || isMobile) {
@@ -1100,23 +1132,34 @@ import SectionHeader from './SectionHeader.astro';
       this.panels.forEach((p, i) => {
         p.addEventListener('click', (e) => {
           const targetEl = e.target as HTMLElement;
-          const interactive = targetEl.closest('a, button');
-          if (interactive) return;
 
+          // Utility buttons (play/pause, close) handle their own actions
+          if (targetEl.closest('.accordion-play-pause, .brand-camera-close-btn')) return;
+
+          const isCurrentActive = p.classList.contains('active') && this.accordion.activeIndex === i;
+
+          // STEP 1: Click collapsed column -> expand column only (NO zoom)
+          if (!isCurrentActive) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.accordion.goToPanel(i, true);
+            return;
+          }
+
+          // STEP 3: Already zoomed in -> clicking external link links out to brand
           if (this.isZoomed) {
+            if (targetEl.closest('a')) {
+              return; // Allow native link out to associated brand
+            }
+            // Clicking outside links closes zoom
             e.preventDefault();
             this.close();
             return;
           }
 
-          // Closed panel click: select brand in accordion, do NOT launch camera
-          if (!p.classList.contains('active')) {
-            this.accordion.goToPanel(i);
-            return;
-          }
-
-          // Active panel click: launch true camera zoom!
+          // STEP 2: Panel is expanded -> clicking image, card, or link launches brand zoom
           e.preventDefault();
+          e.stopPropagation();
           this.open(p);
         });
       });
@@ -1164,10 +1207,11 @@ import SectionHeader from './SectionHeader.astro';
       this.initialStageLeft = stageRect.left;
       this.initialStageTop = stageRect.top;
 
-      // 2. Dynamic scale calculation to fill viewport completely
+      // 2. Dynamic scale calculation:
+      // Moderated scale so the brand camera dollies in without over-zooming or cropping content
       const scaleX = vpWidth / targetRect.width;
       const scaleY = vpHeight / targetRect.height;
-      const scale = Math.max(scaleX, scaleY) * 1.004;
+      const scale = Math.min(scaleX, scaleY) * 1.02;
 
       // 3. Target and viewport centers
       const targetCenterX = targetRect.left + targetRect.width / 2;
@@ -1183,7 +1227,12 @@ import SectionHeader from './SectionHeader.astro';
       const tx = viewportCenterX - scale * targetCX_stage;
       const ty = viewportCenterY - scale * targetCY_stage;
 
-      // 6. Enter zoomed viewport mode without jumping
+      // 6. Enter zoomed viewport mode without jumping or scrollbar shift
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
+      this.viewport.classList.remove('is-closing');
       this.viewport.classList.add('is-zoomed');
       document.body.style.overflow = 'hidden';
 
@@ -1213,7 +1262,7 @@ import SectionHeader from './SectionHeader.astro';
 
       const scaleX = vpWidth / targetRect.width;
       const scaleY = vpHeight / targetRect.height;
-      const scale = Math.max(scaleX, scaleY) * 1.004;
+      const scale = Math.min(scaleX, scaleY) * 1.02;
 
       const targetCenterX = targetRect.left + targetRect.width / 2;
       const targetCenterY = targetRect.top + targetRect.height / 2;
@@ -1233,6 +1282,8 @@ import SectionHeader from './SectionHeader.astro';
     close() {
       if (!this.isZoomed || this.isClosing) return;
       this.isClosing = true;
+      // Start reverse fade and layout return immediately at start of dolly
+      this.viewport.classList.add('is-closing');
 
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (reduced) {
@@ -1263,8 +1314,9 @@ import SectionHeader from './SectionHeader.astro';
     private cleanup() {
       this.stage.style.transition = 'none';
       this.stage.style.transform = 'translate3d(0, 0, 0) scale(1)';
-      this.viewport.classList.remove('is-zoomed');
+      this.viewport.classList.remove('is-zoomed', 'is-closing');
       document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
       this.isZoomed = false;
       this.isClosing = false;
       this.activePanel = null;
@@ -1280,6 +1332,33 @@ import SectionHeader from './SectionHeader.astro';
     const accordion = new BrandAccordion(hero);
     const panels = Array.from(hero.querySelectorAll<HTMLElement>('.accordion-panel'));
     new BrandCameraController(viewport, stage, accordion, panels);
+
+    // Direct brand selection from navbar dropdown or hash
+    const selectBrandById = (brandId: string) => {
+      const idx = panels.findIndex((p) => p.dataset.brandId === brandId || p.id === `brand-${brandId}`);
+      if (idx >= 0) {
+        accordion.goToPanel(idx);
+      }
+    };
+
+    document.addEventListener('click', (e) => {
+      const link = (e.target as Element | null)?.closest('a[href*="#brand-"]');
+      if (!link) return;
+      const href = link.getAttribute('href') || '';
+      const match = href.match(/#brand-([a-z0-9-]+)/);
+      if (match && match[1]) {
+        selectBrandById(match[1]);
+      }
+    });
+
+    const checkHash = () => {
+      const hash = window.location.hash;
+      if (hash && hash.startsWith('#brand-')) {
+        selectBrandById(hash.replace('#brand-', ''));
+      }
+    };
+    window.addEventListener('hashchange', checkHash);
+    setTimeout(checkHash, 150);
   };
 
   initAccordion();

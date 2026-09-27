@@ -43,10 +43,15 @@ const gear = defineCollection({
   schema: z.object({
     category: z.string(),
     order: z.number().default(0),
+    brand: z.string().optional(),
+    subtitle: z.string().optional(),
     items: z.array(
       z.object({
         name: z.string(),
         spec: z.string(),
+        brand: z.string().optional(),
+        affiliateUrl: z.string().optional(),
+        tag: z.string().optional(),
       })
     ),
   }),

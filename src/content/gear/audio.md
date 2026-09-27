@@ -1,0 +1,27 @@
+---
+category: "Audio"
+order: 5
+brand: "DJI, Røde & Zoom"
+subtitle: "32-bit float internal recording, directional shotguns, and studio broadcast narration"
+items:
+  - name: "DJI Mic 2 Wireless System"
+    spec: "Dual-channel wireless mic system with 32-bit float internal backup recording, intelligent active noise cancelling, and magnetic clothing clips."
+    brand: "DJI"
+    affiliateUrl: "https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh"
+    tag: "32-Bit Float Dual"
+  - name: "Røde VideoMic NTG"
+    spec: "Broadcast-grade directional on-camera shotgun microphone with auto-sensing 3.5mm and USB-C output, infinitely variable gain, and built-in safety channel."
+    brand: "Røde"
+    affiliateUrl: "https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh"
+    tag: "On-Camera Shotgun"
+  - name: "Zoom H6 Essential Field Recorder"
+    spec: "Multi-track handheld audio field recorder featuring dual 32-bit float A/D converters, interchangeable X/Y mic capsules, and dual XLR/TRS combo inputs."
+    brand: "Zoom"
+    affiliateUrl: "https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh"
+    tag: "Field Recorder"
+  - name: "Shure SM7B Dynamic Vocal Mic"
+    spec: "Legendary studio broadcast dynamic microphone with flat, wide-range frequency response and internal air-suspension shock isolation for channel voiceovers."
+    brand: "Shure"
+    affiliateUrl: "https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh"
+    tag: "Broadcast Studio"
+---

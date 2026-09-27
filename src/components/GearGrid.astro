@@ -1,75 +1,1240 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 
-interface Props { categories: CollectionEntry<'gear'>[] }
+interface Props {
+  categories: CollectionEntry<'gear'>[];
+}
+
 const { categories } = Astro.props;
+
+// Sort categories to ensure Camera Bodies is hero first, followed by Lens, Lighting, Tools, Audio
+const orderMap: Record<string, number> = {
+  'Camera Bodies': 1,
+  'Lens': 2,
+  'Lighting': 3,
+  'Tools & Support': 4,
+  'Audio': 5,
+};
+
+const sortedCats = [...categories].sort((a, b) => {
+  const oA = orderMap[a.data.category] || a.data.order || 99;
+  const oB = orderMap[b.data.category] || b.data.order || 99;
+  return oA - oB;
+});
+
+const heroCat = sortedCats.find(c => c.data.category === 'Camera Bodies') || sortedCats[0];
+const subCats = sortedCats.filter(c => c !== heroCat);
+
+const AMAZON_STOREFRONT = 'https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh';
 ---
-<div class="gear-panel">
-  <div class="gear-grid">
-    {categories.map((cat) => (
-      <section class="gear-cat reveal" aria-label={cat.data.category}>
-        <h3>{cat.data.category}</h3>
-        <ul>
-          {cat.data.items.map((item) => (
-            <li>
-              <span class="gear-name">{item.name}</span>
-              <span class="gear-spec">{item.spec}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-    ))}
+
+<div class="gear-monolith" id="gear-monolith">
+  <!-- HERO BOX: CAMERA BODIES (FULL WIDTH, PROMINENT TYPOGRAPHY, DIVIDED AS LINKS | IMAGE PREVIEW) -->
+  {heroCat && (
+    <div
+      class="gear-hero-box"
+      id="gear-bodies"
+      data-category="bodies"
+    >
+      <div class="gear-box-topbar">
+        <div class="gear-box-meta">
+          <span class="box-idx">01 / HERO SYSTEM</span>
+          <h3 class="box-title">{heroCat.data.category}</h3>
+          <span class="box-subtitle">High-Resolution Commercial Stills & Next-Gen Mobile Video</span>
+        </div>
+
+        <!-- BRAND LOGOS (SONY, SONY ALPHA, APPLE) -->
+        <div class="brand-strip" aria-label="Camera Brands">
+          <!-- SONY OFFICIAL WORDMARK -->
+          <div class="brand-badge brand-sony" title="Sony Alpha Ecosystem">
+            <svg class="brand-svg-sony" viewBox="0 0 100 22" fill="currentColor" aria-label="Sony">
+              <path d="M14.6 4.8c-2.4-.7-5.1-1.1-7.7-1.1-4.2 0-6.9 1.6-6.9 4.6 0 5.4 12.3 3.6 12.3 8.3 0 2.2-2.1 3.4-5.6 3.4-3.4 0-6.7-.8-9.7-2.3l-1.2 3.6c3.2 1.4 7.2 2.1 10.9 2.1 6.5 0 10.4-2.7 10.4-6.8 0-5.8-12.3-3.8-12.3-8.4 0-1.8 1.7-2.7 4.7-2.7 2.6 0 5.2.6 7.4 1.5l1.6-3.8zM33.6 3.9c-6.8 0-12.2 4.4-12.2 10.7 0 6.4 5.3 10.7 12.2 10.7 6.9 0 12.2-4.4 12.2-10.7 0-6.4-5.4-10.7-12.2-10.7zm0 17.5c-4.3 0-7.2-3.1-7.2-6.8 0-3.8 2.9-6.8 7.2-6.8 4.3 0 7.2 3.1 7.2 6.8 0 3.8-2.9 6.8-7.2 6.8zM58.7 3.9h-4.8v21h4.8V12.7l9.7 12.2h5.1V3.9h-4.8v12.2L58.7 3.9zM86.9 13.9L80.1 3.9h-5.4l10.2 14.6v6.4h4.8v-6.4l10.3-14.6h-5.3l-6.8 10z"/>
+            </svg>
+            <span class="alpha-mark" title="Sony Alpha">α</span>
+          </div>
+
+          <!-- APPLE LOGO -->
+          <div class="brand-badge brand-apple" title="Apple ProRes Log">
+            <svg class="brand-svg-apple" viewBox="0 0 170 170" fill="currentColor" aria-label="Apple">
+              <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.69-3.08-7.7-7.93-12.02-14.55-6.3-9.68-11.23-20.73-14.79-33.15-3.56-12.43-5.34-24.08-5.34-34.96 0-15.11 3.69-27.42 11.07-36.93 7.38-9.5 16.7-14.35 27.97-14.55 5.48 0 11.45 1.49 17.9 4.48 6.45 2.98 10.5 4.54 12.14 4.67 1.83-.26 6.13-1.95 12.89-5.07 6.77-3.12 12.73-4.52 17.9-4.2 13.58.73 24.38 5.75 32.39 15.07-11.89 7.21-17.72 17.15-17.5 29.83.21 9.94 4.08 18.23 11.61 24.88 4.7 4.13 10.15 7.02 16.34 8.68-2.6 7.54-5.74 15.34-9.42 23.41zM119.22 33.02c0-7.72 2.76-14.97 8.27-21.75 5.52-6.77 12.27-10.87 20.25-12.3 1.05 7.72-1.39 14.86-7.32 21.43-5.93 6.57-12.99 10.77-21.2 12.62z"/>
+            </svg>
+            <span class="apple-text">Apple ProRes</span>
+          </div>
+
+          <a href={AMAZON_STOREFRONT} target="_blank" rel="noopener" class="influencer-pill">
+            <span class="influencer-dot"></span>
+            <span class="influencer-text">Amazon Influencer Program</span>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 9.5L9.5 2.5M9.5 2.5H4.5M9.5 2.5V7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- TWO-PANEL HERO SPLIT: LINKS | IMAGE PREVIEW -->
+      <div class="gear-hero-body">
+        <!-- LEFT: LINKS & SPECS -->
+        <div class="gear-hero-links">
+          <div class="hero-col-label">
+            <span class="col-tag">MANIFEST</span>
+            <span class="col-count">{heroCat.data.items.length} CAMERAS IN ACTIVE ROTATION</span>
+          </div>
+
+          <div class="camera-items-list" role="list">
+            {heroCat.data.items.map((item, idx) => (
+              <div
+                class={`camera-item-row ${idx === 0 ? 'is-active' : ''}`}
+                data-item-index={idx}
+                data-item-name={item.name}
+                data-item-brand={item.brand || (item.name.includes('Sony') ? 'Sony' : 'Apple')}
+                data-item-spec={item.spec}
+                data-item-tag={item.tag || (idx === 0 ? 'Primary Workhorse' : 'Cinema Body')}
+                data-item-url={item.affiliateUrl || AMAZON_STOREFRONT}
+              >
+                <div class="camera-select-indicator" aria-hidden="true"></div>
+
+                <div class="camera-item-main">
+                  <div class="camera-item-header">
+                    <h4 class="camera-name">{item.name}</h4>
+                    <span class="camera-tag font-mono">{item.tag || (item.name.includes('Sony') ? 'Sony Alpha' : 'Apple ProRes')}</span>
+                  </div>
+                  <p class="camera-spec">{item.spec}</p>
+                </div>
+
+                <div class="camera-item-action">
+                  <a
+                    href={item.affiliateUrl || AMAZON_STOREFRONT}
+                    target="_blank"
+                    rel="noopener"
+                    class="btn-amazon-link"
+                    title={`Check ${item.name} on Amazon Influencer Storefront`}
+                    onclick="event.stopPropagation();"
+                  >
+                    <span>Shop Amazon</span>
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                      <path d="M2.5 11.5L11.5 2.5M11.5 2.5H5.5M11.5 2.5V8.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <!-- RIGHT: LIVE IMAGE PREVIEW CARD FROM AMAZON INFLUENCER PROGRAM -->
+        <div class="gear-hero-preview-col">
+          <div class="hero-col-label">
+            <span class="col-tag">LIVE PREVIEW</span>
+            <span class="col-count">AMAZON INFLUENCER PROGRAM LINK</span>
+          </div>
+
+          <div class="amazon-preview-card" id="hero-camera-preview-card">
+            <div class="preview-badge-row">
+              <span class="preview-storefront-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                OFFICIAL STOREFRONT
+              </span>
+              <span class="preview-active-tag font-mono" id="preview-camera-tag">Workhorse Body</span>
+            </div>
+
+            <!-- SCHEMATIC CAMERA PRODUCT VISUAL BOX -->
+            <div class="preview-product-stage">
+              <div class="product-visual-container" id="preview-visual-container">
+                <!-- DYNAMIC SVG SCHEMATIC OF CURRENT CAMERA -->
+                <div class="schematic-wrap" id="schematic-view">
+                  <svg class="camera-schematic" viewBox="0 0 260 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="20" y="45" width="220" height="120" rx="3" fill="#141414" stroke="#333" stroke-width="2"/>
+                    <rect x="70" y="25" width="60" height="22" rx="2" fill="#1e1e1e" stroke="#444" stroke-width="1.5"/>
+                    <circle cx="100" cy="35" r="4" fill="#a8822a"/>
+                    <!-- Lens Mount & Sensor -->
+                    <circle cx="130" cy="105" r="48" fill="#0d0d0d" stroke="#555" stroke-width="2"/>
+                    <circle cx="130" cy="105" r="38" fill="#181818" stroke="#ff4422" stroke-width="1.5"/>
+                    <rect x="110" y="88" width="40" height="34" rx="2" fill="#112233" stroke="#44aaff" stroke-width="1"/>
+                    <!-- Grip -->
+                    <rect x="25" y="45" width="42" height="120" fill="#1a1a1a" stroke="#2a2a2a" stroke-width="1"/>
+                    <line x1="28" y1="65" x2="62" y2="65" stroke="#333" stroke-width="1"/>
+                    <line x1="28" y1="85" x2="62" y2="85" stroke="#333" stroke-width="1"/>
+                    <line x1="28" y1="105" x2="62" y2="105" stroke="#333" stroke-width="1"/>
+                    <!-- Dials -->
+                    <rect x="195" y="32" width="24" height="14" rx="2" fill="#222" stroke="#555" stroke-width="1"/>
+                    <rect x="165" y="36" width="20" height="10" rx="2" fill="#222" stroke="#555" stroke-width="1"/>
+                    <!-- Brand text inside schematic -->
+                    <text x="100" y="16" fill="#888" font-family="'JetBrains Mono', monospace" font-size="9" text-anchor="middle" font-weight="bold">SONY ALPHA // SYSTEM</text>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- PREVIEW DETAILS & AMAZON CTA -->
+            <div class="preview-info-strip">
+              <div class="preview-naming">
+                <span class="preview-brand-label font-mono" id="preview-camera-brand">SONY ELECTRONICS</span>
+                <h4 class="preview-item-title" id="preview-camera-title">Sony a7IV</h4>
+                <p class="preview-item-desc" id="preview-camera-desc">33MP Full-Frame Exmor R CMOS, BIONZ XR, 4K60p 10-bit 4:2:2, 15+ stops DR. Primary body for low-light bar and atmospheric beverage work.</p>
+              </div>
+
+              <div class="preview-action-block">
+                <a
+                  href={AMAZON_STOREFRONT}
+                  target="_blank"
+                  rel="noopener"
+                  class="btn-primary-influencer"
+                  id="preview-camera-btn"
+                >
+                  <span class="amz-btn-text">View on Amazon Influencer Storefront</span>
+                  <svg width="15" height="15" viewBox="0 0 14 14" fill="none">
+                    <path d="M2.5 11.5L11.5 2.5M11.5 2.5H5.5M11.5 2.5V8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </a>
+                <span class="preview-disclosure font-mono">Curated by @heythisisandrew · Verified affiliate partner</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+
+  <!-- 4 CONSOLIDATED CATEGORY BOXES BELOW (LENS | LIGHTING | AUDIO | TOOLS & SUPPORT) -->
+  <!-- PERFECTLY OCCUPY 100% WIDTH WITH ZERO EMPTY SPACING -->
+  <div class="gear-sub-grid">
+    {subCats.map((cat, catIdx) => {
+      const isLenses = cat.data.category === 'Lens';
+      const isLighting = cat.data.category === 'Lighting';
+      const isTools = cat.data.category === 'Tools & Support';
+      const isAudio = cat.data.category === 'Audio';
+
+      const anchorId = isLenses ? 'gear-lenses' : isLighting ? 'gear-lighting' : isTools ? 'gear-tools' : isAudio ? 'gear-audio' : `gear-${cat.slug || cat.id.replace(/\.md$/, '')}`;
+      const defaultItem = cat.data.items[0];
+
+      return (
+        <section
+          class="gear-sub-box"
+          id={anchorId}
+          data-subcat={anchorId}
+          aria-label={cat.data.category}
+        >
+          {isLenses && (
+            <span id="gear-zooms" class="vh" aria-hidden="true"></span>
+            <span id="gear-primes" class="vh" aria-hidden="true"></span>
+          )}
+          {isLighting && (
+            <span id="gear-lights" class="vh" aria-hidden="true"></span>
+            <span id="gear-flash" class="vh" aria-hidden="true"></span>
+          )}
+          {isTools && (
+            <span id="gear-grip" class="vh" aria-hidden="true"></span>
+          )}
+          <!-- CATEGORY TOPBAR WITH LOGOS -->
+          <div class="sub-box-header">
+            <div class="sub-header-left">
+              <span class="sub-box-idx font-mono">0{catIdx + 2}</span>
+              <h3 class="sub-box-title">{cat.data.category}</h3>
+            </div>
+
+            <!-- BRAND LOGOS PER SECTION -->
+            <div class="sub-brand-logos">
+              {isLenses && (
+                <div class="sub-brand-pill" title="Sony G Master">
+                  <svg class="sub-svg-sony" viewBox="0 0 100 22" fill="currentColor">
+                    <path d="M14.6 4.8c-2.4-.7-5.1-1.1-7.7-1.1-4.2 0-6.9 1.6-6.9 4.6 0 5.4 12.3 3.6 12.3 8.3 0 2.2-2.1 3.4-5.6 3.4-3.4 0-6.7-.8-9.7-2.3l-1.2 3.6c3.2 1.4 7.2 2.1 10.9 2.1 6.5 0 10.4-2.7 10.4-6.8 0-5.8-12.3-3.8-12.3-8.4 0-1.8 1.7-2.7 4.7-2.7 2.6 0 5.2.6 7.4 1.5l1.6-3.8zM33.6 3.9c-6.8 0-12.2 4.4-12.2 10.7 0 6.4 5.3 10.7 12.2 10.7 6.9 0 12.2-4.4 12.2-10.7 0-6.4-5.4-10.7-12.2-10.7zm0 17.5c-4.3 0-7.2-3.1-7.2-6.8 0-3.8 2.9-6.8 7.2-6.8 4.3 0 7.2 3.1 7.2 6.8 0 3.8-2.9 6.8-7.2 6.8zM58.7 3.9h-4.8v21h4.8V12.7l9.7 12.2h5.1V3.9h-4.8v12.2L58.7 3.9zM86.9 13.9L80.1 3.9h-5.4l10.2 14.6v6.4h4.8v-6.4l10.3-14.6h-5.3l-6.8 10z"/>
+                  </svg>
+                  <span class="gm-mark">GM</span>
+                </div>
+              )}
+
+              {isLighting && (
+                <div class="sub-brand-pill" title="Aputure & Sony">
+                  <span class="aputure-text">Aputure</span>
+                  <span class="brand-divider">/</span>
+                  <span class="alpha-mark">Sony</span>
+                </div>
+              )}
+
+              {isTools && (
+                <div class="sub-brand-pill" title="Zhiyun & SmallRig">
+                  <span class="zhiyun-text">Zhiyun</span>
+                  <span class="brand-divider">/</span>
+                  <span class="smallrig-text">Peak Design</span>
+                </div>
+              )}
+
+              {isAudio && (
+                <div class="sub-brand-pill" title="DJI, Røde & Zoom">
+                  <span class="dji-text">DJI</span>
+                  <span class="brand-divider">/</span>
+                  <span class="rode-text">Røde</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <!-- DEDICATED PREVIEW BOX FOR EACH SECTION TO ALLOW LINKING TO AMAZON AFFILIATE LINK -->
+          <div class="sub-preview-box" id={`preview-box-${anchorId}`}>
+            <div class="sub-preview-header">
+              <span class="sub-amz-badge font-mono">AMAZON INFLUENCER LINK</span>
+              <a
+                href={defaultItem?.affiliateUrl || AMAZON_STOREFRONT}
+                target="_blank"
+                rel="noopener"
+                class="sub-preview-cta-link"
+                id={`sub-cta-${anchorId}`}
+              >
+                <span>Storefront</span>
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 9.5L9.5 2.5M9.5 2.5H4.5M9.5 2.5V7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+
+            <div class="sub-preview-display">
+              <div class="sub-preview-icon-wrap">
+                {isLenses && (
+                  <svg class="sub-preview-svg" viewBox="0 0 48 48" fill="none" stroke="currentColor">
+                    <circle cx="24" cy="24" r="18" stroke-width="2"/>
+                    <circle cx="24" cy="24" r="12" stroke-width="1.5"/>
+                    <circle cx="24" cy="24" r="6" stroke-width="1.2"/>
+                    <line x1="24" y1="2" x2="24" y2="6" stroke-width="2"/>
+                  </svg>
+                )}
+                {isLighting && (
+                  <svg class="sub-preview-svg" viewBox="0 0 48 48" fill="none" stroke="currentColor">
+                    <circle cx="24" cy="20" r="10" stroke-width="2"/>
+                    <path d="M20 30h8v4h-8zM22 34h4v3h-4z" fill="currentColor"/>
+                    <line x1="24" y1="4" x2="24" y2="8" stroke-width="2"/>
+                    <line x1="10" y1="10" x2="13" y2="13" stroke-width="2"/>
+                    <line x1="38" y1="10" x2="35" y2="13" stroke-width="2"/>
+                  </svg>
+                )}
+                {isTools && (
+                  <svg class="sub-preview-svg" viewBox="0 0 48 48" fill="none" stroke="currentColor">
+                    <rect x="20" y="6" width="8" height="12" rx="2" stroke-width="2"/>
+                    <line x1="24" y1="18" x2="24" y2="34" stroke-width="2"/>
+                    <circle cx="24" cy="26" r="14" stroke-width="1.5" stroke-dasharray="4 2"/>
+                    <line x1="16" y1="42" x2="24" y2="34" stroke-width="2"/>
+                    <line x1="32" y1="42" x2="24" y2="34" stroke-width="2"/>
+                  </svg>
+                )}
+                {isAudio && (
+                  <svg class="sub-preview-svg" viewBox="0 0 48 48" fill="none" stroke="currentColor">
+                    <rect x="18" y="8" width="12" height="20" rx="6" stroke-width="2"/>
+                    <path d="M12 22c0 6.6 5.4 12 12 12s12-5.4 12-12" stroke-width="2"/>
+                    <line x1="24" y1="34" x2="24" y2="42" stroke-width="2"/>
+                    <line x1="16" y1="42" x2="32" y2="42" stroke-width="2"/>
+                  </svg>
+                )}
+              </div>
+
+              <div class="sub-preview-text">
+                <span class="sub-active-name" id={`sub-active-name-${anchorId}`}>{defaultItem?.name}</span>
+                <span class="sub-active-tag font-mono" id={`sub-active-tag-${anchorId}`}>{defaultItem?.tag || 'Curated Kit'}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- LINKS COLUMN FOR THIS SUB-SECTION -->
+          <div class="sub-links-wrap">
+            <div class="sub-links-kicker">
+              <span class="font-mono text-muted">LINKS & SPECIFICATIONS</span>
+            </div>
+
+            <ul class="sub-gear-list">
+              {cat.data.items.map((item, itemIdx) => (
+                <li
+                  class={`sub-gear-item ${itemIdx === 0 ? 'is-selected' : ''}`}
+                  data-anchor-target={anchorId}
+                  data-item-name={item.name}
+                  data-item-spec={item.spec}
+                  data-item-tag={item.tag || 'Kit Spec'}
+                  data-item-url={item.affiliateUrl || AMAZON_STOREFRONT}
+                >
+                  <div class="sub-item-body">
+                    <div class="sub-item-top">
+                      <span class="sub-item-name">{item.name}</span>
+                      <a
+                        href={item.affiliateUrl || AMAZON_STOREFRONT}
+                        target="_blank"
+                        rel="noopener"
+                        class="sub-item-amz-badge"
+                        title="Shop on Amazon Storefront"
+                        onclick="event.stopPropagation();"
+                      >
+                        <span>AMZ ↗</span>
+                      </a>
+                    </div>
+                    <span class="sub-item-spec">{item.spec}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      );
+    })}
   </div>
 </div>
 
 <style>
-  .gear-panel h2 { font-size: clamp(1.4rem, 2.8vw, 1.9rem); }
-  .gear-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-    gap: var(--gap);
+  /* STRICT ZERO-EMPTY-SPACE ARCHITECTURAL MONOLITH */
+  .gear-monolith {
+    width: 100%;
     margin-top: 1.5rem;
-  }
-  .gear-cat {
-    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 0;
     border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 1rem;
+    background: #090909;
+    position: relative;
   }
-  .gear-cat h3 {
-    margin: 0 0 0.85rem;
-    font-size: 0.95rem;
+
+  /* TOP HERO BOX: CAMERA BODIES (FULL-WIDTH 100%) */
+  .gear-hero-box {
+    width: 100%;
+    border-bottom: 1px solid var(--line);
+    background: #0c0c0c;
+    position: relative;
+    padding: 0;
+  }
+
+  .gear-box-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    padding: 1.25rem 1.75rem;
+    border-bottom: 1px solid var(--line);
+    background: #0f0f0f;
+  }
+
+  .gear-box-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .box-idx {
     font-family: var(--font-mono);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
     color: var(--key-ink);
+    text-transform: uppercase;
+    font-weight: 600;
   }
-  .gear-cat ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.7rem; }
-  /* Small tactile shift: the row nudges, the spec (the detail) brightens.
-     :active covers tap on touch screens. */
-  .gear-cat li {
-    display: grid;
-    gap: 0.15rem;
-    padding-left: 0;
-    transition: transform 0.2s ease, padding-left 0.2s ease;
+
+  .box-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 2.8vw, 2.4rem);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    margin: 0;
+    color: var(--ink);
   }
-  .gear-cat li:hover,
-  .gear-cat li:active {
-    transform: translateX(4px);
+
+  .box-subtitle {
+    font-size: 0.84rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
   }
-  .gear-name { font-weight: 600; font-size: 0.98rem; }
-  /* Mono for specs: scans like a spec sheet, signals technical credibility. */
-  .gear-spec {
+
+  /* BRAND STRIP (SONY, APPLE, AMAZON INFLUENCER) */
+  .brand-strip {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .brand-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.85rem;
+    background: #141414;
+    border: 1px solid var(--line);
+    color: var(--ink);
+  }
+
+  .brand-svg-sony {
+    width: 68px;
+    height: 15px;
+  }
+
+  .alpha-mark {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #ff5522; /* Sony Alpha signature accent */
+    line-height: 1;
+  }
+
+  .brand-apple {
+    color: #dedede;
+  }
+
+  .brand-svg-apple {
+    width: 14px;
+    height: 14px;
+  }
+
+  .apple-text {
     font-family: var(--font-mono);
-    font-size: 0.78rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+
+  .influencer-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.85rem;
+    background: rgba(212, 175, 55, 0.1);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    color: #e5c358;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+
+  .influencer-pill:hover {
+    background: #d4af37;
+    color: #080808;
+    border-color: #d4af37;
+  }
+
+  .influencer-dot {
+    width: 6px;
+    height: 6px;
+    background: #e5c358;
+    border-radius: 50%;
+  }
+
+  .influencer-pill:hover .influencer-dot {
+    background: #080808;
+  }
+
+  /* HERO BODY: LINKS | IMAGE PREVIEW DIVISION */
+  .gear-hero-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    width: 100%;
+  }
+
+  @media (max-width: 980px) {
+    .gear-hero-body {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* LEFT: LINKS & SPECS */
+  .gear-hero-links {
+    padding: 1.5rem 1.75rem;
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  @media (max-width: 980px) {
+    .gear-hero-links {
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+    }
+  }
+
+  .hero-col-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .col-tag {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    color: var(--key-ink);
+    font-weight: 700;
+  }
+
+  .col-count {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .camera-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .camera-item-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.15rem;
+    background: #111;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+  }
+
+  .camera-item-row:hover,
+  .camera-item-row.is-active {
+    background: #161616;
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+
+  .camera-select-indicator {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: transparent;
+    transition: background 0.2s ease;
+  }
+
+  .camera-item-row.is-active .camera-select-indicator {
+    background: #ff5522; /* Sony/Camera active edge */
+  }
+
+  .camera-item-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .camera-item-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.25rem;
+  }
+
+  .camera-name {
+    font-family: var(--font-display);
+    font-size: clamp(1.15rem, 1.6vw, 1.45rem);
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .camera-tag {
+    font-size: 0.68rem;
+    color: var(--key-ink);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .camera-spec {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
     color: var(--muted);
     line-height: 1.5;
-    transition: color 0.2s ease;
+    margin: 0;
   }
-  .gear-cat li:hover .gear-spec,
-  .gear-cat li:active .gear-spec { color: var(--ink); }
+
+  .camera-item-row:hover .camera-spec {
+    color: #dedede;
+  }
+
+  .camera-item-action {
+    flex-shrink: 0;
+  }
+
+  .btn-amazon-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.75rem;
+    background: #1a1a1a;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .btn-amazon-link:hover {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+  }
+
+  /* RIGHT: LIVE IMAGE PREVIEW CARD FROM AMAZON INFLUENCER PROGRAM */
+  .gear-hero-preview-col {
+    padding: 1.5rem 1.75rem;
+    background: #0e0e0e;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .amazon-preview-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border: 1px solid var(--line);
+    background: #121212;
+    padding: 1.5rem;
+    gap: 1.25rem;
+  }
+
+  .preview-badge-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 0.75rem;
+  }
+
+  .preview-storefront-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    color: #d4af37;
+    font-weight: 700;
+  }
+
+  .preview-active-tag {
+    font-size: 0.7rem;
+    color: var(--key-ink);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .preview-product-stage {
+    min-height: 190px;
+    background: #080808;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 1.25rem;
+  }
+
+  .product-visual-container {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .schematic-wrap {
+    width: 100%;
+    max-width: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .camera-schematic {
+    width: 100%;
+    height: auto;
+    max-height: 170px;
+    filter: drop-shadow(0 0 16px rgba(255, 85, 34, 0.12));
+  }
+
+  .preview-info-strip {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .preview-brand-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--key-ink);
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+
+  .preview-item-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--ink);
+    margin: 0 0 0.4rem;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .preview-item-desc {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .preview-action-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+  }
+
+  .btn-primary-influencer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    background: #d4af37;
+    color: #080808;
+    padding: 0.85rem 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    text-decoration: none;
+    border: 1px solid #d4af37;
+    transition: all 0.2s ease;
+  }
+
+  .btn-primary-influencer:hover {
+    background: #fff;
+    border-color: #fff;
+    color: #000;
+    box-shadow: 0 0 24px rgba(212, 175, 55, 0.35);
+  }
+
+  .preview-disclosure {
+    font-size: 0.68rem;
+    color: var(--muted);
+    text-align: center;
+    letter-spacing: 0.05em;
+  }
+
+  /* 4 CONSOLIDATED SUB-BOXES GRID (LENS, LIGHTING, AUDIO, TOOLS & SUPPORT) */
+  /* OCCUPIES THE ENTIRE SECTION WITH ZERO EMPTY SPACING */
+  .gear-sub-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    width: 100%;
+    margin: 0;
+    background: #090909;
+  }
+
+  @media (max-width: 1200px) {
+    .gear-sub-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .gear-sub-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* INDIVIDUAL SUB BOX */
+  .gear-sub-box {
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    background: #0c0c0c;
+    min-width: 0;
+  }
+
+  .gear-sub-box:last-child {
+    border-right: none;
+  }
+
+  @media (max-width: 1200px) {
+    .gear-sub-box:nth-child(2n) {
+      border-right: none;
+    }
+    .gear-sub-box:nth-child(1),
+    .gear-sub-box:nth-child(2) {
+      border-bottom: 1px solid var(--line);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .gear-sub-box {
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+    }
+    .gear-sub-box:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .sub-box-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1.1rem 1.25rem;
+    background: #111;
+    border-bottom: 1px solid var(--line);
+    flex-wrap: wrap;
+  }
+
+  .sub-header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .sub-box-idx {
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    color: var(--key-ink);
+    font-weight: 700;
+  }
+
+  .sub-box-title {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .sub-brand-logos {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .sub-brand-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: #aaa;
+    letter-spacing: 0.05em;
+  }
+
+  .sub-svg-sony {
+    width: 48px;
+    height: 11px;
+  }
+
+  .gm-mark {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 0.75rem;
+    color: #ff5522;
+  }
+
+  .brand-divider {
+    color: #444;
+  }
+
+  /* SUB-SECTION PREVIEW BOX (AMAZON INFLUENCER LINK) */
+  .sub-preview-box {
+    padding: 1rem 1.25rem;
+    background: #141414;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .sub-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .sub-amz-badge {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    color: #d4af37;
+    font-weight: 600;
+  }
+
+  .sub-preview-cta-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.2s ease;
+  }
+
+  .sub-preview-cta-link:hover {
+    color: #d4af37;
+    border-color: #d4af37;
+  }
+
+  .sub-preview-display {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    background: #090909;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0.75rem 0.85rem;
+  }
+
+  .sub-preview-icon-wrap {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--key-ink);
+    flex-shrink: 0;
+  }
+
+  .sub-preview-svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .sub-preview-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .sub-active-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sub-active-tag {
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* LINKS LIST PER SUB SECTION */
+  .sub-links-wrap {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 1.15rem 1.25rem;
+  }
+
+  .sub-links-kicker {
+    margin-bottom: 0.75rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+  }
+
+  .sub-gear-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .sub-gear-item {
+    padding: 0.6rem 0.75rem;
+    background: #101010;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .sub-gear-item:hover,
+  .sub-gear-item.is-selected {
+    background: #181818;
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateX(2px);
+  }
+
+  .sub-item-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .sub-item-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .sub-item-name {
+    font-family: var(--font-display);
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+
+  .sub-item-amz-badge {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--key-ink);
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 0.15rem 0.4rem;
+    background: #141414;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .sub-item-amz-badge:hover {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+  }
+
+  .sub-item-spec {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  .sub-gear-item:hover .sub-item-spec {
+    color: #ddd;
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .gear-cat li, .gear-cat .gear-spec { transition: none; }
-    .gear-cat li:hover, .gear-cat li:active { transform: none; }
+    .sub-gear-item:hover,
+    .sub-gear-item.is-selected {
+      transform: none;
+    }
   }
 </style>
+
+<script>
+  (() => {
+    // 1. HERO CAMERA BOX INTERACTIVE PREVIEW
+    const heroBox = document.getElementById('gear-bodies');
+    if (heroBox) {
+      const cameraRows = Array.from(heroBox.querySelectorAll<HTMLElement>('.camera-item-row'));
+      const previewTag = document.getElementById('preview-camera-tag');
+      const previewBrand = document.getElementById('preview-camera-brand');
+      const previewTitle = document.getElementById('preview-camera-title');
+      const previewDesc = document.getElementById('preview-camera-desc');
+      const previewBtn = document.getElementById('preview-camera-btn') as HTMLAnchorElement | null;
+      const schematicView = document.getElementById('schematic-view');
+
+      const selectCamera = (row: HTMLElement) => {
+        cameraRows.forEach(r => r.classList.remove('is-active'));
+        row.classList.add('is-active');
+
+        const name = row.dataset.itemName || '';
+        const brand = row.dataset.itemBrand || 'Sony';
+        const spec = row.dataset.itemSpec || '';
+        const tag = row.dataset.itemTag || 'Primary Body';
+        const url = row.dataset.itemUrl || 'https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh';
+
+        if (previewTag) previewTag.textContent = tag;
+        if (previewBrand) previewBrand.textContent = brand.toUpperCase() + ' // WORKHORSE';
+        if (previewTitle) previewTitle.textContent = name;
+        if (previewDesc) previewDesc.textContent = spec;
+        if (previewBtn) previewBtn.href = url;
+
+        // Dynamic schematic rendering based on whether it's Sony or Apple
+        if (schematicView) {
+          if (name.includes('iPhone')) {
+            schematicView.innerHTML = `
+              <svg class="camera-schematic" viewBox="0 0 260 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="75" y="15" width="110" height="150" rx="18" fill="#151515" stroke="#3a3a3a" stroke-width="2.5"/>
+                <!-- Camera Island -->
+                <rect x="85" y="25" width="55" height="55" rx="14" fill="#1e1e1e" stroke="#444" stroke-width="1.5"/>
+                <circle cx="102" cy="42" r="11" fill="#0d0d0d" stroke="#555" stroke-width="2"/>
+                <circle cx="102" cy="42" r="6" fill="#1b2a3a" stroke="#44aaff" stroke-width="1"/>
+                <circle cx="123" cy="58" r="11" fill="#0d0d0d" stroke="#555" stroke-width="2"/>
+                <circle cx="123" cy="58" r="6" fill="#1b2a3a" stroke="#44aaff" stroke-width="1"/>
+                <circle cx="102" cy="66" r="8" fill="#0d0d0d" stroke="#555" stroke-width="1.5"/>
+                <!-- Apple logo & Log badge -->
+                <path d="M130 110c-3 0-5.5 2-8 2s-5-2-8-2c-4 0-8 3-10 8 0 7 6 15 10 15 3 0 4-2 8-2s5 2 8 2c4 0 9-7 10-13-5-2-7-7-7-10 0-4 3-7 7-9-3-4-8-5-10-5zm-3-4c2-3 2-6 1-8-2 0-5 2-7 4 0 2 0 6 1 8 2 0 4-2 5-4z" fill="#333"/>
+                <text x="130" y="172" fill="#777" font-family="'JetBrains Mono', monospace" font-size="8" text-anchor="middle" font-weight="bold">APPLE // PRORES LOG 4K</text>
+              </svg>
+            `;
+          } else {
+            schematicView.innerHTML = `
+              <svg class="camera-schematic" viewBox="0 0 260 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="20" y="45" width="220" height="120" rx="3" fill="#141414" stroke="#333" stroke-width="2"/>
+                <rect x="70" y="25" width="60" height="22" rx="2" fill="#1e1e1e" stroke="#444" stroke-width="1.5"/>
+                <circle cx="100" cy="35" r="4" fill="#a8822a"/>
+                <circle cx="130" cy="105" r="48" fill="#0d0d0d" stroke="#555" stroke-width="2"/>
+                <circle cx="130" cy="105" r="38" fill="#181818" stroke="#ff4422" stroke-width="1.5"/>
+                <rect x="110" y="88" width="40" height="34" rx="2" fill="#112233" stroke="#44aaff" stroke-width="1"/>
+                <rect x="25" y="45" width="42" height="120" fill="#1a1a1a" stroke="#2a2a2a" stroke-width="1"/>
+                <line x1="28" y1="65" x2="62" y2="65" stroke="#333" stroke-width="1"/>
+                <line x1="28" y1="85" x2="62" y2="85" stroke="#333" stroke-width="1"/>
+                <line x1="28" y1="105" x2="62" y2="105" stroke="#333" stroke-width="1"/>
+                <rect x="195" y="32" width="24" height="14" rx="2" fill="#222" stroke="#555" stroke-width="1"/>
+                <rect x="165" y="36" width="20" height="10" rx="2" fill="#222" stroke="#555" stroke-width="1"/>
+                <text x="130" y="16" fill="#888" font-family="'JetBrains Mono', monospace" font-size="9" text-anchor="middle" font-weight="bold">SONY ALPHA // SYSTEM</text>
+              </svg>
+            `;
+          }
+        }
+      };
+
+      cameraRows.forEach(row => {
+        row.addEventListener('click', () => selectCamera(row));
+        row.addEventListener('mouseenter', () => selectCamera(row));
+      });
+    }
+
+    // 2. SUB-BOXES INTERACTIVE PREVIEWS
+    const subBoxes = Array.from(document.querySelectorAll<HTMLElement>('.gear-sub-box'));
+    subBoxes.forEach(box => {
+      const anchorId = box.dataset.subcat || '';
+      const items = Array.from(box.querySelectorAll<HTMLElement>('.sub-gear-item'));
+      const activeNameEl = document.getElementById(`sub-active-name-${anchorId}`);
+      const activeTagEl = document.getElementById(`sub-active-tag-${anchorId}`);
+      const ctaLinkEl = document.getElementById(`sub-cta-${anchorId}`) as HTMLAnchorElement | null;
+
+      items.forEach(item => {
+        const updateSubPreview = () => {
+          items.forEach(it => it.classList.remove('is-selected'));
+          item.classList.add('is-selected');
+
+          const name = item.dataset.itemName || '';
+          const tag = item.dataset.itemTag || 'Curated Spec';
+          const url = item.dataset.itemUrl || 'https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh';
+
+          if (activeNameEl) activeNameEl.textContent = name;
+          if (activeTagEl) activeTagEl.textContent = tag;
+          if (ctaLinkEl) ctaLinkEl.href = url;
+        };
+
+        item.addEventListener('click', updateSubPreview);
+        item.addEventListener('mouseenter', updateSubPreview);
+      });
+    });
+  })();
+</script>

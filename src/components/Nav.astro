@@ -6,43 +6,143 @@ import navLogo from '../assets/brand-logos/hey-thisisandrew.png';
 // Syne links, frosted bar, underline grow + gray glow on hover.
 // Order: Lanes, Projects, Gear, Goals, About. The logo is Home ("/").
 //
-// Spatial navigation layer:
-// - Anchor links scroll with a "receive" landing on the target section.
-// - The About link zooms into /about from the tapped element (route zoom).
-// - The logo zooms back out to / from /about; on the homepage it returns
-//   to the top with a tactile press.
-// - The mobile menu opens/closes with a designed slide + staggered links.
-// - Scrollspy keeps the selected nav state visually connected to the section.
+// Smooth-transitioning dropdown menus allow selecting subsections:
+// - Lanes: All Brands, BE Unconventional, Capture Create Caffeinate, Hey This Is Andrew
+// - Projects: Recent Work, Commercial Photo, Featured Video, Case Studies, Pipeline
+// - Gear: The Kit, Camera Bodies, Zoom Lenses, Prime Lenses, Lighting & Modifiers, Storefront
+// - Goals: Public Goals, Content Engine, Landing Page v1, Work With Andrew
+// - About: About Andrew, Meet The Creator, Notes From The Build, Get In Touch
 
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 
-const links = [
-  { label: 'Lanes', href: `${base}/#directory`, section: 'directory' },
-  { label: 'Projects', href: `${base}/#projects`, section: 'projects' },
-  { label: 'Gear', href: `${base}/#gear`, section: 'gear' },
-  { label: 'Goals', href: `${base}/#goals`, section: 'goals' },
-  { label: 'About', href: `${base}/about`, section: null },
+interface NavSubItem {
+  label: string;
+  href: string;
+  kicker: string;
+}
+
+interface NavItem {
+  label: string;
+  href: string;
+  section: string | null;
+  subsections: NavSubItem[];
+}
+
+const links: NavItem[] = [
+  {
+    label: 'Lanes',
+    href: `${base}/#directory`,
+    section: 'directory',
+    subsections: [
+      { label: 'All Brands', href: `${base}/#directory`, kicker: '01' },
+      { label: 'BE Unconventional', href: `${base}/#brand-be-unconventional`, kicker: 'BE' },
+      { label: 'Capture Create Caffeinate', href: `${base}/#brand-capture-create-caffeinate`, kicker: 'CCC' },
+      { label: 'Hey This Is Andrew', href: `${base}/#brand-hey-thisisandrew`, kicker: 'HQ' },
+    ],
+  },
+  {
+    label: 'Projects',
+    href: `${base}/#projects`,
+    section: 'projects',
+    subsections: [
+      { label: 'Recent Work', href: `${base}/#projects`, kicker: '02' },
+      { label: 'Commercial Photo', href: `${base}/#photography`, kicker: 'PH' },
+      { label: 'Featured Video', href: `${base}/#projects-featured`, kicker: 'YT' },
+      { label: 'Project Case Studies', href: `${base}/#projects-grid`, kicker: 'CS' },
+      { label: 'Production Pipeline', href: `${base}/#projects-workflow`, kicker: 'WF' },
+    ],
+  },
+  {
+    label: 'Gear',
+    href: `${base}/#gear`,
+    section: 'gear',
+    subsections: [
+      { label: 'The Kit', href: `${base}/#gear`, kicker: '03' },
+      { label: 'Camera Bodies', href: `${base}/#gear-bodies`, kicker: 'CAM' },
+      { label: 'Lens', href: `${base}/#gear-lenses`, kicker: 'LNS' },
+      { label: 'Lighting', href: `${base}/#gear-lighting`, kicker: 'LGT' },
+      { label: 'Tools & Support', href: `${base}/#gear-tools`, kicker: 'TLS' },
+      { label: 'Audio', href: `${base}/#gear-audio`, kicker: 'AUD' },
+      { label: 'Curated Storefront', href: `${base}/#gear-storefront`, kicker: 'SHP' },
+    ],
+  },
+  {
+    label: 'Goals',
+    href: `${base}/#goals`,
+    section: 'goals',
+    subsections: [
+      { label: 'Public Goals', href: `${base}/#goals`, kicker: '04' },
+      { label: 'Content Engine', href: `${base}/#goals-content-engine`, kicker: 'ENG' },
+      { label: 'Landing Page v1', href: `${base}/#goals-landing-page-v1`, kicker: 'V1' },
+      { label: 'Work With Andrew', href: `${base}/#work`, kicker: 'WWA' },
+    ],
+  },
+  {
+    label: 'About',
+    href: `${base}/about`,
+    section: null,
+    subsections: [
+      { label: 'About Andrew', href: `${base}/about`, kicker: '05' },
+      { label: 'Meet The Creator', href: `${base}/#about`, kicker: 'BIO' },
+      { label: 'Notes From The Build', href: `${base}/#writing`, kicker: 'WRT' },
+      { label: 'Get In Touch', href: `${base}/#work`, kicker: 'CNT' },
+    ],
+  },
 ];
 
 const isAbout = Astro.url.pathname === '/about' || Astro.url.pathname === '/about/' || Astro.url.pathname === `${base}/about`;
 ---
 <header class="site-nav" id="top">
-  <div class="nav-inner">
+  <div class="container nav-inner">
     <a class="wordmark" href={base || '/'} aria-label="Hey This Is Andrew, home" data-route-zoom={isAbout ? true : undefined} data-logo-home={!isAbout ? true : undefined}>
       <Image src={navLogo} alt="Hey This Is Andrew" class="wordmark-logo" width={800} />
     </a>
-    <nav aria-label="Sections">
-      <ul>
+    <nav aria-label="Sections" class="desktop-nav">
+      <ul class="nav-links">
         {links.map((l) => (
-          <li>
-            <a
-              href={l.href}
-              data-nav-link
-              data-section={l.section}
-              data-route-zoom={l.href === `${base}/about` ? true : undefined}
-              aria-current={l.href === `${base}/about` && isAbout ? 'page' : undefined}
-            >{l.label}</a>
+          <li class="nav-item">
+            <div class="nav-link-wrap">
+              <a
+                href={l.href}
+                data-nav-link
+                data-section={l.section}
+                data-route-zoom={l.href === `${base}/about` ? true : undefined}
+                aria-current={l.href === `${base}/about` && isAbout ? 'page' : undefined}
+                aria-haspopup={l.subsections.length > 0 ? "true" : undefined}
+                aria-expanded={l.subsections.length > 0 ? "false" : undefined}
+                class="nav-link"
+              >
+                <span>{l.label}</span>
+                {l.subsections.length > 0 && (
+                  <svg class="dropdown-chevron" width="8" height="6" viewBox="0 0 8 6" fill="none" aria-hidden="true">
+                    <path d="M1 1.5L4 4.5L7 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                )}
+              </a>
+            </div>
+            {l.subsections.length > 0 && (
+              <div class="dropdown-menu" role="menu" aria-label={`${l.label} subsections`}>
+                <div class="dropdown-inner">
+                  <ul class="dropdown-list">
+                    {l.subsections.map((sub) => (
+                      <li role="none">
+                        <a
+                          href={sub.href}
+                          class="dropdown-link"
+                          role="menuitem"
+                          data-route-zoom={sub.href === `${base}/about` ? true : undefined}
+                        >
+                          <span class="dropdown-kicker">{sub.kicker}</span>
+                          <span class="dropdown-label">{sub.label}</span>
+                          <span class="dropdown-arrow" aria-hidden="true">→</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
           </li>
         ))}
       </ul>
@@ -53,13 +153,34 @@ const isAbout = Astro.url.pathname === '/about' || Astro.url.pathname === '/abou
   </div>
   <div class="mobile-menu" id="mobile-menu" hidden>
     <nav aria-label="Sections menu">
-      <ul>
+      <ul class="mobile-nav-list">
         {links.map((l) => (
-          <li>
-            <a
-              href={l.href}
-              data-route-zoom={l.href === `${base}/about` ? true : undefined}
-            >{l.label}</a>
+          <li class="mobile-nav-item">
+            <div class="mobile-section-header">
+              <a
+                href={l.href}
+                class="mobile-main-link"
+                data-route-zoom={l.href === `${base}/about` ? true : undefined}
+              >
+                {l.label}
+              </a>
+            </div>
+            {l.subsections.length > 0 && (
+              <ul class="mobile-sub-list">
+                {l.subsections.map((sub) => (
+                  <li>
+                    <a
+                      href={sub.href}
+                      class="mobile-sub-link"
+                      data-route-zoom={sub.href === `${base}/about` ? true : undefined}
+                    >
+                      <span class="mobile-sub-kicker font-mono">{sub.kicker}</span>
+                      <span class="mobile-sub-label">{sub.label}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
           </li>
         ))}
       </ul>
@@ -72,9 +193,6 @@ const isAbout = Astro.url.pathname === '/about' || Astro.url.pathname === '/abou
 
   // Route zoom: About <-> Home expand from the tapped element.
   initRouteTransitions('a[data-route-zoom]');
-  // NOTE: initAnchorTransitions() is intentionally NOT called here.
-  // BaseLayout owns same-page hash navigation via its camera-fly system.
-  // Having two handlers caused a scroll-to-top regression.
 
   // Logo: on the homepage, return to top with a tactile press instead of
   // reloading. On any other page, let the href="/" navigate home normally.
@@ -88,7 +206,7 @@ const isAbout = Astro.url.pathname === '/about' || Astro.url.pathname === '/abou
       const reduced = prefersReducedMotion();
       window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
       if (!reduced) {
-        const el = logoHome;
+        const el = logoHome as HTMLElement;
         el.style.transition = 'transform 180ms cubic-bezier(0.2, 0.9, 0.25, 1)';
         el.style.transform = 'scale(0.96)';
         window.setTimeout(() => {
@@ -102,8 +220,37 @@ const isAbout = Astro.url.pathname === '/about' || Astro.url.pathname === '/abou
     });
   }
 
-  // Mobile menu: designed open/close — panel slides down, links stagger in.
-  // Close reverses. Escape, link selection, and resize still close it.
+  // Dropdown accessibility: update aria-expanded and handle Escape key
+  const navItems = Array.from(document.querySelectorAll<HTMLElement>('.nav-item'));
+  navItems.forEach((item) => {
+    const mainLink = item.querySelector<HTMLAnchorElement>('.nav-link');
+    const dropdown = item.querySelector<HTMLElement>('.dropdown-menu');
+    if (!mainLink || !dropdown) return;
+
+    const setExpanded = (expanded: boolean) => {
+      mainLink.setAttribute('aria-expanded', String(expanded));
+    };
+
+    item.addEventListener('mouseenter', () => setExpanded(true));
+    item.addEventListener('mouseleave', () => setExpanded(false));
+    item.addEventListener('focusin', () => setExpanded(true));
+    item.addEventListener('focusout', () => {
+      setTimeout(() => {
+        if (!item.contains(document.activeElement)) {
+          setExpanded(false);
+        }
+      }, 10);
+    });
+
+    item.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        setExpanded(false);
+        mainLink.focus();
+      }
+    });
+  });
+
+  // Mobile menu: designed open/close — panel slides down, links displayed with subsections.
   const menuBtn = document.querySelector('.menu-btn');
   const mobileMenu = document.getElementById('mobile-menu');
   if (menuBtn && mobileMenu) {
@@ -112,13 +259,12 @@ const isAbout = Astro.url.pathname === '/about' || Astro.url.pathname === '/abou
     const reduced = () => prefersReducedMotion();
     let closeTimer = 0;
 
-    const setOpen = (open) => {
+    const setOpen = (open: boolean) => {
       window.clearTimeout(closeTimer);
       menuBtn.setAttribute('aria-expanded', String(open));
       if (label) label.textContent = open ? 'Close' : 'Menu';
       if (open) {
         mobileMenu.hidden = false;
-        // Force reflow so the enter transition plays.
         void mobileMenu.offsetWidth;
         mobileMenu.classList.add('open');
         if (menuLinks.length) menuLinks[0].focus();
@@ -127,7 +273,6 @@ const isAbout = Astro.url.pathname === '/about' || Astro.url.pathname === '/abou
         if (reduced()) {
           mobileMenu.hidden = true;
         } else {
-          // Wait for the reverse transition before hiding.
           closeTimer = window.setTimeout(() => {
             mobileMenu.hidden = true;
           }, 340);
@@ -149,33 +294,78 @@ const isAbout = Astro.url.pathname === '/about' || Astro.url.pathname === '/abou
       }
     });
     window.addEventListener('resize', () => {
-      if (window.innerWidth > 640 && isOpen()) setOpen(false);
+      if (window.innerWidth > 860 && isOpen()) setOpen(false);
     });
   }
 
   // Scrollspy: keep the selected nav state connected to the visible section.
-  const spyLinks = Array.from(document.querySelectorAll('[data-nav-link][data-section]'));
+  // BUG FIX: When scrolled to the very top of the site (Hero section), NO section link
+  // (including Lanes) should be highlighted.
+  const spyLinks = Array.from(document.querySelectorAll<HTMLElement>('[data-nav-link][data-section]'));
   if (spyLinks.length && 'IntersectionObserver' in window) {
     const sections = spyLinks
-      .map((a) => document.getElementById(a.getAttribute('data-section')))
-      .filter(Boolean);
-    const setActive = (id) => {
+      .map((a) => document.getElementById(a.getAttribute('data-section') || ''))
+      .filter(Boolean) as HTMLElement[];
+
+    const setActive = (id: string | null) => {
       spyLinks.forEach((a) => {
-        const on = a.getAttribute('data-section') === id;
+        const on = Boolean(id && a.getAttribute('data-section') === id);
         a.classList.toggle('active', on);
         if (on) a.setAttribute('aria-current', 'true');
         else a.removeAttribute('aria-current');
       });
     };
+
+    const isAtTopOrHero = () => {
+      if (window.scrollY < 80) return true;
+      const dirEl = document.getElementById('directory');
+      if (dirEl) {
+        const top = dirEl.getBoundingClientRect().top;
+        if (top > window.innerHeight * 0.45) return true;
+      }
+      return false;
+    };
+
+    let currentActiveId: string | null = null;
+
     const io = new IntersectionObserver(
       (entries) => {
+        if (isAtTopOrHero()) {
+          setActive(null);
+          return;
+        }
+
         entries.forEach((en) => {
-          if (en.isIntersecting) setActive(en.target.id);
+          if (en.isIntersecting) {
+            currentActiveId = en.target.id;
+          }
         });
+
+        if (isAtTopOrHero()) {
+          setActive(null);
+        } else if (currentActiveId) {
+          setActive(currentActiveId);
+        }
       },
       { rootMargin: '-38% 0px -55% 0px', threshold: 0 }
     );
     sections.forEach((s) => io.observe(s));
+
+    // Clear active state immediately on scroll when returning to top / hero
+    window.addEventListener(
+      'scroll',
+      () => {
+        if (isAtTopOrHero()) {
+          setActive(null);
+        }
+      },
+      { passive: true }
+    );
+
+    // Initial check on load
+    if (isAtTopOrHero()) {
+      setActive(null);
+    }
   }
 </script>
 
@@ -184,34 +374,27 @@ const isAbout = Astro.url.pathname === '/about' || Astro.url.pathname === '/abou
     position: sticky;
     top: 0;
     z-index: 100;
-    /* Top safe area: the viewport meta omits viewport-fit=cover (matching
-       BE Unconventional HQ), so the browser keeps page content inside the
-       safe area and the system renders the Dynamic Island / status-bar
-       region black. No extra padding needed. */
     background: rgba(10, 10, 10, 0.85);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    /* Visible bottom divider and drop shadow: establishes clean physical boundary directly over hero */
     border-bottom: 1px solid rgba(255, 255, 255, 0.15);
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
     transition: background-color 0.3s ease, box-shadow 0.3s ease;
   }
-  /* Menu open: the nav rises above the safe-area blackout (BE pattern),
-     so the open panel owns the top of the screen. */
   .site-nav:has(.mobile-menu.open) {
     z-index: 120;
   }
   .site-nav:hover {
-    background: rgba(25, 25, 25, 0.95);
+    background: rgba(22, 22, 22, 0.95);
     box-shadow:
       0 4px 30px rgba(0, 0, 0, 0.6),
-      0 4px 40px rgba(200, 200, 200, 0.10);
+      0 4px 40px rgba(200, 200, 200, 0.08);
   }
   .nav-inner {
     display: flex;
     align-items: center;
     gap: 2rem;
-    padding: 1.2rem clamp(1.25rem, 4vw, 2.5rem);
+    padding: 1.1rem 0;
   }
   .wordmark {
     display: inline-flex;
@@ -228,18 +411,30 @@ const isAbout = Astro.url.pathname === '/about' || Astro.url.pathname === '/abou
   .wordmark:hover {
     filter: brightness(1.15) drop-shadow(0 0 12px rgba(240, 240, 240, 0.35));
   }
-  /* Tactile press on nav links — the selection feels physical. */
-  .site-nav nav[aria-label="Sections"] a:active {
-    transform: scale(0.96);
-  }
-  .site-nav nav[aria-label="Sections"] ul {
+
+  /* Desktop Navigation */
+  .desktop-nav {
     display: flex;
-    gap: 2.5rem;
+    align-items: center;
+  }
+  .nav-links {
+    display: flex;
+    gap: 1.8rem;
     list-style: none;
     margin: 0;
     padding: 0;
   }
-  .site-nav nav[aria-label="Sections"] a {
+  .nav-item {
+    position: relative;
+  }
+  .nav-link-wrap {
+    display: flex;
+    align-items: center;
+  }
+  .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
     position: relative;
     font-family: var(--font-display);
     font-size: 0.75rem;
@@ -248,39 +443,156 @@ const isAbout = Astro.url.pathname === '/about' || Astro.url.pathname === '/abou
     text-transform: uppercase;
     color: rgba(245, 245, 245, 0.8);
     text-decoration: none;
-    padding: 0.75rem 0.25rem;
-    transition: color 0.3s ease, text-shadow 0.3s ease, transform 0.18s cubic-bezier(0.2, 0.9, 0.25, 1);
+    padding: 0.75rem 0.35rem;
+    transition: color 0.25s ease, text-shadow 0.25s ease, transform 0.18s cubic-bezier(0.2, 0.9, 0.25, 1);
   }
-  .site-nav nav[aria-label="Sections"] a::after {
+  .nav-link::after {
     content: '';
     position: absolute;
     bottom: 0.35rem;
-    left: 0.25rem;
-    right: 0.25rem;
+    left: 0.35rem;
+    right: 0.35rem;
     height: 1px;
-    background: var(--color-accent);
+    background: var(--color-accent, #fff);
     transform: scaleX(0);
     transform-origin: left;
-    transition: transform 0.3s ease;
+    transition: transform 0.25s ease;
   }
-  .site-nav nav[aria-label="Sections"] a:hover,
-  .site-nav nav[aria-label="Sections"] a:focus-visible {
-    color: var(--color-accent-text);
+  .nav-link:hover,
+  .nav-link:focus-visible,
+  .nav-item:hover .nav-link,
+  .nav-item:focus-within .nav-link {
+    color: var(--color-accent-text, #fff);
     text-shadow: 0 0 12px rgba(240, 240, 240, 0.6);
   }
-  .site-nav nav[aria-label="Sections"] a:hover::after,
-  .site-nav nav[aria-label="Sections"] a:focus-visible::after {
+  .nav-link:hover::after,
+  .nav-link:focus-visible::after,
+  .nav-item:hover .nav-link::after,
+  .nav-item:focus-within .nav-link::after {
     transform: scaleX(1);
   }
-  /* Scrollspy active state: the underline stays on the visible section. */
-  .site-nav nav[aria-label="Sections"] a.active {
-    color: var(--color-accent-text);
+  .nav-link.active {
+    color: var(--color-accent-text, #fff);
   }
-  .site-nav nav[aria-label="Sections"] a.active::after {
+  .nav-link.active::after {
     transform: scaleX(1);
+  }
+  .nav-link:active {
+    transform: scale(0.96);
   }
 
-  /* Restrained mobile menu: square, monochrome, uppercase/tracked, 44px targets. */
+  /* Dropdown Chevron */
+  .dropdown-chevron {
+    opacity: 0.5;
+    transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+  }
+  .nav-item:hover .dropdown-chevron,
+  .nav-item:focus-within .dropdown-chevron {
+    transform: rotate(180deg);
+    opacity: 0.95;
+  }
+
+  /* Smooth-Transitioning Dropdown Menu */
+  .dropdown-menu {
+    position: absolute;
+    top: calc(100% - 0.25rem);
+    left: 50%;
+    transform: translateX(-50%) translateY(6px);
+    min-width: 220px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+      visibility 0.24s;
+    z-index: 150;
+  }
+  /* Hit-area bridge prevents accidental mouseout */
+  .dropdown-menu::before {
+    content: '';
+    position: absolute;
+    top: -14px;
+    left: 0;
+    right: 0;
+    height: 16px;
+  }
+  .nav-item:hover .dropdown-menu,
+  .nav-item:focus-within .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+  }
+  .dropdown-inner {
+    background: rgba(12, 12, 12, 0.96);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow:
+      0 16px 40px rgba(0, 0, 0, 0.8),
+      0 0 1px rgba(255, 255, 255, 0.25);
+    border-radius: 4px;
+    padding: 0.4rem 0;
+  }
+  .dropdown-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .dropdown-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(235, 235, 235, 0.75);
+    text-decoration: none;
+    transition: background-color 0.18s ease, color 0.18s ease, padding-left 0.18s ease;
+    white-space: nowrap;
+  }
+  .dropdown-kicker {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 0.08em;
+    min-width: 1.75rem;
+    transition: color 0.18s ease;
+  }
+  .dropdown-label {
+    flex: 1;
+  }
+  .dropdown-arrow {
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    font-size: 0.75rem;
+    color: var(--color-accent-text, #fff);
+  }
+  .dropdown-link:hover,
+  .dropdown-link:focus-visible {
+    background: rgba(255, 255, 255, 0.07);
+    color: #ffffff;
+    padding-left: 1.15rem;
+  }
+  .dropdown-link:hover .dropdown-kicker,
+  .dropdown-link:focus-visible .dropdown-kicker {
+    color: rgba(255, 255, 255, 0.9);
+  }
+  .dropdown-link:hover .dropdown-arrow,
+  .dropdown-link:focus-visible .dropdown-arrow {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* Mobile menu button */
   .menu-btn {
     display: none;
     align-items: center;
@@ -307,14 +619,13 @@ const isAbout = Astro.url.pathname === '/about' || Astro.url.pathname === '/abou
   .menu-btn:active {
     transform: scale(0.94);
   }
+
+  /* Mobile menu panel */
   .mobile-menu {
     border-top: 1px solid rgba(255, 255, 255, 0.15);
     background: rgba(10, 10, 10, 0.98);
     padding-bottom: env(safe-area-inset-bottom);
     overflow: hidden;
-    /* One smooth motion: the whole panel moves as a single unit.
-       No per-link stagger — that was the jitter source (mismatched
-       durations + close timer cutting the animation short). */
     opacity: 0;
     transform: translateY(-14px);
     transition: opacity 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
@@ -327,49 +638,74 @@ const isAbout = Astro.url.pathname === '/about' || Astro.url.pathname === '/abou
   .mobile-menu[hidden] {
     display: none;
   }
-  /* Link block: left-aligned text, centered as a block in the viewport. */
-  .mobile-menu nav {
-    display: flex;
-    justify-content: center;
-  }
-  .mobile-menu ul {
+  .mobile-nav-list {
     list-style: none;
     margin: 0;
-    padding: 0.5rem 0;
-    width: fit-content;
-    min-width: 12rem;
-  }
-  .mobile-menu a {
+    padding: 1.25rem 1.5rem;
     display: flex;
-    align-items: center;
-    min-height: 44px;
-    padding: 0.75rem 0;
+    flex-direction: column;
+    gap: 1.2rem;
+    max-height: calc(85vh - 4rem);
+    overflow-y: auto;
+  }
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .mobile-section-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    padding-bottom: 0.35rem;
+  }
+  .mobile-main-link {
     font-family: var(--font-display);
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: 0.82rem;
+    font-weight: 800;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(245, 245, 245, 0.8);
+    color: #ffffff;
     text-decoration: none;
-    text-align: left;
-    transition: color 0.25s ease, background-color 0.25s ease;
   }
-  .mobile-menu a:hover,
-  .mobile-menu a:focus-visible {
-    color: var(--color-accent-text);
-    background: rgba(255, 255, 255, 0.04);
+  .mobile-sub-list {
+    list-style: none;
+    margin: 0.3rem 0 0 0.5rem;
+    padding-left: 0.75rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
   }
-  .mobile-menu a:active {
-    transform: scale(0.98);
+  .mobile-sub-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 38px;
+    padding: 0.25rem 0;
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(245, 245, 245, 0.7);
+    text-decoration: none;
+    transition: color 0.2s ease, padding-left 0.2s ease;
+  }
+  .mobile-sub-kicker {
+    font-size: 0.6rem;
+    color: rgba(255, 255, 255, 0.35);
+    min-width: 1.6rem;
+  }
+  .mobile-sub-link:hover,
+  .mobile-sub-link:active {
+    color: var(--color-accent-text, #ffffff);
+    padding-left: 0.25rem;
   }
 
-  @media (max-width: 640px) {
-    .site-nav nav[aria-label="Sections"] ul { display: none; }
+  @media (max-width: 860px) {
+    .site-nav .desktop-nav { display: none; }
     .site-nav .menu-btn { display: inline-flex; }
     .nav-inner { gap: 1rem; }
     .wordmark-logo { height: 2.25rem; }
-    /* Opaque on small screens: the safe-area hierarchy is solid black,
-       and no hero chrome ghosts through the bar while scrolling. */
     .site-nav {
       background: #0a0a0a;
       backdrop-filter: none;
@@ -380,9 +716,12 @@ const isAbout = Astro.url.pathname === '/about' || Astro.url.pathname === '/abou
 
   @media (prefers-reduced-motion: reduce) {
     .mobile-menu,
-    .site-nav nav[aria-label="Sections"] a,
+    .dropdown-menu,
+    .dropdown-chevron,
+    .dropdown-link,
+    .site-nav nav a,
     .menu-btn {
-      transition: none;
+      transition: none !important;
     }
   }
 </style>

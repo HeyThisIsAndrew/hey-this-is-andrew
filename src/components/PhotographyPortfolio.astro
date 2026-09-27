@@ -17,6 +17,9 @@ interface DisplayPhoto {
   url: string;
   caption: string;
   category: 'cocktails' | 'bar' | 'product';
+  location: string;
+  venue?: string;
+  event?: string;
   permalink?: string;
 }
 
@@ -26,6 +29,9 @@ const displayPhotos: DisplayPhoto[] = instagramPhotos.length > 0
       url: p.url,
       caption: p.caption,
       category: p.category,
+      location: p.location || (p.category === 'bar' ? 'Bar & Venue' : categoryLabels[p.category]),
+      venue: p.venue,
+      event: p.event,
       permalink: p.permalink,
     }))
   : portfolioPhotos.map((p, idx) => ({
@@ -33,6 +39,7 @@ const displayPhotos: DisplayPhoto[] = instagramPhotos.length > 0
       url: `/portfolio/${p.file}`,
       caption: p.caption,
       category: p.category,
+      location: p.category === 'bar' ? 'Bar & Venue' : categoryLabels[p.category],
     }));
 
 // Distribute photos across 4 columns for visual rhythm.
@@ -90,7 +97,7 @@ const durations = [58, 74, 66, 82];
                       decoding="async"
                       crossorigin="anonymous"
                     />
-                    <span class="photo-tag">{categoryLabels[p.category] || 'Cocktails'}</span>
+                    <span class="photo-tag">{p.location || categoryLabels[p.category] || 'Cocktails'}</span>
                   </button>
                 );
               })}

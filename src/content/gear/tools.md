@@ -1,0 +1,27 @@
+---
+category: "Tools & Support"
+order: 4
+brand: "Zhiyun & SmallRig"
+subtitle: "Motorized 3-axis stabilization, carbon fiber legs, and modular cinema cages"
+items:
+  - name: "Zhiyun Weebill 3 Gimbal"
+    spec: "3-axis motorized camera stabilizer, built-in 1000-lumen fill light and noise-cancelling microphone, ergonomic Sling 2.0 wrist support for long shoot shifts."
+    brand: "Zhiyun"
+    affiliateUrl: "https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh"
+    tag: "3-Axis Gimbal"
+  - name: "Peak Design Carbon Fiber Tripod"
+    spec: "Ultra-compact zero-wasted-volume design, integrated ball head with Arca-Swiss quick-release, fast cam-lever leg deployment for mobile bar scouting."
+    brand: "Peak Design"
+    affiliateUrl: "https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh"
+    tag: "Carbon Travel Legs"
+  - name: "SmallRig Camera Cage & NATO Rig"
+    spec: "Form-fitting aluminum cage, ergonomic wooden top handle with ARRI locating holes, integrated NATO rails and cold-shoe mounts for quick monitor and mic mounting."
+    brand: "SmallRig"
+    affiliateUrl: "https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh"
+    tag: "Modular Rigging"
+  - name: "Kupo Steel C-Stands & Grip Arms"
+    spec: "Heavy-duty chrome-plated steel turtle base C-stands with 40-inch grip arms and 2.5-inch grip heads for overhead cocktail cameras and boom light positioning."
+    brand: "Kupo"
+    affiliateUrl: "https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh"
+    tag: "Overhead Grip"
+---

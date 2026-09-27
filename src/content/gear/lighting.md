@@ -1,0 +1,27 @@
+---
+category: "Lighting"
+order: 3
+brand: "Aputure & Sony"
+subtitle: "Studio point-source LED, magnetic RGB accent tubes, and radio wireless flash"
+items:
+  - name: "Aputure Amaran 200d"
+    spec: "200W Daylight (5600K) point-source LED, Bowens mount, 65,000 lux @ 1m with reflector. Key light for commercial beverage and tabletop setups."
+    brand: "Aputure"
+    affiliateUrl: "https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh"
+    tag: "200W Key Light"
+  - name: "Aputure Amaran PT1c"
+    spec: "1-foot battery-powered RGBWW LED pixel tube, magnetic endcaps, Sidus Link app control. Placed on bar shelves and dark corners for subtle practical rim light."
+    brand: "Aputure"
+    affiliateUrl: "https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh"
+    tag: "RGB Accent Tube"
+  - name: "Sony HVL-F60RM2"
+    spec: "GN60 high-output wireless radio flash, Quick Shift Bounce system, 20-200mm motorized zoom head, high-speed sync (HSS) with reliable multi-flash TTL."
+    brand: "Sony"
+    affiliateUrl: "https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh"
+    tag: "Radio Wireless TTL"
+  - name: "Aputure Light Dome Mini II"
+    spec: "21.5-inch quick-release parabolic softbox with 40-degree fabric grid and dual diffusion layers. Soft, directional light control without room spill."
+    brand: "Aputure"
+    affiliateUrl: "https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh"
+    tag: "Directional Spill"
+---

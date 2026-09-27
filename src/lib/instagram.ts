@@ -39,6 +39,9 @@ export interface InstagramPhoto {
   permalink: string;
   mediaType: string;
   category: 'cocktails' | 'bar' | 'product';
+  location: string;
+  venue?: string;
+  event?: string;
   timestamp: string;
   orientation: 'vertical' | 'horizontal' | 'square';
 }
@@ -234,6 +237,123 @@ export async function autoRefreshTokenIfNeeded(): Promise<boolean> {
 }
 
 /**
+ * CMS and Smart Default Location/Event extraction for Photography items
+ */
+export function extractPhotoLocation(caption: string, permalink = '', id = ''): {
+  location: string;
+  venue?: string;
+  event?: string;
+} {
+  // 1. Check CMS overrides file
+  try {
+    const overridesFile = path.resolve(process.cwd(), 'src/data/portfolio-overrides.json');
+    if (fs.existsSync(overridesFile)) {
+      const { overrides } = JSON.parse(fs.readFileSync(overridesFile, 'utf8'));
+      if (overrides) {
+        const key = Object.keys(overrides).find(k => 
+          (permalink && permalink.includes(k)) || 
+          (id && id === k) ||
+          (k && permalink === k)
+        );
+        if (key && overrides[key]) {
+          return {
+            location: overrides[key].location || overrides[key].venue || overrides[key].event,
+            venue: overrides[key].venue,
+            event: overrides[key].event,
+          };
+        }
+      }
+    }
+  } catch {
+    // Non-fatal
+  }
+
+  // 2. Smart default pattern matcher across captions, hashtags, and mentions
+  const lower = caption.toLowerCase();
+
+  if (lower.includes('desertescape') || lower.includes('desert escape') || lower.includes('palmsprings') || lower.includes('palm springs')) {
+    return {
+      location: 'Palm Springs',
+      venue: 'Ace Hotel',
+      event: 'Desert Escape 2026',
+    };
+  }
+
+  if (lower.includes('stonegroovestillhouse') || lower.includes('stone groove')) {
+    return {
+      location: 'Stone Groove Stillhouse',
+      venue: 'Stone Groove Stillhouse',
+      event: 'Hi-Fi Bar · Anaheim',
+    };
+  }
+
+  if (lower.includes('unsungbrewing') || lower.includes('unsung brewing')) {
+    return {
+      location: 'Unsung Brewing',
+      venue: 'Unsung Brewing',
+      event: 'Anaheim MAKE',
+    };
+  }
+
+  if (lower.includes('anaheimmake') || lower.includes('anaheim make')) {
+    return {
+      location: 'Anaheim MAKE',
+      venue: 'Anaheim MAKE Building',
+    };
+  }
+
+  if (lower.includes('melroseumbrellaco') || lower.includes('melrose umbrella')) {
+    return {
+      location: 'Melrose Umbrella Co.',
+      venue: 'Melrose Umbrella Co. · LA',
+    };
+  }
+
+  if (lower.includes('neuehouse')) {
+    return {
+      location: 'NeueHouse',
+      venue: 'NeueHouse Hollywood',
+    };
+  }
+
+  if (lower.includes('mrblack') || lower.includes('mr black')) {
+    return {
+      location: 'Mr Black Spirits',
+      venue: 'Craft Spirits Studio',
+    };
+  }
+
+  if (lower.includes('nitro.press') || lower.includes('nitropress') || lower.includes('nitro press')) {
+    return {
+      location: 'Nitro Press',
+      venue: 'Coffee & Nitro Studio',
+    };
+  }
+
+  if (lower.includes('anaheim')) {
+    return {
+      location: 'Anaheim, CA',
+    };
+  }
+
+  if (lower.includes('cocktail') || lower.includes('martini') || lower.includes('margarita') || lower.includes('carajillo')) {
+    return {
+      location: 'Craft Cocktail',
+    };
+  }
+
+  if (lower.includes('coffee') || lower.includes('latte')) {
+    return {
+      location: 'Coffee & Studio',
+    };
+  }
+
+  return {
+    location: 'Field Work',
+  };
+}
+
+/**
  * Categorize photo based on caption keywords
  */
 function categorizePhoto(caption: string): 'cocktails' | 'bar' | 'product' {
@@ -263,7 +383,16 @@ export async function getInstagramPhotos(limit = 32): Promise<InstagramPhoto[]> 
   try {
     const feedFile = path.resolve(process.cwd(), 'src/data/instagram-feed.json');
     if (fs.existsSync(feedFile)) {
-      fallbackData = JSON.parse(fs.readFileSync(feedFile, 'utf8'));
+      const raw = JSON.parse(fs.readFileSync(feedFile, 'utf8'));
+      fallbackData = raw.map((p: any) => {
+        const meta = extractPhotoLocation(p.fullCaption || p.caption || '', p.permalink, p.id);
+        return {
+          ...p,
+          location: p.location || meta.location,
+          venue: p.venue || meta.venue,
+          event: p.event || meta.event,
+        };
+      });
     }
   } catch {
     // Ignore
@@ -338,6 +467,7 @@ function processInstagramMedia(rawItems: any[], limit: number): InstagramPhoto[]
     if (item.children?.data?.length) {
       item.children.data.forEach((c: any) => {
         if (c.media_url && c.media_type !== 'VIDEO') {
+          const meta = extractPhotoLocation(rawCaption, item.permalink, c.id);
           photos.push({
             id: c.id,
             url: c.media_url,
@@ -346,6 +476,9 @@ function processInstagramMedia(rawItems: any[], limit: number): InstagramPhoto[]
             permalink: item.permalink,
             mediaType: 'CAROUSEL_ITEM',
             category,
+            location: meta.location,
+            venue: meta.venue,
+            event: meta.event,
             timestamp: item.timestamp,
             orientation: 'vertical',
           });
@@ -354,6 +487,7 @@ function processInstagramMedia(rawItems: any[], limit: number): InstagramPhoto[]
     } else {
       const url = item.media_type === 'VIDEO' ? item.thumbnail_url : item.media_url;
       if (url) {
+        const meta = extractPhotoLocation(rawCaption, item.permalink, item.id);
         photos.push({
           id: item.id,
           url,
@@ -362,6 +496,9 @@ function processInstagramMedia(rawItems: any[], limit: number): InstagramPhoto[]
           permalink: item.permalink,
           mediaType: item.media_type,
           category,
+          location: meta.location,
+          venue: meta.venue,
+          event: meta.event,
           timestamp: item.timestamp,
           orientation: 'vertical',
         });
