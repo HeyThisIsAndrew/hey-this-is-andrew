@@ -1,5 +1,5 @@
 ---
-import { Image } from 'astro:assets';
+import { getInstagramPhotos } from '../lib/instagram';
 import { portfolioPhotos, categoryLabels } from '../data/portfolio';
 import SectionHeader from './SectionHeader.astro';
 
@@ -9,23 +9,36 @@ import SectionHeader from './SectionHeader.astro';
 // aspect ratios — vertical and horizontal mix as part of the composition.
 // Clicking a photo zooms it into the fullscreen viewer (spatial system).
 
-// Import all portfolio images for Astro optimization.
-const images = import.meta.glob<{ default: ImageMetadata }>(
-  '../assets/portfolio/*.jpg',
-  { eager: true }
-);
+// Fetch live photos directly from Instagram Graph API (or cached local JSON)
+const instagramPhotos = await getInstagramPhotos(32);
 
-function imgFor(file: string) {
-  const key = `../assets/portfolio/${file}`;
-  return images[key]?.default;
+interface DisplayPhoto {
+  id: string;
+  url: string;
+  caption: string;
+  category: 'cocktails' | 'bar' | 'product';
+  permalink?: string;
 }
 
+const displayPhotos: DisplayPhoto[] = instagramPhotos.length > 0
+  ? instagramPhotos.map((p) => ({
+      id: p.id,
+      url: p.url,
+      caption: p.caption,
+      category: p.category,
+      permalink: p.permalink,
+    }))
+  : portfolioPhotos.map((p, idx) => ({
+      id: `fallback-${idx}`,
+      url: `/portfolio/${p.file}`,
+      caption: p.caption,
+      category: p.category,
+    }));
+
 // Distribute photos across 4 columns for visual rhythm.
-// Round-robin distribution keeps horizontals separated and adapts
-// automatically if photos are added or removed from portfolio.ts.
 const COLUMN_COUNT = 4;
 const columns: number[][] = Array.from({ length: COLUMN_COUNT }, () => []);
-portfolioPhotos.forEach((_, i) => {
+displayPhotos.forEach((_, i) => {
   columns[i % COLUMN_COUNT].push(i);
 });
 
@@ -34,6 +47,7 @@ const durations = [58, 74, 66, 82];
 ---
 
 <section id="photography" class="photo-section" aria-labelledby="photography-title">
+  <div class="photo-zoom-backdrop" aria-hidden="true"></div>
   <div class="photo-intro">
     <SectionHeader
       kicker="Photography"
@@ -45,7 +59,6 @@ const durations = [58, 74, 66, 82];
   </div>
 
   <div class="photo-stage-wrap">
-    <div class="photo-zoom-backdrop" aria-hidden="true"></div>
     <div id="camera-stage" class="camera-stage">
       <div class="photo-wall" role="region" aria-label="Photography portfolio, vertical image reels">
     {columns.map((col, ci) => (
@@ -58,9 +71,8 @@ const durations = [58, 74, 66, 82];
           {[0, 1].map((dup) => (
             <div class="photo-set" aria-hidden={dup === 1 ? 'true' : undefined}>
               {col.map((pi) => {
-                const p = portfolioPhotos[pi];
-                const img = imgFor(p.file);
-                if (!img) return null;
+                const p = displayPhotos[pi];
+                if (!p) return null;
                 return (
                   <button
                     type="button"
@@ -70,15 +82,15 @@ const durations = [58, 74, 66, 82];
                     aria-label={`View photo: ${p.caption}`}
                     tabindex={dup === 1 ? -1 : 0}
                   >
-                    <Image
-                      src={img}
+                    <img
+                      src={p.url}
                       alt={p.caption}
-                      width={440}
-                      densities={[1, 2]}
+                      width="440"
                       loading="lazy"
                       decoding="async"
+                      crossorigin="anonymous"
                     />
-                    <span class="photo-tag">{categoryLabels[p.category]}</span>
+                    <span class="photo-tag">{categoryLabels[p.category] || 'Cocktails'}</span>
                   </button>
                 );
               })}
@@ -99,13 +111,21 @@ const durations = [58, 74, 66, 82];
 
 <style>
   .photo-section {
+    position: relative;
     padding: var(--space-section) 0;
     overflow: hidden;
   }
   .photo-intro {
+    position: relative;
+    z-index: 10;
+    transition: opacity 0.4s ease;
     max-width: var(--maxw);
     margin: 0 auto;
     padding: 0 clamp(1.25rem, 4vw, 2.5rem);
+  }
+  .photo-section.is-zoomed .photo-intro {
+    opacity: 0;
+    pointer-events: none;
   }
 
   .photo-wall {
@@ -303,7 +323,8 @@ const durations = [58, 74, 66, 82];
     pointer-events: none;
     transition: opacity 0.5s ease;
   }
-  .photo-stage-wrap.is-zoomed .photo-zoom-backdrop {
+  .photo-stage-wrap.is-zoomed .photo-zoom-backdrop,
+  .photo-section.is-zoomed .photo-zoom-backdrop {
     opacity: 1;
     pointer-events: auto;
   }
@@ -437,6 +458,10 @@ const durations = [58, 74, 66, 82];
 
       const updatePlayState = () => {
         if (!reel.anim) return;
+        if (reel === frozenReel) {
+          if (reel.anim.playState === 'running') reel.anim.pause();
+          return;
+        }
         const shouldPlay =
           !zoomPaused && !reel.dragging && !reel.hoverPaused && reel.visible && reel.idleTimer === 0;
         if (shouldPlay && reel.anim.playState === 'paused') reel.anim.play();
@@ -560,24 +585,25 @@ const durations = [58, 74, 66, 82];
     let currentTx = 0;
     let currentTy = 0;
 
-    // Attach explicit click listener directly to each visible photo item button
-    const photoItems = Array.from(wall.querySelectorAll<HTMLElement>('.photo-item'));
-    photoItems.forEach((item) => {
-      item.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (isZoomed) {
-          if (item === activeTarget) {
-            // Clicking the active photo resets zoom
-            resetZoom();
-          } else {
-            // Clicking another photo pans the camera directly to it!
-            panToElement(item);
-          }
+    // Delegated click listener on wall so every item click (original or loop) is handled reliably
+    wall.addEventListener('click', (e) => {
+      const item = (e.target as HTMLElement).closest<HTMLElement>('.photo-item');
+      if (!item) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (isZoomed) {
+        if (item === activeTarget) {
+          // Clicking the active photo resets zoom
+          resetZoom();
         } else {
-          zoomToElement(item);
+          // Clicking another photo pans the camera directly to it!
+          panToElement(item);
         }
-      });
+      } else {
+        zoomToElement(item);
+      }
     });
 
     // ---- Stage-Transform Camera Dolly & Pan ----
@@ -648,17 +674,20 @@ const durations = [58, 74, 66, 82];
         zoomToElement(newTarget);
         return;
       }
+      if (newTarget === activeTarget) {
+        resetZoom();
+        return;
+      }
 
       // 1. Identify new column & freeze it, while resuming previously frozen column
       const column = newTarget.closest<HTMLElement>('.photo-column');
       const targetReel = reels.find((r) => r.column === column) ?? null;
 
-      if (frozenReel && frozenReel !== targetReel) {
-        if (frozenReel.anim && frozenReel.anim.playState === 'paused') {
-          frozenReel.anim.play();
-        }
-      }
+      const prevFrozen = frozenReel;
       frozenReel = targetReel;
+      if (prevFrozen && prevFrozen !== targetReel) {
+        prevFrozen.updatePlayState?.();
+      }
       if (targetReel?.anim && targetReel.anim.playState === 'running') {
         targetReel.anim.pause();
       }
@@ -711,21 +740,33 @@ const durations = [58, 74, 66, 82];
 
       document.body.style.overflow = '';
 
-      // Resume only the previously frozen reel:
-      if (frozenReel?.anim && frozenReel.anim.playState === 'paused') {
-        frozenReel.anim.play();
-      }
+      // Resume previously frozen reel:
+      const prevFrozen = frozenReel;
       frozenReel = null;
+      if (prevFrozen) {
+        prevFrozen.updatePlayState?.();
+      }
     }
 
-    // Clicking stage background when zoomed resets
+    // Clicking stage background or backdrop when zoomed resets
     stage.addEventListener('click', (e) => {
-      if (isZoomed) {
-        e.preventDefault();
-        e.stopPropagation();
-        resetZoom();
-      }
+      if (!isZoomed) return;
+      const item = (e.target as HTMLElement).closest('.photo-item');
+      if (item) return; // Handled by item/wall listener
+      e.preventDefault();
+      e.stopPropagation();
+      resetZoom();
     });
+
+    const backdrop = document.querySelector('.photo-zoom-backdrop');
+    if (backdrop) {
+      backdrop.addEventListener('click', (e) => {
+        if (isZoomed) {
+          e.preventDefault();
+          resetZoom();
+        }
+      });
+    }
 
     // Clicking stage wrapper outside photo items when zoomed resets
     stageWrap?.addEventListener('click', (e) => {

@@ -1,0 +1,24 @@
+name: Auto-Refresh Instagram Token
+
+on:
+  schedule:
+    # Run at 00:00 on day 1 of every month (tokens expire after 60 days, refreshing every 30 days ensures continuous validity)
+    - cron: '0 0 1 * *'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Refresh Instagram Token
+        run: node scripts/refresh-instagram-token.mjs
+        env:
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}

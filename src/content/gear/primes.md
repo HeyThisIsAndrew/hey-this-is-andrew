@@ -1,5 +1,5 @@
 ---
-category: "Prime Lenses"
+category: "Prime & Macro Lenses"
 order: 6
 items:
   - name: "Sony 24mm f/2.8 G"
@@ -10,4 +10,6 @@ items:
     spec: "Low-light normal, creamy rendering"
   - name: "Viltrox 85mm f/2.0 EVO"
     spec: "Short telephoto, subject separation"
+  - name: "Sony 90mm f/2.8 Macro G OSS"
+    spec: "1:1 product detail, beverage close-ups"
 ---

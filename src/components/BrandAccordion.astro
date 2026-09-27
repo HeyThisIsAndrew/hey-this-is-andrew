@@ -11,7 +11,21 @@ import SectionHeader from './SectionHeader.astro';
     {`Panel 1 of ${childBrands.length}: ${childBrands[0]?.name ?? ''}`}
   </div>
 
-  <div class="brand-stage-wrap">
+  <div id="brand-camera-viewport" class="brand-camera-viewport">
+    <button
+      type="button"
+      class="brand-camera-close-btn"
+      id="brand-camera-close-btn"
+      aria-label="Close brand view (Esc)"
+    >
+      <span class="esc-badge font-mono">ESC</span>
+      <span class="close-label font-mono">CLOSE</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+
     <div id="brand-camera-stage" class="brand-camera-stage">
       <div class="accordion-hero">
     {childBrands.map((brand, i) => {
@@ -80,7 +94,7 @@ import SectionHeader from './SectionHeader.astro';
                   <a class="btn btn-primary" href={brand.url} target="_blank" rel="noopener">
                     {brand.cta}
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                      <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M2 12L12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                   </a>
                   {brand.inquiryEmail && (
@@ -113,79 +127,8 @@ import SectionHeader from './SectionHeader.astro';
     </button>
       </div><!-- /.accordion-hero -->
     </div><!-- /#brand-camera-stage -->
-  </div><!-- /.brand-stage-wrap -->
-
-  <!-- FULLSCREEN BRAND ENVIRONMENT (Doorway Camera Destination) -->
-  <div id="brand-fullscreen-env" class="brand-fullscreen-env" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Brand Environment">
-    <div class="env-viewport">
-      {childBrands.map((brand, i) => (
-        <div class={`env-brand-view brand-${brand.id}`} data-env-index={i} data-env-id={brand.id}>
-          <div class="env-bg" aria-hidden="true">
-            {brand.mediaSrc && (
-              <Image src={brand.mediaSrc} alt="" class="env-bg-img" widths={[1280, 1920, 2560]} sizes="100vw" format="webp" loading="lazy" />
-            )}
-          </div>
-          <div class="env-scrims" aria-hidden="true"></div>
-
-          <header class="env-topbar">
-            <div class="env-meta font-mono">
-              <span class="env-lane-tag">THE LANES</span>
-              <span class="env-sep">/</span>
-              <span class="env-kicker">{brand.kicker}</span>
-            </div>
-            <button type="button" class="env-close-btn" aria-label="Close brand environment (Esc)">
-              <span class="env-close-key font-mono">ESC</span>
-              <span class="env-close-text">CLOSE</span>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-          </header>
-
-          <div class="env-content-stage">
-            <div class="env-content-inner">
-              {brand.logoSrc && (
-                <div class="env-logo-wrap">
-                  <Image class="env-logo" src={brand.logoSrc} alt="" widths={[240, 480]} sizes="240px" format="webp" aria-hidden="true" loading="lazy" />
-                </div>
-              )}
-              <span class="env-kicker-chip"><span class="chip chip--brand">{brand.kicker}</span></span>
-              {brand.id === 'be' ? (
-                <h2 class="display env-headline">WHERE NERD CULTURE<br />GETS CINEMATIC.</h2>
-              ) : (
-                <h2 class="display env-headline">{brand.headline}</h2>
-              )}
-              <p class="env-deck">{brand.deck}</p>
-
-              {brand.comingSoon ? (
-                <span class="teaser-tag">In the works</span>
-              ) : (
-                <div class="env-cta-row">
-                  <a class="btn btn-primary env-visit-btn" href={brand.url} target="_blank" rel="noopener">
-                    {brand.cta}
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                      <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </a>
-                  {brand.inquiryEmail && (
-                    <a
-                      class="inquiry-link env-inquiry-link"
-                      href={`mailto:${brand.inquiryEmail}?subject=${encodeURIComponent('Photography project inquiry')}`}
-                    >
-                      Start a project <span aria-hidden="true">→</span>
-                    </a>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
+  </div><!-- /.brand-camera-viewport -->
 </section>
-
 <style>
   /* Base Scoping per directives */
   .brand-accordion-section {
@@ -195,12 +138,26 @@ import SectionHeader from './SectionHeader.astro';
   }
 
   /* Brand camera stage: keeps normal position without hacky transforms. */
-  .brand-stage-wrap {
+  .brand-camera-viewport {
     overflow: hidden;
     position: relative;
+    width: 100%;
+  }
+  .brand-camera-viewport.is-zoomed {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    z-index: 1000;
+    background: #080808;
+    overflow: hidden;
   }
   .brand-camera-stage {
+    transform-origin: 0 0;
+    transition: transform 700ms cubic-bezier(0.25, 1, 0.5, 1);
+    will-change: transform;
     position: relative;
+    width: 100%;
   }
   /* The lanes get a visible editorial header; the accordion stays full-bleed. */
   .lanes-intro {
@@ -318,7 +275,7 @@ import SectionHeader from './SectionHeader.astro';
 
   .accordion-panel.is-coming-soon .panel-bg img {
     filter: blur(8px) grayscale(100%) brightness(0.4);
-    transform: scale(1.1);
+    transform: none;
   }
 
   /* Backgrounds & Scrims */
@@ -335,9 +292,8 @@ import SectionHeader from './SectionHeader.astro';
     height: 100%;
     object-fit: cover;
     filter: grayscale(100%) brightness(0.6) contrast(1.1);
-    transform: scale(1);
-    transition: transform 10s cubic-bezier(0.22, 0.61, 0.36, 1), filter 450ms ease;
-    transform-origin: center center;
+    transform: none;
+    transition: filter 450ms ease;
   }
 
   /* Hover frame, HQ style in monochrome: fades in on preview. */
@@ -817,189 +773,68 @@ import SectionHeader from './SectionHeader.astro';
     cursor: pointer;
   }
 
-  /* Fullscreen Brand Environment (Doorway Camera Destination) */
-  .brand-fullscreen-env {
+  /* ---- Camera Zoom State & Controls ---- */
+  .brand-camera-close-btn {
     position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100dvh;
-    z-index: 1000;
-    background: #080808;
-    overflow: hidden;
-    opacity: 0;
-    pointer-events: none;
-    clip-path: inset(0px 0px 0px 0px);
-    will-change: clip-path, opacity;
-  }
-  .brand-fullscreen-env.is-active {
-    opacity: 1;
-    pointer-events: auto;
-  }
-  .env-viewport {
-    position: relative;
-    width: 100%;
-    height: 100%;
-  }
-  .env-brand-view {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    display: none;
-  }
-  .env-brand-view.is-visible {
-    display: block;
-  }
-  .env-bg {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    background: #080808;
-  }
-  .env-bg-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    filter: grayscale(0%) brightness(0.85) contrast(1.08);
-  }
-  .env-scrims {
-    position: absolute;
-    inset: 0;
-    background:
-      linear-gradient(to top, rgba(8, 8, 8, 0.95) 0%, rgba(8, 8, 8, 0.6) 35%, transparent 60%),
-      linear-gradient(to right, rgba(8, 8, 8, 0.92) 0%, rgba(8, 8, 8, 0.4) 40%, transparent 70%);
-    pointer-events: none;
-  }
-  .env-topbar {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 72px;
-    padding: 0 clamp(1.5rem, 4vw, 3.5rem);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    z-index: 10;
-  }
-  .env-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    font-size: 0.72rem;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .env-lane-tag {
-    color: var(--ink);
-    font-weight: 700;
-  }
-  .env-sep {
-    color: rgba(255, 255, 255, 0.25);
-  }
-  .env-kicker {
-    color: var(--blood);
-  }
-  .env-close-btn {
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 1100;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(20, 20, 20, 0.75);
+    background: rgba(18, 18, 18, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    color: var(--ink);
-    padding: 0.5rem 0.9rem;
+    color: var(--ink, #fff);
+    padding: 0.5rem 0.85rem;
     cursor: pointer;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease, background 0.2s ease, border-color 0.2s ease;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
-  .env-close-btn:hover {
-    background: var(--ink);
+
+  .brand-camera-viewport.is-zoomed .brand-camera-close-btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .brand-camera-close-btn:hover {
+    background: #fff;
     color: #080808;
-    border-color: var(--ink);
+    border-color: #fff;
   }
-  .env-close-key {
-    font-size: 0.65rem;
-    padding: 0.1rem 0.35rem;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+
+  .brand-camera-close-btn .esc-badge {
+    font-size: 0.62rem;
+    padding: 0.12rem 0.35rem;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.25);
     color: inherit;
   }
-  .env-close-btn:hover .env-close-key {
-    background: rgba(0, 0, 0, 0.15);
+
+  .brand-camera-close-btn:hover .esc-badge {
+    background: rgba(0, 0, 0, 0.2);
     border-color: rgba(0, 0, 0, 0.3);
   }
-  .env-content-stage {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    padding: clamp(2rem, 5vw, 4.5rem);
-    padding-bottom: clamp(3rem, 6vw, 5rem);
-    z-index: 5;
+
+  /* When zoomed, hide auxiliary progress and play button so the brand panel fills cleanly */
+  .brand-camera-viewport.is-zoomed .bottom-progress-bar,
+  .brand-camera-viewport.is-zoomed .active-edge,
+  .brand-camera-viewport.is-zoomed .accordion-play-pause {
+    opacity: 0 !important;
+    pointer-events: none !important;
   }
-  .env-content-inner {
-    max-width: 52rem;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
+
+  .accordion-panel.active {
+    cursor: pointer;
   }
-  .env-logo-wrap {
-    margin-bottom: 1.5rem;
-  }
-  .env-logo {
-    height: 72px;
-    width: auto;
-    max-width: 260px;
-    object-fit: contain;
-    filter:
-      drop-shadow(0 0 18px rgba(240, 240, 240, 0.55))
-      drop-shadow(0 0 48px rgba(240, 240, 240, 0.30));
-  }
-  .brand-ccc .env-logo {
-    height: 110px;
-    max-width: 190px;
-  }
-  .env-kicker-chip {
-    margin-bottom: 1rem;
-  }
-  .env-headline {
-    font: 800 clamp(2.4rem, 4.5vw, 4.2rem) / 1.05 var(--font-display);
-    margin: 0 0 1.25rem;
-    text-transform: uppercase;
-    color: var(--ink);
-    letter-spacing: -0.01em;
-    text-wrap: balance;
-  }
-  .brand-be .env-headline {
-    max-width: 18ch;
-  }
-  .env-deck {
-    font: 500 clamp(0.95rem, 1.6vw, 1.15rem) / 1.7 var(--font-body);
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.72);
-    margin: 0 0 2rem;
-    max-width: 65ch;
-  }
-  .env-cta-row {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-  }
-  .env-visit-btn {
-    font-size: 0.95rem;
-    padding: 0.9rem 1.75rem;
-  }
-  .env-inquiry-link {
-    margin-top: 0;
-    font-size: 0.8rem;
+
+  .brand-camera-viewport.is-zoomed .accordion-panel.active {
+    cursor: default;
   }
 
   /* Reduced Motion */
@@ -1012,9 +847,8 @@ import SectionHeader from './SectionHeader.astro';
     .progress-fill {
       transition: none !important;
     }
-    .brand-fullscreen-env {
-      transition: opacity 0.2s ease !important;
-      clip-path: none !important;
+    .brand-camera-stage {
+      transition: none !important;
     }
   }
 </style>
@@ -1240,148 +1074,165 @@ import SectionHeader from './SectionHeader.astro';
     }
   }
 
-  /**
-   * BrandDoorwayCamera
-   * State Machine: IDLE -> OPENING -> OPEN -> CLOSING -> IDLE
-   * When the active brand panel is clicked:
-   * 1. Measures panel's screen rectangle (the doorway).
-   * 2. Sets initial clip-path to that exact rectangle.
-   * 3. Animates clip-path outward to 100vw x 100dvh (inset 0 0 0 0).
-   * 4. Completely covers the site in the selected brand's fullscreen environment.
-   * 5. Escape or clicking background reverses the doorway back into the panel.
-   */
-  class BrandDoorwayCamera {
-    private env: HTMLElement;
-    private brandViews: NodeListOf<HTMLElement>;
+  class BrandCameraController {
+    private viewport: HTMLElement;
+    private stage: HTMLElement;
     private accordion: BrandAccordion;
     private panels: HTMLElement[];
-    private state: 'IDLE' | 'OPENING' | 'OPEN' | 'CLOSING' = 'IDLE';
+    private closeBtn: HTMLButtonElement | null;
+    public isZoomed: boolean = false;
+    private isClosing: boolean = false;
     private activePanel: HTMLElement | null = null;
-    private closeButtons: NodeListOf<HTMLButtonElement>;
+    private initialStageLeft: number = 0;
+    private initialStageTop: number = 0;
 
-    constructor(env: HTMLElement, accordion: BrandAccordion, panels: HTMLElement[]) {
-      this.env = env;
+    constructor(viewport: HTMLElement, stage: HTMLElement, accordion: BrandAccordion, panels: HTMLElement[]) {
+      this.viewport = viewport;
+      this.stage = stage;
       this.accordion = accordion;
       this.panels = panels;
-      this.brandViews = env.querySelectorAll('.env-brand-view');
-      this.closeButtons = env.querySelectorAll('.env-close-btn');
+      this.closeBtn = viewport.querySelector<HTMLButtonElement>('.brand-camera-close-btn');
 
       this.init();
     }
 
     init() {
-      // Panel Click Handling
       this.panels.forEach((p, i) => {
         p.addEventListener('click', (e) => {
-          // If clicked a link or inquiry button, let it follow naturally
-          const link = (e.target as HTMLElement).closest('a, button.inquiry-link');
-          if (link) return;
+          const targetEl = e.target as HTMLElement;
+          const interactive = targetEl.closest('a, button');
+          if (interactive) return;
 
-          // If panel is NOT active yet: select that brand in accordion (do NOT launch camera)
+          if (this.isZoomed) {
+            e.preventDefault();
+            this.close();
+            return;
+          }
+
+          // Closed panel click: select brand in accordion, do NOT launch camera
           if (!p.classList.contains('active')) {
             this.accordion.goToPanel(i);
             return;
           }
 
-          // If panel IS already active: launch the fullscreen doorway camera!
+          // Active panel click: launch true camera zoom!
           e.preventDefault();
-          this.open(p, i);
+          this.open(p);
         });
       });
 
-      // Close buttons
-      this.closeButtons.forEach((btn) => {
-        btn.addEventListener('click', (e) => {
+      if (this.closeBtn) {
+        this.closeBtn.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
           this.close();
         });
-      });
+      }
 
-      // Background click in fullscreen environment (outside content inner) closes
-      this.env.addEventListener('click', (e) => {
-        if (this.state !== 'OPEN') return;
-        const target = e.target as HTMLElement;
-        // If clicking CTA button or link, do not close!
-        if (target.closest('a, button, .env-content-inner')) return;
-        this.close();
-      });
-
-      // Escape key closes
       window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && (this.state === 'OPEN' || this.state === 'OPENING')) {
+        if (e.key === 'Escape' && this.isZoomed) {
           e.preventDefault();
           this.close();
         }
       });
 
-      // Browser back/forward closes
       window.addEventListener('popstate', () => {
-        if (this.state === 'OPEN' || this.state === 'OPENING') {
+        if (this.isZoomed) {
           this.close();
         }
       });
+
+      window.addEventListener('resize', () => {
+        if (this.isZoomed && this.activePanel) {
+          this.recalculate();
+        }
+      });
     }
 
-    open(panel: HTMLElement, index: number) {
-      if (this.state !== 'IDLE') return;
-      this.state = 'OPENING';
+    open(panel: HTMLElement) {
+      if (this.isZoomed || this.isClosing) return;
+      this.isZoomed = true;
       this.activePanel = panel;
       this.accordion.freezeForZoom();
 
-      // 1. Measure active panel's viewport rectangle
-      const rect = panel.getBoundingClientRect();
-      const top = Math.max(0, rect.top);
-      const left = Math.max(0, rect.left);
-      const right = Math.max(0, window.innerWidth - rect.right);
-      const bottom = Math.max(0, window.innerHeight - rect.bottom);
+      // 1. Measure initial geometry
+      const targetRect = panel.getBoundingClientRect();
+      const stageRect = this.stage.getBoundingClientRect();
+      const vpWidth = window.innerWidth;
+      const vpHeight = window.innerHeight;
 
-      // 2. Activate matching brand view in fullscreen environment
-      this.brandViews.forEach((v, i) => {
-        if (i === index) {
-          v.classList.add('is-visible');
-        } else {
-          v.classList.remove('is-visible');
-        }
-      });
+      this.initialStageLeft = stageRect.left;
+      this.initialStageTop = stageRect.top;
 
-      // 3. Set initial clipping rectangle to exactly the active panel's doorway
-      this.env.style.transition = 'none';
-      this.env.style.clipPath = `inset(${top}px ${right}px ${bottom}px ${left}px)`;
-      this.env.classList.add('is-active');
-      this.env.setAttribute('aria-hidden', 'false');
+      // 2. Dynamic scale calculation to fill viewport completely
+      const scaleX = vpWidth / targetRect.width;
+      const scaleY = vpHeight / targetRect.height;
+      const scale = Math.max(scaleX, scaleY) * 1.004;
+
+      // 3. Target and viewport centers
+      const targetCenterX = targetRect.left + targetRect.width / 2;
+      const targetCenterY = targetRect.top + targetRect.height / 2;
+      const viewportCenterX = vpWidth / 2;
+      const viewportCenterY = vpHeight / 2;
+
+      // 4. Target center coordinates relative to stage (transform-origin 0 0)
+      const targetCX_stage = targetCenterX - stageRect.left;
+      const targetCY_stage = targetCenterY - stageRect.top;
+
+      // 5. Final camera translation so target center lands at viewport center
+      const tx = viewportCenterX - scale * targetCX_stage;
+      const ty = viewportCenterY - scale * targetCY_stage;
+
+      // 6. Enter zoomed viewport mode without jumping
+      this.viewport.classList.add('is-zoomed');
       document.body.style.overflow = 'hidden';
-
-      // 4. Force reflow, then animate clipping rectangle outward until it covers entire viewport
-      this.env.getBoundingClientRect();
 
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (reduced) {
-        this.env.style.clipPath = 'inset(0px 0px 0px 0px)';
-        this.state = 'OPEN';
+        this.stage.style.transition = 'none';
+        this.stage.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
         return;
       }
 
-      this.env.style.transition = 'clip-path 0.55s cubic-bezier(0.16, 1, 0.3, 1)';
-      this.env.style.clipPath = 'inset(0px 0px 0px 0px)';
+      this.stage.style.transition = 'none';
+      this.stage.style.transform = `translate3d(${this.initialStageLeft}px, ${this.initialStageTop}px, 0) scale(1)`;
 
-      setTimeout(() => {
-        if (this.state === 'OPENING') {
-          this.state = 'OPEN';
-        }
-      }, 560);
+      void this.stage.offsetWidth;
+
+      // 7. Transition camera stage to calculated destination
+      this.stage.style.transition = 'transform 700ms cubic-bezier(0.25, 1, 0.5, 1)';
+      this.stage.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
+    }
+
+    private recalculate() {
+      if (!this.activePanel) return;
+      const targetRect = this.activePanel.getBoundingClientRect();
+      const stageRect = this.stage.getBoundingClientRect();
+      const vpWidth = window.innerWidth;
+      const vpHeight = window.innerHeight;
+
+      const scaleX = vpWidth / targetRect.width;
+      const scaleY = vpHeight / targetRect.height;
+      const scale = Math.max(scaleX, scaleY) * 1.004;
+
+      const targetCenterX = targetRect.left + targetRect.width / 2;
+      const targetCenterY = targetRect.top + targetRect.height / 2;
+      const viewportCenterX = vpWidth / 2;
+      const viewportCenterY = vpHeight / 2;
+
+      const targetCX_stage = targetCenterX - stageRect.left;
+      const targetCY_stage = targetCenterY - stageRect.top;
+
+      const tx = viewportCenterX - scale * targetCX_stage;
+      const ty = viewportCenterY - scale * targetCY_stage;
+
+      this.stage.style.transition = 'none';
+      this.stage.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
     }
 
     close() {
-      if (this.state !== 'OPEN' && this.state !== 'OPENING') return;
-      this.state = 'CLOSING';
-
-      // Measure current panel rectangle
-      const rect = this.activePanel ? this.activePanel.getBoundingClientRect() : null;
-      const top = rect ? Math.max(0, rect.top) : window.innerHeight / 2;
-      const left = rect ? Math.max(0, rect.left) : window.innerWidth / 2;
-      const right = rect ? Math.max(0, window.innerWidth - rect.right) : window.innerWidth / 2;
-      const bottom = rect ? Math.max(0, window.innerHeight - rect.bottom) : window.innerHeight / 2;
+      if (!this.isZoomed || this.isClosing) return;
+      this.isClosing = true;
 
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (reduced) {
@@ -1389,22 +1240,33 @@ import SectionHeader from './SectionHeader.astro';
         return;
       }
 
-      this.env.style.transition = 'clip-path 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.45s ease';
-      this.env.style.clipPath = `inset(${top}px ${right}px ${bottom}px ${left}px)`;
+      // Reverse exact camera movement back to resting position
+      this.stage.style.transition = 'transform 700ms cubic-bezier(0.25, 1, 0.5, 1)';
+      this.stage.style.transform = `translate3d(${this.initialStageLeft}px, ${this.initialStageTop}px, 0) scale(1)`;
+
+      const onEnd = (e: TransitionEvent) => {
+        if (e.target !== this.stage || e.propertyName !== 'transform') return;
+        this.stage.removeEventListener('transitionend', onEnd);
+        this.cleanup();
+      };
+
+      this.stage.addEventListener('transitionend', onEnd);
 
       setTimeout(() => {
-        this.cleanup();
-      }, 460);
+        if (this.isClosing) {
+          this.stage.removeEventListener('transitionend', onEnd);
+          this.cleanup();
+        }
+      }, 750);
     }
 
     private cleanup() {
-      this.env.classList.remove('is-active');
-      this.env.setAttribute('aria-hidden', 'true');
-      this.env.style.clipPath = 'inset(0px 0px 0px 0px)';
-      this.env.style.transition = 'none';
+      this.stage.style.transition = 'none';
+      this.stage.style.transform = 'translate3d(0, 0, 0) scale(1)';
+      this.viewport.classList.remove('is-zoomed');
       document.body.style.overflow = '';
-      this.brandViews.forEach((v) => v.classList.remove('is-visible'));
-      this.state = 'IDLE';
+      this.isZoomed = false;
+      this.isClosing = false;
       this.activePanel = null;
       this.accordion.resumeFromZoom();
     }
@@ -1412,13 +1274,12 @@ import SectionHeader from './SectionHeader.astro';
 
   const initAccordion = () => {
     const hero = document.querySelector('.accordion-hero') as HTMLElement;
-    const env = document.getElementById('brand-fullscreen-env') as HTMLElement;
-    if (!hero) return;
+    const viewport = document.getElementById('brand-camera-viewport') as HTMLElement;
+    const stage = document.getElementById('brand-camera-stage') as HTMLElement;
+    if (!hero || !viewport || !stage) return;
     const accordion = new BrandAccordion(hero);
     const panels = Array.from(hero.querySelectorAll<HTMLElement>('.accordion-panel'));
-    if (env) {
-      new BrandDoorwayCamera(env, accordion, panels);
-    }
+    new BrandCameraController(viewport, stage, accordion, panels);
   };
 
   initAccordion();
