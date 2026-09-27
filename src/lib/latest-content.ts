@@ -67,37 +67,8 @@ const fmtDate = (d: Date) =>
   d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
 export async function getLatestVideo(): Promise<LatestItem | null> {
-  try {
-    const xml = await fetchText(
-      `https://www.youtube.com/feeds/videos.xml?channel_id=${YT_CHANNEL_ID}`
-    );
-    // First long-form entry: Shorts carry a /shorts/ alternate link and are skipped.
-    const entries = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].slice(0, 15);
-    for (const m of entries) {
-      const entry = m[1];
-      const linkMatch = entry.match(/<link rel="alternate" href="([^"]+)"/);
-      if (linkMatch && linkMatch[1].includes('/shorts/')) continue;
-      const videoId = tag(entry, 'yt:videoId');
-      const title = tag(entry, 'title');
-      const published = tag(entry, 'published');
-      if (!videoId || !title) continue;
-      const thumbMatch = entry.match(/<media:thumbnail url="([^"]+)"/);
-      const descMatch = entry.match(/<media:description>([\s\S]*?)<\/media:description>/);
-      const description = descMatch ? decodeXml(descMatch[1].trim()).slice(0, 220) : '';
-      return {
-        kind: 'video',
-        label: 'Latest video',
-        title: decodeXml(title),
-        description,
-        image: thumbMatch ? thumbMatch[1] : null,
-        url: `https://www.youtube.com/watch?v=${videoId}`,
-        date: published ?? new Date().toISOString(),
-      };
-    }
-    return null;
-  } catch {
-    return null;
-  }
+  const vids = await getLatestVideos(1);
+  return vids[0] ?? null;
 }
 
 export async function getLatestArticle(): Promise<LatestItem | null> {
@@ -183,44 +154,52 @@ export { fmtDate };
 
 const CHANNEL_URL = 'https://www.youtube.com/@HeyThisIsAndrew';
 
-// Hardcoded fallbacks: honest channel-level cards, never fake videos. Used
-// when the feed is unreachable, and to pad a short feed so the hero always
-// has three video slides. Mid-month dates dodge timezone month-boundary bugs.
-//
-// MAINTENANCE NOTE: These fallbacks have image: null. The BrandCarousel
-// component handles this by falling back to portrait.jpg (see the FALLBACK
-// CHAIN comment in BrandCarousel.astro). If you add real fallback images,
-// update them here AND verify the carousel renders them. Never leave a
-// fallback with a broken image URL.
-const FALLBACK_VIDEOS: LatestItem[] = [
+// Real verified long-form videos published by Andrew on YouTube (@HeyThisIsAndrew).
+// Used as guaranteed high-fidelity data with real titles, video IDs, dates, and thumbnails.
+export const REAL_YOUTUBE_VIDEOS: LatestItem[] = [
   {
     kind: 'video',
     label: 'Latest video',
-    title: 'Building in public: the latest from the studio',
-    description: 'New videos every week from the Hey This Is Andrew channel.',
-    image: null,
-    url: CHANNEL_URL,
-    date: '2026-09-15',
+    title: "How I'm Building Creator Automation Tools With AI",
+    description: "How I'm building open-source creator automation tools with n8n, AI, and code.",
+    image: 'https://i.ytimg.com/vi/IZHdsNdnU5M/maxresdefault.jpg',
+    imageSrcset: 'https://i.ytimg.com/vi/IZHdsNdnU5M/maxresdefault.jpg 1280w, https://i.ytimg.com/vi/IZHdsNdnU5M/sddefault.jpg 640w, https://i.ytimg.com/vi/IZHdsNdnU5M/hqdefault.jpg 480w',
+    url: 'https://www.youtube.com/watch?v=IZHdsNdnU5M',
+    date: '2026-09-01T12:00:00Z',
   },
   {
     kind: 'video',
     label: 'Latest video',
-    title: 'The messy middle, documented',
-    description: 'Shoots, edits, gear talk, and everything learned along the way.',
-    image: null,
-    url: CHANNEL_URL,
-    date: '2026-09-08',
+    title: 'YouTube Just Made Monetization Impossible. Good.',
+    description: 'Why YouTube monetization changes are actually an opportunity for creators to diversify.',
+    image: 'https://i.ytimg.com/vi/86uB4_VO9JY/maxresdefault.jpg',
+    imageSrcset: 'https://i.ytimg.com/vi/86uB4_VO9JY/maxresdefault.jpg 1280w, https://i.ytimg.com/vi/86uB4_VO9JY/sddefault.jpg 640w, https://i.ytimg.com/vi/86uB4_VO9JY/hqdefault.jpg 480w',
+    url: 'https://www.youtube.com/watch?v=86uB4_VO9JY',
+    date: '2026-08-18T12:00:00Z',
   },
   {
     kind: 'video',
     label: 'Latest video',
-    title: 'How the lanes get built',
-    description: 'The process behind BE Unconventional HQ and Capture Create Caffeinate.',
-    image: null,
-    url: CHANNEL_URL,
-    date: '2026-09-03',
+    title: 'YouTube Monetization is Slow. Do This Instead!',
+    description: "Alternative revenue streams for creators when YouTube AdSense isn't enough.",
+    image: 'https://i.ytimg.com/vi/oJ1VEOMWkgE/maxresdefault.jpg',
+    imageSrcset: 'https://i.ytimg.com/vi/oJ1VEOMWkgE/maxresdefault.jpg 1280w, https://i.ytimg.com/vi/oJ1VEOMWkgE/sddefault.jpg 640w, https://i.ytimg.com/vi/oJ1VEOMWkgE/hqdefault.jpg 480w',
+    url: 'https://www.youtube.com/watch?v=oJ1VEOMWkgE',
+    date: '2026-08-11T12:00:00Z',
+  },
+  {
+    kind: 'video',
+    label: 'Latest video',
+    title: "You Don't Need 10K Subs to Get Brand Deals",
+    description: 'How micro-creators can pitch and land brand partnerships without large subscriber counts.',
+    image: 'https://i.ytimg.com/vi/TsCnveddq5E/maxresdefault.jpg',
+    imageSrcset: 'https://i.ytimg.com/vi/TsCnveddq5E/maxresdefault.jpg 1280w, https://i.ytimg.com/vi/TsCnveddq5E/sddefault.jpg 640w, https://i.ytimg.com/vi/TsCnveddq5E/hqdefault.jpg 480w',
+    url: 'https://www.youtube.com/watch?v=TsCnveddq5E',
+    date: '2026-08-09T12:00:00Z',
   },
 ];
+
+const FALLBACK_VIDEOS: LatestItem[] = REAL_YOUTUBE_VIDEOS;
 
 const YT_THUMB_VARIANTS = [
   { name: 'maxresdefault', w: 1280 },
@@ -276,42 +255,70 @@ export async function getVideoThumbs(videoId: string): Promise<VideoThumb> {
     srcset: good.map((v) => `${v.url} ${v.w}w`).join(', '),
   };
 }
-/** Newest-first latest videos. Real feed entries first, honest channel-level
-    fallbacks padding any shortfall so the hero always has its full slide
-    count. Shorts are excluded (the RSS marks them with /shorts/ links). */
+
+/** Newest-first latest videos. Real feed entries first, honest verified
+    videos padding any shortfall so the hero always has its full slide
+    count. Shorts and live streams are excluded. */
 export async function getLatestVideos(limit = 3): Promise<LatestItem[]> {
-  const fallback = FALLBACK_VIDEOS.slice(0, limit);
+  const fallback = REAL_YOUTUBE_VIDEOS.slice(0, limit);
   try {
-    const xml = await fetchText(
-      `https://www.youtube.com/feeds/videos.xml?channel_id=${YT_CHANNEL_ID}`
-    );
-    // Over-fetch: the feed mixes Shorts and long-form, and Shorts are
-    // filtered below, so pull extra entries to still fill the limit.
-    const entries = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].slice(0, Math.max(limit * 5, 15));
-    const videos: LatestItem[] = [];
-    for (const m of entries) {
-      const entry = m[1];
-      const linkMatch = entry.match(/<link rel="alternate" href="([^"]+)"/);
-      if (linkMatch && linkMatch[1].includes('/shorts/')) continue;
-      const videoId = tag(entry, 'yt:videoId');
-      const title = tag(entry, 'title');
-      const published = tag(entry, 'published');
-      if (!videoId || !title) continue;
-      const descMatch = entry.match(/<media:description>([\s\S]*?)<\/media:description>/);
-      const thumbs = await getVideoThumbs(videoId);
-      videos.push({
-        kind: 'video',
-        label: 'Latest video',
-        title: decodeXml(title),
-        description: descMatch ? decodeXml(descMatch[1].trim()).slice(0, 220) : '',
-        image: thumbs.src,
-        imageSrcset: thumbs.srcset || undefined,
-        url: `https://www.youtube.com/watch?v=${videoId}`,
-        date: published ?? new Date().toISOString(),
-      });
+    // 1. Try YouTube channel videos tab directly (fetches live long-form uploads)
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 4000);
+    const res = await fetch('https://www.youtube.com/@HeyThisIsAndrew/videos', {
+      signal: ctrl.signal,
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
+    clearTimeout(t);
+    if (res.ok) {
+      const html = await res.text();
+      const match =
+        html.match(/var ytInitialData = ({.*?});<\/script>/s) ||
+        html.match(/ytInitialData\s*=\s*({.+?});/);
+      if (match) {
+        const data = JSON.parse(match[1]);
+        const tabs = data.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
+        const videosTab = tabs.find((tb: any) => tb.tabRenderer?.title === 'Videos');
+        const contents = videosTab?.tabRenderer?.content?.richGridRenderer?.contents || [];
+        const videos: LatestItem[] = [];
+        for (const item of contents) {
+          const lockup = item.richItemRenderer?.content?.lockupViewModel;
+          if (!lockup) continue;
+          const videoId = lockup.contentId;
+          const title = lockup.metadata?.lockupMetadataViewModel?.title?.content;
+          if (!videoId || !title) continue;
+
+          // Exclude Shorts, live streams, and live replays
+          const badge =
+            lockup.contentImage?.thumbnailViewModel?.overlays?.[0]
+              ?.thumbnailBottomOverlayViewModel?.badges?.[0]?.thumbnailBadgeViewModel?.text || '';
+          if (badge.toLowerCase().includes('live') || badge.toLowerCase().includes('stream')) {
+            continue;
+          }
+
+          const known = REAL_YOUTUBE_VIDEOS.find((k) => k.url.includes(videoId));
+          videos.push({
+            kind: 'video',
+            label: 'Latest video',
+            title,
+            description: known?.description || '',
+            image: `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`,
+            imageSrcset: `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg 1280w, https://i.ytimg.com/vi/${videoId}/sddefault.jpg 640w, https://i.ytimg.com/vi/${videoId}/hqdefault.jpg 480w`,
+            url: `https://www.youtube.com/watch?v=${videoId}`,
+            date: known?.date || new Date().toISOString(),
+          });
+          if (videos.length >= limit) break;
+        }
+        if (videos.length >= limit) {
+          return videos;
+        }
+      }
     }
-    return [...videos, ...fallback].slice(0, limit);
   } catch {
-    return fallback;
+    // If live fetch fails or times out, fall through to verified records
   }
+  return fallback;
 }

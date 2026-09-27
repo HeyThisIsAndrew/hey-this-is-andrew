@@ -285,6 +285,11 @@ const durations = [58, 74, 66, 82];
     position: relative;
     width: 100%;
   }
+  .photo-stage-wrap.is-zoomed,
+  .photo-section.is-zoomed {
+    overflow: visible;
+    z-index: 50;
+  }
 
   .camera-stage {
     transform-origin: center center;
@@ -296,6 +301,16 @@ const durations = [58, 74, 66, 82];
 
   .camera-stage.is-zoomed {
     cursor: zoom-out;
+    z-index: 50;
+  }
+
+  .camera-stage.is-zoomed .photo-wall {
+    mask-image: none !important;
+    -webkit-mask-image: none !important;
+  }
+
+  .camera-stage.is-zoomed .photo-column {
+    overflow: visible;
   }
 
   .camera-stage.is-zoomed .photo-item {
@@ -309,6 +324,11 @@ const durations = [58, 74, 66, 82];
   .photo-item[data-camera-zoom] {
     cursor: pointer;
   }
+  @media (prefers-reduced-motion: reduce) {
+    .camera-stage {
+      transition-duration: 0.01ms !important;
+    }
+  }
 </style>
 
 <script>
@@ -317,6 +337,7 @@ const durations = [58, 74, 66, 82];
     const wall = document.querySelector('.photo-wall');
     const stage = document.getElementById('camera-stage');
     const stageWrap = document.querySelector('.photo-stage-wrap');
+    const photoSection = document.querySelector('.photo-section');
     if (!wall || !stage || !('requestAnimationFrame' in window)) return;
     wall.classList.add('js-reels');
 
@@ -325,11 +346,11 @@ const durations = [58, 74, 66, 82];
     const IDLE_RESUME_MS = 2500;
     const DRAG_THRESHOLD_PX = 8;
     const WHEEL_NUDGE = 0.35;
-    const SCALE = 2.2;
 
     let zoomPaused = false;
     let isZoomed = false;
     let activeTarget: HTMLElement | null = null;
+    let frozenReel: Reel | null = null;
 
     interface Reel {
       column: HTMLElement;
@@ -428,78 +449,54 @@ const durations = [58, 74, 66, 82];
       let startY = 0;
       let startTime = 0;
       let moved = 0;
-      let suppressClick = false;
-      let captured = false;
+      let isPointerActive = false;
 
       column.addEventListener('pointerdown', (e) => {
         if (isZoomed) return;
         if (e.isPrimary === false) return;
         if (e.pointerType === 'mouse' && e.button !== 0) return;
         startY = e.clientY;
-        startTime = reel.anim?.currentTime ?? 0;
+        startTime = typeof reel.anim?.currentTime === 'number' ? reel.anim.currentTime : 0;
         moved = 0;
-        captured = false;
-        reel.dragging = true;
-        window.clearTimeout(reel.idleTimer);
-        reel.idleTimer = 0;
-        updatePlayState();
-        wall.classList.add('is-dragging');
+        isPointerActive = true;
       });
 
       column.addEventListener('pointermove', (e) => {
-        if (!reel.dragging || e.isPrimary === false) return;
+        if (!isPointerActive || isZoomed || e.isPrimary === false) return;
         const dy = e.clientY - startY;
         moved = Math.max(moved, Math.abs(dy));
         if (moved > DRAG_THRESHOLD_PX) {
-          e.preventDefault();
-          if (!captured) {
-            try {
-              column.setPointerCapture(e.pointerId);
-              captured = true;
-            } catch {
-              /* capture unavailable */
-            }
+          reel.dragging = true;
+          wall.classList.add('is-dragging');
+          window.clearTimeout(reel.idleTimer);
+          reel.idleTimer = 0;
+          updatePlayState();
+
+          if (reel.anim && typeof startTime === 'number') {
+            const dt = (dy / reel.setH) * reel.baseDuration * 1000;
+            reel.anim.currentTime = startTime + (reel.direction === 1 ? dt : -dt);
           }
-        }
-        if (reel.anim && typeof startTime === 'number') {
-          const dt = (dy / reel.setH) * reel.baseDuration * 1000;
-          reel.anim.currentTime = startTime + (reel.direction === 1 ? dt : -dt);
         }
       });
 
-      const endDrag = (e: PointerEvent) => {
-        if (!reel.dragging) return;
-        reel.dragging = false;
-        wall.classList.remove('is-dragging');
-        if (moved > DRAG_THRESHOLD_PX) {
-          suppressClick = true;
-          window.setTimeout(() => {
-            suppressClick = false;
-          }, 120);
-        }
-        pauseIdle();
-        if (captured) {
-          captured = false;
-          try {
-            if (column.hasPointerCapture(e.pointerId)) {
-              column.releasePointerCapture(e.pointerId);
-            }
-          } catch {
-            /* already released */
-          }
+      const endDrag = () => {
+        if (!isPointerActive) return;
+        isPointerActive = false;
+        if (reel.dragging) {
+          reel.dragging = false;
+          wall.classList.remove('is-dragging');
+          pauseIdle();
         }
       };
       column.addEventListener('pointerup', endDrag);
       column.addEventListener('pointercancel', endDrag);
-      window.addEventListener('pointerup', endDrag);
 
       column.addEventListener(
         'click',
         (e) => {
-          if (suppressClick) {
+          if (reel.dragging || moved > DRAG_THRESHOLD_PX) {
             e.preventDefault();
             e.stopPropagation();
-            suppressClick = false;
           }
         },
         true
@@ -543,6 +540,20 @@ const durations = [58, 74, 66, 82];
     reels.forEach(measure);
     window.addEventListener('resize', () => reels.forEach(measure));
 
+    // Attach explicit click listener directly to each visible photo item button
+    const photoItems = Array.from(wall.querySelectorAll<HTMLElement>('.photo-item'));
+    photoItems.forEach((item) => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isZoomed) {
+          resetZoom();
+        } else {
+          zoomToElement(item);
+        }
+      });
+    });
+
     // ---- Stage-Transform Camera Dolly ----
     function zoomToElement(target: HTMLElement) {
       if (isZoomed) {
@@ -550,7 +561,24 @@ const durations = [58, 74, 66, 82];
         return;
       }
 
-      // 1. Capture geometry BEFORE transforming
+      // 1. Identify clicked item & its column
+      const column = target.closest<HTMLElement>('.photo-column');
+      const targetReel = reels.find((r) => r.column === column) ?? null;
+
+      // 2. Freeze ONLY the selected item visually:
+      // By pausing only the target column's reel animation, the selected item
+      // stays anchored/frozen in place while neighboring reels to left and right
+      // remain active and part of the living environment.
+      frozenReel = targetReel;
+      if (targetReel?.anim && targetReel.anim.playState === 'running') {
+        targetReel.anim.pause();
+      }
+
+      // 3. Capture geometry BEFORE transforming
+      const stageRect = stage.getBoundingClientRect();
+      const stageCX = stageRect.left + stageRect.width / 2;
+      const stageCY = stageRect.top + stageRect.height / 2;
+
       const rect = target.getBoundingClientRect();
       const imgCX = rect.left + rect.width / 2;
       const imgCY = rect.top + rect.height / 2;
@@ -558,23 +586,29 @@ const durations = [58, 74, 66, 82];
       const vpCX = window.innerWidth / 2;
       const vpCY = window.innerHeight / 2;
 
-      const dx = vpCX - imgCX;
-      const dy = vpCY - imgCY;
+      // Camera scale: fills the viewport with target as clear focal point
+      const scaleX = window.innerWidth / rect.width;
+      const scaleY = window.innerHeight / rect.height;
+      const targetScale = Math.max(2.2, Math.min(2.8, Math.max(scaleX * 0.82, scaleY * 0.82)));
 
-      // 2. Pause reels/elevator
-      pauseReels();
+      // Exact camera offset with center-origin math:
+      // scale(SCALE) translate(tx, ty) maps target center to viewport center
+      const tx = (vpCX - stageCX) / targetScale - (imgCX - stageCX);
+      const ty = (vpCY - stageCY) / targetScale - (imgCY - stageCY);
 
-      // 3. Mark state
+      // 4. Mark state
       isZoomed = true;
       activeTarget = target;
       target.classList.add('is-active');
       stage.classList.add('is-zoomed');
+      stageWrap?.classList.add('is-zoomed');
+      photoSection?.classList.add('is-zoomed');
 
-      // 4. Lock body scrolling
+      // 5. Lock body scrolling
       document.body.style.overflow = 'hidden';
 
-      // 5. Apply the single transform to the entire stage
-      stage.style.transform = `scale(${SCALE}) translate(${dx / SCALE}px, ${dy / SCALE}px)`;
+      // 6. Apply camera transform to entire stage
+      stage.style.transform = `scale(${targetScale}) translate(${tx}px, ${ty}px)`;
     }
 
     function resetZoom() {
@@ -583,6 +617,8 @@ const durations = [58, 74, 66, 82];
       isZoomed = false;
       stage.style.transform = 'none';
       stage.classList.remove('is-zoomed');
+      stageWrap?.classList.remove('is-zoomed');
+      photoSection?.classList.remove('is-zoomed');
 
       if (activeTarget) {
         activeTarget.classList.remove('is-active');
@@ -590,22 +626,20 @@ const durations = [58, 74, 66, 82];
       }
 
       document.body.style.overflow = '';
-      resumeReels();
+
+      // Resume only the previously frozen reel:
+      if (frozenReel?.anim && frozenReel.anim.playState === 'paused') {
+        frozenReel.anim.play();
+      }
+      frozenReel = null;
     }
 
-    // Click handler on stage
+    // Clicking stage background when zoomed resets
     stage.addEventListener('click', (e) => {
       if (isZoomed) {
         e.preventDefault();
         e.stopPropagation();
         resetZoom();
-        return;
-      }
-
-      const item = (e.target as HTMLElement).closest('.photo-item') as HTMLElement | null;
-      if (item) {
-        e.preventDefault();
-        zoomToElement(item);
       }
     });
 

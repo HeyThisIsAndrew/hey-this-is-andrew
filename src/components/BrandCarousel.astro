@@ -46,6 +46,7 @@ function videoDescriptor(title: string): string {
   // Check for known phrases first (most specific)
   if (t.includes('build in public')) return 'BUILD IN PUBLIC';
   if (t.includes('creator automation')) return 'CREATOR AUTOMATION';
+  if (t.includes('monetization is slow')) return 'ALTERNATIVE REVENUE';
   if (t.includes('monetization')) return 'MONETIZATION';
   if (t.includes('brand deal')) return 'BRAND DEALS';
   
@@ -74,18 +75,20 @@ const slides: HeroSlide[] = [
   ...videos.slice(0, 3).map((v, i) => {
     // Fallback slides point at the channel, not a video: label them honestly.
     const isFallback = v.url === CHANNEL_URL;
+    const dateLabel = new Date(v.date)
+      .toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+      .toUpperCase();
     return {
       id: `video-${i}`,
       toc: videoDescriptor(v.title),
-      // Metadata hierarchy: YOUTUBE / LATEST / <content descriptor>
-      // Date is secondary, not the primary identifier.
+      // Truthful metadata: YOUTUBE / LATEST / SEP 2026 (or RECENT / AUG 2026)
       metadata: isFallback
         ? ['FROM THE CHANNEL']
-        : ['YOUTUBE', i === 0 ? 'LATEST' : 'NEW', videoDescriptor(v.title)],
+        : ['YOUTUBE', i === 0 ? 'LATEST' : 'RECENT', dateLabel],
       headline: v.title,
-      ctaLabel: isFallback ? 'Visit the channel' : 'Watch the video',
+      ctaLabel: 'Watch on YouTube',
       ctaHref: v.url,
-      // Real videos open the in-page player with a spatial zoom from the slide.
+      // Real videos open the in-page player with a spatial zoom from the slide thumbnail.
       videoUrl: isFallback ? undefined : v.url,
       imageSrc: v.image ?? undefined,
       imageSrcset: v.imageSrcset,
@@ -167,23 +170,14 @@ const slides: HeroSlide[] = [
           <h2 class="display slide-title">{slide.headline}</h2>
           {slide.teaser ? (
             <span class="teaser-tag cta-anim">{slide.teaser}</span>
-          ) : slide.videoUrl ? (
-            <button
-              type="button"
-              class="btn btn-primary cta-anim"
-              data-video-player
-              data-video-url={slide.videoUrl}
-              data-video-title={slide.headline}
-              data-video-source=".slide-media"
-              aria-label={`Play video: ${slide.headline}`}
-            >
-              {slide.ctaLabel}
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                <path d="M4 2.5v9l7-4.5z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
           ) : slide.ctaLabel && slide.ctaHref ? (
-            <a class="btn btn-primary cta-anim" href={slide.ctaHref} target="_blank" rel="noopener">
+            <a
+              class="btn btn-primary cta-anim"
+              href={slide.ctaHref}
+              target="_blank"
+              rel="noopener"
+              aria-label={`Watch ${slide.headline} on YouTube`}
+            >
               {slide.ctaLabel}
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                 <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>

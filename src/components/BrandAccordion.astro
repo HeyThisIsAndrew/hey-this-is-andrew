@@ -130,13 +130,28 @@ import SectionHeader from './SectionHeader.astro';
     overflow: hidden;
     position: relative;
   }
+  .brand-stage-wrap.is-zoomed,
+  .brand-accordion-section.is-zoomed {
+    overflow: visible;
+    z-index: 50;
+  }
   .brand-camera-stage {
     transform-origin: center center;
     transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
     will-change: transform;
+    position: relative;
   }
   .brand-camera-stage.is-zoomed {
     cursor: zoom-out;
+    z-index: 50;
+  }
+  .brand-camera-stage.is-zoomed .accordion-panel {
+    cursor: zoom-out;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .brand-camera-stage {
+      transition-duration: 0.01ms !important;
+    }
   }
   /* The lanes get a visible editorial header; the accordion stays full-bleed. */
   .lanes-intro {
@@ -934,6 +949,15 @@ import SectionHeader from './SectionHeader.astro';
       this.kick();
     }
 
+    // Called when the camera dolly resets to idle: clears manual override and resumes rotation
+    resumeFromZoom() {
+      this.manualOverride = false;
+      this.isPaused = false;
+      this.startTime = performance.now();
+      this.kick();
+      this.updatePlayPauseIcon();
+    }
+
     // Start the rAF clock only when there is work to do. The loop stops
     // itself whenever rotation is paused or manually overridden, so the
     // page is not paying for frames while nothing moves.
@@ -1005,15 +1029,16 @@ import SectionHeader from './SectionHeader.astro';
   class BrandCamera {
     private stage: HTMLElement;
     private stageWrap: HTMLElement | null;
+    private section: HTMLElement | null;
     private accordion: BrandAccordion;
     private panels: HTMLElement[];
     private isZoomed: boolean = false;
     private activeElement: HTMLElement | null = null;
-    private readonly SCALE = 2.0;
 
     constructor(stage: HTMLElement, accordion: BrandAccordion) {
       this.stage = stage;
       this.stageWrap = stage.closest('.brand-stage-wrap');
+      this.section = stage.closest('.brand-accordion-section');
       this.accordion = accordion;
       this.panels = Array.from(stage.querySelectorAll('.accordion-panel'));
 
@@ -1027,22 +1052,23 @@ import SectionHeader from './SectionHeader.astro';
           const interactive = (e.target as HTMLElement).closest('a, button.inquiry-link');
           if (interactive && !this.isZoomed) return;
 
+          // If zoomed: clicking anywhere on the stage/active panel reverses the camera
+          if (this.isZoomed) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.resetZoom();
+            return;
+          }
+
           // If panel not active yet, accordion switches to it first
           if (!p.classList.contains('active')) {
-            if (this.isZoomed) {
-              this.resetZoom();
-            }
             this.accordion.goToPanel(i);
             return;
           }
 
-          // If panel is active:
+          // If panel is active: trigger physical camera dolly
           e.preventDefault();
-          if (this.isZoomed) {
-            this.resetZoom();
-          } else {
-            this.zoomToElement(p);
-          }
+          this.zoomToElement(p);
         });
       });
 
@@ -1076,14 +1102,27 @@ import SectionHeader from './SectionHeader.astro';
         return;
       }
 
-      // 1. Capture geometry before transform
+      // 1. Capture geometry BEFORE transform
+      const stageRect = this.stage.getBoundingClientRect();
+      const stageCX = stageRect.left + stageRect.width / 2;
+      const stageCY = stageRect.top + stageRect.height / 2;
+
       const rect = el.getBoundingClientRect();
       const elCX = rect.left + rect.width / 2;
       const elCY = rect.top + rect.height / 2;
+
       const vpCX = window.innerWidth / 2;
       const vpCY = window.innerHeight / 2;
-      const dx = vpCX - elCX;
-      const dy = vpCY - elCY;
+
+      // Determine camera dolly scale: fill the viewport with target as clear focal point
+      const scaleX = window.innerWidth / rect.width;
+      const scaleY = window.innerHeight / rect.height;
+      const targetScale = Math.max(2.2, Math.min(2.8, Math.max(scaleX, scaleY)));
+
+      // Exact camera offset with center-origin math:
+      // scale(SCALE) translate(tx, ty) maps target center to viewport center
+      const tx = (vpCX - stageCX) / targetScale - (elCX - stageCX);
+      const ty = (vpCY - stageCY) / targetScale - (elCY - stageCY);
 
       // 2. Pause accordion rotation
       this.accordion.freezeForZoom();
@@ -1092,10 +1131,12 @@ import SectionHeader from './SectionHeader.astro';
       this.isZoomed = true;
       this.activeElement = el;
       this.stage.classList.add('is-zoomed');
+      this.stageWrap?.classList.add('is-zoomed');
+      this.section?.classList.add('is-zoomed');
       document.body.style.overflow = 'hidden';
 
-      // 4. Transform stage: exactly scale(SCALE) translate(dx / SCALE, dy / SCALE)
-      this.stage.style.transform = `scale(${this.SCALE}) translate(${dx / this.SCALE}px, ${dy / this.SCALE}px)`;
+      // 4. Transform stage: scale(SCALE) translate(tx, ty)
+      this.stage.style.transform = `scale(${targetScale}) translate(${tx}px, ${ty}px)`;
     }
 
     resetZoom() {
@@ -1104,10 +1145,12 @@ import SectionHeader from './SectionHeader.astro';
       this.isZoomed = false;
       this.stage.style.transform = 'none';
       this.stage.classList.remove('is-zoomed');
+      this.stageWrap?.classList.remove('is-zoomed');
+      this.section?.classList.remove('is-zoomed');
       document.body.style.overflow = '';
       this.activeElement = null;
 
-      this.accordion.resume();
+      this.accordion.resumeFromZoom();
     }
   }
 
