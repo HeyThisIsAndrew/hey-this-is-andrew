@@ -1,0 +1,127 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { NETWORK_BRANDS } from '../lib/network';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+  large?: boolean;
+}
+const { project, large = false } = Astro.props;
+const { title, description, tools, image, link, role, brand } = project.data;
+const date = project.data.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+const credit = [role, brand ? NETWORK_BRANDS[brand] : null].filter(Boolean).join(' \u00b7 ');
+---
+<article class:list={['project-card', 'reveal', { large }, { 'no-image': !image }]}>
+  {link && (
+    <a class="stretched" href={link} target="_blank" rel="noopener" aria-label={`${title} (opens in a new tab)`}></a>
+  )}
+  {image ? (
+    <div class="thumb">
+      <img src={image} alt="" loading="lazy" />
+    </div>
+  ) : (
+    <div class="thumb thumb-empty" aria-hidden="true">
+      <span class="thumb-mark">REC</span>
+    </div>
+  )}
+  <div class="project-meta">
+    <p class="project-date">{date}</p>
+    <h3>{title}</h3>
+    {credit && <p class="project-credit">{credit}</p>}
+    <p class="project-desc">{description}</p>
+    {tools.length > 0 && (
+      <ul class="tools" aria-label="Tools used">
+        {tools.map((t) => <li>{t}</li>)}
+      </ul>
+    )}
+  </div>
+</article>
+
+<style>
+  /* Stretched link: the whole card is clickable when a link exists,
+     without wrapping the article in an anchor. */
+  .project-card { position: relative; }
+  .stretched { position: absolute; inset: 0; z-index: 1; }
+  .project-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: clip;
+    transition: transform 0.25s ease, border-color 0.25s ease;
+  }
+  .project-card:has(.stretched:hover) { transform: translateY(-4px); border-color: var(--key-dim); }
+  .project-card:has(.stretched:active) { transform: translateY(-1px) scale(0.995); }
+  .project-card.large {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+  }
+  @media (max-width: 720px) { .project-card.large { grid-template-columns: 1fr; } }
+  .thumb {
+    aspect-ratio: 16 / 9;
+    display: grid;
+    place-items: center;
+    background:
+      radial-gradient(70% 80% at 50% 120%, color-mix(in srgb, var(--rec) 12%, transparent), transparent 70%),
+      var(--surface-2);
+    border-bottom: 1px solid var(--line);
+    overflow: clip;
+  }
+  .project-card.large .thumb {
+    border-bottom: none;
+    border-right: 1px solid var(--line);
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+  @media (max-width: 720px) {
+    .project-card.large .thumb { border-right: none; border-bottom: 1px solid var(--line); }
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  /* No image yet: collapse the empty frame entirely instead of
+     leaving a giant blank box. The card becomes a compact text
+     block until a real thumbnail lands. */
+  .project-card.no-image .thumb-empty { display: none; }
+  .project-card.large.no-image { grid-template-columns: 1fr; }
+  .thumb-mark {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    color: var(--rec);
+    border: 1px solid var(--rec);
+    border-radius: 0;
+    padding: 0.25rem 0.6rem;
+  }
+  .project-meta { padding: 1rem 1.25rem 1.25rem; }
+  .project-date {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 0.5rem;
+  }
+  .project-meta h3 { margin: 0 0 0.35rem; font-size: 1.25rem; }
+  .project-card.large .project-meta h3 { font-size: 1.6rem; }
+  .project-credit {
+    margin: 0 0 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .project-desc { margin: 0 0 1rem; color: var(--muted); font-size: 0.95rem; }
+  .tools {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    list-style: none; margin: 0; padding: 0;
+    position: relative; z-index: 2;
+  }
+  .tools li {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 0;
+    padding: 0.25rem 0.7rem;
+  }
+</style>

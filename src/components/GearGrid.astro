@@ -1,0 +1,75 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props { categories: CollectionEntry<'gear'>[] }
+const { categories } = Astro.props;
+---
+<div class="gear-panel">
+  <div class="gear-grid">
+    {categories.map((cat) => (
+      <section class="gear-cat reveal" aria-label={cat.data.category}>
+        <h3>{cat.data.category}</h3>
+        <ul>
+          {cat.data.items.map((item) => (
+            <li>
+              <span class="gear-name">{item.name}</span>
+              <span class="gear-spec">{item.spec}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
+  </div>
+</div>
+
+<style>
+  .gear-panel h2 { font-size: clamp(1.4rem, 2.8vw, 1.9rem); }
+  .gear-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: var(--gap);
+    margin-top: 1.5rem;
+  }
+  .gear-cat {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1rem;
+  }
+  .gear-cat h3 {
+    margin: 0 0 0.85rem;
+    font-size: 0.95rem;
+    font-family: var(--font-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--key-ink);
+  }
+  .gear-cat ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.7rem; }
+  /* Small tactile shift: the row nudges, the spec (the detail) brightens.
+     :active covers tap on touch screens. */
+  .gear-cat li {
+    display: grid;
+    gap: 0.15rem;
+    padding-left: 0;
+    transition: transform 0.2s ease, padding-left 0.2s ease;
+  }
+  .gear-cat li:hover,
+  .gear-cat li:active {
+    transform: translateX(4px);
+  }
+  .gear-name { font-weight: 600; font-size: 0.98rem; }
+  /* Mono for specs: scans like a spec sheet, signals technical credibility. */
+  .gear-spec {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.5;
+    transition: color 0.2s ease;
+  }
+  .gear-cat li:hover .gear-spec,
+  .gear-cat li:active .gear-spec { color: var(--ink); }
+  @media (prefers-reduced-motion: reduce) {
+    .gear-cat li, .gear-cat .gear-spec { transition: none; }
+    .gear-cat li:hover, .gear-cat li:active { transform: none; }
+  }
+</style>

@@ -1,0 +1,251 @@
+---
+import { Image } from 'astro:assets';
+import portraitImg from '../assets/hero-media/portrait.jpg';
+import { SUBSTACK_URL } from '../lib/latest-content';
+
+interface Props {
+  /** Full version (About page): all seven paragraphs, Substack kicker link. */
+  full?: boolean;
+}
+const { full = false } = Astro.props;
+---
+<section id="about" aria-labelledby="about-heading" class="about-section">
+  <div class="container">
+    <!-- BE-style section bar: logo + title + categories + rule + link, one line.
+         HEY_THISISANDREW is the logo (Syne 800 wordmark). Monochrome. -->
+    <div class="about-bar">
+      {full ? (
+        <>
+          <span class="about-logo" aria-hidden="true">HEY_THISISANDREW</span>
+          <h2 class="about-bar-title" id="about-heading">About Andrew</h2>
+        </>
+      ) : (
+        <h2 class="about-bar-title" id="about-heading">Meet The</h2>
+      )}
+      <span class="about-bar-cats">Creator | Photographer | Coffee drinker</span>
+      <span class="about-bar-rule" aria-hidden="true"></span>
+    </div>
+
+    <div class="about-grid">
+      <figure class="about-portrait">
+        <span class="tape" aria-hidden="true"></span>
+        <span class="headshot-crop">
+          <Image src={portraitImg} alt="Andrew Baxter" widths={[320, 480, 640]} sizes="(max-width: 767px) 60vw, 320px" format="webp" loading="lazy" decoding="async" class="headshot-img" />
+        </span>
+        <figcaption>
+          <strong>Andrew Baxter</strong>
+          <span>Creator &amp; photographer</span>
+        </figcaption>
+      </figure>
+
+      <div class="about-copy">
+        <p>I'm a creator, photographer, coffee drinker, building in public and figuring it out as I go.</p>
+        {full ? (
+          <>
+            <p>For a long time I doubted myself. Now I'm just going for it. There are more tools available to us than ever before, and I'm going to use all of them to get where I want to be.</p>
+            <p>Right now I'm building three brands, and I'm documenting the whole journey. This site is the hub for all of it.</p>
+            <p><strong>BE Unconventional HQ</strong> is where I cover movies, TV, games, and events. I'm building it into a small press outlet.</p>
+            <p><strong>Capture Create Caffeinate</strong> is my beverage photography work for bars and restaurants.</p>
+            <p><strong>Sip the Magic</strong> is still in the works. More on that soon.</p>
+            <p>The best thing you can do is be yourself and put the work out there. We all have more potential than we think, and you'll never see how far it goes unless you try. So this is me trying, in public. Hope you'll follow along.</p>
+          </>
+        ) : (
+          <p>Right now I'm building three brands, and I'm documenting the whole journey. This site is the hub for all of it.</p>
+        )}
+        <div class="about-ctas">
+          {full ? (
+            <>
+              <a class="btn btn-primary" href={SUBSTACK_URL} target="_blank" rel="noopener">
+                Read the Substack
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </a>
+              <a class="btn btn-ghost" href="#writing">Latest articles</a>
+            </>
+          ) : (
+            <>
+              <a class="btn btn-primary" href="/about" data-route-zoom>More about me</a>
+              <a class="btn btn-primary" href={SUBSTACK_URL} target="_blank" rel="noopener">Read the Substack</a>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .about-section {
+    padding: clamp(4rem, 8vw, 7rem) 0;
+    border-top: 1px solid var(--line);
+  }
+
+  /* BE-style section bar: logo | title | categories — rule — link.
+     Single horizontal line, HQ's "INSIDE THE HQ" pattern in monochrome.
+     HEY_THISISANDREW wordmark (Syne 800) is the logo. */
+  .about-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: clamp(2rem, 4vw, 3.25rem);
+    flex-wrap: wrap;
+  }
+  .about-logo {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .about-bar-title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.05rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin: 0;
+    white-space: nowrap;
+  }
+  .about-bar-cats {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .about-bar-rule {
+    flex: 1 1 2rem;
+    height: 1px;
+    background: var(--border);
+    min-width: 2rem;
+  }
+  @media (max-width: 640px) {
+    .about-bar-cats { display: none; }
+    .about-bar { gap: 0.75rem; }
+  }
+
+  /* Kicker row: icon + title + tags + rule + link, HQ's "INSIDE THE HQ" bar. */
+  .about-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+    gap: clamp(2rem, 5vw, 5rem);
+    align-items: center;
+  }
+  @media (max-width: 767px) {
+    .about-grid {
+      grid-template-columns: 1fr;
+      gap: 2.25rem;
+    }
+    .about-portrait {
+      width: min(60vw, 260px);
+      max-width: none;
+      margin-left: auto;
+      margin-right: auto;
+      justify-self: center;
+      transform: none;
+    }
+    .about-portrait figcaption { text-align: center; }
+  }
+
+  /* Taped portrait frame, HQ style: 320px square headshot. The 16:9 source
+     has the face right-of-center with an out-of-focus hand across the lower
+     foreground, so a plain cover crop put the face half out of frame with
+     the hand dominating. This square window reproduces the BE headshot
+     framing (face fills the frame) from source box (1250,0)-(2950,1700):
+     width 3840/1700 = 225.9%, shifted left 1250/1700 = 73.5%. Astro's
+     resized variants keep the download small. */
+  .about-portrait {
+    position: relative;
+    margin: 0;
+    max-width: 320px;
+    transform: rotate(-2deg);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: #0b0b0b;
+    padding: 0.6rem 0.6rem 0;
+  }
+  .headshot-crop {
+    display: block;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    background: #0b0b0b;
+  }
+  .headshot-img {
+    display: block;
+    width: 225.9%;
+    max-width: none;
+    height: auto;
+    margin-left: -73.5%;
+    filter: grayscale(0.25) contrast(1.05);
+  }
+  .tape {
+    position: absolute;
+    top: -0.85rem;
+    left: 8%;
+    width: 5.5rem;
+    height: 1.7rem;
+    background: rgba(214, 205, 180, 0.35);
+    border-left: 1px dashed rgba(255,255,255,0.25);
+    border-right: 1px dashed rgba(255,255,255,0.25);
+    transform: rotate(-6deg);
+    z-index: 2;
+  }
+  .about-portrait figcaption {
+    padding: 1rem 0.4rem 1rem;
+  }
+  .about-portrait figcaption strong {
+    display: block;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1rem;
+    line-height: 1.1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .about-portrait figcaption span {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.7rem;
+    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .about-headline {
+    font-size: clamp(2rem, 4.5vw, 3.25rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: 0.01em;
+    margin: 0 0 1.5rem;
+    text-wrap: balance;
+  }
+  .about-copy p {
+    color: rgba(245, 245, 245, 0.78);
+    font-size: 1.02rem;
+    line-height: 1.75;
+    margin: 0 0 1.25rem;
+    max-width: 62ch;
+  }
+  .about-copy p strong { color: var(--ink); }
+  .about-copy .about-headline { color: var(--ink); }
+  .about-ctas {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+  }
+
+  @media (max-width: 640px) {
+    .about-kicker-tags { display: none; }
+    .about-kicker-title { font-size: 0.95rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .about-kicker-link { transition: none; }
+  }
+</style>

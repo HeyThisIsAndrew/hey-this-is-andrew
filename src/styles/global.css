@@ -1,0 +1,267 @@
+/* Global styles: quiet defaults so components only style what makes them unique. */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; overflow-x: clip; scroll-padding-top: 96px; background-color: #000; }
+
+/* Andrew's 14" MacBook Pro calibration (Sept 26, 2026): at 100% browser zoom the
+   site should read the way 75% zoom does — type and buttons were oversized.
+   Desktop widths only; phones and tablets keep the normal root size. */
+@media (min-width: 1100px) {
+  html { font-size: 75%; }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+  position: relative;
+}
+
+/* Cinematic film grain: a static visual layer, exactly like BE Unconventional HQ.
+   Opacity 0.035 (3.5%), never animated. pointer-events: none keeps it click-through. */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 150;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+}
+
+::selection { background: var(--color-accent); color: var(--color-black); }
+
+img { max-width: 100%; display: block; }
+
+a { color: inherit; }
+
+/* Top safe area: the viewport meta omits viewport-fit=cover (matching BE
+   Unconventional HQ), so the browser keeps page content inside the safe
+   area and the system renders the Dynamic Island / status-bar region black
+   (theme-color #000000). No overlay div needed. */
+
+/* Navigation height, published for the hero: the fixed bar's
+   actual occupied space = safe-area inset + nav-inner padding
+   (1.2rem top/bottom) + logo height + 1px border. The hero starts
+   below this, never underneath it. Desktop logo is 4.5rem,
+   mobile is 3.375rem. */
+:root {
+  --nav-h: calc(env(safe-area-inset-top, 0px) + 6.9rem + 1px);
+}
+@media (max-width: 640px) {
+  :root {
+    --nav-h: calc(env(safe-area-inset-top, 0px) + 5.775rem + 1px);
+  }
+}
+
+/* Visible keyboard focus everywhere, no exceptions. */
+:focus-visible {
+  outline: 2px solid var(--key-ink);
+  outline-offset: 3px;
+  border-radius: 0;
+}
+
+.container {
+  width: min(100% - 2.5rem, var(--maxw));
+  margin-inline: auto;
+}
+
+section { padding-block: clamp(2rem, 4vw, 3rem); }
+
+/* Kicker: small label above section headings, HQ style. */
+.kicker {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--key-ink);
+  margin: 0 0 1rem;
+}
+
+/* Display headings: the movie-poster voice. Syne 800, HQ's display voice. */
+.display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.95;
+  margin: 0;
+}
+
+h2.display { font-size: clamp(2.5rem, 6vw, 4.5rem); }
+
+/* Section titles: HQ's section-header voice. Syne 800, tracked, uppercase. */
+.section-title {
+  font-family: var(--font-section);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  line-height: 1.08;
+  font-size: clamp(1.7rem, 3.6vw, 2.7rem);
+  margin: 0;
+}
+
+.section-lede {
+  color: var(--muted);
+  max-width: 60ch;
+  margin: 1rem 0 0;
+}
+
+/* Screen-reader-only text (Mystery text fix) */
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Buttons: unified CTA system lives in src/styles/cta.css
+   (.btn-primary white-on-black, .btn-secondary outline, .btn-ghost text).
+   Imported after this file in BaseLayout. */
+
+/* Metadata chips: HQ's acc-chip, monochrome. Inter 500, 11px,
+   tracked, uppercase; the lead (brand) chip carries the accent edge. */
+.chip {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+.chip--brand {
+  color: rgba(255, 255, 255, 0.9);
+  border-left: 2px solid var(--color-accent);
+}
+
+/* Cinematic play toggle: BE Unconventional HQ's play icon language.
+   Bare triangle, no container, resting opacity 0.35; hover scales to 1.1
+   with a soft gray glow (HQ glows red). */
+.play-toggle {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.2, 1);
+}
+.play-toggle svg {
+  width: 40px;
+  height: 40px;
+  opacity: 0.35;
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+.play-toggle:hover svg, .play-toggle:focus-visible svg {
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 17px rgba(240, 240, 240, 0.85))
+    drop-shadow(0 0 33px rgba(240, 240, 240, 0.5));
+}
+.play-toggle:hover { transform: scale(1.1); }
+.play-toggle:active { transform: scale(0.95); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Scroll lock (iOS half) ──────────────────────────────────────────
+   spatial.ts pins <body> with position:fixed + top:-scrollY when an overlay
+   opens. `overflow: hidden` alone is not enough on iOS Safari, which
+   rubber-bands the page behind a fixed overlay regardless — so the lock is
+   also applied to <html> here. Adapted from BE's ios-lock.css.
+   The body must NOT be clamped to 100dvh: a reader past one screen height
+   would otherwise land on a blank page. */
+html.menu-open,
+html.modal-open {
+  position: fixed !important;
+  width: 100% !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+}
+html.menu-open body,
+html.modal-open body {
+  position: fixed !important;
+  width: 100% !important;
+  overflow: hidden !important;
+}
+/* Fixed navbar does not inherit body padding: compensate the measured
+   scrollbar gutter (published as --scrollbar-gutter by spatial.ts) so it
+   does not jump sideways on desktop when the scrollbar disappears. */
+html.menu-open .site-nav,
+html.modal-open .site-nav {
+  padding-right: var(--scrollbar-gutter, 0px);
+}
+
+/* ---- Restrained scroll reveals (driven by initReveals in spatial.ts) ----
+   Hidden pre-states only apply under html.js, so no-JS and script-failure
+   leave all content visible. Tiny stagger lives in --rd. */
+html.js .reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition-delay: var(--rd, 0ms);
+}
+html.js .reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+/* Section headers: eyebrow -> title -> lede, a 70ms beat apart. */
+html.js .sec-head .sec-eyebrow,
+html.js .sec-head .section-title,
+html.js .sec-head .section-lede {
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+html.js .sec-head.is-in .sec-eyebrow { opacity: 1; transform: none; transition-delay: 0ms; }
+html.js .sec-head.is-in .section-title { opacity: 1; transform: none; transition-delay: 70ms; }
+html.js .sec-head.is-in .section-lede { opacity: 1; transform: none; transition-delay: 140ms; }
+/* Goal progress bars fill when their group scrolls into view. */
+html.js .goal-group .bar .fill { width: 0; }
+html.js .goal-group.is-in .bar .fill { width: var(--pct, 0%); }
+@media (prefers-reduced-motion: reduce) {
+  html.js .reveal,
+  html.js .sec-head .sec-eyebrow,
+  html.js .sec-head .section-title,
+  html.js .sec-head .section-lede,
+  html.js .goal-group .bar .fill {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  html.js .goal-group .bar .fill { width: var(--pct, 0%); }
+}

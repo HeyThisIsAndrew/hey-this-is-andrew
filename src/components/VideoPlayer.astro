@@ -1,0 +1,249 @@
+---
+// Fullscreen video player — the spatial destination for YouTube videos.
+// Opens with a FLIP zoom FROM the tapped card/slide thumbnail: the selected
+// video becomes the visual source, expands through the viewport, and the
+// player appears. Close reverses back to the card.
+---
+
+<div
+  id="video-player"
+  class="video-player"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Video player"
+  aria-hidden="true"
+  hidden
+>
+  <div class="vp-backdrop" data-vp-close></div>
+  <div class="vp-frame">
+    <div class="vp-screen">
+      <iframe
+        class="vp-iframe"
+        title="YouTube video player"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+      ></iframe>
+    </div>
+    <div class="vp-meta">
+      <span class="vp-title"></span>
+      <a class="vp-youtube" href="#" target="_blank" rel="noopener">Watch on YouTube</a>
+    </div>
+  </div>
+  <button type="button" class="vp-btn vp-close" data-vp-close aria-label="Close video player">
+    <span aria-hidden="true">×</span>
+  </button>
+</div>
+
+<script>
+  import { flipZoomOpen, lockBody, trapFocus, prefersReducedMotion } from '../lib/spatial.ts';
+
+  const player = document.getElementById('video-player');
+  if (player) {
+    const iframe = player.querySelector('.vp-iframe');
+    const title = player.querySelector('.vp-title');
+    const ytLink = player.querySelector('.vp-youtube');
+
+    let closeZoom = null;
+    let unlock = null;
+    let untrap = null;
+    let opener = null;
+
+    function videoId(url) {
+      const m = url.match(/[?&]v=([^&]+)/) || url.match(/youtu\.be\/([^?]+)/);
+      return m ? m[1] : null;
+    }
+
+    function openFrom(sourceEl, url, label) {
+      const id = videoId(url);
+      if (!id) {
+        // No parseable ID — fall back to opening the link normally.
+        window.open(url, '_blank', 'noopener');
+        return;
+      }
+      opener = sourceEl;
+      iframe.src = `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`;
+      title.textContent = label || 'Video';
+      ytLink.href = url;
+      player.hidden = false;
+
+      unlock = lockBody();
+      untrap = trapFocus(player);
+
+      // FLIP zoom: the tapped card/slide expands into the player.
+      closeZoom = flipZoomOpen({
+        source: sourceEl,
+        overlay: player,
+        instant: prefersReducedMotion(),
+        onDone: () => player.querySelector('.vp-close').focus(),
+      });
+    }
+
+    function close() {
+      if (player.hidden) return;
+      if (closeZoom) closeZoom();
+      else {
+        player.hidden = true;
+        player.setAttribute('aria-hidden', 'true');
+      }
+      // Stop the video.
+      iframe.src = '';
+      if (unlock) { unlock(); unlock = null; }
+      if (untrap) { untrap(); untrap = null; }
+      if (opener) opener.focus();
+      opener = null;
+    }
+
+    // Resolve the FLIP zoom source. A trigger may name a different visual
+    // element via data-video-source (e.g. the hero CTA button names the
+    // slide visual), so the zoom originates from what the user is entering,
+    // not from the small control they tapped.
+    function resolveSource(trigger) {
+      const sel = trigger.getAttribute('data-video-source');
+      if (!sel) return trigger;
+      const scope = trigger.closest('.carousel-slide') || document;
+      return scope.querySelector(sel) || trigger;
+    }
+
+    function triggerVideo(el) {
+      const url = el.getAttribute('data-video-url');
+      if (!url) return;
+      const label = el.getAttribute('data-video-title') || el.getAttribute('aria-label') || 'Video';
+      openFrom(resolveSource(el), url, label);
+    }
+
+    // Global delegation: any [data-video-player] with data-video-url opens.
+    document.addEventListener('click', (e) => {
+      const el = e.target.closest('[data-video-player]');
+      if (!el || !player.hidden) return;
+      // Ignore triggers inside hidden (inactive) slides.
+      if (el.closest('[aria-hidden="true"]')) return;
+      const url = el.getAttribute('data-video-url');
+      if (!url) return;
+      e.preventDefault();
+      triggerVideo(el);
+    });
+
+    // Keyboard: non-native triggers (role="button" visuals) open on Enter/Space.
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const el = e.target.closest?.('[data-video-player][role="button"]');
+      if (!el || !player.hidden) return;
+      if (el.tagName === 'BUTTON' || el.tagName === 'A') return; // native behavior covers these
+      if (el.closest('[aria-hidden="true"]')) return;
+      e.preventDefault();
+      triggerVideo(el);
+    });
+
+    player.addEventListener('click', (e) => {
+      if (e.target.closest('[data-vp-close]')) close();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (!player.hidden && e.key === 'Escape') close();
+    });
+  }
+</script>
+
+<style>
+  .video-player {
+    position: fixed;
+    inset: 0;
+    z-index: 400;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .video-player[hidden] {
+    display: none;
+  }
+  .vp-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 5, 5, 0.96);
+    cursor: zoom-out;
+  }
+  .vp-frame {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(1rem, 4vw, 3rem);
+    pointer-events: none;
+  }
+  .vp-screen {
+    width: min(92vw, 1100px);
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.8);
+    pointer-events: auto;
+  }
+  .vp-iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+  .vp-meta {
+    margin-top: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    pointer-events: auto;
+  }
+  .vp-title {
+    font-family: var(--font-display, sans-serif);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: rgba(245, 245, 245, 0.9);
+    max-width: 60vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .vp-youtube {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(245, 245, 245, 0.7);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    white-space: nowrap;
+  }
+  .vp-youtube:hover {
+    color: #fff;
+  }
+  .vp-btn {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    background: rgba(20, 20, 20, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: rgba(245, 245, 245, 0.9);
+    font-size: 1.8rem;
+    cursor: pointer;
+    transition: border-color 0.25s ease, background-color 0.25s ease, transform 0.18s cubic-bezier(0.2, 0.9, 0.25, 1);
+  }
+  .vp-btn:hover,
+  .vp-btn:focus-visible {
+    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(35, 35, 35, 0.95);
+    outline: none;
+  }
+  .vp-btn:active {
+    transform: scale(0.92);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .vp-btn {
+      transition: none;
+    }
+  }
+</style>

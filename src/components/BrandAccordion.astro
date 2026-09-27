@@ -1,0 +1,1123 @@
+---
+import { Image } from 'astro:assets';
+import { childBrands } from '../data/brands';
+import SectionHeader from './SectionHeader.astro';
+---
+<section id="directory" aria-labelledby="directory-heading" class="brand-accordion-section">
+  <div class="container lanes-intro">
+    <SectionHeader id="directory-heading" index="01" kicker="The lanes" title="The brands" />
+  </div>
+  <div class="vh" aria-live="polite" id="accordion-announcer">
+    {`Panel 1 of ${childBrands.length}: ${childBrands[0]?.name ?? ''}`}
+  </div>
+
+  <div class="brand-stage-wrap">
+    <div id="brand-camera-stage" class="brand-camera-stage">
+      <div class="accordion-hero">
+    {childBrands.map((brand, i) => {
+      const isExpanded = i === 0;
+      return (
+        <article
+          class:list={[
+            'accordion-panel',
+            `brand-${brand.id}`,
+            { active: isExpanded, 'is-coming-soon': brand.comingSoon }
+          ]}
+          data-index={i}
+          data-brand-id={brand.id}
+          data-brand-url={brand.url ?? ''}
+        >
+          <div class="panel-bg" aria-hidden="true">
+            {brand.mediaSrc && (
+              <Image src={brand.mediaSrc} alt="" widths={[768, 1280, 1920]} sizes="(max-width: 767px) 100vw, 80vw" format="webp" fetchpriority={i === 0 ? "high" : "auto"} loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+            )}
+          </div>
+
+          <div class="panel-scrims" aria-hidden="true"></div>
+
+          <button
+            type="button"
+            class="acc-trigger"
+            id={`panel-btn-${i}`}
+            aria-expanded={isExpanded ? "true" : "false"}
+            aria-controls={`panel-content-${i}`}
+            data-index={i}
+          >
+            <span class="collapsed-strip" aria-hidden="true">
+              <span class="vertical-title">{brand.name}</span>
+              <span class="col-logo">
+                {brand.logoSrc ? (
+                  <Image src={brand.logoSrc} alt="" class="logo-img" widths={[160, 320]} sizes="62px" format="webp" loading="lazy" />
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="placeholder-icon">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                    <circle cx="12" cy="13" r="4"></circle>
+                  </svg>
+                )}
+              </span>
+            </span>
+          </button>
+
+          <div class="expanded-content" id={`panel-content-${i}`}>
+            <div class="active-edge" aria-hidden="true"></div>
+
+            <div class="content-inner">
+              {brand.logoSrc && (
+                <Image class="content-logo" src={brand.logoSrc} alt="" widths={[240, 480]} sizes="240px" format="webp" aria-hidden="true" loading="lazy" />
+              )}
+              <span class="kicker"><span class="chip chip--brand">{brand.kicker}</span></span>
+              {brand.id === 'be' ? (
+                <h3 class="display headline">WHERE NERD CULTURE<br />GETS CINEMATIC.</h3>
+              ) : (
+                <h3 class="display headline">{brand.headline}</h3>
+              )}
+              <p class="deck">{brand.deck}</p>
+
+              {brand.comingSoon ? (
+                <span class="teaser-tag">In the works</span>
+              ) : (
+                <>
+                  <a class="btn btn-primary" href={brand.url} target="_blank" rel="noopener">
+                    {brand.cta}
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                      <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </a>
+                  {brand.inquiryEmail && (
+                    <a
+                      class="inquiry-link"
+                      href={`mailto:${brand.inquiryEmail}?subject=${encodeURIComponent('Photography project inquiry')}`}
+                    >
+                      Start a project <span aria-hidden="true">→</span>
+                    </a>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div class="bottom-progress-bar" aria-hidden="true">
+              <div class="progress-fill"></div>
+            </div>
+          </div>
+        </article>
+      )
+    })}
+
+    <button type="button" class="accordion-play-pause play-toggle" aria-label="Pause auto-rotation" aria-pressed="false">
+      <svg class="icon-pause" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+      </svg>
+      <svg class="icon-play" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="display: none;">
+        <path d="M8 5v14l11-7z"/>
+      </svg>
+    </button>
+      </div><!-- /.accordion-hero -->
+    </div><!-- /#brand-camera-stage -->
+  </div><!-- /.brand-stage-wrap -->
+</section>
+
+<style>
+  /* Base Scoping per directives */
+  .brand-accordion-section {
+    padding-top: 0;
+    padding-bottom: 0;
+    position: relative;
+  }
+
+  /* Brand camera stage: same lens-like dolly as the photography elevator.
+     The entire accordion scales from the target panel's center. */
+  .brand-stage-wrap {
+    overflow: hidden;
+    position: relative;
+  }
+  .brand-camera-stage {
+    transform-origin: center center;
+    transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+    will-change: transform;
+  }
+  .brand-camera-stage.is-zoomed {
+    cursor: zoom-out;
+  }
+  /* The lanes get a visible editorial header; the accordion stays full-bleed. */
+  .lanes-intro {
+    padding-top: clamp(3rem, 6vw, 5rem);
+    padding-bottom: clamp(1.5rem, 3vw, 2.5rem);
+  }
+
+  .lanes-intro .sec-head {
+    margin-bottom: 0;
+  }
+
+  /* Parent hub is monochrome: no red on parent surfaces. The --blood and
+     --crimson tokens resolve to white/gray here. */
+  .brand-be {
+    --blood: var(--color-white);
+    --crimson: var(--color-white-muted);
+    --hairline: #1a1a1a;
+    --panel: #0b0b0b;
+    --ink-60: rgba(245,245,245,0.6);
+    --font-display: "Syne", system-ui, sans-serif;
+    --font-body: "Inter", system-ui, sans-serif;
+  }
+
+  /* BE headline: "WHERE NERD CULTURE GETS CINEMATIC" must read as two lines,
+     not five. Constrain width to force the break after "CULTURE". */
+  .brand-be .headline {
+    max-width: 18ch;
+    line-height: 1.08;
+    text-wrap: balance;
+  }
+
+  /* CCC Tokens: the brand's own gold, the way HQ uses its red inside
+     brand panels. Parent surfaces stay monochrome. The generic panel-accent
+     tokens alias the descriptive CCC gold names so shared rules keep working. */
+  .brand-ccc {
+    --ccc-gold: #d4af37;
+    --ccc-gold-deep: #a8822a;
+    --blood: var(--ccc-gold);
+    --crimson: var(--ccc-gold-deep);
+    --ink-60: rgba(255,255,255,0.6);
+    --font-display: "Syne", system-ui, sans-serif;
+    --font-body: "Inter", system-ui, sans-serif;
+  }
+
+  .accordion-hero {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    width: 100%;
+    height: clamp(480px, 72vh, 680px);
+    overflow: hidden;
+    position: relative;
+    background: var(--bg);
+  }
+
+  /* Panel Base */
+  .accordion-panel {
+    flex: 1 1 0%;
+    min-width: 76px;
+    position: relative;
+    background: #080808;
+    margin: 0;
+    overflow: hidden;
+    transition: flex-grow 450ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    text-align: left;
+    color: var(--ink);
+    font-family: var(--font-body);
+  }
+
+  .accordion-panel.active {
+    flex-grow: 8;
+  }
+
+  /* Hover is a preview only: a slight widen, a frame, and a brighten.
+     It never switches the active panel. Only a click (or the keyboard)
+     does that. */
+  @media (hover: hover) {
+    .accordion-panel:not(.active):hover {
+      flex-grow: 1.7;
+    }
+    .accordion-panel:not(.active):hover .panel-bg img {
+      filter: grayscale(35%) brightness(0.78) contrast(1.1);
+    }
+    .accordion-panel:not(.active):hover .panel-bg::after {
+      opacity: 1;
+    }
+    .accordion-panel:not(.active):hover .vertical-title {
+      color: var(--ink);
+      letter-spacing: 0.4em;
+    }
+  }
+
+  /* The click target: covers the whole panel and carries the collapsed strip.
+     Fades out when the panel is active so the content link stays reachable. */
+  .acc-trigger {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+    transition: opacity 250ms ease;
+  }
+
+  .accordion-panel.active .acc-trigger {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .accordion-panel.is-coming-soon .panel-bg img {
+    filter: blur(8px) grayscale(100%) brightness(0.4);
+    transform: scale(1.1);
+  }
+
+  /* Backgrounds & Scrims */
+  .panel-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: #050505;
+  }
+
+  .panel-bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(100%) brightness(0.6) contrast(1.1);
+    transform: scale(1);
+    transition: transform 10s cubic-bezier(0.22, 0.61, 0.36, 1), filter 450ms ease;
+    transform-origin: center center;
+  }
+
+  /* Hover frame, HQ style in monochrome: fades in on preview. */
+  .panel-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35), inset 0 -120px 90px -60px rgba(255,255,255,0.10);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+  }
+
+  /* The open panel keeps its glow: a luminous wash rising from the bottom,
+     the monochrome version of HQ's red aura. */
+  .accordion-panel.active .panel-bg::after {
+    opacity: 1;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,0.22),
+      inset 0 -180px 110px -60px rgba(240,240,240,0.16);
+  }
+
+  /* Slow zoom & color reveal on active */
+  .accordion-panel.active .panel-bg img {
+    transform: scale(1.05);
+    filter: grayscale(0%) brightness(0.9) contrast(1.1);
+  }
+
+  .panel-scrims {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(8,8,8,0.9) 0%, transparent 50%);
+    opacity: 0.8;
+    transition: opacity 450ms ease;
+  }
+
+  .accordion-panel.active .panel-scrims {
+    background: linear-gradient(to right, rgba(8,8,8,0.95) 0%, transparent 60%), linear-gradient(to top, rgba(8,8,8,0.9) 0%, transparent 40%);
+    opacity: 1;
+  }
+
+  /* Collapsed Strip, HQ placement: the vertical title sits dead-center
+     of the column and the logo is pinned to the bottom. */
+  .collapsed-strip {
+    position: absolute;
+    inset: 0;
+    width: 74px;
+    display: block;
+    padding: 0;
+    opacity: 1;
+    transition: opacity 250ms ease;
+    z-index: 10;
+  }
+
+  .vertical-title {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(180deg);
+    writing-mode: vertical-rl;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--ink-60);
+    white-space: nowrap;
+    margin: 0;
+    transition: color 0.3s ease, letter-spacing 0.4s ease;
+  }
+
+  .col-logo {
+    position: absolute;
+    bottom: 1.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+  }
+
+  /* CCC's portrait lockup needs height to read; give it a taller box. */
+  .brand-ccc .col-logo {
+    width: 54px;
+    height: 80px;
+  }
+
+  .logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .placeholder-icon {
+    width: 24px;
+    height: 24px;
+    color: var(--ink-60);
+  }
+
+  /* Expanded Content: HQ's hero block. Left-aligned chips, headline,
+     deck and button; the logo glows bottom-right. */
+  .expanded-content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end; /* HQ bottom-anchors the hero block */
+    align-items: flex-start;
+    text-align: left;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 300ms ease;
+    z-index: 5;
+  }
+
+  .accordion-panel.active .expanded-content {
+    opacity: 1;
+    pointer-events: auto;
+    transition-delay: 150ms;
+  }
+
+  .accordion-panel .expanded-content .kicker {
+    position: absolute;
+    top: clamp(1.5rem, 3.5vw, 2.5rem);
+    left: clamp(1.5rem, 3.5vw, 2.5rem);
+    margin: 0;
+    z-index: 6;
+  }
+
+  /* Expansion reads spatially: logo -> chips -> headline -> deck -> CTA
+     arrive on a short beat as the panel geometry settles. Restrained:
+     8px rise, 60ms steps. */
+  .content-inner > * {
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .accordion-panel.active .content-inner > * {
+    opacity: 1;
+    transform: none;
+  }
+  .accordion-panel.active .content-inner > *:nth-child(1) { transition-delay: 200ms; }
+  .accordion-panel.active .content-inner > *:nth-child(2) { transition-delay: 260ms; }
+  .accordion-panel.active .content-inner > *:nth-child(3) { transition-delay: 320ms; }
+  .accordion-panel.active .content-inner > *:nth-child(4) { transition-delay: 380ms; }
+  .accordion-panel.active .content-inner > *:nth-child(5) { transition-delay: 440ms; }
+  .accordion-panel.active .content-inner > *:nth-child(6) { transition-delay: 500ms; }
+  @media (prefers-reduced-motion: reduce) {
+    .content-inner > * { opacity: 1; transform: none; transition: none; }
+  }
+
+  .active-edge {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px; /* HQ's open-panel edge bar */
+    background: var(--blood);
+    opacity: 0;
+    transition: opacity 450ms ease;
+  }
+
+  .accordion-panel.active .active-edge {
+    opacity: 1;
+  }
+
+  .content-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    padding: clamp(1.5rem, 4vw, 3.75rem); /* HQ's hero pad */
+    padding-bottom: clamp(2rem, 3.5vw, 3.25rem);
+    max-width: 46rem;
+  }
+
+  .kicker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0 0 1.1rem; /* HQ's chip row */
+  }
+
+  .headline {
+    font: 800 clamp(2.2rem, 1.9vw, 3.4rem) / 1.06 var(--font-display); /* HQ's hero title */
+    margin: 0.2rem 0 0.9rem;
+    text-wrap: balance;
+  }
+
+  /* CCC uses Montserrat Medium (500) or Bold (700). Applying 700 here. */
+  .brand-ccc .headline {
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .deck {
+    font: 500 0.95rem / 1.7 var(--font-body); /* HQ's deck voice */
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.62);
+    margin: 0;
+    max-width: min(70ch, 100%);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* HQ's CTA sits 1.4rem below the deck. */
+  .content-inner .btn,
+  .content-inner .teaser-tag {
+    margin-top: 1.4rem;
+  }
+  /* Quiet commercial path: a text link under the panel CTA, deliberately
+     subordinate to the primary action. */
+  .inquiry-link {
+    display: inline-block;
+    margin-top: 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 0.2rem;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+  .inquiry-link:hover,
+  .inquiry-link:focus-visible {
+    color: var(--ink);
+    border-color: var(--ink);
+  }
+
+  /* Hollow by default; fills with the brand accent on hover, HQ style. */
+  .btn {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--blood);
+  }
+
+  .btn:hover, .btn:focus-visible {
+    background: var(--blood);
+    color: #0a0a0a;
+    border-color: var(--blood);
+    box-shadow: 0 0 30px rgba(178, 178, 178, 0.4);
+  }
+
+  /* CCC's gold glow on hover. */
+  .brand-ccc .btn:hover, .brand-ccc .btn:focus-visible {
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.45);
+  }
+
+  .brand-ccc .chip--brand {
+    border-left-color: var(--ccc-gold);
+  }
+
+  .teaser-tag {
+    display: inline-block;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--ink-60);
+    border: 1px solid var(--hairline, #333);
+    padding: 0.6rem 1.2rem;
+  }
+
+  /* Progress Bar */
+  .bottom-progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: transparent;
+  }
+
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--blood);
+  }
+
+  /* Bare HQ play toggle, top-right like HQ's hero; the interaction
+     lives in global .play-toggle. */
+  .accordion-play-pause {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 50;
+    appearance: none;
+  }
+
+  /* The big logo inside the open card: HQ's hero places it bottom-right.
+     This base rule must come BEFORE the mobile block below, so the
+     mobile in-flow placement wins on phones. */
+  .content-logo {
+    display: block;
+    position: absolute;
+    bottom: 2.5rem;
+    right: 2.5rem;
+    height: 64px;
+    width: auto;
+    max-width: 240px;
+    object-fit: contain;
+    margin: 0;
+    /* HQ's logo glow, monochrome: a strong luminous aura like the
+       red glow on the BE Unconventional HQ mark. */
+    filter:
+      drop-shadow(0 0 18px rgba(240, 240, 240, 0.55))
+      drop-shadow(0 0 48px rgba(240, 240, 240, 0.30));
+  }
+
+  /* CCC's portrait lockup: give it height so it's legible. */
+  .brand-ccc .content-logo {
+    height: 120px;
+    max-width: 180px;
+  }
+
+  /* Mobile: vertical stack, HQ pattern. The open panel jumps to the top
+     (order: -1); closed rows are 76px tap targets with the logo, name,
+     and nothing else. No rotation on phones; the play/pause button can
+     start it.
+     
+     SWAP, NOT SHIFT: The active panel always sits at the top (order: -1).
+     When you tap a different brand, the new active moves to the top and
+     the old active becomes a closed row in its place. Total height stays
+     constant (480px + 3×76px), so content below never shifts. */
+  @media (max-width: 767px) {
+    .accordion-hero {
+      flex-direction: column;
+      height: auto;
+      min-height: 0;
+      gap: 6px;
+    }
+
+    /* Fixed heights: the open panel and the closed rows never change
+       size, so switching panels swaps which one is open without the
+       stack shifting or the page reflowing. */
+    .accordion-panel {
+      flex: none;
+      width: 100%;
+      height: 76px;
+      min-height: 76px;
+      order: 0;
+      transition: height 450ms cubic-bezier(0.22, 0.61, 0.36, 1), order 0ms;
+    }
+
+    .accordion-panel.active {
+      height: 480px;
+      min-height: 480px;
+      order: 0; /* Expands IN PLACE without order: -1 hack */
+    }
+
+    /* Closed rows: logo left, name next to it. */
+    .collapsed-strip {
+      display: flex;
+      flex-direction: row;
+      width: 100%;
+      height: 76px;
+      padding: 0 1.25rem;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 1rem;
+    }
+
+    .vertical-title {
+      position: static;
+      writing-mode: horizontal-tb;
+      transform: none;
+      margin-top: 0;
+      font-size: 0.8rem;
+      letter-spacing: 0.18em;
+      flex: 1;
+      text-align: center;
+    }
+
+    .col-logo {
+      position: static;
+      transform: none;
+      margin-top: 0;
+      width: 72px;
+      height: 44px;
+      order: -1;
+      flex: none;
+    }
+
+    /* CCC portrait logo on mobile rows: taller box. */
+    .brand-ccc .col-logo {
+      width: 48px;
+      height: 72px;
+    }
+
+    /* The open panel's trigger row is hidden on mobile; the content
+       carries the brand logo instead. */
+    .accordion-panel.active .acc-trigger {
+      display: none;
+    }
+
+    .expanded-content {
+      position: static;
+      height: 100%;
+      opacity: 1;
+      pointer-events: auto;
+      transition: none;
+    }
+    .accordion-panel:not(.active) .expanded-content {
+      display: none;
+    }
+
+    .content-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+      height: 100%;
+      padding: 1.5rem 1.25rem 1.75rem;
+      background: #0d0d0d;
+    }
+
+    /* Open-panel logo sits at the bottom-right of the card, HQ style. */
+    .content-logo {
+      display: block;
+      position: static;
+      transform: none;
+      height: 56px;
+      width: auto;
+      max-width: 200px;
+      object-fit: contain;
+      order: 99;
+      align-self: flex-end;
+      margin: auto 0 0;
+      filter:
+        drop-shadow(0 0 14px rgba(240, 240, 240, 0.5))
+        drop-shadow(0 0 36px rgba(240, 240, 240, 0.28));
+    }
+
+    /* CCC portrait logo on mobile: taller so it's legible. */
+    .brand-ccc .content-logo {
+      height: 96px;
+      max-width: 150px;
+    }
+
+    .headline {
+      font-size: clamp(28px, 8vw, 40px);
+    }
+
+    .deck {
+      font-size: 1rem;
+    }
+
+    .active-edge {
+      width: 100%;
+      height: 3px;
+      top: 0;
+      bottom: auto;
+      left: 0;
+    }
+
+    .accordion-play-pause {
+      bottom: auto;
+      top: 1rem;
+      right: 1rem;
+    }
+  }
+
+  /* ---- Spatial zoom ---- */
+  /* The active panel is clickable to trigger the camera movement into the
+     fullscreen view (the expand icon was removed). No magnifying-glass
+     cursor: the interaction is the site's camera navigation, not a generic
+     zoom. Links and buttons inside keep their pointer cursor. */
+  .accordion-panel.active a,
+  .accordion-panel.active button {
+    cursor: pointer;
+  }
+
+  /* Reduced Motion */
+  @media (prefers-reduced-motion: reduce) {
+    .accordion-panel, .panel-bg img, .expanded-content, .panel-scrims {
+      transition: none !important;
+      transform: none !important;
+      animation: none !important;
+    }
+    .progress-fill {
+      transition: none !important;
+    }
+  }
+</style>
+
+<script>
+  class BrandAccordion {
+    private section: HTMLElement;
+    private panels: NodeListOf<HTMLElement>;
+    private triggers: NodeListOf<HTMLButtonElement>;
+    private announcer: HTMLElement | null;
+    private playPauseBtn: HTMLButtonElement | null;
+    private activeIndex: number = 0;
+    private duration: number = 7000;
+    private timer: number | null = null;
+    private startTime: number = 0;
+    private remainingTime: number = 0;
+    private isPaused: boolean = false;
+    private manualOverride: boolean = false;
+    private hasStarted: boolean = false;
+
+    constructor(el: HTMLElement) {
+      this.section = el;
+      this.panels = this.section.querySelectorAll('.accordion-panel');
+      this.triggers = this.section.querySelectorAll('.acc-trigger');
+      this.announcer = document.getElementById('accordion-announcer');
+      this.playPauseBtn = this.section.querySelector('.accordion-play-pause');
+
+      if (!this.panels.length) return;
+
+      this.init();
+    }
+
+    init() {
+      // Check for reduced motion or mobile to disable auto-rotation
+      const isMobile = window.innerWidth <= 767;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || isMobile) {
+        this.manualOverride = true;
+        this.updatePlayPauseIcon();
+      }
+
+      // Click is the ONLY thing that switches panels. Hover is a CSS-only
+      // preview (see the :hover rules above) and never activates a panel.
+      this.triggers.forEach((trigger, i) => {
+        trigger.addEventListener('click', () => {
+          if (this.activeIndex !== i) {
+            this.manualOverride = true; // Permanent stop
+            this.updatePlayPauseIcon();
+            this.goToPanel(i);
+          }
+        });
+      });
+
+      // Play/Pause Click
+      if (this.playPauseBtn) {
+        this.playPauseBtn.addEventListener('click', () => {
+          this.manualOverride = !this.manualOverride;
+          if (this.manualOverride) {
+            this.pause();
+          } else {
+            this.resume();
+          }
+          this.updatePlayPauseIcon();
+        });
+      }
+
+      // Auto-pause on hover/focus/touch (for the whole section)
+      this.section.addEventListener('mouseenter', () => this.pause());
+      this.section.addEventListener('mouseleave', () => {
+        if (!this.manualOverride) this.resume();
+      });
+      this.section.addEventListener('focusin', () => this.pause());
+      this.section.addEventListener('focusout', () => {
+        setTimeout(() => {
+          if (!this.section.contains(document.activeElement) && !this.manualOverride) {
+            this.resume();
+          }
+        }, 10);
+      });
+      this.section.addEventListener('touchstart', () => this.pause(), { passive: true });
+
+      // Keyboard support
+      this.section.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          this.manualOverride = true;
+          this.goToPanel((this.activeIndex + 1) % this.panels.length);
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          this.manualOverride = true;
+          this.goToPanel((this.activeIndex - 1 + this.panels.length) % this.panels.length);
+        } else if (e.key === 'Home') {
+          e.preventDefault();
+          this.manualOverride = true;
+          this.goToPanel(0);
+        } else if (e.key === 'End') {
+          e.preventDefault();
+          this.manualOverride = true;
+          this.goToPanel(this.panels.length - 1);
+        }
+      });
+
+      // Intersection Observer to start 3s beat when scrolled into view
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !this.hasStarted && !this.manualOverride) {
+            this.hasStarted = true;
+            setTimeout(() => {
+              if (!this.manualOverride) {
+                this.startTime = performance.now();
+                this.remainingTime = this.duration;
+                this.kick();
+              }
+            }, 3000); // 3s beat
+            observer.disconnect();
+          }
+        });
+      }, { threshold: 0.5 });
+
+      observer.observe(this.section);
+
+      // Force initial active styles correctly on fill
+      this.updateProgressFill();
+    }
+
+    goToPanel(index: number) {
+      if (index === this.activeIndex) return;
+
+      const prevFill = this.panels[this.activeIndex].querySelector('.progress-fill') as HTMLElement;
+      if (prevFill) prevFill.style.width = '0%';
+
+      this.panels[this.activeIndex].classList.remove('active');
+      this.triggers[this.activeIndex].setAttribute('aria-expanded', 'false');
+
+      this.activeIndex = index;
+
+      const newPanel = this.panels[this.activeIndex];
+      newPanel.classList.add('active');
+      this.triggers[this.activeIndex].setAttribute('aria-expanded', 'true');
+
+      if (this.announcer) {
+        const title = newPanel.querySelector('.headline')?.textContent || '';
+        this.announcer.textContent = `Panel ${index + 1} of ${this.panels.length}: ${title}`;
+      }
+
+      this.startTime = performance.now();
+      this.remainingTime = this.duration;
+      this.updateProgressFill();
+      this.kick();
+    }
+
+    pause() {
+      this.isPaused = true;
+    }
+
+    // The fullscreen zoom takes over: stop rotation for good.
+    freezeForZoom() {
+      this.manualOverride = true;
+      this.isPaused = true;
+      if (this.timer !== null) {
+        cancelAnimationFrame(this.timer);
+        this.timer = null;
+      }
+      this.updatePlayPauseIcon();
+    }
+
+    resume() {
+      if (this.manualOverride) return;
+      this.isPaused = false;
+      this.kick();
+    }
+
+    // Start the rAF clock only when there is work to do. The loop stops
+    // itself whenever rotation is paused or manually overridden, so the
+    // page is not paying for frames while nothing moves.
+    kick() {
+      if (this.timer !== null) return;
+      if (this.isPaused || this.manualOverride) return;
+      this.startTime = performance.now();
+      this.timer = requestAnimationFrame(this.tick);
+    }
+
+    updatePlayPauseIcon() {
+      if (!this.playPauseBtn) return;
+      const iconPlay = this.playPauseBtn.querySelector('.icon-play') as HTMLElement;
+      const iconPause = this.playPauseBtn.querySelector('.icon-pause') as HTMLElement;
+
+      if (this.manualOverride) {
+        iconPlay.style.display = 'block';
+        iconPause.style.display = 'none';
+        this.playPauseBtn.setAttribute('aria-pressed', 'true');
+        this.playPauseBtn.setAttribute('aria-label', 'Play auto-rotation');
+      } else {
+        iconPlay.style.display = 'none';
+        iconPause.style.display = 'block';
+        this.playPauseBtn.setAttribute('aria-pressed', 'false');
+        this.playPauseBtn.setAttribute('aria-label', 'Pause auto-rotation');
+      }
+    }
+
+    updateProgressFill() {
+      if (this.manualOverride) {
+        const activeFill = this.panels[this.activeIndex].querySelector('.progress-fill') as HTMLElement;
+        if (activeFill) activeFill.style.width = '0%';
+        return;
+      }
+
+      const progress = 1 - (this.remainingTime / this.duration);
+      const activeFill = this.panels[this.activeIndex].querySelector('.progress-fill') as HTMLElement;
+      if (activeFill) {
+        activeFill.style.width = `${progress * 100}%`;
+      }
+    }
+
+    tick = () => {
+      if (!this.isPaused && !this.manualOverride) {
+        const now = performance.now();
+        const elapsed = now - this.startTime;
+        this.remainingTime -= elapsed;
+        this.startTime = now;
+
+        if (this.remainingTime <= 0) {
+          this.goToPanel((this.activeIndex + 1) % this.panels.length);
+        } else {
+          this.updateProgressFill();
+        }
+        this.timer = requestAnimationFrame(this.tick);
+      } else {
+        // Nothing to do: stop the loop until kick() restarts it.
+        this.timer = null;
+        this.startTime = performance.now();
+      }
+    }
+  }
+
+  // ---- Brand Camera Dolly ----
+  // When an active brand panel is clicked, the camera physically dollys toward
+  // that panel by scaling and translating the #brand-camera-stage coordinate space.
+  // The clicked panel lands centered in the viewport while surrounding content
+  // enlarges uniformly. Clicking again, clicking background, or pressing ESC resets.
+  class BrandCamera {
+    private stage: HTMLElement;
+    private stageWrap: HTMLElement | null;
+    private accordion: BrandAccordion;
+    private panels: HTMLElement[];
+    private isZoomed: boolean = false;
+    private activeElement: HTMLElement | null = null;
+    private readonly SCALE = 2.0;
+
+    constructor(stage: HTMLElement, accordion: BrandAccordion) {
+      this.stage = stage;
+      this.stageWrap = stage.closest('.brand-stage-wrap');
+      this.accordion = accordion;
+      this.panels = Array.from(stage.querySelectorAll('.accordion-panel'));
+
+      this.init();
+    }
+
+    init() {
+      this.panels.forEach((p, i) => {
+        p.addEventListener('click', (e) => {
+          // If clicked a link or button inside panel, let it behave normally if not zoomed
+          const interactive = (e.target as HTMLElement).closest('a, button.inquiry-link');
+          if (interactive && !this.isZoomed) return;
+
+          // If panel not active yet, accordion switches to it first
+          if (!p.classList.contains('active')) {
+            if (this.isZoomed) {
+              this.resetZoom();
+            }
+            this.accordion.goToPanel(i);
+            return;
+          }
+
+          // If panel is active:
+          e.preventDefault();
+          if (this.isZoomed) {
+            this.resetZoom();
+          } else {
+            this.zoomToElement(p);
+          }
+        });
+      });
+
+      // Background click resets
+      this.stageWrap?.addEventListener('click', (e) => {
+        if (this.isZoomed) {
+          const panel = (e.target as HTMLElement).closest('.accordion-panel');
+          if (!panel) {
+            this.resetZoom();
+          }
+        }
+      });
+
+      // ESC key resets
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && this.isZoomed) {
+          e.preventDefault();
+          this.resetZoom();
+        }
+      });
+
+      // Browser back/forward
+      window.addEventListener('popstate', () => {
+        if (this.isZoomed) this.resetZoom();
+      });
+    }
+
+    zoomToElement(el: HTMLElement) {
+      if (this.isZoomed) {
+        this.resetZoom();
+        return;
+      }
+
+      // 1. Capture geometry before transform
+      const rect = el.getBoundingClientRect();
+      const elCX = rect.left + rect.width / 2;
+      const elCY = rect.top + rect.height / 2;
+      const vpCX = window.innerWidth / 2;
+      const vpCY = window.innerHeight / 2;
+      const dx = vpCX - elCX;
+      const dy = vpCY - elCY;
+
+      // 2. Pause accordion rotation
+      this.accordion.freezeForZoom();
+
+      // 3. Mark state
+      this.isZoomed = true;
+      this.activeElement = el;
+      this.stage.classList.add('is-zoomed');
+      document.body.style.overflow = 'hidden';
+
+      // 4. Transform stage: exactly scale(SCALE) translate(dx / SCALE, dy / SCALE)
+      this.stage.style.transform = `scale(${this.SCALE}) translate(${dx / this.SCALE}px, ${dy / this.SCALE}px)`;
+    }
+
+    resetZoom() {
+      if (!this.isZoomed) return;
+
+      this.isZoomed = false;
+      this.stage.style.transform = 'none';
+      this.stage.classList.remove('is-zoomed');
+      document.body.style.overflow = '';
+      this.activeElement = null;
+
+      this.accordion.resume();
+    }
+  }
+
+  const initAccordion = () => {
+    const hero = document.querySelector('.accordion-hero') as HTMLElement;
+    const stage = document.getElementById('brand-camera-stage') as HTMLElement;
+    if (!hero || !stage) return;
+    const accordion = new BrandAccordion(hero);
+    new BrandCamera(stage, accordion);
+  };
+
+  initAccordion();
+</script>

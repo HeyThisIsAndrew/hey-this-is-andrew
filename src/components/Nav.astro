@@ -1,0 +1,386 @@
+---
+import { Image } from 'astro:assets';
+import navLogo from '../assets/brand-logos/hey-thisisandrew.png';
+
+// Fixed navbar: BE Unconventional HQ's navbar, monochrome.
+// Syne links, frosted bar, underline grow + gray glow on hover.
+// Order: Lanes, Projects, Gear, Goals, About. The logo is Home ("/").
+//
+// Spatial navigation layer:
+// - Anchor links scroll with a "receive" landing on the target section.
+// - The About link zooms into /about from the tapped element (route zoom).
+// - The logo zooms back out to / from /about; on the homepage it returns
+//   to the top with a tactile press.
+// - The mobile menu opens/closes with a designed slide + staggered links.
+// - Scrollspy keeps the selected nav state visually connected to the section.
+
+const rawBase = import.meta.env.BASE_URL;
+const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
+
+const links = [
+  { label: 'Lanes', href: `${base}/#directory`, section: 'directory' },
+  { label: 'Projects', href: `${base}/#projects`, section: 'projects' },
+  { label: 'Gear', href: `${base}/#gear`, section: 'gear' },
+  { label: 'Goals', href: `${base}/#goals`, section: 'goals' },
+  { label: 'About', href: `${base}/about`, section: null },
+];
+
+const isAbout = Astro.url.pathname === '/about' || Astro.url.pathname === '/about/' || Astro.url.pathname === `${base}/about`;
+---
+<header class="site-nav" id="top">
+  <div class="nav-inner">
+    <a class="wordmark" href={base || '/'} aria-label="Hey This Is Andrew, home" data-route-zoom={isAbout ? true : undefined} data-logo-home={!isAbout ? true : undefined}>
+      <Image src={navLogo} alt="Hey This Is Andrew" class="wordmark-logo" width={800} />
+    </a>
+    <nav aria-label="Sections">
+      <ul>
+        {links.map((l) => (
+          <li>
+            <a
+              href={l.href}
+              data-nav-link
+              data-section={l.section}
+              data-route-zoom={l.href === `${base}/about` ? true : undefined}
+              aria-current={l.href === `${base}/about` && isAbout ? 'page' : undefined}
+            >{l.label}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+    <button type="button" class="menu-btn" aria-expanded="false" aria-controls="mobile-menu">
+      <span class="menu-btn-label">Menu</span>
+    </button>
+  </div>
+  <div class="mobile-menu" id="mobile-menu" hidden>
+    <nav aria-label="Sections menu">
+      <ul>
+        {links.map((l) => (
+          <li>
+            <a
+              href={l.href}
+              data-route-zoom={l.href === `${base}/about` ? true : undefined}
+            >{l.label}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<script>
+  import { initRouteTransitions, prefersReducedMotion } from '../lib/spatial.ts';
+
+  // Route zoom: About <-> Home expand from the tapped element.
+  initRouteTransitions('a[data-route-zoom]');
+  // NOTE: initAnchorTransitions() is intentionally NOT called here.
+  // BaseLayout owns same-page hash navigation via its camera-fly system.
+  // Having two handlers caused a scroll-to-top regression.
+
+  // Logo: on the homepage, return to top with a tactile press instead of
+  // reloading. On any other page, let the href="/" navigate home normally.
+  const logoHome = document.querySelector('[data-logo-home]');
+  if (logoHome) {
+    logoHome.addEventListener('click', (e) => {
+      if (window.location.pathname !== '/') return;
+      e.preventDefault();
+      const reduced = prefersReducedMotion();
+      window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+      if (!reduced) {
+        const el = logoHome;
+        el.style.transition = 'transform 180ms cubic-bezier(0.2, 0.9, 0.25, 1)';
+        el.style.transform = 'scale(0.96)';
+        window.setTimeout(() => {
+          el.style.transform = 'scale(1)';
+          window.setTimeout(() => {
+            el.style.transition = '';
+            el.style.transform = '';
+          }, 200);
+        }, 140);
+      }
+    });
+  }
+
+  // Mobile menu: designed open/close — panel slides down, links stagger in.
+  // Close reverses. Escape, link selection, and resize still close it.
+  const menuBtn = document.querySelector('.menu-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+  if (menuBtn && mobileMenu) {
+    const label = menuBtn.querySelector('.menu-btn-label');
+    const menuLinks = Array.from(mobileMenu.querySelectorAll('a'));
+    const reduced = () => prefersReducedMotion();
+    let closeTimer = 0;
+
+    const setOpen = (open) => {
+      window.clearTimeout(closeTimer);
+      menuBtn.setAttribute('aria-expanded', String(open));
+      if (label) label.textContent = open ? 'Close' : 'Menu';
+      if (open) {
+        mobileMenu.hidden = false;
+        // Force reflow so the enter transition plays.
+        void mobileMenu.offsetWidth;
+        mobileMenu.classList.add('open');
+        if (menuLinks.length) menuLinks[0].focus();
+      } else {
+        mobileMenu.classList.remove('open');
+        if (reduced()) {
+          mobileMenu.hidden = true;
+        } else {
+          // Wait for the reverse transition before hiding.
+          closeTimer = window.setTimeout(() => {
+            mobileMenu.hidden = true;
+          }, 340);
+        }
+      }
+    };
+    const isOpen = () => !mobileMenu.hidden;
+    menuBtn.addEventListener('click', () => setOpen(!isOpen()));
+    menuLinks.forEach((a) =>
+      a.addEventListener('click', () => {
+        setOpen(false);
+        menuBtn.focus();
+      })
+    );
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isOpen()) {
+        setOpen(false);
+        menuBtn.focus();
+      }
+    });
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 640 && isOpen()) setOpen(false);
+    });
+  }
+
+  // Scrollspy: keep the selected nav state connected to the visible section.
+  const spyLinks = Array.from(document.querySelectorAll('[data-nav-link][data-section]'));
+  if (spyLinks.length && 'IntersectionObserver' in window) {
+    const sections = spyLinks
+      .map((a) => document.getElementById(a.getAttribute('data-section')))
+      .filter(Boolean);
+    const setActive = (id) => {
+      spyLinks.forEach((a) => {
+        const on = a.getAttribute('data-section') === id;
+        a.classList.toggle('active', on);
+        if (on) a.setAttribute('aria-current', 'true');
+        else a.removeAttribute('aria-current');
+      });
+    };
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((en) => {
+          if (en.isIntersecting) setActive(en.target.id);
+        });
+      },
+      { rootMargin: '-38% 0px -55% 0px', threshold: 0 }
+    );
+    sections.forEach((s) => io.observe(s));
+  }
+</script>
+
+<style>
+  .site-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    /* Top safe area: the viewport meta omits viewport-fit=cover (matching
+       BE Unconventional HQ), so the browser keeps page content inside the
+       safe area and the system renders the Dynamic Island / status-bar
+       region black. No extra padding needed. */
+    background: rgba(10, 10, 10, 0.85);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    /* Visible bottom divider and drop shadow: establishes clean physical boundary directly over hero */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  /* Menu open: the nav rises above the safe-area blackout (BE pattern),
+     so the open panel owns the top of the screen. */
+  .site-nav:has(.mobile-menu.open) {
+    z-index: 120;
+  }
+  .site-nav:hover {
+    background: rgba(25, 25, 25, 0.95);
+    box-shadow:
+      0 4px 30px rgba(0, 0, 0, 0.6),
+      0 4px 40px rgba(200, 200, 200, 0.10);
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 1.2rem clamp(1.25rem, 4vw, 2.5rem);
+  }
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    margin-right: auto;
+    text-decoration: none;
+    transition: filter 0.3s ease;
+  }
+  .wordmark-logo {
+    display: block;
+    height: 3rem;
+    width: auto;
+  }
+  .wordmark:hover {
+    filter: brightness(1.15) drop-shadow(0 0 12px rgba(240, 240, 240, 0.35));
+  }
+  /* Tactile press on nav links — the selection feels physical. */
+  .site-nav nav[aria-label="Sections"] a:active {
+    transform: scale(0.96);
+  }
+  .site-nav nav[aria-label="Sections"] ul {
+    display: flex;
+    gap: 2.5rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .site-nav nav[aria-label="Sections"] a {
+    position: relative;
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(245, 245, 245, 0.8);
+    text-decoration: none;
+    padding: 0.75rem 0.25rem;
+    transition: color 0.3s ease, text-shadow 0.3s ease, transform 0.18s cubic-bezier(0.2, 0.9, 0.25, 1);
+  }
+  .site-nav nav[aria-label="Sections"] a::after {
+    content: '';
+    position: absolute;
+    bottom: 0.35rem;
+    left: 0.25rem;
+    right: 0.25rem;
+    height: 1px;
+    background: var(--color-accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+  }
+  .site-nav nav[aria-label="Sections"] a:hover,
+  .site-nav nav[aria-label="Sections"] a:focus-visible {
+    color: var(--color-accent-text);
+    text-shadow: 0 0 12px rgba(240, 240, 240, 0.6);
+  }
+  .site-nav nav[aria-label="Sections"] a:hover::after,
+  .site-nav nav[aria-label="Sections"] a:focus-visible::after {
+    transform: scaleX(1);
+  }
+  /* Scrollspy active state: the underline stays on the visible section. */
+  .site-nav nav[aria-label="Sections"] a.active {
+    color: var(--color-accent-text);
+  }
+  .site-nav nav[aria-label="Sections"] a.active::after {
+    transform: scaleX(1);
+  }
+
+  /* Restrained mobile menu: square, monochrome, uppercase/tracked, 44px targets. */
+  .menu-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 1rem;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: rgba(245, 245, 245, 0.9);
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.25s ease, border-color 0.25s ease, transform 0.18s cubic-bezier(0.2, 0.9, 0.25, 1);
+  }
+  .menu-btn:hover,
+  .menu-btn:focus-visible {
+    color: var(--color-accent-text);
+    border-color: rgba(255, 255, 255, 0.6);
+  }
+  .menu-btn:active {
+    transform: scale(0.94);
+  }
+  .mobile-menu {
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(10, 10, 10, 0.98);
+    padding-bottom: env(safe-area-inset-bottom);
+    overflow: hidden;
+    /* One smooth motion: the whole panel moves as a single unit.
+       No per-link stagger — that was the jitter source (mismatched
+       durations + close timer cutting the animation short). */
+    opacity: 0;
+    transform: translateY(-14px);
+    transition: opacity 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+      transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .mobile-menu.open {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .mobile-menu[hidden] {
+    display: none;
+  }
+  /* Link block: left-aligned text, centered as a block in the viewport. */
+  .mobile-menu nav {
+    display: flex;
+    justify-content: center;
+  }
+  .mobile-menu ul {
+    list-style: none;
+    margin: 0;
+    padding: 0.5rem 0;
+    width: fit-content;
+    min-width: 12rem;
+  }
+  .mobile-menu a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0.75rem 0;
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(245, 245, 245, 0.8);
+    text-decoration: none;
+    text-align: left;
+    transition: color 0.25s ease, background-color 0.25s ease;
+  }
+  .mobile-menu a:hover,
+  .mobile-menu a:focus-visible {
+    color: var(--color-accent-text);
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .mobile-menu a:active {
+    transform: scale(0.98);
+  }
+
+  @media (max-width: 640px) {
+    .site-nav nav[aria-label="Sections"] ul { display: none; }
+    .site-nav .menu-btn { display: inline-flex; }
+    .nav-inner { gap: 1rem; }
+    .wordmark-logo { height: 2.25rem; }
+    /* Opaque on small screens: the safe-area hierarchy is solid black,
+       and no hero chrome ghosts through the bar while scrolling. */
+    .site-nav {
+      background: #0a0a0a;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+    .site-nav:hover { background: #0a0a0a; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-menu,
+    .site-nav nav[aria-label="Sections"] a,
+    .menu-btn {
+      transition: none;
+    }
+  }
+</style>

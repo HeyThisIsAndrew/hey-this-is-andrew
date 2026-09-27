@@ -1,0 +1,147 @@
+---
+/**
+ * NewsletterSignup — the owned-newsletter on-ramp. Understated by design:
+ * notes from the build, what broke, what's next. No hype.
+ *
+ * Today the signup completes on Substack (real path, see
+ * src/lib/newsletter.ts). The form UI stays the same when a direct
+ * provider is connected — only NEWSLETTER_PROVIDER changes.
+ */
+import { NEWSLETTER_PROVIDER, NEWSLETTER_ENDPOINT } from '../lib/newsletter';
+---
+
+<div class="newsletter" role="region" aria-labelledby="newsletter-heading">
+  <div class="newsletter-copy">
+    <h3 class="newsletter-title" id="newsletter-heading">Notes from the build, by email</h3>
+    <p class="newsletter-lede">What I'm making, what I'm learning, what broke, what's coming next. Short, occasional, no hype.</p>
+  </div>
+  <form class="newsletter-form" id="newsletter-form" novalidate>
+    <label class="newsletter-label" for="newsletter-email">Email address</label>
+    <div class="newsletter-row">
+      <input
+        class="newsletter-input"
+        type="email"
+        id="newsletter-email"
+        name="email"
+        placeholder="you@example.com"
+        autocomplete="email"
+        required
+        aria-describedby="newsletter-note"
+      />
+      <button class="btn btn-primary newsletter-btn" type="submit">Subscribe</button>
+    </div>
+    <p class="newsletter-note" id="newsletter-note">Via Substack. Unsubscribe anytime.</p>
+    <p class="newsletter-error" id="newsletter-error" role="alert" hidden>Enter a valid email address.</p>
+  </form>
+</div>
+
+<script define:vars={{ provider: NEWSLETTER_PROVIDER, endpoint: NEWSLETTER_ENDPOINT }}>
+  const form = document.getElementById('newsletter-form');
+  const input = document.getElementById('newsletter-email');
+  const error = document.getElementById('newsletter-error');
+  // NOTE: define:vars values must be JSON-serializable literals — never
+  // import or reference TS modules here (raw TS imports in define:vars
+  // broke a past deploy). The subscribe URL is rebuilt from the same
+  // constant the server module uses.
+  const SUBSTACK_SUBSCRIBE = 'https://thisiscoffeetalk.substack.com/subscribe';
+  const valid = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = (input.value || '').trim();
+    if (!valid(email)) {
+      if (error) error.hidden = false;
+      input.focus();
+      return;
+    }
+    if (error) error.hidden = true;
+    if (provider === 'direct' && endpoint) {
+      fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      }).catch(() => {});
+      form.innerHTML = '<p class="newsletter-done">You are on the list. Talk soon.</p>';
+    } else {
+      window.open(`${SUBSTACK_SUBSCRIBE}?email=${encodeURIComponent(email)}`, '_blank', 'noopener');
+      form.innerHTML = '<p class="newsletter-done">Almost done. Finish subscribing on Substack.</p>';
+    }
+  });
+</script>
+
+<style>
+  .newsletter {
+    margin-top: clamp(2.5rem, 5vw, 4rem);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+    display: grid;
+    gap: 1.5rem;
+  }
+  @media (min-width: 760px) {
+    .newsletter { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; }
+  }
+  .newsletter-title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(1.25rem, 2.6vw, 1.75rem);
+    margin: 0 0 0.6rem;
+    letter-spacing: 0.01em;
+  }
+  .newsletter-lede {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    max-width: 38ch;
+  }
+  .newsletter-label {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .newsletter-row {
+    display: flex;
+    gap: 0.75rem;
+  }
+  .newsletter-input {
+    flex: 1;
+    min-width: 0;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 0.8rem 1rem;
+    font-size: 0.95rem;
+    font-family: var(--font-body);
+    border-radius: 0;
+  }
+  .newsletter-input:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: -2px;
+  }
+  .newsletter-input::placeholder { color: var(--muted); }
+  .newsletter-btn { flex: none; }
+  .newsletter-note {
+    margin: 0.6rem 0 0;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .newsletter-error {
+    margin: 0.6rem 0 0;
+    color: var(--ink);
+    font-size: 0.85rem;
+  }
+  .newsletter-done {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--ink);
+  }
+  @media (max-width: 480px) {
+    .newsletter-row { flex-direction: column; }
+    .newsletter-btn { width: 100%; }
+  }
+</style>

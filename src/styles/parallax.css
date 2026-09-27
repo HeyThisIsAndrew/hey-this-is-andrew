@@ -1,0 +1,54 @@
+/* Scroll parallax: subtle, compositor-friendly, transform-only.
+   Primary path is pure CSS via view() scroll timelines (no JS, no jank).
+   Browsers without animation-timeline support get the rAF fallback in
+   src/lib/parallax.ts, which drives the same [data-parallax] hooks with
+   translate3d and only while the element is in view.
+   Uses the CSS `translate` property (not `transform`) so it composes with
+   the reveal system in spatial.ts, which owns `transform` on these nodes.
+   Respects prefers-reduced-motion: no movement at all. */
+
+/* Hero media: drifts gently against the scroll while the slide is in view.
+   Applied to .slide-media (the frame), never the img inside it — the img
+   runs its own Ken Burns zoom and must not be disturbed. */
+@supports (animation-timeline: view()) {
+  .slide-media {
+    animation: parallax-hero linear both;
+    animation-timeline: view();
+    animation-range: entry 0% exit 100%;
+    will-change: translate;
+  }
+  /* Section headers: a whisper of upward drift as they travel through the
+     viewport. translate composes with the children's reveal transforms. */
+  .sec-head {
+    animation: parallax-head linear both;
+    animation-timeline: view();
+    animation-range: entry 0% exit 100%;
+    will-change: translate;
+  }
+}
+
+@keyframes parallax-hero {
+  from { translate: 0 -4%; }
+  to { translate: 0 4%; }
+}
+
+@keyframes parallax-head {
+  from { translate: 0 1.25rem; }
+  to { translate: 0 -1.25rem; }
+}
+
+/* The JS fallback adds .parallax-js to <html>; kill the CSS timelines there
+   so the two systems never fight. */
+html.parallax-js .slide-media,
+html.parallax-js .sec-head {
+  animation: none;
+  will-change: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide-media,
+  .sec-head {
+    animation: none;
+    will-change: auto;
+  }
+}

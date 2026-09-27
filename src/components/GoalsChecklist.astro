@@ -1,0 +1,129 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props { groups: CollectionEntry<'goals'>[] }
+const { groups } = Astro.props;
+
+const statusLabel: Record<string, string> = {
+  'done': 'Done',
+  'in-progress': 'In progress',
+  'next': 'Up next',
+};
+
+function progress(items: CollectionEntry<'goals'>['data']['items']) {
+  const done = items.filter((i) => i.status === 'done').length;
+  return { done, total: items.length, pct: Math.round((done / items.length) * 100) };
+}
+---
+<div class="goals-panel">
+  {groups.map((group) => {
+    const { done, total, pct } = progress(group.data.items);
+    return (
+      <section class="goal-group reveal" aria-label={group.data.title}>
+        <div class="goal-head">
+          <h3>{group.data.title}</h3>
+          <span class="goal-count">{done}/{total}</span>
+        </div>
+        <div class="bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`${group.data.title} progress`}>
+          <span class="fill" style={`--pct: ${pct}%`}></span>
+        </div>
+        <ul class="goals">
+          {group.data.items.map((item) => (
+            <li data-status={item.status}>
+              <span class="box" aria-hidden="true"></span>
+              <div>
+                <span class="label">
+                  {item.label}
+                  <span class="vh">: {statusLabel[item.status]}</span>
+                </span>
+                {item.note && <span class="note">{item.note}</span>}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+  })}
+</div>
+
+<style>
+  .goals-panel h2 { font-size: clamp(1.4rem, 2.8vw, 1.9rem); }
+  .goal-group {
+    margin-top: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+  }
+  .goal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.9rem;
+  }
+  .goal-head h3 { margin: 0; font-size: 1.15rem; }
+  .goal-count {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  /* Thin progress bar; width driven by the --pct custom property. */
+  .bar {
+    height: 4px;
+    background: var(--surface-2);
+    border-radius: 0;
+    overflow: clip;
+    margin-bottom: 1.25rem;
+  }
+  .bar .fill {
+    display: block;
+    height: 100%;
+    width: var(--pct, 0%);
+    background: var(--key);
+    border-radius: 0;
+    transition: width 0.4s ease;
+  }
+  /* Real list semantics: screen readers announce structure,
+     styling hooks off data-status so updates are one-word changes. */
+  .goals { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.85rem; }
+  .goals li { display: flex; gap: 0.85rem; align-items: flex-start; }
+  .box {
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.2rem;
+    border: 1.5px solid var(--muted);
+    border-radius: 0;
+    display: grid;
+    place-items: center;
+  }
+  li[data-status="done"] .box {
+    background: var(--key);
+    border-color: var(--key);
+  }
+  li[data-status="done"] .box::after {
+    content: "";
+    width: 0.55rem;
+    height: 0.3rem;
+    border-left: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+    transform: rotate(-45deg) translateY(-1px);
+  }
+  li[data-status="in-progress"] .box {
+    border-color: var(--key);
+  }
+  li[data-status="in-progress"] .box::after {
+    content: "";
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 0;
+    background: var(--key);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    50% { opacity: 0.35; }
+  }
+  li[data-status="done"] .label { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--key-dim); }
+  .label { font-weight: 500; display: block; }
+  .note { display: block; font-size: 0.88rem; color: var(--muted); }
+</style>

@@ -1,0 +1,154 @@
+---
+import '../styles/tokens.css';
+import '../styles/global.css';
+import '../styles/cta.css';
+import '../styles/parallax.css';
+import Nav from '../components/Nav.astro';
+import LiveBanner from '../components/LiveBanner.astro';
+import Footer from '../components/Footer.astro';
+import VideoPlayer from '../components/VideoPlayer.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const {
+  title,
+  description = 'Andrew Baxter: creator, photographer, and coffee drinker building brands in public.',
+} = Astro.props;
+
+// Link preview image: absolute URL required by crawlers. Falls back to the
+// staging URL until the production domain is configured.
+const siteUrl =
+  Astro.site?.toString().replace(/\/$/, '') ?? 'https://hey-this-is-andrew-staging.netlify.app';
+const ogImage = `${siteUrl}/og-image.jpg`;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#000000" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+    <title>{title}</title>
+    <style>
+      .site-camera-stage {
+        position: relative;
+      }
+    </style>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <Nav />
+    <LiveBanner />
+    <div id="site-camera-stage" class="site-camera-stage">
+      <main id="main-content">
+        <slot />
+      </main>
+    </div>
+    <Footer />
+    <VideoPlayer />
+    <script>
+      // Complete the incoming half of a route zoom (About <-> Home).
+      import { handleRouteEnter, initReveals } from '../lib/spatial.ts';
+      import { initParallaxFallback } from '../lib/parallax.ts';
+      handleRouteEnter('main');
+      initReveals();
+      // CSS view() timelines drive parallax where supported; this is the
+      // rAF fallback for older browsers. No-op when native support exists.
+      initParallaxFallback();
+
+      // Single authoritative in-page anchor navigation system.
+      // Reliability beats spectacle: smoothly lands on the requested section
+      // with exact offset for the sticky navbar, coherent URL hash state,
+      // and no conflicting transforms, duplicate listeners, or bounce sequences.
+      (function () {
+        function getNavHeight() {
+          const nav = document.querySelector('.site-nav');
+          return nav ? nav.getBoundingClientRect().height : 72;
+        }
+
+        function scrollToTarget(target: Element, pushHash = false, hash = '') {
+          if (!target) return;
+          const navH = getNavHeight();
+          const targetTop = target.getBoundingClientRect().top + window.scrollY - navH;
+          if (pushHash && hash) {
+            history.pushState(null, '', hash);
+          }
+          window.scrollTo({
+            top: Math.max(0, targetTop),
+            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+          });
+          // Move focus for accessibility without causing extra scroll
+          if (target instanceof HTMLElement && !target.hasAttribute('tabindex')) {
+            target.setAttribute('tabindex', '-1');
+          }
+          (target as HTMLElement).focus?.({ preventScroll: true });
+        }
+
+        // Intercept internal anchor link clicks
+        document.addEventListener('click', (e) => {
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+          const targetEl = e.target as Element | null;
+          if (!targetEl || typeof targetEl.closest !== 'function') return;
+          const link = targetEl.closest('a[href*="#"]') as HTMLAnchorElement | null;
+          if (!link) return;
+          const href = link.getAttribute('href') || '';
+          const hashIndex = href.indexOf('#');
+          if (hashIndex === -1) return;
+          const hash = href.slice(hashIndex);
+          if (!hash || hash === '#') return;
+
+          // Only intercept same-page hashes.
+          const linkPath = href.slice(0, hashIndex);
+          const currentPath = window.location.pathname;
+          if (linkPath && linkPath !== currentPath && linkPath !== currentPath.replace(/\/$/, '') && linkPath !== '/') {
+            return;
+          }
+
+          const target = document.querySelector(hash);
+          if (!target) return;
+
+          e.preventDefault();
+          scrollToTarget(target, true, hash);
+        });
+
+        // Initial hash load
+        if (window.location.hash) {
+          const target = document.querySelector(window.location.hash);
+          if (target) {
+            setTimeout(() => scrollToTarget(target, false), 150);
+          }
+        }
+
+        // Browser back / forward
+        window.addEventListener('popstate', () => {
+          if (window.location.hash) {
+            const target = document.querySelector(window.location.hash);
+            if (target) scrollToTarget(target, false);
+          } else if (window.location.pathname === '/' || window.location.pathname === '') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

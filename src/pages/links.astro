@@ -1,0 +1,129 @@
+---
+/**
+ * /links: the link-in-bio page. One destination for every profile,
+ * pointed at from social bios. Monochrome button list, no tracking.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const LINKS = [
+  { label: 'YouTube', sub: '@HeyThisIsAndrew', href: 'https://www.youtube.com/@HeyThisIsAndrew' },
+  { label: 'Instagram', sub: '@hey_thisisandrew', href: 'https://www.instagram.com/hey_thisisandrew/' },
+  { label: 'TikTok', sub: '@hey_thisisandrew', href: 'https://tiktok.com/@hey_thisisandrew' },
+  { label: 'Substack', sub: 'Notes from the build', href: 'https://thisiscoffeetalk.substack.com' },
+  { label: 'Full site', sub: 'hey-this-is-andrew', href: '/' },
+  { label: 'Feed', sub: 'Every video and article', href: '/feed' },
+  { label: 'Bluesky', sub: '@thisisandrew', href: 'https://bsky.app/profile/thisisandrew.bsky.social' },
+  { label: 'LinkedIn', sub: 'Andrew Baxter', href: 'https://www.linkedin.com/in/andrewlwyrbaxter/' },
+  { label: 'Email', sub: 'heythisisandrewb@gmail.com', href: 'mailto:heythisisandrewb@gmail.com' },
+];
+---
+
+<BaseLayout
+  title="Links · Hey This Is Andrew"
+  description="Everywhere to find Hey This Is Andrew: YouTube, Instagram, TikTok, Substack, and more."
+>
+  <div class="links-wrap">
+    <section class="links-profile" aria-label="Profile">
+      <p class="links-wordmark">HEY_THISISANDREW</p>
+      <p class="links-tagline">Creator · Photographer · Coffee Drinker</p>
+    </section>
+
+    <nav class="links-list" aria-label="Social links">
+      {LINKS.map((l) => (
+        <a
+          class="links-btn"
+          href={l.href}
+          target={l.href.startsWith('http') ? '_blank' : undefined}
+          rel={l.href.startsWith('http') ? 'noopener' : undefined}
+        >
+          <span class="links-label">{l.label}</span>
+          <span class="links-sub">{l.sub}</span>
+          <span class="links-arrow" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M1 11L11 1M11 1H3M11 1V9" stroke="currentColor" stroke-width="1.5" />
+            </svg>
+          </span>
+        </a>
+      ))}
+    </nav>
+  </div>
+</BaseLayout>
+
+<style>
+  .links-wrap {
+    max-width: 34rem;
+    margin: 0 auto;
+    padding: clamp(3rem, 8vw, 5rem) 1.25rem clamp(4rem, 8vw, 6rem);
+  }
+
+  .links-profile {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+
+  .links-wordmark {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.4rem;
+    letter-spacing: 0.02em;
+    margin: 0 0 0.5rem;
+  }
+
+  .links-tagline {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  .links-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .links-btn {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.25rem 1rem;
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    text-decoration: none;
+    transition: border-color 160ms ease, background 160ms ease;
+  }
+
+  .links-btn:hover {
+    border-color: var(--key);
+    background: var(--color-surface-2);
+  }
+
+  .links-label {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.02rem;
+    grid-column: 1;
+  }
+
+  .links-sub {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    grid-column: 1;
+  }
+
+  .links-arrow {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    color: var(--muted);
+  }
+
+  .links-btn:hover .links-arrow {
+    color: var(--ink);
+  }
+</style>

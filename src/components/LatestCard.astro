@@ -1,0 +1,97 @@
+---
+import type { LatestItem } from '../lib/latest-content';
+
+interface Props { item: LatestItem }
+const { item } = Astro.props;
+const date = new Date(item.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+const cta = item.kind === 'video' ? 'Watch the video' : 'Read on Substack';
+// Videos open the in-page player with a spatial zoom from the card.
+// Articles still open externally.
+const isVideo = item.kind === 'video';
+---
+<article class="latest-card reveal">
+  {isVideo ? (
+    <button
+      type="button"
+      class="stretched"
+      data-video-player
+      data-video-url={item.url}
+      data-video-title={item.title}
+      aria-label={`${item.title} (${cta})`}
+    ></button>
+  ) : (
+    <a class="stretched" href={item.url} target="_blank" rel="noopener" aria-label={`${item.title} (${cta}, opens in a new tab)`}></a>
+  )}
+  {item.image && (
+    <div class="thumb">
+      <img src={item.image} alt="" loading="lazy" referrerpolicy="no-referrer" />
+    </div>
+  )}
+  <div class="latest-meta">
+    <p class="latest-eyebrow"><span class="live-dot" aria-hidden="true"></span>{item.label} &middot; {date}</p>
+    <h3>{item.title}</h3>
+    {item.description && <p class="latest-desc">{item.description}</p>}
+    <p class="latest-cta">{cta} <span aria-hidden="true">&nearr;</span></p>
+  </div>
+</article>
+
+<style>
+  .latest-card { position: relative; }
+  .stretched {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    /* When the stretched trigger is a button (video player), reset button styles. */
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+  .latest-card {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    min-width: 0; /* grid blowout guard: long titles must wrap, not widen */
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: clip;
+    transition: transform 0.25s ease, border-color 0.25s ease;
+  }
+  .latest-card:has(.stretched:hover) { transform: translateY(-4px); border-color: var(--key-dim); }
+  .latest-card:has(.stretched:active) { transform: translateY(-1px) scale(0.995); }
+  @media (max-width: 720px) { .latest-card { grid-template-columns: 1fr; } }
+  .thumb {
+    aspect-ratio: 16 / 9;
+    min-width: 0;
+    background: var(--surface-2);
+    border-right: 1px solid var(--line);
+    overflow: clip;
+  }
+  @media (max-width: 720px) { .thumb { border-right: none; border-bottom: 1px solid var(--line); } }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .latest-meta { padding: 1.25rem 1.5rem 1.5rem; align-self: center; min-width: 0; }
+  .latest-eyebrow {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--key-ink);
+    margin: 0 0 0.75rem;
+  }
+  .live-dot {
+    width: 0.5rem; height: 0.5rem;
+    background: var(--key);
+    display: inline-block;
+  }
+  .latest-meta h3 { margin: 0 0 0.75rem; font-size: 1.6rem; line-height: 1.2; }
+  .latest-desc { margin: 0 0 1.25rem; color: var(--muted); font-size: 0.95rem; }
+  .latest-cta {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+</style>

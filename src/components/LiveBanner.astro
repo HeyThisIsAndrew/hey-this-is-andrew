@@ -1,0 +1,237 @@
+---
+/**
+ * LiveBanner — a slim takeover bar that appears only when the YouTube
+ * channel is live right now.
+ *
+ * No API key: the client fetches the channel's /live page through a CORS
+ * proxy and inspects the canonical link. YouTube serves a watch page at
+ * /live when streaming (canonical → youtube.com/watch?v=…); when offline
+ * the canonical points back at the channel. Everything fails silently —
+ * proxy down, parse miss, timeout — the banner simply never renders.
+ *
+ * Monochrome by rule: white pulse dot, Syne label, no red.
+ */
+---
+
+<div class="live-banner" id="live-banner" hidden>
+  <span class="live-pulse" aria-hidden="true"></span>
+  <span class="live-text">Live now</span>
+  <a class="live-cta" id="live-cta" href="#" target="_blank" rel="noopener">
+    Watch the stream
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+      <path d="M1 11L11 1M11 1H3M11 1V9" stroke="currentColor" stroke-width="1.5" />
+    </svg>
+  </a>
+  <button class="live-dismiss" id="live-dismiss" type="button" aria-label="Dismiss live banner">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+      <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.5" />
+    </svg>
+  </button>
+</div>
+
+<script>
+  (function () {
+    var CHANNEL_ID = 'UCNn5badDO7pbspeS6noInCw';
+    var LIVE_URL = 'https://www.youtube.com/channel/' + CHANNEL_ID + '/live';
+    var PROXY = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(LIVE_URL);
+    var CACHE_KEY = 'hia-live-check';
+    var DISMISS_KEY = 'hia-live-dismissed';
+    var CACHE_TTL = 5 * 60 * 1000;
+    var TIMEOUT_MS = 8000;
+
+    var banner = document.getElementById('live-banner');
+    var cta = document.getElementById('live-cta');
+    var dismiss = document.getElementById('live-dismiss');
+    if (!banner || !cta || !dismiss) return;
+
+    function readCache() {
+      try {
+        var raw = sessionStorage.getItem(CACHE_KEY);
+        if (!raw) return null;
+        var data = JSON.parse(raw);
+        if (!data || typeof data.at !== 'number') return null;
+        if (Date.now() - data.at > CACHE_TTL) return null;
+        return data;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function writeCache(data) {
+      try {
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
+      } catch (e) {
+        /* storage unavailable; the check just runs uncached */
+      }
+    }
+
+    function isDismissed() {
+      try {
+        return sessionStorage.getItem(DISMISS_KEY) === '1';
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function show(videoId) {
+      if (isDismissed()) return;
+      cta.href = 'https://www.youtube.com/watch?v=' + videoId;
+      banner.hidden = false;
+      document.documentElement.classList.add('live-on');
+    }
+
+    function hide() {
+      banner.hidden = true;
+      document.documentElement.classList.remove('live-on');
+    }
+
+    dismiss.addEventListener('click', function () {
+      try {
+        sessionStorage.setItem(DISMISS_KEY, '1');
+      } catch (e) {
+        /* ignore */
+      }
+      hide();
+    });
+
+    function check() {
+      var cached = readCache();
+      if (cached) {
+        if (cached.live && cached.videoId) show(cached.videoId);
+        return;
+      }
+      var ctrl = 'AbortController' in window ? new AbortController() : null;
+      var timer = setTimeout(function () {
+        if (ctrl) ctrl.abort();
+      }, TIMEOUT_MS);
+      var opts = ctrl ? { signal: ctrl.signal } : {};
+      fetch(PROXY, opts)
+        .then(function (res) {
+          if (!res.ok) throw new Error('proxy ' + res.status);
+          return res.text();
+        })
+        .then(function (html) {
+          var m = html.match(/<link rel="canonical" href="([^"]+)"/);
+          var canonical = m && m[1];
+          if (canonical && canonical.indexOf('watch?v=') !== -1) {
+            var vid = null;
+            try {
+              vid = new URL(canonical).searchParams.get('v');
+            } catch (e) {
+              /* malformed canonical; treat as offline */
+            }
+            if (vid) {
+              writeCache({ at: Date.now(), live: true, videoId: vid });
+              show(vid);
+              return;
+            }
+          }
+          writeCache({ at: Date.now(), live: false });
+        })
+        .catch(function () {
+          /* Fail silently: proxy down, timeout, parse miss. No banner. */
+        })
+        .finally(function () {
+          clearTimeout(timer);
+        });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', check);
+    } else {
+      check();
+    }
+  })();
+</script>
+
+<style>
+  .live-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 130;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    height: 2.5rem;
+    padding: 0 2.5rem;
+    background: var(--ink);
+    color: var(--color-black);
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+  .live-banner[hidden] {
+    display: none;
+  }
+
+  .live-pulse {
+    width: 0.55rem;
+    height: 0.55rem;
+    flex: none;
+    background: var(--color-black);
+    animation: live-ping 1.6s ease-in-out infinite;
+  }
+  @keyframes live-ping {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.8); }
+  }
+
+  .live-text {
+    white-space: nowrap;
+  }
+
+  .live-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--color-black);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    white-space: nowrap;
+  }
+  .live-cta:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  .live-dismiss {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    background: transparent;
+    border: none;
+    color: var(--color-black);
+    cursor: pointer;
+    opacity: 0.6;
+  }
+  .live-dismiss:hover {
+    opacity: 1;
+  }
+
+  /* When the banner is live, the fixed nav slides down beneath it and the
+     hero keeps its clearance. Scoped-component selectors still match from
+     here because the elements carry their classes. */
+  html.live-on .site-nav {
+    top: 2.5rem;
+  }
+  html.live-on .brand-carousel {
+    margin-top: calc(var(--nav-h, 0px) + 2.5rem);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .live-pulse {
+      animation: none;
+    }
+  }
+</style>
