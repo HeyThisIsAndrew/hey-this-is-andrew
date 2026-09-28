@@ -206,30 +206,33 @@ import SectionHeader from './SectionHeader.astro';
   .accordion-hero {
     display: flex;
     flex-direction: row;
-    gap: 10px;
+    gap: clamp(8px, 1vw, 18px);
     width: 100%;
-    height: clamp(480px, 72vh, 680px);
+    /* Aspect Ratio Lock: Exactly maintains 16 / 9 aspect ratio occupying 100% width */
+    aspect-ratio: 16 / 9;
     overflow: hidden;
     position: relative;
     background: var(--bg);
   }
 
-  /* Panel Base */
+  /* Panel Base: Side tabs/rail items scale proportionally across viewports */
   .accordion-panel {
-    flex: 1 1 0%;
-    min-width: 76px;
+    flex: 0 0 clamp(72px, 6vw, 180px);
+    min-width: 64px;
     position: relative;
     background: #080808;
     margin: 0;
     overflow: hidden;
-    transition: flex-grow 450ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    transition: flex 450ms cubic-bezier(0.22, 0.61, 0.36, 1);
     text-align: left;
     color: var(--ink);
     font-family: var(--font-body);
   }
 
   .accordion-panel.active {
-    flex-grow: 8;
+    flex: 1 1 0%;
+    min-width: 0;
+    max-width: none;
   }
 
   /* Hover is a preview only: a slight widen, a frame, and a brighten.
@@ -237,7 +240,8 @@ import SectionHeader from './SectionHeader.astro';
      does that. */
   @media (hover: hover) {
     .accordion-panel:not(.active):hover {
-      flex-grow: 1.7;
+      flex: 0 0 clamp(88px, 7vw, 110px);
+      max-width: 120px;
     }
     .accordion-panel:not(.active):hover .panel-bg img {
       filter: grayscale(35%) brightness(0.78) contrast(1.1);
@@ -292,6 +296,7 @@ import SectionHeader from './SectionHeader.astro';
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center;
     filter: grayscale(100%) brightness(0.6) contrast(1.1);
     transform: none;
     transition: filter 450ms ease;
@@ -467,9 +472,9 @@ import SectionHeader from './SectionHeader.astro';
     flex-direction: column;
     align-items: flex-start;
     text-align: left;
-    padding: clamp(1.5rem, 4vw, 3.75rem); /* HQ's hero pad */
-    padding-bottom: clamp(2rem, 3.5vw, 3.25rem);
-    max-width: 46rem;
+    padding: clamp(1.5rem, 4vw, 4.5rem);
+    padding-bottom: clamp(2rem, 4vw, 4rem);
+    max-width: clamp(40rem, 52vw, 75rem);
   }
 
   .kicker {
@@ -480,7 +485,7 @@ import SectionHeader from './SectionHeader.astro';
   }
 
   .headline {
-    font: 800 clamp(2.2rem, 1.9vw, 3.4rem) / 1.06 var(--font-display); /* HQ's hero title */
+    font: 800 clamp(2.4rem, 3.6vw, 5.5rem) / 1.05 var(--font-display);
     margin: 0.2rem 0 0.9rem;
     text-wrap: balance;
   }
@@ -492,7 +497,7 @@ import SectionHeader from './SectionHeader.astro';
   }
 
   .deck {
-    font: 500 0.95rem / 1.7 var(--font-body); /* HQ's deck voice */
+    font: 500 clamp(0.85rem, 1vw, 1.25rem) / 1.65 var(--font-body);
     letter-spacing: 0.22em;
     text-transform: uppercase;
     color: rgba(255, 255, 255, 0.62);
@@ -597,11 +602,11 @@ import SectionHeader from './SectionHeader.astro';
   .content-logo {
     display: block;
     position: absolute;
-    bottom: 2.5rem;
-    right: 2.5rem;
-    height: 64px;
+    bottom: clamp(2rem, 3.5vw, 4.5rem);
+    right: clamp(2rem, 3.5vw, 4.5rem);
+    height: clamp(64px, 5.5vw, 130px);
     width: auto;
-    max-width: 240px;
+    max-width: clamp(240px, 18vw, 380px);
     object-fit: contain;
     margin: 0;
     /* HQ's logo glow, monochrome: a strong luminous aura like the
@@ -613,8 +618,8 @@ import SectionHeader from './SectionHeader.astro';
 
   /* CCC's portrait lockup: give it height so it's legible. */
   .brand-ccc .content-logo {
-    height: 120px;
-    max-width: 180px;
+    height: clamp(120px, 9.5vw, 220px);
+    max-width: clamp(180px, 14vw, 300px);
   }
 
   /* Mobile: vertical stack, HQ pattern. The open panel jumps to the top

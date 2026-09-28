@@ -65,9 +65,10 @@ const durations = [58, 74, 66, 82];
     />
   </div>
 
-  <div class="photo-stage-wrap">
-    <div id="camera-stage" class="camera-stage">
-      <div class="photo-wall" role="region" aria-label="Photography portfolio, vertical image reels">
+  <div class="photo-grid-container">
+    <div class="photo-stage-wrap">
+      <div id="camera-stage" class="camera-stage">
+        <div class="photo-wall" role="region" aria-label="Photography portfolio, vertical image reels">
     {columns.map((col, ci) => (
       <div
         class="photo-column"
@@ -106,9 +107,10 @@ const durations = [58, 74, 66, 82];
         </div>
       </div>
     ))}
-      </div><!-- /.photo-wall -->
-    </div><!-- /#camera-stage -->
-  </div><!-- /.photo-stage-wrap -->
+        </div><!-- /.photo-wall -->
+      </div><!-- /#camera-stage -->
+    </div><!-- /.photo-stage-wrap -->
+  </div><!-- /.photo-grid-container -->
 
   <p class="photo-note">
     All photographs by Andrew. The cocktails and dishes pictured are the bar's.
@@ -135,16 +137,25 @@ const durations = [58, 74, 66, 82];
     pointer-events: none;
   }
 
+  .photo-grid-container {
+    width: 100%;
+    max-width: var(--maxw);
+    margin-inline: auto;
+    position: relative;
+    padding-inline: clamp(1rem, 3vw, 2.5rem);
+  }
+
   .photo-wall {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: clamp(1rem, 2.5vw, 2rem);
-    max-width: var(--maxw);
+    gap: clamp(12px, 1.5vw, 24px);
+    width: 100%;
+    max-width: 100%;
     margin: 0 auto;
-    padding: 3rem clamp(1.25rem, 4vw, 2.5rem) 0;
-    /* Tall enough to feel like reels, not a strip. */
-    height: min(92vh, 900px);
-    min-height: 560px;
+    padding: 2rem 0 0;
+    /* Tall enough to feel like reels with proportional height across 4K displays */
+    height: clamp(540px, 75vh, 1600px);
+    min-height: 520px;
     /* Fade the top and bottom edges so the reels dissolve. */
     mask-image: linear-gradient(to bottom, transparent 0, black 8%, black 92%, transparent 100%);
     -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 8%, black 92%, transparent 100%);
@@ -153,6 +164,7 @@ const durations = [58, 74, 66, 82];
   .photo-column {
     overflow: hidden;
     position: relative;
+    width: 100%;
   }
 
   .photo-track {
@@ -203,8 +215,8 @@ const durations = [58, 74, 66, 82];
   .photo-set {
     display: flex;
     flex-direction: column;
-    gap: clamp(1rem, 2vw, 1.75rem);
-    padding-bottom: clamp(1rem, 2vw, 1.75rem);
+    gap: clamp(12px, 1.5vw, 24px);
+    padding-bottom: clamp(12px, 1.5vw, 24px);
   }
 
   .photo-item {
@@ -216,13 +228,27 @@ const durations = [58, 74, 66, 82];
     background: #111;
     cursor: pointer;
     overflow: hidden;
-    /* Photos keep natural aspect ratio — no forced crop. */
+    /* Fixed cell aspect ratios to prevent distortion on wide displays */
+    aspect-ratio: 4 / 5;
     transition: border-color 0.3s ease, transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
   }
+
+  .photo-item:nth-child(3n + 1) {
+    aspect-ratio: 16 / 9;
+  }
+  .photo-item:nth-child(3n + 2) {
+    aspect-ratio: 1 / 1;
+  }
+  .photo-item:nth-child(3n) {
+    aspect-ratio: 4 / 5;
+  }
+
   .photo-item img {
     display: block;
     width: 100%;
-    height: auto;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
     /* Subtle cinematic grade at rest, full color on hover. */
     filter: grayscale(0.35) contrast(1.02);
     transition: filter 0.4s ease, transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -368,6 +394,17 @@ const durations = [58, 74, 66, 82];
   .photo-item[data-camera-zoom] {
     cursor: pointer;
   }
+  @media (max-width: 900px) {
+    .photo-wall {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .photo-set {
+      gap: 12px;
+      padding-bottom: 12px;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .camera-stage {
       transition-duration: 0.01ms !important;

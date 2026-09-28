@@ -6,19 +6,16 @@ html { scroll-behavior: smooth; overflow-x: clip; scroll-padding-top: 96px; back
 
 /* Andrew's 14" MacBook Pro calibration: at 100% browser zoom on standard laptop/desktop
    (1100px-1919px), site reads like 75% zoom.
-   For larger displays, QHD, and 4K monitors (1920px, 2560px, 3400px+),
-   scale proportionally so typography and spatial controls match the grandeur of the canvas. */
+   For larger displays, QHD, and 4K monitors (1920px up to 3840px+),
+   scale proportionally to the viewport so the percentage of screen occupied is
+   identical to the 14" MacBook Pro. */
 @media (min-width: 1100px) and (max-width: 1919px) {
   html { font-size: 75%; }
 }
-@media (min-width: 1920px) and (max-width: 2559px) {
-  html { font-size: 85%; }
-}
-@media (min-width: 2560px) and (max-width: 3399px) {
-  html { font-size: 100%; }
-}
-@media (min-width: 3400px) {
-  html { font-size: 112.5%; }
+@media (min-width: 1920px) {
+  html {
+    font-size: calc(75% * (100vw / 1512));
+  }
 }
 
 body {
@@ -275,3 +272,80 @@ html.js .goal-group.is-in .bar .fill { width: var(--pct, 0%); }
   }
   html.js .goal-group .bar .fill { width: var(--pct, 0%); }
 }
+
+/* ==========================================================================
+   EXPLICIT SECTION & SUBSECTION UTILITY HEADERS
+   Section headers: Heavy font weight, distinct margins, visible bottom border
+   Subsections: Visually subordinated
+   ========================================================================== */
+.section-header {
+  font-family: var(--font-display, 'Syne', sans-serif);
+  font-size: clamp(1.4rem, 2.8vw, 2.2rem);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  color: var(--ink, #f0f0f0);
+  margin-top: 3.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.subsection-header {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted, #888888);
+  margin-top: 1.75rem;
+  margin-bottom: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.subsection-header::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background-color: var(--muted, #888888);
+}
+
+/* Mobile Responsiveness Rules:
+   - Cap portrait hero images at 45vh-50vh so value propositions and navigation cues remain visible above the fold
+   - In landscape mobile, switch to 2-column split instead of squashing */
+@media (max-width: 768px) {
+  .hero-media-wrapper {
+    max-height: 48vh;
+    height: 48vh;
+  }
+  .hero-image {
+    height: 100%;
+    max-height: 48vh;
+    object-fit: cover;
+  }
+}
+
+@media (max-width: 920px) and (orientation: landscape) {
+  .hero-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+}
+
+/* Layout containers inherit fluid --maxw from tokens.css */
+.photo-grid-container {
+  width: 100%;
+  max-width: var(--maxw);
+  margin-inline: auto;
+  position: relative;
+}
+
+
