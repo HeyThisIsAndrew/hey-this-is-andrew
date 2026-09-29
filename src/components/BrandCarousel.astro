@@ -16,6 +16,7 @@ interface HeroSlide {
   /** Editorial metadata hierarchy (BE-style): category, status, date. */
   metadata: string[];
   headline: string;
+  deck?: string;
   ctaLabel?: string;
   ctaHref?: string;
   teaser?: string;
@@ -67,6 +68,7 @@ const slides: HeroSlide[] = [
     toc: 'BUILD IN PUBLIC',
     metadata: ['BUILD IN PUBLIC', 'INTRO'],
     headline: 'Building in public.',
+    deck: 'Documenting the messy middle of building three brands, commercial photography, and creator automation.',
     ctaLabel: 'Watch on YouTube',
     ctaHref: CHANNEL_URL,
     image: portrait,
@@ -86,6 +88,9 @@ const slides: HeroSlide[] = [
         ? ['FROM THE CHANNEL']
         : ['YOUTUBE', i === 0 ? 'LATEST' : 'RECENT', dateLabel],
       headline: v.title,
+      deck: v.description
+        ? v.description.replace(/\n+/g, ' ').slice(0, 110).toUpperCase()
+        : 'WATCH THE LATEST VIDEO ON YOUTUBE.',
       ctaLabel: 'Watch on YouTube',
       ctaHref: v.url,
       // Real videos open the in-page player with a spatial zoom from the slide thumbnail.
@@ -579,102 +584,189 @@ const slides: HeroSlide[] = [
     }
   }
 
-  /* Mobile hero: BE Unconventional HQ's mobile pattern.
-     BLACK SAFE AREA -> NAV -> 16:9 MEDIA -> CONTENT BELOW THE IMAGE.
-     Metadata chips sit in a row under the image (not overlaid on it),
-     headline follows, and there is no watch/CTA button on mobile.
-     The nav is sticky (in normal flow); the hero sits flush below it.
-     Slides stack in one grid cell so the crossfade transition survives
-     while the track takes its height from real content. Desktop layout
-     is untouched. */
-  @media (max-width: 640px) {
+  /* Mobile hero: Replicates mobile image orientation and overlay pattern (img_4264 spec).
+     Media fits in 16:9 landscape orientation with image fitting cleanly.
+     Metadata chips are placed at top-left overlaid on the image with scrim.
+     Headline is punchy and placed at bottom-left overlaid on the image with shadow.
+     Watch CTA button is visible and active directly below the headline.
+     TOC and player controls flow cleanly below the hero. */
+  @media (max-width: 768px) {
     .brand-carousel {
       height: auto;
       margin-top: 0;
       padding-top: 0;
       padding-block-start: 0;
+      position: relative;
+      width: 100%;
+      overflow: hidden;
     }
     .carousel-track {
       position: relative;
       inset: auto;
       height: auto;
       display: grid;
+      width: 100%;
       flex: none;
     }
     .carousel-slide {
       position: relative;
       inset: auto;
       grid-area: 1 / 1;
-      flex-direction: column;
-      align-items: stretch;
-      /* Keep the crossfade; drop the scale so stacked slides don't
-         bleed outside the media frame during the transition. */
+      width: 100%;
+      display: block;
       transform: none;
     }
     .carousel-slide.active {
       transform: none;
     }
+    .carousel-slide:not(.active) {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    /* Mobile orientation: 16:9 landscape ratio so hero image fits naturally on phones without aggressive cropping */
     .slide-media {
       position: relative;
       inset: auto;
       width: 100%;
       height: auto;
       aspect-ratio: 16 / 9;
+      min-height: 220px;
+      max-height: 52vh;
+      overflow: hidden;
       flex: none;
+      background: #080808;
     }
     .slide-media img {
       position: absolute;
       inset: 0;
+      width: 100%;
       height: 100%;
+      object-fit: cover;
+      object-position: center;
     }
-    /* Slides with no image (Coming Soon) don't render an empty
-       16:9 frame on mobile — it reads as a broken image. The slide
-       becomes a centered title card in the shared track height. */
     .slide-media[data-empty-media] {
       display: none;
     }
     .carousel-slide:has(.slide-media[data-empty-media]) {
       justify-content: center;
     }
-    /* No scrim on mobile: text lives below the image, not on it. */
+    /* Scrim active on mobile: ensures high contrast for overlaid text */
     .slide-scrim {
-      display: none;
+      display: block !important;
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background:
+        linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.45) 45%, rgba(0, 0, 0, 0.1) 65%, transparent 80%),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.25) 30%, transparent 50%);
     }
-    /* BE mobile pattern: content flows below the media in document
-       order — chips row, then headline. No overlaid CTA on mobile. */
+    /* Overlay content: sits directly on top of the image */
     .slide-content {
-      position: relative;
-      inset: auto;
-      height: auto;
-      justify-content: flex-start;
-      align-items: flex-start;
-      padding: 1.25rem 1.25rem 0.25rem;
-      gap: 0.75rem;
+      position: absolute !important;
+      inset: 0 !important;
+      height: 100% !important;
+      z-index: 2 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: flex-end !important;
+      align-items: flex-start !important;
+      padding: clamp(0.75rem, 3vw, 1.25rem) !important;
+      padding-bottom: clamp(0.85rem, 3.5vw, 1.35rem) !important;
+      gap: 0.35rem !important;
+      pointer-events: none !important;
     }
+    .slide-content a,
+    .slide-content button {
+      pointer-events: auto !important;
+    }
+    /* Metadata chips placed at top-left of the image */
     .slide-content .kicker {
-      position: static;
-      margin-bottom: 0;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: flex-start;
-      gap: 0.4rem;
-      max-width: none;
+      position: absolute !important;
+      top: clamp(0.75rem, 3vw, 1.25rem) !important;
+      left: clamp(0.75rem, 3vw, 1.25rem) !important;
+      margin: 0 !important;
+      display: flex !important;
+      flex-wrap: wrap !important;
+      justify-content: flex-start !important;
+      gap: 0.35rem !important;
+      max-width: 85% !important;
+      z-index: 3 !important;
     }
+    .slide-content .kicker .chip {
+      font-size: 0.62rem !important;
+      padding: 0.2rem 0.5rem !important;
+      letter-spacing: 0.14em !important;
+      background: rgba(10, 10, 10, 0.85) !important;
+      backdrop-filter: blur(8px) !important;
+      -webkit-backdrop-filter: blur(8px) !important;
+      border: 1px solid rgba(255, 255, 255, 0.25) !important;
+      color: #f0f0f0 !important;
+    }
+    /* Headline positioned bottom-left over the image */
     .slide-title {
-      font-size: clamp(1.15rem, 5.2vw, 1.5rem);
-      max-width: 20ch;
-      /* On the solid background, no shadow needed for legibility. */
-      text-shadow: none;
+      font-family: var(--font-display) !important;
+      font-size: clamp(1.15rem, 4.8vw, 1.65rem) !important;
+      font-weight: 800 !important;
+      line-height: 1.08 !important;
+      letter-spacing: -0.01em !important;
+      text-transform: uppercase !important;
+      color: #ffffff !important;
+      text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9) !important;
+      margin: 0 !important;
+      max-width: 22ch !important;
+      text-wrap: balance !important;
     }
-    /* No watch button on mobile — matches BE Unconventional HQ. */
-    .slide-content .btn.cta-anim,
+    /* Watch CTA button visible directly under the headline */
+    .slide-content .btn.cta-anim {
+      display: inline-flex !important;
+      align-self: flex-start !important;
+      margin-top: 0.15rem !important;
+      padding: 0.45rem 0.95rem !important;
+      font-size: 0.7rem !important;
+      font-weight: 600 !important;
+      letter-spacing: 0.1em !important;
+      text-transform: uppercase !important;
+      background: #ffffff !important;
+      color: #080808 !important;
+      border: 1px solid #ffffff !important;
+      box-shadow: 0 3px 14px rgba(0, 0, 0, 0.6) !important;
+    }
     .slide-content .teaser-tag.cta-anim {
-      display: none;
+      display: inline-block !important;
+      align-self: flex-start !important;
+      margin-top: 0.15rem !important;
+      padding: 0.45rem 0.9rem !important;
+      font-size: 0.68rem !important;
+    }
+    .carousel-slide.active .slide-title,
+    .carousel-slide.active .kicker,
+    .carousel-slide.active .cta-anim {
+      opacity: 1 !important;
+      transform: none !important;
+      visibility: visible !important;
+    }
+    .slide-play {
+      width: 52px;
+      height: 52px;
+      opacity: 0.85;
     }
     .carousel-toc {
       position: relative;
-      margin-top: 2rem;
-      padding-bottom: 1.5rem;
+      margin-top: 0;
+      padding-top: 0.75rem;
+      padding-bottom: 1.25rem;
+    }
+    .toc-inner {
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 0.75rem 1rem !important;
+    }
+    .player-controls {
+      grid-column: 1 / -1 !important;
+      margin-top: 0.25rem !important;
     }
   }
 </style>

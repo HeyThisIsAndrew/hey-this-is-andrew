@@ -16,10 +16,9 @@ import navLogo from '../assets/brand-logos/hey-thisisandrew.png';
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 const homeUrl = base ? `${base}/` : '/';
-const indexUrl = base ? `${base}/index.html` : '/index.html';
-const buildUrl = base ? `${base}/build.html` : '/build.html';
-const gearUrl = base ? `${base}/gear.html` : '/gear.html';
-const cafeUrl = base ? `${base}/cafe.html` : '/cafe.html';
+const buildUrl = base ? `${base}/build/` : '/build/';
+const gearUrl = base ? `${base}/gear/` : '/gear/';
+const cafeUrl = base ? `${base}/cafe/` : '/cafe/';
 
 interface NavSubItem {
   label: string;
@@ -41,8 +40,8 @@ const links: NavItem[] = [
     section: 'home',
     subsections: [
       { label: 'Overview', href: homeUrl, kicker: '01' },
-      { label: 'Featured Initiative', href: `${indexUrl}#featured`, kicker: 'PUB' },
-      { label: 'Site Directory', href: `${indexUrl}#directory`, kicker: 'DIR' },
+      { label: 'Featured Initiative', href: `${homeUrl}#featured`, kicker: 'PUB' },
+      { label: 'Site Directory', href: `${homeUrl}#directory`, kicker: 'DIR' },
     ],
   },
   {
@@ -81,11 +80,13 @@ const links: NavItem[] = [
   },
 ];
 
-const isAbout = Astro.url.pathname === '/about' || Astro.url.pathname === '/about/' || Astro.url.pathname === `${base}/about`;
+const currentPath = Astro.url.pathname.replace(/\/$/, '');
+const isHome = currentPath === '' || currentPath === base;
+const isAbout = currentPath === `${base}/about` || currentPath === '/about';
 ---
 <header class="site-nav" id="top">
   <div class="nav-inner">
-    <a class="wordmark" href={homeUrl} aria-label="Hey This Is Andrew, home" data-route-zoom={isAbout ? true : undefined} data-logo-home={!isAbout ? true : undefined}>
+    <a class="wordmark" href={homeUrl} aria-label="Hey This Is Andrew, home" data-logo-home={isHome ? true : undefined}>
       <Image src={navLogo} alt="Hey This Is Andrew" class="wordmark-logo" width={800} />
     </a>
     <nav aria-label="Sections" class="desktop-nav">
