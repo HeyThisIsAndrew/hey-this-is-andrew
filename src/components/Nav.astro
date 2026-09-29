@@ -19,6 +19,7 @@ const homeUrl = base ? `${base}/` : '/';
 const buildUrl = base ? `${base}/build/` : '/build/';
 const gearUrl = base ? `${base}/gear/` : '/gear/';
 const cafeUrl = base ? `${base}/cafe/` : '/cafe/';
+const aboutUrl = base ? `${base}/about/` : '/about/';
 
 interface NavSubItem {
   label: string;
@@ -78,13 +79,24 @@ const links: NavItem[] = [
       { label: 'James Coffee Co.', href: `${cafeUrl}#beans`, kicker: 'ROAST' },
     ],
   },
+  {
+    label: 'About',
+    href: aboutUrl,
+    section: 'about',
+    subsections: [
+      { label: 'About Andrew', href: aboutUrl, kicker: '05' },
+      { label: 'Meet the Creator', href: `${homeUrl}#about`, kicker: 'MEET' },
+      { label: 'Notes from the Build', href: `${homeUrl}#writing`, kicker: 'SUB' },
+      { label: 'Work with Andrew', href: `${homeUrl}#work`, kicker: 'DIR' },
+    ],
+  },
 ];
 
 const currentPath = Astro.url.pathname.replace(/\/$/, '');
 const isHome = currentPath === '' || currentPath === base;
 const isAbout = currentPath === `${base}/about` || currentPath === '/about';
 ---
-<header class="site-nav" id="top">
+<header class:list={['site-nav', { 'site-nav--home': isHome, 'at-top': isHome }]} id="top">
   <div class="nav-inner">
     <a class="wordmark" href={homeUrl} aria-label="Hey This Is Andrew, home" data-logo-home={isHome ? true : undefined}>
       <Image src={navLogo} alt="Hey This Is Andrew" class="wordmark-logo" width={800} />
@@ -266,7 +278,7 @@ const isAbout = currentPath === `${base}/about` || currentPath === '/about';
         } else {
           closeTimer = window.setTimeout(() => {
             mobileMenu.hidden = true;
-          }, 340);
+          }, 270);
         }
       }
     };
@@ -353,6 +365,21 @@ const isAbout = currentPath === `${base}/about` || currentPath === '/about';
       { passive: true }
     );
 
+    // Dynamic scroll tracking: removes border and shadow artifacts when sitting flush against the hero
+    const updateNavScroll = () => {
+      const nav = document.querySelector('.site-nav');
+      if (!nav) return;
+      if (window.scrollY > 4) {
+        nav.classList.add('scrolled');
+        nav.classList.remove('at-top');
+      } else {
+        nav.classList.add('at-top');
+        nav.classList.remove('scrolled');
+      }
+    };
+    window.addEventListener('scroll', updateNavScroll, { passive: true });
+    updateNavScroll();
+
     // Initial check on load
     if (isAtTopOrHero()) {
       setActive(null);
@@ -368,18 +395,31 @@ const isAbout = currentPath === `${base}/about` || currentPath === '/about';
     background: rgba(10, 10, 10, 0.85);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
+    border-bottom: none;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6), inset 0 -1px 0 rgba(255, 255, 255, 0.15);
     transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  .site-nav--home.at-top {
+    border-bottom: none;
+    box-shadow: none;
+  }
+  .site-nav--home.scrolled {
+    border-bottom: none;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6), inset 0 -1px 0 rgba(255, 255, 255, 0.15);
   }
   .site-nav:has(.mobile-menu.open) {
     z-index: 120;
   }
-  .site-nav:hover {
+  .site-nav:not(.at-top):hover {
     background: rgba(22, 22, 22, 0.95);
     box-shadow:
       0 4px 30px rgba(0, 0, 0, 0.6),
-      0 4px 40px rgba(200, 200, 200, 0.08);
+      0 4px 40px rgba(200, 200, 200, 0.08),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+  }
+  .site-nav--home.at-top:hover {
+    background: rgba(22, 22, 22, 0.95);
+    box-shadow: none;
   }
   .nav-inner {
     display: flex;
@@ -387,7 +427,7 @@ const isAbout = currentPath === `${base}/about` || currentPath === '/about';
     justify-content: space-between;
     width: 100% !important;
     max-width: 100% !important;
-    padding: 1.1rem clamp(1.5rem, 3.5vw, 4rem) !important;
+    padding: 1rem clamp(1.5rem, 3.5vw, 4rem) !important;
     margin: 0 !important;
   }
   .wordmark {
@@ -621,9 +661,10 @@ const isAbout = currentPath === `${base}/about` || currentPath === '/about';
     padding-bottom: env(safe-area-inset-bottom);
     overflow: hidden;
     opacity: 0;
-    transform: translateY(-14px);
-    transition: opacity 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
-      transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
+    transform: translateY(-12px);
+    will-change: transform, opacity;
+    transition: opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .mobile-menu.open {
     opacity: 1;

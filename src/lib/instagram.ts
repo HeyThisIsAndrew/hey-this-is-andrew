@@ -458,32 +458,39 @@ export async function getInstagramPhotos(limit = 32): Promise<InstagramPhoto[]> 
 
 function processInstagramMedia(rawItems: any[], limit: number): InstagramPhoto[] {
   const photos: InstagramPhoto[] = [];
+  const seenPermalinks = new Set<string>();
+  const seenCaptions = new Set<string>();
 
   for (const item of rawItems) {
     const rawCaption = item.caption || '';
     const cleanCaption = rawCaption.split('\n')[0].trim() || 'Capture Create Caffeinate';
     const category = categorizePhoto(rawCaption);
 
+    if (item.permalink && seenPermalinks.has(item.permalink)) continue;
+    if (cleanCaption && cleanCaption !== 'Capture Create Caffeinate' && seenCaptions.has(cleanCaption)) continue;
+
     if (item.children?.data?.length) {
-      item.children.data.forEach((c: any) => {
-        if (c.media_url && c.media_type !== 'VIDEO') {
-          const meta = extractPhotoLocation(rawCaption, item.permalink, c.id);
-          photos.push({
-            id: c.id,
-            url: c.media_url,
-            caption: cleanCaption,
-            fullCaption: rawCaption,
-            permalink: item.permalink,
-            mediaType: 'CAROUSEL_ITEM',
-            category,
-            location: meta.location,
-            venue: meta.venue,
-            event: meta.event,
-            timestamp: item.timestamp,
-            orientation: 'vertical',
-          });
-        }
-      });
+      // Pick the primary photo from the carousel (first valid image)
+      const primaryPhoto = item.children.data.find((c: any) => c.media_url && c.media_type !== 'VIDEO') || item.children.data[0];
+      if (primaryPhoto && primaryPhoto.media_url) {
+        const meta = extractPhotoLocation(rawCaption, item.permalink, primaryPhoto.id);
+        photos.push({
+          id: primaryPhoto.id,
+          url: primaryPhoto.media_url,
+          caption: cleanCaption,
+          fullCaption: rawCaption,
+          permalink: item.permalink,
+          mediaType: 'CAROUSEL_ITEM',
+          category,
+          location: meta.location,
+          venue: meta.venue,
+          event: meta.event,
+          timestamp: item.timestamp,
+          orientation: 'vertical',
+        });
+        if (item.permalink) seenPermalinks.add(item.permalink);
+        if (cleanCaption) seenCaptions.add(cleanCaption);
+      }
     } else {
       const url = item.media_type === 'VIDEO' ? item.thumbnail_url : item.media_url;
       if (url) {
@@ -502,8 +509,12 @@ function processInstagramMedia(rawItems: any[], limit: number): InstagramPhoto[]
           timestamp: item.timestamp,
           orientation: 'vertical',
         });
+        if (item.permalink) seenPermalinks.add(item.permalink);
+        if (cleanCaption) seenCaptions.add(cleanCaption);
       }
     }
+
+    if (photos.length >= limit) break;
   }
 
   // Update memory cache

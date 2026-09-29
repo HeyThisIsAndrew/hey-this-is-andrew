@@ -215,22 +215,24 @@ import SectionHeader from './SectionHeader.astro';
     background: var(--bg);
   }
 
-  /* Panel Base: Side tabs/rail items scale proportionally across viewports */
+  /* Panel Base: Balanced cinematic proportions across all desktop viewports.
+     Active panel: ~60% (flex 3), Collapsed panels: ~20% each (flex 1).
+     Total ratio 3:1:1 creates strong reframing while keeping collapsed windows recognizable. */
   .accordion-panel {
-    flex: 0 0 clamp(72px, 6vw, 180px);
-    min-width: 64px;
+    flex: 1 1 0%;
+    min-width: 0;
     position: relative;
     background: #080808;
     margin: 0;
     overflow: hidden;
-    transition: flex 450ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    transition: flex 500ms cubic-bezier(0.22, 0.61, 0.36, 1);
     text-align: left;
     color: var(--ink);
     font-family: var(--font-body);
   }
 
   .accordion-panel.active {
-    flex: 1 1 0%;
+    flex: 3 1 0%;
     min-width: 0;
     max-width: none;
   }
@@ -240,18 +242,17 @@ import SectionHeader from './SectionHeader.astro';
      does that. */
   @media (hover: hover) {
     .accordion-panel:not(.active):hover {
-      flex: 0 0 clamp(88px, 7vw, 110px);
-      max-width: 120px;
+      flex: 1.15 1 0%;
     }
     .accordion-panel:not(.active):hover .panel-bg img {
-      filter: grayscale(35%) brightness(0.78) contrast(1.1);
+      filter: grayscale(25%) brightness(0.8) contrast(1.1);
     }
     .accordion-panel:not(.active):hover .panel-bg::after {
       opacity: 1;
     }
     .accordion-panel:not(.active):hover .vertical-title {
       color: var(--ink);
-      letter-spacing: 0.4em;
+      letter-spacing: 0.36em;
     }
   }
 
@@ -345,7 +346,7 @@ import SectionHeader from './SectionHeader.astro';
   .collapsed-strip {
     position: absolute;
     inset: 0;
-    width: 74px;
+    width: 100%;
     display: block;
     padding: 0;
     opacity: 1;
@@ -891,7 +892,8 @@ import SectionHeader from './SectionHeader.astro';
 
   .brand-camera-viewport.is-zoomed:not(.is-closing) .bottom-progress-bar,
   .brand-camera-viewport.is-zoomed:not(.is-closing) .active-edge,
-  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-play-pause {
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-play-pause,
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel:not(.active) {
     opacity: 0 !important;
     pointer-events: none !important;
   }
@@ -1268,10 +1270,10 @@ import SectionHeader from './SectionHeader.astro';
       this.initialStageTop = stageRect.top;
 
       // 2. Dynamic scale calculation:
-      // Moderated scale so the brand camera dollies in without over-zooming or cropping content
+      // True full-screen cover scale: ensures active panel completely fills 100% of viewport width and height
       const scaleX = vpWidth / targetRect.width;
       const scaleY = vpHeight / targetRect.height;
-      const scale = Math.min(scaleX, scaleY) * 1.02;
+      const scale = Math.max(scaleX, scaleY) * 1.01;
 
       // 3. Target and viewport centers
       const targetCenterX = targetRect.left + targetRect.width / 2;
@@ -1322,7 +1324,7 @@ import SectionHeader from './SectionHeader.astro';
 
       const scaleX = vpWidth / targetRect.width;
       const scaleY = vpHeight / targetRect.height;
-      const scale = Math.min(scaleX, scaleY) * 1.02;
+      const scale = Math.max(scaleX, scaleY) * 1.01;
 
       const targetCenterX = targetRect.left + targetRect.width / 2;
       const targetCenterY = targetRect.top + targetRect.height / 2;

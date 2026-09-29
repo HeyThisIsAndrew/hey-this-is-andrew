@@ -23,7 +23,10 @@ interface DisplayPhoto {
   permalink?: string;
 }
 
-const displayPhotos: DisplayPhoto[] = instagramPhotos.length > 0
+const rawBase = import.meta.env.BASE_URL;
+const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
+
+const rawDisplayPhotos: DisplayPhoto[] = instagramPhotos.length > 0
   ? instagramPhotos.map((p) => ({
       id: p.id,
       url: p.url,
@@ -36,11 +39,26 @@ const displayPhotos: DisplayPhoto[] = instagramPhotos.length > 0
     }))
   : portfolioPhotos.map((p, idx) => ({
       id: `fallback-${idx}`,
-      url: `/portfolio/${p.file}`,
+      url: `${base}/portfolio/${p.file}`,
       caption: p.caption,
       category: p.category,
       location: p.category === 'bar' ? 'Bar & Venue' : categoryLabels[p.category],
     }));
+
+// Deduplicate displayPhotos by ID, URL, and caption so each project appears exactly once
+const seenIds = new Set<string>();
+const seenUrls = new Set<string>();
+const seenCaps = new Set<string>();
+const displayPhotos: DisplayPhoto[] = [];
+
+for (const p of rawDisplayPhotos) {
+  if (seenIds.has(p.id) || seenUrls.has(p.url)) continue;
+  if (p.caption && p.caption !== 'Capture Create Caffeinate' && seenCaps.has(p.caption)) continue;
+  seenIds.add(p.id);
+  seenUrls.add(p.url);
+  if (p.caption) seenCaps.add(p.caption);
+  displayPhotos.push(p);
+}
 
 // Distribute photos across 4 columns for visual rhythm.
 const COLUMN_COUNT = 4;
@@ -76,34 +94,31 @@ const durations = [58, 74, 66, 82];
         style={`--reel-duration: ${durations[ci]}s`}
       >
         <div class="photo-track">
-          {[0, 1].map((dup) => (
-            <div class="photo-set" aria-hidden={dup === 1 ? 'true' : undefined}>
-              {col.map((pi) => {
-                const p = displayPhotos[pi];
-                if (!p) return null;
-                return (
-                  <button
-                    type="button"
-                    class="photo-item"
-                    data-camera-zoom
-                    data-photo-index={pi}
-                    aria-label={`View photo: ${p.caption}`}
-                    tabindex={dup === 1 ? -1 : 0}
-                  >
-                    <img
-                      src={p.url}
-                      alt={p.caption}
-                      width="440"
-                      loading="lazy"
-                      decoding="async"
-                      crossorigin="anonymous"
-                    />
-                    <span class="photo-tag">{p.location || categoryLabels[p.category] || 'Cocktails'}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+          <div class="photo-set">
+            {col.map((pi) => {
+              const p = displayPhotos[pi];
+              if (!p) return null;
+              return (
+                <button
+                  type="button"
+                  class="photo-item"
+                  data-camera-zoom
+                  data-photo-index={pi}
+                  aria-label={`View photo: ${p.caption}`}
+                >
+                  <img
+                    src={p.url}
+                    alt={p.caption}
+                    width="440"
+                    loading="lazy"
+                    decoding="async"
+                    crossorigin="anonymous"
+                  />
+                  <span class="photo-tag">{p.location || categoryLabels[p.category] || 'Cocktails'}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     ))}
