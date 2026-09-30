@@ -79,6 +79,7 @@ export const RESOURCES: Resource[] = [];
 
 import { getLatestVideos, getLatestArticles } from './latest-content';
 import { getCollection } from 'astro:content';
+import { cleanFeedText } from './feed-text';
 
 // ---- BE Unconventional HQ: build-time RSS ingestion ----
 const BE_RSS = 'https://beunconventionalhq.com/rss.xml';
@@ -103,18 +104,7 @@ function rssTag(xml: string, name: string): string | null {
   return m ? m[1].trim() : null;
 }
 
-function decodeXml(s: string): string {
-  return s
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&amp;/g, '&');
-}
 
-function stripHtml(s: string): string {
-  return s.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-}
 
 /** og:image from an article page, so BE entries can carry imagery.
  *  Best-effort: null when the page can't be reached. */
@@ -147,8 +137,8 @@ export async function getBEArticles(limit = 3): Promise<NetworkItem[]> {
         return {
           brand: 'be' as NetworkBrandId,
           kind: 'article' as NetworkKind,
-          title: decodeXml(stripHtml(title)),
-          excerpt: excerpt ? decodeXml(stripHtml(excerpt)).slice(0, 160) : undefined,
+          title: cleanFeedText(title),
+          excerpt: excerpt ? cleanFeedText(excerpt).slice(0, 160) : undefined,
           date: pubDate ? new Date(pubDate).toISOString() : new Date(0).toISOString(),
           url,
           image,
@@ -248,6 +238,7 @@ export async function getNetworkFeed(limit = 8): Promise<NetworkItem[]> {
   ];
 
   return items
+    .map((i) => ({ ...i, title: cleanFeedText(i.title), excerpt: i.excerpt ? cleanFeedText(i.excerpt) : undefined }))
     .sort((a, b) => timeOf(b.date) - timeOf(a.date))
     .slice(0, limit);
 }

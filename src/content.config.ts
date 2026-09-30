@@ -27,6 +27,8 @@ const goals = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/goals' }),
   schema: z.object({
     title: z.string(),
+    /** Display order: lower first. The Big Goals lead. */
+    order: z.number().default(99),
     items: z.array(
       z.object({
         label: z.string(),

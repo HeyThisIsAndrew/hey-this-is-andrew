@@ -1,7 +1,10 @@
 /* Design tokens: inherited from the BE Unconventional HQ color system.
-   HQ's brand red is replaced with cinematic gray on the parent hub —
-   no red appears on Hey This Is Andrew surfaces. */
+   HQ's brand red is replaced with cinematic gray on the parent hub, so no
+   red appears on Hey This Is Andrew surfaces. The ONE exception is the
+   BE Unconventional HQ brand panel in the accordion, a BE brand context:
+   it reads the --be-* tokens below and nothing else may. */
 :root {
+  color-scheme: dark;
   /* HQ base palette (exact) */
   --color-black: #0a0a0a;
   --color-surface: #111111;
@@ -38,19 +41,54 @@
      rule). Components reference this token instead of literal radii, so the
      old universal !important override is gone. */
   --radius: 0;
-  --maxw: min(94vw, 3600px);
+
+  /* Parent-site chrome (monochrome) */
+  --page-bg: #080808;
+  --text: #f5f5f5;
+  --text-muted: #9a9a9a;
+  --hairline: rgba(255, 255, 255, 0.1);
+  --hairline-strong: rgba(255, 255, 255, 0.15);
+  --focus-ring: #f0f0f0;
+
+  /* BE Unconventional HQ brand panel ONLY (decision 3). Matches
+     beunconventionalhq.com: active edge, CTA hover fill + glow, progress. */
+  --be-red: #e60000;
+  --be-cta-hover: #cc0000;
+  --be-cta-glow: 0 0 30px rgba(204, 0, 0, 0.4);
+  --be-crimson: #9b0000;
+  --be-frame: rgba(230, 0, 0, 0.6);
+  --be-frame-glow: rgba(230, 0, 0, 0.38);
+  --be-label-glow: 0 0 18px rgba(230, 0, 0, 0.7);
+
+  /* Layout */
+  --page-max: min(94vw, 3600px);
+  --maxw: var(--page-max);
+  --space-section: clamp(2.5rem, 5vw, 6rem);
+  --gutter: 16px;
+  --tap-min: 44px;
+  /* Breakpoints (reference values; CSS cannot read custom properties inside
+     @media, so components write these numbers literally):
+     --bp-phone 767px, --bp-nav 860px, --bp-laptop 1100px, --bp-wide 1920px */
+
+  /* Brand accordion (Section 1.3 contract, mirrors HQ's hero accordion) */
+  --acc-gap: 6px;
+  --acc-strip: clamp(128px, 11vw, 180px);
+  --acc-ease: cubic-bezier(0.65, 0, 0.35, 1);
+  --acc-duration: 0.7s;
   --gap: clamp(1.25rem, 2vw, 2.5rem);
   --transition-smooth: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (min-width: 1920px) {
   :root {
-    --maxw: 72vw;
+    --page-max: 72vw;
     --gap: clamp(1.5rem, 2.5vw, 3.5rem);
   }
 }
 
-/* Light Mode Token Inversion: Clean, high-contrast monochrome editorial theme */
+/* Light Mode Token Inversion. DORMANT: the site is dark-mode only
+   (decision 6) and nothing sets data-theme="light" while the toggle is
+   hidden. Kept so the light theme can be revisited without a rewrite. */
 :root[data-theme="light"] {
   --color-black: #f7f7f9;
   --color-surface: #ffffff;

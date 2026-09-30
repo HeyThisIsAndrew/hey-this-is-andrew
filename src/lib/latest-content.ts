@@ -3,6 +3,8 @@
 // public Substack archive API. Anything that fails returns null, so a
 // network hiccup can never break the build; the section falls back
 // to the local project entries. Content refreshes on every build.
+import { cleanFeedText } from './feed-text';
+
 export interface LatestItem {
   kind: 'video' | 'article';
   label: string;
@@ -38,14 +40,6 @@ function tag(xml: string, name: string): string | null {
   return m ? m[1].trim() : null;
 }
 
-function decodeXml(s: string): string {
-  return s
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&amp;/g, '&');
-}
 
 // Substack wraps covers in a /image/fetch/ proxy URL with the original
 // appended at the end. Unwrap to the direct file: fewer hops, and the
@@ -80,8 +74,8 @@ export async function getLatestArticle(): Promise<LatestItem | null> {
     return {
       kind: 'article',
       label: 'Latest article',
-      title: p.title ?? 'Latest article',
-      description: String(p.subtitle ?? p.description ?? '').slice(0, 220),
+      title: cleanFeedText(p.title) || 'Latest article',
+      description: cleanFeedText(p.subtitle ?? p.description).slice(0, 220),
       image: unwrapSubstackImage(p.cover_image ?? null),
       url: `${SUBSTACK}/p/${p.slug}`,
       date: p.post_date ?? new Date().toISOString(),
@@ -137,8 +131,8 @@ export async function getLatestArticles(limit = 3): Promise<ArticleItem[]> {
       .filter((p: any) => p?.slug)
       .slice(0, limit)
       .map((p: any): ArticleItem => ({
-        title: p.title ?? 'Untitled',
-        subtitle: String(p.subtitle ?? p.description ?? ''),
+        title: cleanFeedText(p.title) || 'Untitled',
+        subtitle: cleanFeedText(p.subtitle ?? p.description),
         date: p.post_date ?? new Date().toISOString(),
         url: `${SUBSTACK}/p/${p.slug}`,
         image: unwrapSubstackImage(p.cover_image ?? null),
@@ -303,7 +297,7 @@ export async function getLatestVideos(limit = 3): Promise<LatestItem[]> {
           videos.push({
             kind: 'video',
             label: 'Latest video',
-            title,
+            title: cleanFeedText(title),
             description: known?.description || '',
             image: `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`,
             imageSrcset: `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg 1280w, https://i.ytimg.com/vi/${videoId}/sddefault.jpg 640w, https://i.ytimg.com/vi/${videoId}/hqdefault.jpg 480w`,

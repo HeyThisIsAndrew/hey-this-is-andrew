@@ -4,27 +4,41 @@ import cccLogo from '../assets/brand-logos/ccc-logo.png';
 import beMedia from '../assets/hero-media/be-hq-still.jpg';
 import cccMedia from '../assets/hero-media/ccc-pour.jpg';
 
-// The lanes accordion: the worlds Andrew has built.
-// Images are imported so Astro optimizes them at build time (WebP/AVIF,
-// responsive widths). Masters live in src/assets; nothing here points at
-// /public.
+// The brands accordion (#directory): the worlds Andrew has built. This file
+// is the single source of truth for every panel. Images are imported so
+// Astro optimizes them at build time (WebP, responsive widths). Masters
+// live in src/assets; nothing here points at /public.
+
+/**
+ * Panel accent. The parent site is monochrome (decision 2); the BE
+ * Unconventional HQ panel is a BE brand context and carries BE's red
+ * (decision 3). Every other panel is 'mono'.
+ */
+export type PanelAccent = 'mono' | 'be-red';
 
 export interface ChildBrand {
   id: string;
   name: string;
+  /** Metadata chip, top-left of the open panel. */
   kicker: string;
   headline: string;
   deck: string;
   cta: string;
+  /** Empty for a panel with no CTA (Sip The Magic, for now). */
   url: string;
   logoSrc?: ImageMetadata;
   wordmark: string;
-  mediaSrc?: ImageMetadata;
+  /** Preview art: full on the open panel, blurred on a collapsed strip.
+      Null renders the monochrome teaser card instead (never a black box). */
+  mediaSrc: ImageMetadata | null;
+  accent: PanelAccent;
   /** Quiet commercial path: rendered as a subtle "Start a project" link
       under the panel CTA. Only set where inquiries are real. */
   inquiryEmail?: string;
-  /** Future/unlaunched lane: renders in a quieter treatment, non-clickable. */
+  /** Future/unlaunched brand: coming-soon teaser treatment, no CTA link. */
   comingSoon?: boolean;
+  /** Teaser tag shown in place of a CTA on a coming-soon panel. */
+  teaserTag?: string;
 }
 
 export const childBrands: ChildBrand[] = [
@@ -39,6 +53,7 @@ export const childBrands: ChildBrand[] = [
     logoSrc: beLogo,
     wordmark: 'BE',
     mediaSrc: beMedia,
+    accent: 'be-red',
   },
   {
     id: 'ccc',
@@ -51,6 +66,7 @@ export const childBrands: ChildBrand[] = [
     logoSrc: cccLogo,
     wordmark: 'CCC',
     mediaSrc: cccMedia,
+    accent: 'mono',
     inquiryEmail: 'capturecreatecaffeinate@gmail.com',
   },
   {
@@ -59,9 +75,16 @@ export const childBrands: ChildBrand[] = [
     kicker: 'SOMETHING IS BREWING',
     headline: 'SIP THE MAGIC.',
     deck: 'Something is brewing. Sip the Magic is coming together. More soon.',
-    cta: 'In the works',
+    cta: '',
+    // TODO (Andrew): no CTA link until you supply the Instagram link.
     url: '',
     wordmark: 'STM',
+    // TODO (Andrew): swap in the Instagram image you choose. Import it at the
+    // top of this file (e.g. `import stmArt from '../assets/hero-media/stm.jpg'`)
+    // and set `mediaSrc: stmArt`. Until then the teaser card renders.
+    mediaSrc: null,
+    accent: 'mono',
     comingSoon: true,
+    teaserTag: 'In the works',
   },
 ];

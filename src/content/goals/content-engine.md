@@ -1,5 +1,6 @@
 ---
 title: "Content Engine"
+order: 1
 items:
   - label: "Publish build-in-public episode 1"
     status: in-progress

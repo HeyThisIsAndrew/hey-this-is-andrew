@@ -1,5 +1,6 @@
 ---
 title: "Landing Page v1"
+order: 2
 items:
   - label: "Write the design spec"
     status: done

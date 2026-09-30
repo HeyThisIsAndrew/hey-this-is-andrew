@@ -614,29 +614,85 @@ export function initAnchorTransitions(
  * (reveal delay), set inline per element where a sequence matters.
  * Reduced-motion users get content with no animation.
  */
+const REVEAL_SELECTOR = '.sec-head, .reveal, .section-header';
+
+function markRevealed(el: Element): void {
+  el.classList.add('is-in', 'is-revealed');
+}
+
+/**
+ * Force every reveal inside (and including) `scope` visible right now.
+ * Used for in-page jumps and tab switches: content the reader was sent to
+ * must never wait for a scroll event to become readable (audit defect 7).
+ */
+export function forceReveal(scope: Element | null): void {
+  if (!scope) return;
+  if (scope.matches(REVEAL_SELECTOR)) markRevealed(scope);
+  scope.querySelectorAll(REVEAL_SELECTOR).forEach(markRevealed);
+  // Also reveal the section headers of the enclosing section.
+  scope.closest('section')?.querySelectorAll(REVEAL_SELECTOR).forEach(markRevealed);
+}
+
+/** Reveal anything currently inside the viewport. The safety net under the
+ *  IntersectionObserver: runs after every scroll settles. */
+function sweepVisible(): void {
+  const vh = window.innerHeight;
+  document.querySelectorAll(`${REVEAL_SELECTOR}`).forEach((el) => {
+    if (el.classList.contains('is-in')) return;
+    const r = el.getBoundingClientRect();
+    if (r.bottom > 0 && r.top < vh && (r.width > 0 || r.height > 0)) markRevealed(el);
+  });
+}
+
 export function initReveals(): void {
   const root = document.documentElement;
   root.classList.add('js');
-  const els = document.querySelectorAll('.sec-head, .reveal, .section-header');
-  if (prefersReducedMotion()) {
+  const els = document.querySelectorAll(REVEAL_SELECTOR);
+  if (prefersReducedMotion() || !('IntersectionObserver' in window) || els.length === 0) {
     // No animation, no hiding: content simply appears.
-    els.forEach((el) => el.classList.add('is-in', 'is-revealed'));
+    els.forEach(markRevealed);
     return;
   }
-  if (!('IntersectionObserver' in window) || els.length === 0) {
-    els.forEach((el) => el.classList.add('is-in', 'is-revealed'));
-    return;
-  }
+  // threshold 0: any visible pixel reveals. A proportional threshold never
+  // fired for elements taller than the viewport (the gear manifest).
   const io = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
         if (entry.isIntersecting) {
-          entry.target.classList.add('is-in', 'is-revealed');
+          markRevealed(entry.target);
           io.unobserve(entry.target);
         }
       }
     },
-    { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
+    { threshold: 0, rootMargin: '0px 0px -8% 0px' }
   );
   els.forEach((el) => io.observe(el));
+
+  // In-page jumps: reveal the destination before the scroll lands.
+  const revealHash = () => {
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (id) forceReveal(document.getElementById(id));
+  };
+  window.addEventListener('hashchange', revealHash);
+  revealHash();
+  document.addEventListener('click', (e) => {
+    const a = (e.target as Element | null)?.closest?.('a[href*="#"]');
+    const hash = a?.getAttribute('href')?.split('#')[1];
+    if (hash) forceReveal(document.getElementById(decodeURIComponent(hash)));
+  });
+  // Components (e.g. gear tabs) ask for a reveal after changing content.
+  document.addEventListener('reveal:force', (e) => {
+    forceReveal(((e as CustomEvent).detail as Element | null) ?? null);
+  });
+
+  // Fallback sweep once scrolling settles.
+  let t = 0;
+  const settle = () => {
+    window.clearTimeout(t);
+    t = window.setTimeout(sweepVisible, 120);
+  };
+  window.addEventListener('scroll', settle, { passive: true });
+  window.addEventListener('resize', settle, { passive: true });
+  if ('onscrollend' in window) window.addEventListener('scrollend', sweepVisible);
+  window.addEventListener('load', sweepVisible, { once: true });
 }

@@ -24,12 +24,11 @@ const ogImage = `${siteUrl}/og-image.png`;
 const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
 ---
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#000000" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -41,7 +40,10 @@ const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_UR
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
     <title>{title}</title>
-    <!-- Prevent theme flash -->
+    <!-- Dark-mode only (decision 6). The theme toggle is hidden, so the
+         stored/OS preference is no longer read; <html> ships data-theme="dark".
+         To bring the light theme back, restore this script and the toggle in
+         Nav.astro:
     <script is:inline>
       (function() {
         try {
@@ -51,6 +53,7 @@ const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_UR
         } catch (e) {}
       })();
     </script>
+    -->
     <link rel="sitemap" type="application/xml" href={`${siteUrl}/sitemap-index.xml`} />
     <style>
       .site-camera-stage {
@@ -63,8 +66,14 @@ const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_UR
         padding: 0;
       }
     </style>
-    <link rel="icon" type="image/png" href={`${baseUrl}favicon.png`} />
-    <link rel="apple-touch-icon" href={`${baseUrl}apple-touch-icon.png`} />
+    <!-- Favicon: white H_ on #080808, Syne 800 (scripts/build-brand-marks.mjs) -->
+    <link rel="icon" href={`${baseUrl}favicon.ico`} sizes="48x48" />
+    <link rel="icon" type="image/svg+xml" href={`${baseUrl}favicon.svg`} />
+    <link rel="icon" type="image/png" sizes="16x16" href={`${baseUrl}favicon-16.png`} />
+    <link rel="icon" type="image/png" sizes="32x32" href={`${baseUrl}favicon-32.png`} />
+    <link rel="icon" type="image/png" sizes="64x64" href={`${baseUrl}favicon-64.png`} />
+    <link rel="apple-touch-icon" sizes="180x180" href={`${baseUrl}apple-touch-icon.png`} />
+    <meta name="theme-color" content="#080808" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -239,13 +248,23 @@ const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_UR
         const btn = document.getElementById('back-to-top-btn');
         if (!btn) return;
 
-        window.addEventListener('scroll', () => {
-          if (window.scrollY > 600) {
-            btn.classList.add('visible');
-          } else {
-            btn.classList.remove('visible');
-          }
-        }, { passive: true });
+        // The button never covers content marked [data-avoid-fab] (the brand
+        // accordion, full-bleed to the right edge): while such a block sits
+        // under the button's corner, the button steps out of the way.
+        const avoid = Array.from(document.querySelectorAll<HTMLElement>('[data-avoid-fab]'));
+        const coversAvoided = () => {
+          const b = btn.getBoundingClientRect();
+          const zoneTop = b.top - 8;
+          return avoid.some((el) => {
+            const r = el.getBoundingClientRect();
+            return r.top < window.innerHeight && r.bottom > zoneTop;
+          });
+        };
+        const update = () => {
+          btn.classList.toggle('visible', window.scrollY > 600 && !coversAvoided());
+        };
+        window.addEventListener('scroll', update, { passive: true });
+        window.addEventListener('resize', update, { passive: true });
 
         btn.addEventListener('click', () => {
           window.scrollTo({

@@ -1,34 +1,39 @@
 ---
 /**
- * Press — the creator kit. Bio, audience stats, brand assets, and a press
- * contact for brand partnerships and media inquiries. Stats show "—" until
- * real numbers are confirmed; nothing here is invented.
+ * Press: the creator kit. Bio, audience stats, brand assets, and a press
+ * contact for brand partnerships and media inquiries. A stat with no value
+ * renders an empty marker until the real number is confirmed; nothing here
+ * is invented.
  */
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SectionHeader from '../components/SectionHeader.astro';
 
 const CONTACT_EMAIL = 'heythisisandrewb@gmail.com';
 
-const STATS = [
-  { label: 'YouTube subscribers', value: '—', note: 'Hey This Is Andrew' },
-  { label: 'Instagram followers', value: '—', note: '@hey_thisisandrew' },
-  { label: 'TikTok followers', value: '—', note: '@hey_thisisandrew' },
+const rawBase = import.meta.env.BASE_URL;
+const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
+
+// TODO (Andrew): fill in each confirmed number as a string, e.g. '1,240'.
+const STATS: { label: string; value: string | null; note: string }[] = [
+  { label: 'YouTube subscribers', value: null, note: 'Hey This Is Andrew' },
+  { label: 'Instagram followers', value: null, note: '@hey_thisisandrew' },
+  { label: 'TikTok followers', value: null, note: '@hey_thisisandrew' },
 ];
 
 const ASSETS = [
   {
     name: 'Wordmark lockup',
     desc: 'HEY_THISISANDREW knocked out to solid white on pure black. 1200 x 630.',
-    href: '/og-image.jpg',
-    filename: 'hey-thisisandrew-wordmark.jpg',
+    href: `${base}/og-image.png`,
+    filename: 'hey-thisisandrew-wordmark.png',
   },
 ];
 ---
 <BaseLayout
-  title="Press Kit · Hey This Is Andrew"
+  title="Press Kit · HEY_THISISANDREW"
   description="Press kit for Andrew Baxter: bio, audience stats, brand assets, and contact for partnerships and media inquiries."
 >
-  <h1 class="vh">Press kit for Hey This Is Andrew</h1>
+  <h1 class="vh">Press kit for HEY_THISISANDREW</h1>
   <div class="page-head" aria-hidden="true"></div>
 
   <section class="press-section" aria-labelledby="press-heading">
@@ -66,7 +71,9 @@ const ASSETS = [
           <dl class="stats-list">
             {STATS.map((s) => (
               <div class="stat-row">
-                <dt class="stat-value">{s.value}</dt>
+                <dt class="stat-value">
+                  {s.value ?? (<><span class="stat-pending" aria-hidden="true"></span><span class="vh">Not yet confirmed</span></>)}
+                </dt>
                 <dd class="stat-label">{s.label}</dd>
                 <dd class="stat-note">{s.note}</dd>
               </div>
@@ -175,6 +182,13 @@ const ASSETS = [
     color: var(--ink);
     margin: 0;
     line-height: 1;
+  }
+  .stat-pending {
+    display: inline-block;
+    width: 1.5rem;
+    height: 2px;
+    background: var(--muted);
+    vertical-align: middle;
   }
   .stat-label {
     font-size: 0.85rem;
