@@ -11,6 +11,7 @@
  * - Graceful fallback so the site is never broken if Instagram rate limits or fails.
  */
 
+import type { ImageMetadata } from 'astro';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -33,10 +34,8 @@ export interface InstagramMediaItem {
 
 export interface InstagramPhoto {
   id: string;
-  /** Site-relative URL of the self-hosted file. Never an Instagram CDN URL. */
-  url: string;
-  width?: number;
-  height?: number;
+  /** The self-hosted file (src/assets/instagram). Never an Instagram CDN URL. */
+  image: ImageMetadata;
   caption: string;
   fullCaption?: string;
   permalink: string;
@@ -374,12 +373,21 @@ function categorizePhoto(caption: string): 'cocktails' | 'bar' | 'product' {
  * The "Shot on the Job" photos, SELF-HOSTED ONLY (audit defect 5).
  *
  * Reads src/data/instagram-feed.json and returns only the photos whose image
- * is stored under public/images/instagram/ (written by
- * scripts/sync-instagram.mjs). No remote Instagram URL reaches the page:
- * those are signed and expire, which would break the grid without warning.
- * The build makes no network request here; freshness comes from the sync,
- * which the deploy workflow runs before every build.
+ * is stored in src/assets/instagram/ (written by scripts/sync-instagram.mjs).
+ * The files are imported through import.meta.glob, so pages render them with
+ * Astro's <Image> (responsive widths, intrinsic width/height, no layout
+ * shift). No remote Instagram URL reaches the page: those are signed and
+ * expire. The build makes no network request here; freshness comes from the
+ * sync, which the deploy workflow runs before every build.
  */
+const LOCAL_PHOTOS = import.meta.glob<{ default: ImageMetadata }>('../assets/instagram/*.{webp,jpg,jpeg,png}', { eager: true });
+
+function localImageFor(localImage: string): ImageMetadata | null {
+  const file = localImage.split('/').pop() ?? '';
+  const hit = Object.entries(LOCAL_PHOTOS).find(([k]) => k.endsWith(`/${file}`));
+  return hit ? hit[1].default : null;
+}
+
 export async function getInstagramPhotos(limit = 32): Promise<InstagramPhoto[]> {
   const now = Date.now();
   if (memoryPhotosCache && now - memoryPhotosCache.timestamp < CACHE_TTL_MS) {
@@ -394,12 +402,11 @@ export async function getInstagramPhotos(limit = 32): Promise<InstagramPhoto[]> 
     rows = [];
   }
 
-  const base = (import.meta.env?.BASE_URL ?? '/').replace(/\/?$/, '/');
   const photos: InstagramPhoto[] = [];
   let skipped = 0;
   for (const p of rows) {
-    const local = typeof p.localImage === 'string' ? p.localImage : '';
-    if (!local || !fs.existsSync(path.resolve(process.cwd(), 'public', local))) {
+    const image = typeof p.localImage === 'string' ? localImageFor(p.localImage) : null;
+    if (!image) {
       skipped++;
       continue;
     }
@@ -407,9 +414,7 @@ export async function getInstagramPhotos(limit = 32): Promise<InstagramPhoto[]> 
     const meta = extractPhotoLocation(caption, p.permalink, p.id);
     photos.push({
       id: p.id,
-      url: `${base}${local}`,
-      width: p.width,
-      height: p.height,
+      image,
       caption: p.caption || 'Capture Create Caffeinate',
       fullCaption: p.fullCaption,
       permalink: p.permalink,
@@ -423,7 +428,7 @@ export async function getInstagramPhotos(limit = 32): Promise<InstagramPhoto[]> 
     });
   }
   if (skipped) {
-    console.warn(`[Instagram] ${skipped} photo(s) have no self-hosted file yet; run npm run sync:instagram (see src/data/instagram-media-todo.md).`);
+    console.warn(`[Instagram] ${skipped} photo(s) have no self-hosted file yet; run the sync (see src/data/instagram-media-todo.md).`);
   }
 
   memoryPhotosCache = { data: photos, timestamp: now };
@@ -439,7 +444,7 @@ export async function getInstagramMedia(limit = 12): Promise<InstagramMediaItem[
     id: p.id,
     caption: p.caption,
     media_type: p.mediaType === 'VIDEO' ? 'VIDEO' : 'IMAGE',
-    media_url: p.url,
+    media_url: p.image.src,
     permalink: p.permalink,
     timestamp: p.timestamp,
   }));

@@ -19,11 +19,14 @@ import { NAV_LINKS, FOOTER_EXPLORE, SOCIALS, PRIVACY_HREF, SEARCH_TRIGGER, homeU
 interface Props {
   title: string;
   description?: string;
+  /** Keep the page out of search engines (hero concept previews). */
+  noindex?: boolean;
 }
 
 const {
   title,
   description = 'Andrew Baxter: creator, photographer, and coffee drinker building brands in public.',
+  noindex = false,
 } = Astro.props;
 
 // Link preview image and canonical URLs: production GitHub Pages path
@@ -41,6 +44,7 @@ const canonical = new URL(Astro.url.pathname, 'https://heythisisandrew.github.io
     <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical} />
     <meta property="og:title" content={title} />
@@ -68,6 +72,7 @@ const canonical = new URL(Astro.url.pathname, 'https://heythisisandrew.github.io
     </script>
     -->
     <link rel="sitemap" type="application/xml" href={`${siteUrl}/sitemap-index.xml`} />
+    <link rel="alternate" type="application/rss+xml" title="HEY_THISISANDREW: writing" href={`${baseUrl}rss.xml`} />
     <style>
       .site-camera-stage {
         position: relative;

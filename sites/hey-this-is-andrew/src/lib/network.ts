@@ -50,6 +50,8 @@ export interface NetworkItem {
   image?: string | null;
   /** Opens off-site (new tab, rel=noopener). */
   external?: boolean;
+  /** The real publish date is unknown; never flag as new. */
+  dateEstimated?: boolean;
 }
 
 // ---- Future content models (architecture only — no UI until real items exist) ----
@@ -202,6 +204,7 @@ export async function getNetworkFeed(limit = 8): Promise<NetworkItem[]> {
         title: v.title,
         excerpt: v.description || undefined,
         date: v.date,
+        dateEstimated: v.dateEstimated,
         url: v.url,
         image: v.image,
         external: true,
@@ -230,7 +233,8 @@ export async function getNetworkFeed(limit = 8): Promise<NetworkItem[]> {
           p.data.date instanceof Date
             ? p.data.date.toISOString()
             : new Date(p.data.date).toISOString(),
-        url: p.data.link ?? '#projects',
+        // No external link: the project's home is the work archive.
+        url: p.data.link ?? `${(import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/')}work/#projects`,
         image: p.data.image ?? null,
         external: p.data.link ? true : false,
       })

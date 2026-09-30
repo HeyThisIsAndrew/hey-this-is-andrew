@@ -1,0 +1,128 @@
+---
+/**
+ * ArchiveLayout: the ONE layout for every archive page (/work, /latest,
+ * /gear, /goals, /services, /now). Built on BaseLayout, so the head, nav,
+ * footer and grain are the site's; this adds the archive header (breadcrumb
+ * back home, kicker, h1, lede, hairline) and a slot for filter UI.
+ *
+ *   <ArchiveLayout title=... heading=... kicker=... lede=... crumb=...>
+ *     <FilterTabs slot="filters" ... />   (optional)
+ *     ...content...
+ *   </ArchiveLayout>
+ */
+import BaseLayout from './BaseLayout.astro';
+import { homeUrl } from '../data/nav';
+
+interface Props {
+  /** Document <title>. */
+  title: string;
+  description: string;
+  /** Visible h1. */
+  heading: string;
+  kicker: string;
+  lede?: string;
+  /** Breadcrumb label for this page. Defaults to the heading. */
+  crumb?: string;
+}
+
+const { title, description, heading, kicker, lede, crumb = heading } = Astro.props;
+---
+<BaseLayout title={title} description={description}>
+  <div class="archive">
+    <header class="container archive-head">
+      <nav class="archive-crumb" aria-label="Breadcrumb">
+        <a href={homeUrl}>Home</a>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">{crumb}</span>
+      </nav>
+      <p class="archive-kicker">{kicker}</p>
+      <h1 class="archive-title">{heading}</h1>
+      {lede && <p class="archive-lede">{lede}</p>}
+      <span class="archive-rule" aria-hidden="true"><i></i></span>
+    </header>
+    {Astro.slots.has('filters') && (
+      <div class="container archive-filters">
+        <slot name="filters" />
+      </div>
+    )}
+    <div class="archive-body">
+      <slot />
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .archive {
+    padding-bottom: var(--space-section);
+  }
+  .archive-head {
+    padding-top: clamp(2.5rem, 6vw, 5rem);
+    padding-bottom: clamp(1.5rem, 3vw, 2.5rem);
+  }
+  .archive-crumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0 0 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .archive-crumb a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap-min);
+    min-width: var(--tap-min);
+    color: var(--muted);
+    text-decoration: none;
+  }
+  .archive-crumb a:hover,
+  .archive-crumb a:focus-visible {
+    color: var(--ink);
+  }
+  .archive-crumb [aria-current] {
+    color: var(--ink);
+  }
+  .archive-kicker {
+    margin: 0 0 0.9rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .archive-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    line-height: 1.02;
+    font-size: clamp(2.2rem, 6vw, 4.5rem);
+    color: var(--ink);
+  }
+  .archive-lede {
+    margin: 1.1rem 0 0;
+    max-width: 62ch;
+    color: var(--muted);
+  }
+  .archive-rule {
+    display: block;
+    position: relative;
+    height: 1px;
+    margin-top: 1.75rem;
+    background: var(--hairline);
+  }
+  .archive-rule i {
+    position: absolute;
+    left: 0;
+    top: -2.5px;
+    width: 6px;
+    height: 6px;
+    background: var(--ink);
+  }
+</style>

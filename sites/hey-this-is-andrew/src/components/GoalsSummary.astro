@@ -1,0 +1,78 @@
+---
+/**
+ * Goals (homepage, condensed): The Big Goals stay public in full (building
+ * in public); every other group is one line with its progress. The full
+ * checklist lives at /goals.
+ */
+import type { CollectionEntry } from 'astro:content';
+import SectionHeader from '@andrew/ui/SectionHeader.astro';
+import ViewAllLink from '@andrew/ui/ViewAllLink.astro';
+import GoalsChecklist from './GoalsChecklist.astro';
+
+interface Props { groups: CollectionEntry<'goals'>[] }
+const { groups } = Astro.props;
+
+const rawBase = import.meta.env.BASE_URL;
+const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
+const [lead, ...rest] = groups;
+const count = (g: CollectionEntry<'goals'>) => {
+  const done = g.data.items.filter((i) => i.status === 'done').length;
+  return { done, total: g.data.items.length, pct: Math.round((done / Math.max(1, g.data.items.length)) * 100) };
+};
+---
+<section id="goals" aria-labelledby="goals-heading">
+  <div class="container">
+    <SectionHeader id="goals-heading" index="04" kicker="Building in public" title="Goals" lede="Goals / Building in public." />
+    {lead && <GoalsChecklist groups={[lead]} />}
+    {rest.length > 0 && (
+      <ul class="goal-lines">
+        {rest.map((g) => {
+          const { done, total, pct } = count(g);
+          return (
+            <li class="goal-line">
+              <span class="goal-line-title">{g.data.title}</span>
+              <span class="goal-line-bar" aria-hidden="true"><span style={`width: ${pct}%`}></span></span>
+              <span class="goal-line-count">{done}/{total}<span class="vh"> done</span></span>
+            </li>
+          );
+        })}
+      </ul>
+    )}
+    <ViewAllLink href={`${base}/goals/`} what="goals" />
+  </div>
+</section>
+
+<style>
+  .goal-lines {
+    list-style: none;
+    margin: 1rem 0 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+  }
+  .goal-line {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(80px, 30%) auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.9rem 0.25rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .goal-line-title {
+    font-weight: 600;
+  }
+  .goal-line-bar {
+    display: block;
+    height: 4px;
+    background: var(--surface-2);
+  }
+  .goal-line-bar span {
+    display: block;
+    height: 100%;
+    background: var(--key);
+  }
+  .goal-line-count {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+</style>

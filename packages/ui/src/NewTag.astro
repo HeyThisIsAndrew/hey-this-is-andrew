@@ -1,0 +1,52 @@
+---
+/**
+ * NewTag (@andrew/ui): HQ's `.acc-new` pattern for genuinely fresh content.
+ *
+ * Rendered HIDDEN with its deadline; a tiny script shows it only while the
+ * deadline is still ahead, because a static page is built once and then
+ * served for days (HQ's reasoning). Colours are tokens: --new-tag-bg and
+ * --new-tag-ink (base: #f0f0f0 on #080808; HQ's theme makes it red).
+ */
+interface Props {
+  /** ISO date the content went live. */
+  published: string | Date;
+  /** How long it counts as new, in hours (HQ: 24). */
+  hours?: number;
+  label?: string;
+  class?: string;
+}
+
+const { published, hours = 24, label = 'New', class: className } = Astro.props;
+const t = new Date(published).getTime();
+const until = Number.isFinite(t) ? t + hours * 3600 * 1000 : 0;
+---
+{until > 0 && (
+  <span class:list={['new-tag', className]} data-new-until={until} hidden>{label}</span>
+)}
+
+<style>
+  .new-tag {
+    display: inline-block;
+    padding: 0.25rem 0.45rem;
+    background: var(--new-tag-bg, #f0f0f0);
+    color: var(--new-tag-ink, #080808);
+    font: 600 0.58rem/1 var(--font-body);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .new-tag[hidden] {
+    display: none;
+  }
+</style>
+
+<script>
+  function showFreshTags() {
+    const now = Date.now();
+    document.querySelectorAll<HTMLElement>('.new-tag[data-new-until]').forEach((tag) => {
+      tag.hidden = !(Number(tag.dataset.newUntil) > now);
+    });
+  }
+  showFreshTags();
+</script>

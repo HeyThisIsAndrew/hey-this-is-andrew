@@ -1,4 +1,6 @@
 ---
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
 import { getInstagramPhotos } from '../lib/instagram';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
 
@@ -8,7 +10,7 @@ import SectionHeader from '@andrew/ui/SectionHeader.astro';
 // aspect ratios — vertical and horizontal mix as part of the composition.
 // Clicking a photo zooms it into the fullscreen viewer (spatial system).
 
-// Self-hosted photos only (public/images/instagram, via npm run sync:instagram).
+// Self-hosted photos only (src/assets/instagram, via the sync:instagram script).
 const instagramPhotos = await getInstagramPhotos(32);
 const categoryLabels: Record<'cocktails' | 'bar' | 'product', string> = {
   cocktails: 'Cocktails',
@@ -18,9 +20,7 @@ const categoryLabels: Record<'cocktails' | 'bar' | 'product', string> = {
 
 interface DisplayPhoto {
   id: string;
-  url: string;
-  width?: number;
-  height?: number;
+  image: ImageMetadata;
   caption: string;
   category: 'cocktails' | 'bar' | 'product';
   location: string;
@@ -32,9 +32,7 @@ interface DisplayPhoto {
 
 const rawDisplayPhotos: DisplayPhoto[] = instagramPhotos.map((p) => ({
   id: p.id,
-  url: p.url,
-  width: p.width,
-  height: p.height,
+  image: p.image,
   caption: p.caption,
   category: p.category,
   location: p.location || (p.category === 'bar' ? 'Bar & Venue' : categoryLabels[p.category]),
@@ -50,10 +48,10 @@ const seenCaps = new Set<string>();
 const displayPhotos: DisplayPhoto[] = [];
 
 for (const p of rawDisplayPhotos) {
-  if (seenIds.has(p.id) || seenUrls.has(p.url)) continue;
+  if (seenIds.has(p.id) || seenUrls.has(p.image.src)) continue;
   if (p.caption && p.caption !== 'Capture Create Caffeinate' && seenCaps.has(p.caption)) continue;
   seenIds.add(p.id);
-  seenUrls.add(p.url);
+  seenUrls.add(p.image.src);
   if (p.caption) seenCaps.add(p.caption);
   displayPhotos.push(p);
 }
@@ -110,11 +108,12 @@ const durations = [58, 74, 66, 82];
                   data-photo-index={pi}
                   aria-label={`View photo: ${p.caption}`}
                 >
-                  <img
-                    src={p.url}
+                  <Image
+                    src={p.image}
                     alt={p.caption}
-                    width={p.width ?? 440}
-                    height={p.height}
+                    widths={[360, 540, 720, 1080]}
+                    sizes="(max-width: 767px) 50vw, 540px"
+                    format="webp"
                     loading="lazy"
                     decoding="async"
                   />

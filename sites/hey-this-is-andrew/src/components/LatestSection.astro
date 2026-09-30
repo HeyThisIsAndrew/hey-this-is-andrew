@@ -1,0 +1,41 @@
+---
+/**
+ * Latest (homepage, condensed): merges "Notes from the build" and "Activity
+ * across the brands" into one feed with All / Video / Writing filters, then
+ * View all -> /latest. Keeps #writing and #network as landing anchors.
+ */
+import SectionHeader from '@andrew/ui/SectionHeader.astro';
+import ViewAllLink from '@andrew/ui/ViewAllLink.astro';
+import FilterTabs from '@andrew/ui/FilterTabs.astro';
+import LatestFeed from './LatestFeed.astro';
+import { getNetworkFeed } from '../lib/network';
+
+const rawBase = import.meta.env.BASE_URL;
+const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
+const items = await getNetworkFeed(6);
+---
+<section id="latest" aria-labelledby="latest-heading" class="latest-section">
+  <span id="writing" class="anchor-alias" aria-hidden="true"></span>
+  <span id="network" class="anchor-alias" aria-hidden="true"></span>
+  <div class="container">
+    <SectionHeader id="latest-heading" index="03" kicker="The network" title="Latest" lede="Recent videos, articles, and dispatches across BE, CCC, and the build." />
+    <FilterTabs
+      target="latest-home-list"
+      label="Filter the latest"
+      tabs={[{ key: 'all', label: 'All' }, { key: 'video', label: 'Video' }, { key: 'writing', label: 'Writing' }]}
+    />
+    <LatestFeed items={items} id="latest-home-list" />
+    <ViewAllLink href={`${base}/latest/`} what="of the latest" />
+  </div>
+</section>
+
+<style>
+  .latest-section {
+    position: relative;
+    border-top: 1px solid var(--line);
+  }
+  .anchor-alias {
+    position: absolute;
+    top: 0;
+  }
+</style>

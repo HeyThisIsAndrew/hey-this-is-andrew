@@ -1,10 +1,10 @@
 # TODO (Andrew): photos that could not be self-hosted
 
-The site shows only photos stored in `public/images/instagram/`. These
+The site shows only photos stored in `src/assets/instagram/`. These
 posts are in the feed but their image could not be downloaded. Run
 `npm run sync:instagram` from your machine (with `INSTAGRAM_ACCESS_TOKEN`
 set, or before the cached URLs expire), or save the image yourself as
-`public/images/instagram/<id>.webp`.
+`src/assets/instagram/<id>.webp`.
 
 | id | post | shot |
 | --- | --- | --- |

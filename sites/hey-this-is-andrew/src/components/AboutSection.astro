@@ -2,6 +2,7 @@
 import { Image } from 'astro:assets';
 import portraitImg from '../assets/hero-media/portrait.jpg';
 import { SUBSTACK_URL } from '../lib/latest-content';
+import { NOW_MONTH, NOW_ITEMS } from '../data/now';
 
 interface Props {
   /** Full version (About page): all seven paragraphs, Substack kicker link. */
@@ -47,8 +48,19 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
       <div class="about-copy">
         <h3 class="display about-headline">WHERE THE MESSY MIDDLE<br />GETS BUILT IN PUBLIC</h3>
         <p>If you want to build something real, you have to show the work. Hey This Is Andrew is an independent hub for the creative process, where building three brands, commercial beverage photography, and creative automation happen out in the open. No shortcuts, no artificial templates: just honest documentation of the messy middle.</p>
-        <p>Founded and documented by Andrew Baxter. More than a decade across technology, creative production, and hospitality photography gives him a grounded, working knowledge of how ideas are actually built, tested, and shipped.</p>
+        {full && <p>Founded and documented by Andrew Baxter. More than a decade across technology, creative production, and hospitality photography gives him a grounded, working knowledge of how ideas are actually built, tested, and shipped.</p>}
         <p class="about-punchline font-display">BE HONEST. BUILD IN PUBLIC. <strong>HEY_THISISANDREW.</strong></p>
+        {!full && (
+          /* The Now band, folded in as one line (full list at /now). */
+          <p class="about-now">
+            <a class="about-now-label font-mono" href={`${base}/now/`}>Now <span class="about-now-month">{NOW_MONTH}</span> <span aria-hidden="true">&rarr;</span></a>
+            <span class="about-now-items">
+              {NOW_ITEMS.map((n, i) => (
+                <span class="about-now-item"><span class="about-now-key">{n.label}:</span> {n.value.replace(/\.$/, '')}{i < NOW_ITEMS.length - 1 && <span class="about-now-sep" aria-hidden="true"> / </span>}</span>
+              ))}
+            </span>
+          </p>
+        )}
 
         <div class="about-ctas">
           {full ? (
@@ -268,6 +280,41 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
   .about-punchline strong {
     color: var(--ink);
     font-weight: 800;
+  }
+  /* Now line (the former Now band, folded into Meet the Creator). */
+  .about-now {
+    margin: -0.75rem 0 2rem;
+    padding: 0.9rem 0 0;
+    border-top: 1px solid var(--line);
+    font-size: 0.85rem;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+  .about-now-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: var(--tap-min);
+    margin-right: 0.75rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .about-now-label:hover,
+  .about-now-label:focus-visible {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .about-now-month {
+    color: var(--muted);
+  }
+  .about-now-key {
+    color: var(--ink);
+  }
+  .about-now-sep {
+    color: var(--line);
   }
   .about-ctas {
     display: flex;

@@ -26,7 +26,7 @@ src/data/           brands (accordion), nav (header + footer), services (DRAFT),
 src/components/     this site's sections (shared blocks come from @andrew/ui)
 src/layouts/        BaseLayout.astro: the one layout every page uses
 src/styles/         theme.css (overrides on @andrew/tokens), global.css
-public/images/instagram/   self-hosted portfolio photos (sync:instagram)
+src/assets/instagram/   self-hosted portfolio photos (sync:instagram)
 scripts/            sync-instagram, build-brand-marks, audit-dist, tests
 legacy/             the original static prototype (not built, not deployed)
 ```

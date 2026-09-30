@@ -1,0 +1,33 @@
+---
+/**
+ * The homepage's sections after the hero, in funnel order. The hero is a
+ * slot so the hero concepts (/preview/hero-*) render the identical page
+ * around a different hero. `brandsAsHero` drops the brands heading when the
+ * accordion itself is the hero (Concept A).
+ */
+import { getCollection } from 'astro:content';
+import BrandsSection from './BrandsSection.astro';
+import AboutSection from './AboutSection.astro';
+import SelectedWork from './SelectedWork.astro';
+import LatestSection from './LatestSection.astro';
+import GoalsSummary from './GoalsSummary.astro';
+import WorkWithAndrew from './WorkWithAndrew.astro';
+import KitSection from './KitSection.astro';
+import NewsletterSection from './NewsletterSection.astro';
+
+interface Props {
+  /** Skip the brands section (a hero concept that already renders it). */
+  skipBrands?: boolean;
+}
+const { skipBrands = false } = Astro.props;
+const goals = (await getCollection('goals')).sort((a, b) => a.data.order - b.data.order);
+---
+<slot name="hero" />
+{!skipBrands && <BrandsSection />}
+<AboutSection />
+<SelectedWork />
+<LatestSection />
+<GoalsSummary groups={goals} />
+<WorkWithAndrew variant="home" />
+<KitSection />
+<NewsletterSection />

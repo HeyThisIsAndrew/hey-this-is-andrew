@@ -15,6 +15,9 @@ export interface LatestItem {
   imageSrcset?: string;
   url: string;
   date: string; // ISO
+  /** True when the real publish date is unknown and `date` is a stand-in
+      (never treat such an item as "new"). */
+  dateEstimated?: boolean;
 }
 
 const YT_CHANNEL_ID = 'UCNn5badDO7pbspeS6noInCw'; // @HeyThisIsAndrew
@@ -303,6 +306,7 @@ export async function getLatestVideos(limit = 3): Promise<LatestItem[]> {
             imageSrcset: `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg 1280w, https://i.ytimg.com/vi/${videoId}/sddefault.jpg 640w, https://i.ytimg.com/vi/${videoId}/hqdefault.jpg 480w`,
             url: `https://www.youtube.com/watch?v=${videoId}`,
             date: known?.date || new Date().toISOString(),
+            dateEstimated: !known?.date,
           });
           if (videos.length >= limit) break;
         }

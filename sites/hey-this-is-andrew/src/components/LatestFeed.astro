@@ -1,19 +1,29 @@
 ---
 /**
- * NetworkSection — THE NETWORK. A live activity stream from the Andrew
- * ecosystem: BE articles, videos, notes, projects. Editorial index, not a
- * card wall. Deliberately absent from the primary nav; the sophistication
- * lives in the architecture, not the menu.
+ * LatestFeed: the merged "Latest" list (was "Notes from the Build" +
+ * "Activity across the brands"). Videos, writing (Substack and BE Unconventional
+ * HQ articles) and projects, newest first. Each row carries data-kind for
+ * FilterTabs (video / writing / project) and a NEW tag while it is fresh.
+ * Used on the homepage (condensed) and on /latest (everything).
  */
-import SectionHeader from '@andrew/ui/SectionHeader.astro';
+import NewTag from '@andrew/ui/NewTag.astro';
 import { NETWORK_BRANDS, NETWORK_KIND_LABELS } from '../lib/network';
 import type { NetworkItem } from '../lib/network';
 
 interface Props {
   items: NetworkItem[];
+  /** id of the <ol>, the FilterTabs target. */
+  id: string;
 }
 
-const { items } = Astro.props;
+const { items, id } = Astro.props;
+
+/** "New" for a week after publishing: HQ uses 24 hours, but this site
+    publishes weekly, so a day would almost never show. */
+const NEW_HOURS = 24 * 7;
+
+const kindOf = (item: NetworkItem) =>
+  item.kind === 'video' ? 'video' : item.kind === 'project' ? 'project' : 'writing';
 
 const fmtDate = (iso: string) => {
   const d = new Date(iso);
@@ -21,48 +31,33 @@ const fmtDate = (iso: string) => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 ---
-
-<section id="network" aria-labelledby="network-heading" class="network-section">
-  <div class="container">
-    <SectionHeader
-      id="network-heading"
-      index="05"
-      kicker="The network"
-      title="Activity across the brands"
-      lede="Recent videos, articles, and dispatches across BE, CCC, and the build."
-    />
-    {items.length > 0 ? (
-      <ol class="network-list">
-        {items.map((item, i) => (
-          <li class="network-row reveal" style={`--rd: ${(i % 4) * 60}ms`}>
-            <a
-              class="network-link"
-              href={item.url}
-              target={item.external ? '_blank' : undefined}
-              rel={item.external ? 'noopener' : undefined}
-            >
-              <span class="network-meta">
-                <span class="network-brand">{NETWORK_BRANDS[item.brand]}</span>
-                <span class="network-kind">{NETWORK_KIND_LABELS[item.kind]}</span>
-              </span>
-              <span class="network-title">{item.title}</span>
-              <span class="network-date">{fmtDate(item.date)}</span>
-              <span class="network-arrow" aria-hidden="true">→</span>
-            </a>
-          </li>
-        ))}
-      </ol>
-    ) : (
-      <p class="network-empty">The feeds are quiet right now. Check back after the next build.</p>
-    )}
-  </div>
-</section>
+{items.length > 0 ? (
+  <ol class="network-list" id={id}>
+    {items.map((item, i) => (
+      <li class="network-row reveal" style={`--rd: ${(i % 4) * 60}ms`} data-kind={kindOf(item)}>
+        <a
+          class="network-link"
+          href={item.url}
+          target={item.external ? '_blank' : undefined}
+          rel={item.external ? 'noopener' : undefined}
+        >
+          <span class="network-meta">
+            <span class="network-brand">{NETWORK_BRANDS[item.brand]}</span>
+            <span class="network-kind">{NETWORK_KIND_LABELS[item.kind]}</span>
+            {!item.dateEstimated && <NewTag published={item.date} hours={NEW_HOURS} />}
+          </span>
+          <span class="network-title">{item.title}</span>
+          <span class="network-date">{item.dateEstimated ? '' : fmtDate(item.date)}</span>
+          <span class="network-arrow" aria-hidden="true">→</span>
+        </a>
+      </li>
+    ))}
+  </ol>
+) : (
+  <p class="network-empty">The feeds are quiet right now. Check back after the next build.</p>
+)}
 
 <style>
-  .network-section {
-    padding: clamp(4rem, 8vw, 7rem) 0;
-    border-top: 1px solid var(--line);
-  }
   .network-list {
     list-style: none;
     margin: 0;
@@ -94,9 +89,13 @@ const fmtDate = (iso: string) => {
     outline: 2px solid var(--ink);
     outline-offset: -2px;
   }
+  .network-row[hidden] {
+    display: none;
+  }
   .network-meta {
     grid-area: meta;
     display: flex;
+    flex-wrap: wrap;
     gap: 0.75rem;
     align-items: baseline;
     font-family: var(--font-mono);

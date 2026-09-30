@@ -1,0 +1,75 @@
+---
+/**
+ * Hero concept C (identity band + brands): a compact band carrying the
+ * wordmark, one line and the Now line, then the brand accordion right away.
+ * Identity and the brands both inside the first screen; no carousel.
+ */
+import BrandAccordion from '@andrew/ui/BrandAccordion.astro';
+import { childBrands } from '../../data/brands';
+import { NOW_MONTH, NOW_ITEMS } from '../../data/now';
+import wordmark from '../../assets/brand-logos/hey-thisisandrew.svg';
+
+const building = NOW_ITEMS.find((n) => n.label === 'Building');
+---
+<section id="overview" class="hero-identity" aria-labelledby="hero-identity-title">
+  <div class="container hi-band">
+    <h2 id="hero-identity-title" class="hi-wordmark">
+      <img src={wordmark.src} width={wordmark.width} height={wordmark.height} alt="HEY_THISISANDREW" />
+    </h2>
+    <div class="hi-copy">
+      <p class="hi-line">Documenting the messy middle of building three brands, commercial photography, and creator automation.</p>
+      {building && <p class="hi-now font-mono">Now {NOW_MONTH} / {building.label}: {building.value}</p>}
+    </div>
+  </div>
+</section>
+<section id="directory" class="hi-brands" aria-label="The brands">
+  <span id="brands" class="anchor-alias" aria-hidden="true"></span>
+  <BrandAccordion panels={childBrands} fullscreen />
+</section>
+
+<style>
+  .hero-identity {
+    padding: clamp(1.75rem, 4vh, 3rem) 0 clamp(1.5rem, 3vh, 2.25rem);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .hi-band {
+    display: grid;
+    gap: 1.25rem 3rem;
+    align-items: end;
+  }
+  @media (min-width: 900px) {
+    .hi-band {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+  }
+  .hi-wordmark {
+    margin: 0;
+  }
+  .hi-wordmark img {
+    width: min(88vw, 560px);
+    height: auto;
+  }
+  .hi-line {
+    margin: 0;
+    max-width: 46ch;
+    font: 500 clamp(0.9rem, 1.2vw, 1.1rem) / 1.6 var(--font-body);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(245, 245, 245, 0.78);
+  }
+  .hi-now {
+    margin: 0.6rem 0 0;
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .hi-brands {
+    position: relative;
+    padding: 0;
+  }
+  .anchor-alias {
+    position: absolute;
+    top: 0;
+  }
+</style>

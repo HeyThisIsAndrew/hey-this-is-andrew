@@ -1,0 +1,54 @@
+---
+import ArchiveLayout from '../layouts/ArchiveLayout.astro';
+import FilterTabs from '@andrew/ui/FilterTabs.astro';
+import LatestFeed from '../components/LatestFeed.astro';
+import { getNetworkFeed } from '../lib/network';
+import { SUBSTACK_URL } from '../lib/latest-content';
+
+const items = await getNetworkFeed(60);
+const rawBase = import.meta.env.BASE_URL;
+const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
+---
+<ArchiveLayout
+  title="Latest · HEY_THISISANDREW"
+  description="Every recent video, article, and dispatch across Hey This Is Andrew, BE Unconventional HQ, and Capture Create Caffeinate."
+  heading="Latest"
+  kicker="The network"
+  lede="Recent videos, articles, and dispatches across BE, CCC, and the build."
+>
+  <FilterTabs
+    slot="filters"
+    target="latest-list"
+    label="Filter the latest"
+    tabs={[{ key: 'all', label: 'All' }, { key: 'video', label: 'Video' }, { key: 'writing', label: 'Writing' }]}
+  />
+  <div class="container">
+    <LatestFeed items={items} id="latest-list" />
+    <p class="latest-links">
+      <a href={SUBSTACK_URL} target="_blank" rel="noopener">Read everything on Substack</a>
+      <a href={`${base}/rss.xml`}>RSS feed for the writing</a>
+    </p>
+  </div>
+</ArchiveLayout>
+
+<style>
+  .latest-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 2rem;
+    margin: 2rem 0 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .latest-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap-min);
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: var(--hairline-strong);
+  }
+</style>

@@ -6,10 +6,11 @@
  *
  * Why: Instagram's CDN URLs are signed and expire (the `oe=` parameter). The
  * site used to hotlink them, so every photo would break without warning.
- * This script downloads each photo ONCE into public/images/instagram/<id>.webp
+ * This script downloads each photo ONCE into src/assets/instagram/<id>.webp
  * and records `localImage` in src/data/instagram-feed.json. The build reads
- * only local files (src/lib/instagram.ts); no remote Instagram URL ever
- * reaches the page.
+ * only these local files (src/lib/instagram.ts) and runs them through
+ * Astro's image pipeline (responsive sizes, width/height, lazy loading); no
+ * remote Instagram URL ever reaches the page.
  *
  * Sources, in order:
  *   1. The Instagram Graph API, when INSTAGRAM_ACCESS_TOKEN is set (fresh,
@@ -27,7 +28,7 @@ import sharp from 'sharp';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const FEED = path.join(root, 'src/data/instagram-feed.json');
-const OUT_DIR = path.join(root, 'public/images/instagram');
+const OUT_DIR = path.join(root, 'src/assets/instagram');
 const TODO = path.join(root, 'src/data/instagram-media-todo.md');
 const LIMIT = 35;
 
@@ -96,7 +97,7 @@ async function readApi() {
 
 async function download(row) {
   const file = path.join(OUT_DIR, `${row.id}.webp`);
-  const rel = `images/instagram/${row.id}.webp`;
+  const rel = `instagram/${row.id}.webp`; // relative to src/assets
   if (fs.existsSync(file)) {
     const meta = await sharp(file).metadata();
     return { localImage: rel, width: meta.width, height: meta.height };
@@ -106,7 +107,7 @@ async function download(row) {
     const res = await fetchWithTimeout(row.url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const buf = Buffer.from(await res.arrayBuffer());
-    const out = await sharp(buf).rotate().resize({ width: 1080, withoutEnlargement: true }).webp({ quality: 82 }).toBuffer({ resolveWithObject: true });
+    const out = await sharp(buf).rotate().resize({ width: 1440, withoutEnlargement: true }).webp({ quality: 90 }).toBuffer({ resolveWithObject: true });
     fs.writeFileSync(file, out.data);
     return { localImage: rel, width: out.info.width, height: out.info.height };
   } catch (err) {
@@ -141,17 +142,17 @@ async function main() {
 
   fs.writeFileSync(FEED, JSON.stringify(rows, null, 2) + '\n');
   const ok = rows.length - missing.length;
-  console.log(`[sync:instagram] ${ok}/${rows.length} photos self-hosted in public/images/instagram/.`);
+  console.log(`[sync:instagram] ${ok}/${rows.length} photos self-hosted in src/assets/instagram/.`);
 
   if (missing.length) {
     const lines = [
       '# TODO (Andrew): photos that could not be self-hosted',
       '',
-      'The site shows only photos stored in `public/images/instagram/`. These',
+      'The site shows only photos stored in `src/assets/instagram/`. These',
       'posts are in the feed but their image could not be downloaded. Run',
       '`npm run sync:instagram` from your machine (with `INSTAGRAM_ACCESS_TOKEN`',
       'set, or before the cached URLs expire), or save the image yourself as',
-      '`public/images/instagram/<id>.webp`.',
+      '`src/assets/instagram/<id>.webp`.',
       '',
       '| id | post | shot |',
       '| --- | --- | --- |',

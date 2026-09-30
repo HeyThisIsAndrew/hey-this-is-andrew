@@ -1,0 +1,77 @@
+---
+/**
+ * FilterTabs (@andrew/ui): a row of filter buttons over a list.
+ *
+ * Items inside the element named by `target` carry data-kind="<key>"; a tab
+ * with key "all" shows everything. Plain buttons with aria-pressed (a
+ * filter, not a tablist: the list itself never changes identity). Without
+ * JavaScript every item stays visible.
+ */
+interface Props {
+  /** id of the element whose [data-kind] children are filtered */
+  target: string;
+  tabs: { key: string; label: string }[];
+  label: string;
+}
+
+const { target, tabs, label } = Astro.props;
+---
+<div class="filter-tabs" role="group" aria-label={label} data-filter-tabs data-target={target}>
+  {tabs.map((t, i) => (
+    <button type="button" class="filter-tab" data-key={t.key} aria-pressed={i === 0 ? 'true' : 'false'}>
+      {t.label}
+    </button>
+  ))}
+</div>
+
+<style>
+  .filter-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0 0 1.5rem;
+  }
+  .filter-tab {
+    min-height: var(--tap-min, 44px);
+    padding: 0 1.1rem;
+    background: transparent;
+    border: 1px solid var(--hairline-strong, rgba(255, 255, 255, 0.15));
+    color: var(--muted);
+    font: 600 0.7rem/1 var(--font-body);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+  }
+  .filter-tab:hover {
+    color: var(--ink);
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+  .filter-tab[aria-pressed='true'] {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--page-bg, #080808);
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-filter-tabs]').forEach((group) => {
+    if (group.dataset.ready) return;
+    group.dataset.ready = '1';
+    const list = document.getElementById(group.dataset.target ?? '');
+    if (!list) return;
+    const tabs = Array.from(group.querySelectorAll<HTMLButtonElement>('.filter-tab'));
+    const apply = (key: string) => {
+      tabs.forEach((t) => t.setAttribute('aria-pressed', String(t.dataset.key === key)));
+      list.querySelectorAll<HTMLElement>('[data-kind]').forEach((item) => {
+        item.hidden = key !== 'all' && item.dataset.kind !== key;
+      });
+      // Anything revealed here must not sit at a scroll-reveal pre-state.
+      document.dispatchEvent(new CustomEvent('reveal:force', { detail: list }));
+    };
+    tabs.forEach((t) => t.addEventListener('click', () => apply(t.dataset.key ?? 'all')));
+    // ?filter=<key> preselects a tab (deep links from nav and search).
+    const fromUrl = new URLSearchParams(window.location.search).get('filter');
+    if (fromUrl && tabs.some((t) => t.dataset.key === fromUrl)) apply(fromUrl);
+  });
+</script>

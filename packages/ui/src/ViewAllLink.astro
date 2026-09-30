@@ -1,0 +1,74 @@
+---
+/**
+ * ViewAllLink (@andrew/ui): the one "View all →" pattern that ends every
+ * condensed section and points at its archive page. Same type, spacing and
+ * hover everywhere: mono caps, a hairline that sweeps in from the left.
+ */
+interface Props {
+  href: string;
+  label?: string;
+  /** Accessible context, e.g. "all work". Read as "View all work". */
+  what?: string;
+}
+
+const { href, label = 'View all', what } = Astro.props;
+---
+<p class="view-all">
+  <a class="view-all-link" href={href} aria-label={what ? `${label} ${what}` : undefined}>
+    <span>{label}</span>
+    <span class="view-all-arrow" aria-hidden="true">→</span>
+  </a>
+</p>
+
+<style>
+  .view-all {
+    margin: clamp(1.75rem, 3vw, 2.5rem) 0 0;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .view-all-link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: var(--tap-min, 44px);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .view-all-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0.55rem;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0.35);
+    transform-origin: left;
+    opacity: 0.5;
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.2, 1), opacity 0.3s ease;
+  }
+  .view-all-link:hover::after,
+  .view-all-link:focus-visible::after {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  .view-all-arrow {
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.2, 1);
+  }
+  .view-all-link:hover .view-all-arrow,
+  .view-all-link:focus-visible .view-all-arrow {
+    transform: translateX(4px);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .view-all-link::after,
+    .view-all-arrow {
+      transition: none;
+    }
+  }
+</style>

@@ -13,6 +13,8 @@
  *   - no Instagram CDN URL anywhere (photos are self-hosted)
  *   - every internal link and image resolves to a built file
  *   - every target="_blank" link has rel="noopener"
+ *   - no dead anchors: every internal link with a #fragment points at a page
+ *     that has an element with that id
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -32,6 +34,25 @@ const visibleText = (html) =>
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<[^>]+>/g, ' ');
 
+const idCache = new Map();
+function idsOf(file) {
+  if (!idCache.has(file)) {
+    const html = fs.readFileSync(file, 'utf8');
+    idCache.set(file, new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1])));
+  }
+  return idCache.get(file);
+}
+function pageFile(url, fromPage) {
+  let u = url.split('#')[0].split('?')[0];
+  if (!u) return fromPage;
+  if (!u.startsWith(base)) return null;
+  u = decodeURIComponent(u.slice(base.length));
+  const p = path.join(dist, u);
+  if (fs.existsSync(p) && fs.statSync(p).isFile()) return p.endsWith('.html') ? p : null;
+  if (fs.existsSync(path.join(p, 'index.html'))) return path.join(p, 'index.html');
+  return null;
+}
+
 function resolveLocal(url) {
   let u = url.split('#')[0].split('?')[0];
   if (!u) return true;
@@ -43,6 +64,12 @@ function resolveLocal(url) {
 
 for (const page of pages) {
   const raw = fs.readFileSync(page, 'utf8');
+  // Redirect stubs (Astro `redirects`) are not pages: check only the target.
+  if (/<meta http-equiv="refresh"/i.test(raw)) {
+    const to = (raw.match(/content="\d+;\s*url=([^"]+)"/i) || [])[1];
+    if (!to || !resolveLocal(to)) fail(page, `redirect to a missing page: ${to}`);
+    continue;
+  }
   // Attribute scans ignore inline scripts (their regexes look like markup).
   const html = raw.replace(/<script\b(?![^>]*type="application\/(?:ld\+)?json")[^>]*>[\s\S]*?<\/script>/gi, '<script></script>');
   if (count(html, /<header[^>]*class="[^"]*site-nav/g) !== 1) fail(page, 'site header count != 1');
@@ -67,6 +94,15 @@ for (const page of pages) {
     const url = m[2];
     if (/^(https?:|mailto:|tel:|data:|#|javascript:)/.test(url) || url.startsWith('//')) continue;
     if (!resolveLocal(url)) fail(page, `broken ${m[1]}: ${url}`);
+  }
+  for (const m of html.matchAll(/\shref="([^"]*#[^"]+)"/g)) {
+    const url = m[1];
+    if (/^(https?:|mailto:|tel:)/.test(url)) continue;
+    const frag = decodeURIComponent(url.split('#')[1]);
+    if (!frag || frag === 'top') continue;
+    const file = pageFile(url, page);
+    if (!file) continue; // broken page links are reported above
+    if (!idsOf(file).has(frag)) fail(page, `dead anchor: ${url}`);
   }
   for (const m of html.matchAll(/\ssrcset="([^"]+)"/g)) {
     for (const part of m[1].split(',')) {
