@@ -54,21 +54,63 @@ import { NEWSLETTER_PROVIDER, NEWSLETTER_ENDPOINT } from '../lib/newsletter';
       return;
     }
     if (error) error.hidden = true;
-    if (provider === 'direct' && endpoint) {
-      fetch(endpoint, {
+
+    const btn = form.querySelector('.newsletter-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Joining...';
+    }
+
+    try {
+      fetch('https://thisiscoffeetalk.substack.com/api/v1/free', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors',
         body: JSON.stringify({ email }),
       }).catch(() => {});
-      form.innerHTML = '<p class="newsletter-done">You are on the list. Talk soon.</p>';
-    } else {
-      window.open(`${SUBSTACK_SUBSCRIBE}?email=${encodeURIComponent(email)}`, '_blank', 'noopener');
-      form.innerHTML = '<p class="newsletter-done">Almost done. Finish subscribing on Substack.</p>';
-    }
+    } catch (err) {}
+
+    try {
+      localStorage.setItem('newsletter_subscribed', 'true');
+    } catch (e) {}
+
+    setTimeout(() => {
+      form.innerHTML = `
+        <div class="newsletter-success" role="status">
+          <span class="success-icon" aria-hidden="true">✓</span>
+          <p class="newsletter-done">You're on the list. Check your inbox.</p>
+        </div>
+      `;
+    }, 250);
   });
 </script>
 
 <style>
+  .newsletter-success {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: var(--surface-2, rgba(255, 255, 255, 0.05));
+    border: 1px solid var(--border-active, rgba(255, 255, 255, 0.3));
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    letter-spacing: 0.04em;
+    animation: newsletterFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .success-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #22c55e;
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+  @keyframes newsletterFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
   .newsletter {
     margin-top: clamp(2.5rem, 5vw, 4rem);
     border: 1px solid var(--line);

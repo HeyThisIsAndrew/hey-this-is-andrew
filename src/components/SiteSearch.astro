@@ -1,0 +1,1033 @@
+---
+import { getCollection } from 'astro:content';
+
+interface SearchItem {
+  id: string;
+  title: string;
+  category: 'gear' | 'milestones' | 'projects' | 'sections';
+  badge: string;
+  spec?: string;
+  note?: string;
+  status?: string;
+  href: string;
+  keywords: string;
+}
+
+const rawBase = import.meta.env.BASE_URL;
+const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
+const homeUrl = base ? `${base}/` : '/';
+const buildUrl = base ? `${base}/build/` : '/build/';
+const gearUrl = base ? `${base}/gear/` : '/gear/';
+const cafeUrl = base ? `${base}/cafe/` : '/cafe/';
+const aboutUrl = base ? `${base}/about/` : '/about/';
+const pressUrl = base ? `${base}/press/` : '/press/';
+
+// 1. Fetch collections
+const gearCollection = await getCollection('gear');
+const goalsCollection = await getCollection('goals');
+const projectsCollection = await getCollection('projects');
+
+const searchItems: SearchItem[] = [];
+
+// Index Gear from content collections
+gearCollection.forEach((cat) => {
+  const catSlug = cat.data.category.toLowerCase().includes('body') || cat.data.category.toLowerCase().includes('camera')
+    ? 'bodies'
+    : cat.data.category.toLowerCase().includes('lens')
+    ? 'lenses'
+    : cat.data.category.toLowerCase().includes('light')
+    ? 'lighting'
+    : cat.data.category.toLowerCase().includes('audio')
+    ? 'audio'
+    : 'tools';
+
+  cat.data.items.forEach((item) => {
+    searchItems.push({
+      id: `gear-${item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      title: item.name,
+      category: 'gear',
+      badge: cat.data.category,
+      spec: item.spec,
+      note: item.tag,
+      href: `${gearUrl}#${catSlug}`,
+      keywords: `${item.name} ${item.brand ?? ''} ${cat.data.category} ${item.spec} ${item.tag ?? ''} camera gear kit equipment amazon`,
+    });
+  });
+});
+
+// Index Cafe & Beverage Equipment
+const cafeGear = [
+  { name: 'Ascaso Steel Duo', badge: 'Espresso Machine', spec: 'Dual Thermoblock, PID temperature control, volumetric dosing', href: `${cafeUrl}#brew`, keywords: 'ascaso espresso machine thermoblock coffee maker brew bar' },
+  { name: 'Eureka Mignon Specialita', badge: 'Espresso Grinder', spec: '55mm hardened steel flat burrs, micrometric grind adjustment', href: `${cafeUrl}#gear`, keywords: 'eureka mignon specialita espresso grinder flat burrs' },
+  { name: 'Fellow Ode Gen 2', badge: 'Filter Grinder', spec: '64mm flat burrs, anti-static technology, single-dose workflow', href: `${cafeUrl}#gear`, keywords: 'fellow ode gen 2 batch brew filter grinder pour over' },
+  { name: 'Acaia Lunar Scale', badge: 'Precision Scale', spec: 'Water-resistant, 0.1g resolution, auto-tare espresso timer', href: `${cafeUrl}#gear`, keywords: 'acaia lunar scale espresso barista 0.1g timer' },
+  { name: 'Acaia Pearl Scale', badge: 'Brew Scale', spec: 'Real-time flow-rate indicator, batch brew & pour-over precision', href: `${cafeUrl}#gear`, keywords: 'acaia pearl scale pour over drip kettle' },
+  { name: 'Fellow Stagg EKG', badge: 'Electric Kettle', spec: 'Variable temperature control, gooseneck spout for pour-over', href: `${cafeUrl}#gear`, keywords: 'fellow stagg ekg kettle gooseneck water heater' },
+  { name: 'James Coffee Co. "Owl"', badge: 'Specialty Beans', spec: 'Signature espresso blend, dark chocolate & caramelized sugar notes', href: `${cafeUrl}#beans`, keywords: 'james coffee co owl roast beans espresso blend' },
+  { name: 'James Coffee Co. "Night Owl"', badge: 'Decaf Beans', spec: 'Swiss Water Process specialty decaf, caramel & toasted almond', href: `${cafeUrl}#beans`, keywords: 'james coffee co night owl decaf beans swiss water' },
+];
+
+cafeGear.forEach((g) => {
+  searchItems.push({
+    id: `cafe-${g.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    title: g.name,
+    category: 'gear',
+    badge: g.badge,
+    spec: g.spec,
+    href: g.href,
+    keywords: `${g.name} ${g.badge} ${g.spec} ${g.keywords} coffee studio cafe`,
+  });
+});
+
+// Index Build Milestones from build.astro
+const buildMilestones = [
+  { title: 'System Automation', badge: 'Core Engine', spec: 'Build self-hosted n8n infrastructure for automated social media distribution', status: 'IN PROGRESS', href: `${buildUrl}#core-engine-heading`, keywords: 'system automation n8n automated social distribution webhook workflow pipeline build' },
+  { title: 'Creator Tech Authority', badge: 'Core Engine', spec: 'Establish workflow and gear catalog bridging creator tools and production systems', status: 'IN PROGRESS', href: `${buildUrl}#core-engine-heading`, keywords: 'creator tech authority gear catalog workflow production systems' },
+  { title: 'Revenue & Partnerships', badge: 'Core Engine', spec: 'Scale direct UGC brand partnerships and affiliate pipelines', status: 'IN PROGRESS', href: `${buildUrl}#core-engine-heading`, keywords: 'revenue partnerships ugc affiliate sponsorships brands' },
+  { title: 'Industry Access & Accreditation', badge: 'Core Engine', spec: 'Secure accreditation and invitations to Sony Kando, Apple Keynote, and Meta Connect', status: 'QUEUED', href: `${buildUrl}#core-engine-heading`, keywords: 'industry access sony kando apple keynote meta connect press credentials' },
+  { title: 'BE Unconventional HQ: Foundation', badge: 'BE Roadmap', spec: 'Independent editorial calendar and breaking coverage system', status: 'ACHIEVED', href: `${buildUrl}#be-heading`, keywords: 'be unconventional hq foundation editorial calendar breaking coverage' },
+  { title: 'BE Unconventional HQ: On-Site Access', badge: 'BE Roadmap', spec: 'Major event press credentials and live floor coverage for entertainment/culture', status: 'ACTIVE TARGET', href: `${buildUrl}#be-heading`, keywords: 'be unconventional hq on site access event press credentials comic con' },
+  { title: 'BE Unconventional HQ: Commercial Integration', badge: 'BE Roadmap', spec: 'Paid event photography and entertainment marketing partnerships', status: 'UPCOMING', href: `${buildUrl}#be-heading`, keywords: 'be unconventional commercial integration paid event photography marketing' },
+  { title: 'BE Unconventional HQ: CCA Accreditation', badge: 'BE Roadmap', spec: 'Critics Choice Association (CCA) credentialed accreditation', status: 'TARGET', href: `${buildUrl}#be-heading`, keywords: 'critics choice association cca accreditation critics credentials' },
+  { title: 'Capture Create Caffeinate: Pilot Pipeline', badge: 'CCC Roadmap', spec: 'First 5 local coffee roaster & cocktail bar commercial photography clients', status: 'ACHIEVED', href: `${buildUrl}#ccc-heading`, keywords: 'capture create caffeinate pilot pipeline coffee roaster bar clients' },
+  { title: 'Capture Create Caffeinate: Paid Tier-1 Roster', badge: 'CCC Roadmap', spec: 'Recurring monthly retainer contracts with premier hospitality venues', status: 'ACTIVE TARGET', href: `${buildUrl}#ccc-heading`, keywords: 'capture create caffeinate tier 1 roster retainer contracts hospitality' },
+  { title: 'Capture Create Caffeinate: National Reach', badge: 'CCC Roadmap', spec: 'Commercial beverage shoots for national coffee and spirits brands', status: 'UPCOMING', href: `${buildUrl}#ccc-heading`, keywords: 'capture create caffeinate national reach commercial beverage shoots brands' },
+];
+
+buildMilestones.forEach((m) => {
+  searchItems.push({
+    id: `milestone-${m.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    title: m.title,
+    category: 'milestones',
+    badge: m.badge,
+    spec: m.spec,
+    status: m.status,
+    href: m.href,
+    keywords: `${m.title} ${m.badge} ${m.spec} ${m.status} ${m.keywords} milestone roadmap build public`,
+  });
+});
+
+// Index Public Goals from goals collection
+goalsCollection.forEach((goalGroup) => {
+  goalGroup.data.items.forEach((item) => {
+    searchItems.push({
+      id: `goal-${item.label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      title: item.label,
+      category: 'milestones',
+      badge: goalGroup.data.title,
+      spec: item.note ?? `Milestone in ${goalGroup.data.title}`,
+      status: item.status.toUpperCase(),
+      href: `${homeUrl}#goals`,
+      keywords: `${item.label} ${goalGroup.data.title} ${item.note ?? ''} ${item.status} public goals milestone building in public`,
+    });
+  });
+});
+
+// Index Projects collection
+projectsCollection.forEach((p) => {
+  searchItems.push({
+    id: `project-${p.id}`,
+    title: p.data.title,
+    category: 'projects',
+    badge: p.data.brand.toUpperCase(),
+    spec: p.data.description,
+    note: p.data.tools?.join(', '),
+    href: `${homeUrl}#projects`,
+    keywords: `${p.data.title} ${p.data.description} ${p.data.role ?? ''} ${p.data.tools?.join(' ') ?? ''} video project shoot edit`,
+  });
+});
+
+// Index Key Hub Sections & Navigation destinations
+const hubSections = [
+  { title: 'The Brands Directory', badge: 'Hub Directory', spec: 'Explore BE Unconventional HQ, Capture Create Caffeinate, and Sip the Magic', href: `${homeUrl}#directory`, keywords: 'the brands directory be unconventional capture create caffeinate lanes accordion' },
+  { title: 'Photography Portfolio', badge: 'Visual Archive', spec: 'Commercial beverage, craft cocktails, and bar photography gallery', href: `${homeUrl}#photography`, keywords: 'photography portfolio commercial beverage craft cocktails bar photo archive' },
+  { title: 'Recent Work & Video Production', badge: 'Case Studies', spec: 'Proof of process: client shoots, studio setups, and documentary edits', href: `${homeUrl}#projects`, keywords: 'recent work video production client shoots youtube documentary' },
+  { title: 'Notes from the Build', badge: 'Substack Essays', spec: 'Long-form editorial essays on brand building, audience growth, and creator infrastructure', href: `${homeUrl}#writing`, keywords: 'notes from the build substack writing essays editorial build in public' },
+  { title: 'In The Stream', badge: 'Live Media', spec: 'Multi-platform content stream across YouTube, TikTok, and Instagram', href: `${homeUrl}#network`, keywords: 'in the stream live media network youtube feed social' },
+  { title: 'Studio & Production Gear (The Kit)', badge: 'Equipment', spec: 'Full equipment registry: cameras, prime and zoom lenses, lighting, and audio', href: `${homeUrl}#gear`, keywords: 'gear kit the kit equipment cameras lenses lighting audio registry' },
+  { title: 'Public Roadmap & Goals', badge: 'Milestones', spec: 'Live milestones checklist: tracking infrastructure, content engine, and business goals', href: `${homeUrl}#goals`, keywords: 'public goals roadmap checklist milestones building in public' },
+  { title: 'Work With Andrew', badge: 'Collaboration', spec: 'Commercial photography bookings, brand partnerships, and studio inquiries', href: `${homeUrl}#work`, keywords: 'work with andrew contact booking inquiry collaboration hire' },
+  { title: 'Press Kit & Media Assets', badge: 'Media Kit', spec: 'Biographical info, official stats, brand logos, and media asset downloads', href: pressUrl, keywords: 'press kit media assets bio statistics downloads media partnerships' },
+  { title: 'Studio Cafe & Brew Bar', badge: 'The Cafe', spec: 'Commercial espresso workflow, grinders, water filtration, and specialty roast reviews', href: cafeUrl, keywords: 'studio cafe brew bar espresso ascaso coffee grinder beans' },
+  { title: 'Build in Public Roadmap Dashboard', badge: 'Build Hub', spec: 'Complete brand roadmap, technical progression tiers, and interactive milestone trackers', href: buildUrl, keywords: 'build in public roadmap dashboard technical progression core engine' },
+  { title: 'About Andrew Baxter', badge: 'About', spec: 'Andrew Baxter: creator, photographer, and coffee drinker building brands in public', href: aboutUrl, keywords: 'about andrew baxter bio history story creator photographer' },
+];
+
+hubSections.forEach((s) => {
+  searchItems.push({
+    id: `sec-${s.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    title: s.title,
+    category: 'sections',
+    badge: s.badge,
+    spec: s.spec,
+    href: s.href,
+    keywords: `${s.title} ${s.badge} ${s.spec} ${s.keywords} page section navigation`,
+  });
+});
+---
+
+<!-- Site-wide Search Dialog Modal -->
+<div id="site-search-modal" class="site-search-modal" role="dialog" aria-modal="true" aria-label="Site search" hidden>
+  <div class="search-modal-backdrop" id="search-modal-backdrop"></div>
+  <div class="search-modal-container">
+    <div class="search-header">
+      <div class="search-input-wrap">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input
+          type="search"
+          id="site-search-input"
+          class="site-search-input"
+          placeholder="Search gear, build milestones, projects, sections..."
+          autocomplete="off"
+          autocorrect="off"
+          spellcheck="false"
+          aria-autocomplete="list"
+          aria-controls="search-results-list"
+        />
+        <button type="button" id="search-clear-btn" class="search-clear-btn" aria-label="Clear search input" hidden>×</button>
+      </div>
+      <button type="button" class="search-close-badge font-mono" id="search-modal-close" aria-label="Close search (Esc)">ESC</button>
+    </div>
+
+    <!-- Category Filter Tabs -->
+    <div class="search-category-tabs" role="tablist" aria-label="Filter search categories">
+      <button type="button" class="search-cat-tab active" data-category="all" role="tab" aria-selected="true">
+        All <span class="tab-count font-mono" id="count-all">0</span>
+      </button>
+      <button type="button" class="search-cat-tab" data-category="gear" role="tab" aria-selected="false">
+        Gear <span class="tab-count font-mono" id="count-gear">0</span>
+      </button>
+      <button type="button" class="search-cat-tab" data-category="milestones" role="tab" aria-selected="false">
+        Milestones <span class="tab-count font-mono" id="count-milestones">0</span>
+      </button>
+      <button type="button" class="search-cat-tab" data-category="projects" role="tab" aria-selected="false">
+        Projects <span class="tab-count font-mono" id="count-projects">0</span>
+      </button>
+      <button type="button" class="search-cat-tab" data-category="sections" role="tab" aria-selected="false">
+        Sections <span class="tab-count font-mono" id="count-sections">0</span>
+      </button>
+    </div>
+
+    <!-- Results Container -->
+    <div class="search-results-wrap">
+      <div id="search-empty-state" class="search-empty-state" hidden>
+        <p class="search-empty-title font-display">No matching items found</p>
+        <p class="search-empty-hint font-mono">Try searching for "Sony", "24-70mm", "Automation", "Roadmap", or "Espresso"</p>
+      </div>
+      <ul id="search-results-list" class="search-results-list" role="listbox" aria-label="Search results"></ul>
+    </div>
+
+    <!-- Modal Footer Navigation Tips -->
+    <div class="search-footer">
+      <div class="search-shortcuts">
+        <span class="shortcut-tip"><kbd class="font-mono">↑</kbd><kbd class="font-mono">↓</kbd> Navigate</span>
+        <span class="shortcut-tip"><kbd class="font-mono">↵</kbd> Select</span>
+        <span class="shortcut-tip"><kbd class="font-mono">ESC</kbd> Close</span>
+      </div>
+      <div class="search-summary font-mono" id="search-results-count">Ready</div>
+    </div>
+  </div>
+</div>
+
+<!-- Embedded Search Index -->
+<script id="site-search-index" type="application/json" is:inline set:html={JSON.stringify(searchItems)}></script>
+
+<style>
+  .site-search-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: clamp(3rem, 10vh, 7rem);
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-bottom: 2rem;
+    box-sizing: border-box;
+  }
+
+  .site-search-modal[hidden] {
+    display: none !important;
+  }
+
+  .search-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 6, 6, 0.78);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    animation: searchBackdropFade 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  [data-theme="light"] .search-modal-backdrop {
+    background: rgba(240, 240, 240, 0.82);
+  }
+
+  .search-modal-container {
+    position: relative;
+    width: 100%;
+    max-width: 680px;
+    max-height: min(600px, 82vh);
+    background: var(--surface, #0e0e0e);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.16));
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: searchModalSlide 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  [data-theme="light"] .search-modal-container {
+    background: #ffffff;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  }
+
+  @keyframes searchBackdropFade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes searchModalSlide {
+    from {
+      opacity: 0;
+      transform: translateY(-16px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .search-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1.15rem;
+    border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+    background: var(--surface, #0e0e0e);
+  }
+
+  [data-theme="light"] .search-header {
+    background: #fafafa;
+  }
+
+  .search-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    position: relative;
+  }
+
+  .search-icon {
+    color: var(--muted, #888);
+    flex-shrink: 0;
+  }
+
+  .site-search-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: var(--font-body, system-ui, sans-serif);
+    font-size: 1.05rem;
+    color: var(--ink, #fff);
+    caret-color: var(--ink, #fff);
+    padding: 0.25rem 0;
+  }
+
+  .site-search-input::placeholder {
+    color: var(--muted, #777);
+    font-size: 0.95rem;
+  }
+
+  .site-search-input::-webkit-search-cancel-button {
+    display: none;
+  }
+
+  .search-clear-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted, #888);
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+  }
+
+  .search-clear-btn:hover {
+    color: var(--ink, #fff);
+  }
+
+  .search-close-badge {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.18));
+    color: var(--muted, #888);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .search-close-badge:hover {
+    background: var(--ink, #fff);
+    color: var(--bg, #080808);
+    border-color: var(--ink, #fff);
+  }
+
+  /* Category Filter Tabs */
+  .search-category-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.65rem 1.15rem;
+    border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+    background: rgba(255, 255, 255, 0.02);
+    overflow-x: auto;
+  }
+
+  .search-cat-tab {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--muted, #888);
+    font-family: var(--font-mono, monospace);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 0.3rem 0.65rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.18s ease;
+    white-space: nowrap;
+  }
+
+  .search-cat-tab:hover {
+    color: var(--ink, #fff);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .search-cat-tab.active {
+    color: var(--ink, #fff);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--border, rgba(255, 255, 255, 0.2));
+  }
+
+  [data-theme="light"] .search-cat-tab.active {
+    background: rgba(0, 0, 0, 0.06);
+    border-color: rgba(0, 0, 0, 0.15);
+  }
+
+  .tab-count {
+    font-size: 0.62rem;
+    opacity: 0.7;
+  }
+
+  /* Results List */
+  .search-results-wrap {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem 0;
+    max-height: 420px;
+    overscroll-behavior: contain;
+  }
+
+  .search-results-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .search-result-item {
+    display: block;
+    margin: 0;
+    padding: 0;
+  }
+
+  .search-result-link {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1.15rem;
+    text-decoration: none;
+    color: inherit;
+    border-left: 2px solid transparent;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    cursor: pointer;
+  }
+
+  .search-result-link:hover,
+  .search-result-link.is-selected {
+    background: rgba(255, 255, 255, 0.06);
+    border-left-color: var(--ink, #fff);
+  }
+
+  [data-theme="light"] .search-result-link:hover,
+  [data-theme="light"] .search-result-link.is-selected {
+    background: rgba(0, 0, 0, 0.04);
+    border-left-color: #080808;
+  }
+
+  .result-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .result-header-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .result-cat-badge {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 0.12rem 0.4rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--ink, #fff);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.15));
+  }
+
+  .result-sub-badge {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.65rem;
+    color: var(--muted, #888);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .result-status-badge {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    padding: 0.1rem 0.35rem;
+    margin-left: auto;
+    text-transform: uppercase;
+    border: 1px solid currentColor;
+  }
+
+  .result-status-badge.done,
+  .result-status-badge.achieved {
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.1);
+  }
+
+  .result-status-badge.in-progress,
+  .result-status-badge.active-target {
+    color: #facc15;
+    background: rgba(250, 204, 21, 0.1);
+  }
+
+  .result-status-badge.next,
+  .result-status-badge.upcoming,
+  .result-status-badge.queued {
+    color: #94a3b8;
+    background: rgba(148, 163, 184, 0.1);
+  }
+
+  .result-title {
+    font-family: var(--font-display, 'Syne', sans-serif);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--ink, #fff);
+    margin: 0 0 0.2rem;
+    line-height: 1.3;
+  }
+
+  .result-spec {
+    font-family: var(--font-body, system-ui, sans-serif);
+    font-size: 0.8rem;
+    color: var(--muted, #999);
+    margin: 0;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .result-arrow {
+    color: var(--muted, #777);
+    font-family: var(--font-mono, monospace);
+    font-size: 0.9rem;
+    align-self: center;
+    flex-shrink: 0;
+    transition: transform 0.15s ease, color 0.15s ease;
+  }
+
+  .search-result-link:hover .result-arrow,
+  .search-result-link.is-selected .result-arrow {
+    color: var(--ink, #fff);
+    transform: translateX(3px);
+  }
+
+  /* Empty state */
+  .search-empty-state {
+    padding: 3rem 1.5rem;
+    text-align: center;
+  }
+
+  .search-empty-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--ink, #fff);
+    margin: 0 0 0.5rem;
+  }
+
+  .search-empty-hint {
+    font-size: 0.75rem;
+    color: var(--muted, #888);
+    margin: 0;
+    letter-spacing: 0.04em;
+  }
+
+  /* Footer shortcuts */
+  .search-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 1.15rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+    font-size: 0.72rem;
+    color: var(--muted, #888);
+  }
+
+  [data-theme="light"] .search-footer {
+    background: #f7f7f7;
+  }
+
+  .search-shortcuts {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+  }
+
+  .shortcut-tip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .shortcut-tip kbd {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.15));
+    color: var(--ink, #fff);
+    font-size: 0.65rem;
+    padding: 0.1rem 0.35rem;
+    line-height: 1;
+  }
+
+  [data-theme="light"] .shortcut-tip kbd {
+    background: #eee;
+    color: #111;
+  }
+
+  /* Highlight matches */
+  :global(.search-hl) {
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--ink, #fff);
+    font-weight: 700;
+    padding: 0 0.15rem;
+  }
+
+  [data-theme="light"] :global(.search-hl) {
+    background: rgba(0, 0, 0, 0.12);
+    color: #000;
+  }
+
+  @media (max-width: 640px) {
+    .site-search-modal {
+      padding-top: 1rem;
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+    .search-modal-container {
+      max-height: 90vh;
+    }
+    .search-shortcuts {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  interface SearchItem {
+    id: string;
+    title: string;
+    category: 'gear' | 'milestones' | 'projects' | 'sections';
+    badge: string;
+    spec?: string;
+    note?: string;
+    status?: string;
+    href: string;
+    keywords: string;
+  }
+
+  class SiteSearchController {
+    private modal: HTMLElement | null = null;
+    private backdrop: HTMLElement | null = null;
+    private input: HTMLInputElement | null = null;
+    private clearBtn: HTMLButtonElement | null = null;
+    private closeBtn: HTMLButtonElement | null = null;
+    private resultsList: HTMLElement | null = null;
+    private emptyState: HTMLElement | null = null;
+    private resultsCount: HTMLElement | null = null;
+    private categoryTabs: NodeListOf<HTMLButtonElement> | null = null;
+
+    private items: SearchItem[] = [];
+    private filteredItems: SearchItem[] = [];
+    private activeCategory: string = 'all';
+    private selectedIndex: number = 0;
+    private isOpen: boolean = false;
+    private lastActiveElement: HTMLElement | null = null;
+
+    constructor() {
+      this.init();
+    }
+
+    private init() {
+      const dataScript = document.getElementById('site-search-index');
+      if (dataScript && dataScript.textContent) {
+        try {
+          this.items = JSON.parse(dataScript.textContent);
+        } catch (e) {
+          this.items = [];
+        }
+      }
+
+      this.modal = document.getElementById('site-search-modal');
+      this.backdrop = document.getElementById('search-modal-backdrop');
+      this.input = document.getElementById('site-search-input') as HTMLInputElement;
+      this.clearBtn = document.getElementById('search-clear-btn') as HTMLButtonElement;
+      this.closeBtn = document.getElementById('search-modal-close') as HTMLButtonElement;
+      this.resultsList = document.getElementById('search-results-list');
+      this.emptyState = document.getElementById('search-empty-state');
+      this.resultsCount = document.getElementById('search-results-count');
+      this.categoryTabs = document.querySelectorAll('.search-cat-tab');
+
+      this.updateCategoryCounts();
+      this.bindEvents();
+    }
+
+    private updateCategoryCounts() {
+      const allCount = this.items.length;
+      const gearCount = this.items.filter((i) => i.category === 'gear').length;
+      const milesCount = this.items.filter((i) => i.category === 'milestones').length;
+      const projCount = this.items.filter((i) => i.category === 'projects').length;
+      const secCount = this.items.filter((i) => i.category === 'sections').length;
+
+      const setEl = (id: string, count: number) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = count.toString();
+      };
+
+      setEl('count-all', allCount);
+      setEl('count-gear', gearCount);
+      setEl('count-milestones', milesCount);
+      setEl('count-projects', projCount);
+      setEl('count-sections', secCount);
+    }
+
+    private bindEvents() {
+      // Global trigger bindings: Desktop button, Mobile button, Shortcut (Cmd+K / Ctrl+K / /)
+      document.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (target && target.closest('#nav-search-trigger, #mobile-search-trigger')) {
+          e.preventDefault();
+          this.open();
+        }
+      });
+
+      // Keyboard shortcuts
+      window.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+          e.preventDefault();
+          if (this.isOpen) {
+            this.close();
+          } else {
+            this.open();
+          }
+          return;
+        }
+
+        // Forward slash '/' when not inside an input/textarea
+        if (e.key === '/' && !this.isOpen) {
+          const active = document.activeElement;
+          const isInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || (active as HTMLElement).isContentEditable);
+          if (!isInput) {
+            e.preventDefault();
+            this.open();
+          }
+          return;
+        }
+
+        if (this.isOpen) {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            this.close();
+          } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            this.moveSelection(1);
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            this.moveSelection(-1);
+          } else if (e.key === 'Enter') {
+            e.preventDefault();
+            this.selectActiveItem();
+          }
+        }
+      });
+
+      if (this.backdrop) {
+        this.backdrop.addEventListener('click', () => this.close());
+      }
+
+      if (this.closeBtn) {
+        this.closeBtn.addEventListener('click', () => this.close());
+      }
+
+      if (this.clearBtn && this.input) {
+        this.clearBtn.addEventListener('click', () => {
+          if (!this.input) return;
+          this.input.value = '';
+          this.clearBtn.hidden = true;
+          this.renderResults();
+          this.input.focus();
+        });
+      }
+
+      if (this.input) {
+        this.input.addEventListener('input', () => {
+          if (this.clearBtn) {
+            this.clearBtn.hidden = !this.input?.value;
+          }
+          this.renderResults();
+        });
+      }
+
+      if (this.categoryTabs) {
+        this.categoryTabs.forEach((tab) => {
+          tab.addEventListener('click', () => {
+            const cat = tab.dataset.category || 'all';
+            this.activeCategory = cat;
+            this.categoryTabs?.forEach((t) => {
+              const active = t.dataset.category === cat;
+              t.classList.toggle('active', active);
+              t.setAttribute('aria-selected', active ? 'true' : 'false');
+            });
+            this.renderResults();
+          });
+        });
+      }
+    }
+
+    public open() {
+      if (this.isOpen || !this.modal) return;
+      this.lastActiveElement = document.activeElement as HTMLElement | null;
+      this.isOpen = true;
+      this.modal.hidden = false;
+      document.body.style.overflow = 'hidden';
+
+      if (this.input) {
+        this.input.value = '';
+        if (this.clearBtn) this.clearBtn.hidden = true;
+        this.renderResults();
+        setTimeout(() => this.input?.focus(), 50);
+      }
+    }
+
+    public close() {
+      if (!this.isOpen || !this.modal) return;
+      this.isOpen = false;
+      this.modal.hidden = true;
+      document.body.style.overflow = '';
+      if (this.lastActiveElement && typeof this.lastActiveElement.focus === 'function') {
+        this.lastActiveElement.focus();
+      }
+    }
+
+    private moveSelection(delta: number) {
+      if (!this.filteredItems.length) return;
+      const count = this.filteredItems.length;
+      this.selectedIndex = (this.selectedIndex + delta + count) % count;
+      this.updateSelection();
+    }
+
+    private updateSelection() {
+      if (!this.resultsList) return;
+      const links = this.resultsList.querySelectorAll<HTMLAnchorElement>('.search-result-link');
+      links.forEach((link, idx) => {
+        const isSel = idx === this.selectedIndex;
+        link.classList.toggle('is-selected', isSel);
+        link.setAttribute('aria-selected', isSel ? 'true' : 'false');
+        if (isSel) {
+          link.scrollIntoView({ block: 'nearest' });
+        }
+      });
+    }
+
+    private selectActiveItem() {
+      if (!this.filteredItems.length) return;
+      const item = this.filteredItems[this.selectedIndex];
+      if (item && item.href) {
+        this.navigateTo(item.href);
+      }
+    }
+
+    private navigateTo(href: string) {
+      this.close();
+
+      const hashIndex = href.indexOf('#');
+      if (hashIndex !== -1) {
+        const pathPart = href.slice(0, hashIndex);
+        const hash = href.slice(hashIndex);
+        const currentPath = window.location.pathname;
+
+        const isSamePage =
+          !pathPart ||
+          pathPart === currentPath ||
+          pathPart === currentPath.replace(/\/$/, '') ||
+          pathPart === '/' && currentPath === '';
+
+        if (isSamePage) {
+          const target = document.querySelector(hash);
+          if (target) {
+            history.pushState(null, '', hash);
+            const nav = document.querySelector('.site-nav');
+            const navH = nav ? nav.getBoundingClientRect().height : 72;
+            const targetTop = target.getBoundingClientRect().top + window.scrollY - navH - 12;
+            window.scrollTo({
+              top: Math.max(0, targetTop),
+              behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+            });
+            return;
+          }
+        }
+      }
+
+      window.location.href = href;
+    }
+
+    private renderResults() {
+      if (!this.resultsList || !this.emptyState || !this.resultsCount) return;
+
+      const query = (this.input?.value || '').trim().toLowerCase();
+      const terms = query.split(/\s+/).filter(Boolean);
+
+      let pool = this.items;
+      if (this.activeCategory !== 'all') {
+        pool = pool.filter((item) => item.category === this.activeCategory);
+      }
+
+      if (!terms.length) {
+        this.filteredItems = pool;
+      } else {
+        this.filteredItems = pool.filter((item) => {
+          const targetText = `${item.title} ${item.badge} ${item.spec ?? ''} ${item.note ?? ''} ${item.status ?? ''} ${item.keywords}`.toLowerCase();
+          return terms.every((term) => targetText.includes(term));
+        });
+      }
+
+      this.selectedIndex = 0;
+      this.resultsList.innerHTML = '';
+
+      if (!this.filteredItems.length) {
+        this.emptyState.hidden = false;
+        this.resultsCount.textContent = '0 results';
+        return;
+      }
+
+      this.emptyState.hidden = true;
+      this.resultsCount.textContent = `${this.filteredItems.length} result${this.filteredItems.length === 1 ? '' : 's'}`;
+
+      const highlight = (text: string) => {
+        if (!terms.length || !text) return text;
+        let res = text;
+        terms.forEach((term) => {
+          const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+          res = res.replace(regex, '<span class="search-hl">$1</span>');
+        });
+        return res;
+      };
+
+      this.filteredItems.forEach((item, index) => {
+        const li = document.createElement('li');
+        li.className = 'search-result-item';
+
+        const a = document.createElement('a');
+        a.className = `search-result-link ${index === 0 ? 'is-selected' : ''}`;
+        a.href = item.href;
+        a.role = 'option';
+        a.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
+
+        const catKicker =
+          item.category === 'gear'
+            ? 'GEAR'
+            : item.category === 'milestones'
+            ? 'MILESTONE'
+            : item.category === 'projects'
+            ? 'PROJECT'
+            : 'SECTION';
+
+        let statusHtml = '';
+        if (item.status) {
+          const statusClass = item.status.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          statusHtml = `<span class="result-status-badge ${statusClass}">${item.status}</span>`;
+        }
+
+        a.innerHTML = `
+          <div class="result-main">
+            <div class="result-header-row">
+              <span class="result-cat-badge">${catKicker}</span>
+              <span class="result-sub-badge">${item.badge}</span>
+              ${statusHtml}
+            </div>
+            <h4 class="result-title">${highlight(item.title)}</h4>
+            ${item.spec ? `<p class="result-spec">${highlight(item.spec)}</p>` : ''}
+          </div>
+          <span class="result-arrow" aria-hidden="true">→</span>
+        `;
+
+        a.addEventListener('click', (e) => {
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+          e.preventDefault();
+          this.navigateTo(item.href);
+        });
+
+        a.addEventListener('mouseenter', () => {
+          this.selectedIndex = index;
+          this.updateSelection();
+        });
+
+        li.appendChild(a);
+        this.resultsList?.appendChild(li);
+      });
+    }
+  }
+
+  // Initialize search controller when DOM is ready
+  if (typeof window !== 'undefined') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        new SiteSearchController();
+      });
+    } else {
+      new SiteSearchController();
+    }
+  }
+</script>

@@ -46,14 +46,16 @@
     let closeZoom = null;
     let unlock = null;
     let untrap = null;
-    let opener = null;
+    let opener: HTMLElement | null = null;
+    let isPaused = false;
+    let isMuted = false;
 
-    function videoId(url) {
+    function videoId(url: string) {
       const m = url.match(/[?&]v=([^&]+)/) || url.match(/youtu\.be\/([^?]+)/);
       return m ? m[1] : null;
     }
 
-    function openFrom(sourceEl, url, label) {
+    function openFrom(sourceEl: HTMLElement, url: string, label: string) {
       const id = videoId(url);
       if (!id) {
         // No parseable ID — fall back to opening the link normally.
@@ -61,9 +63,13 @@
         return;
       }
       opener = sourceEl;
-      iframe.src = `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`;
-      title.textContent = label || 'Video';
-      ytLink.href = url;
+      isPaused = false;
+      isMuted = false;
+      if (iframe) {
+        (iframe as HTMLIFrameElement).src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&enablejsapi=1`;
+      }
+      if (title) title.textContent = label || 'Video';
+      if (ytLink) (ytLink as HTMLAnchorElement).href = url;
       player.hidden = false;
 
       unlock = lockBody();
@@ -74,7 +80,7 @@
         source: sourceEl,
         overlay: player,
         instant: prefersReducedMotion(),
-        onDone: () => player.querySelector('.vp-close').focus(),
+        onDone: () => player.querySelector<HTMLElement>('.vp-close')?.focus(),
       });
     }
 
@@ -86,7 +92,7 @@
         player.setAttribute('aria-hidden', 'true');
       }
       // Stop the video.
-      iframe.src = '';
+      if (iframe) (iframe as HTMLIFrameElement).src = '';
       if (unlock) { unlock(); unlock = null; }
       if (untrap) { untrap(); untrap = null; }
       if (opener) opener.focus();
@@ -139,7 +145,21 @@
     });
 
     document.addEventListener('keydown', (e) => {
-      if (!player.hidden && e.key === 'Escape') close();
+      if (player.hidden) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        close();
+      } else if (e.key === ' ' && e.target !== iframe && !['input', 'textarea'].includes((e.target as HTMLElement)?.tagName?.toLowerCase())) {
+        e.preventDefault();
+        isPaused = !isPaused;
+        const cmd = isPaused ? 'pauseVideo' : 'playVideo';
+        (iframe as HTMLIFrameElement)?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: cmd, args: '' }), '*');
+      } else if ((e.key === 'm' || e.key === 'M') && !['input', 'textarea'].includes((e.target as HTMLElement)?.tagName?.toLowerCase())) {
+        e.preventDefault();
+        isMuted = !isMuted;
+        const cmd = isMuted ? 'mute' : 'unMute';
+        (iframe as HTMLIFrameElement)?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: cmd, args: '' }), '*');
+      }
     });
   }
 </script>

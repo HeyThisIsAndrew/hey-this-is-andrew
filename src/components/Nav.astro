@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import navLogo from '../assets/brand-logos/hey-thisisandrew.png';
+import SiteSearch from './SiteSearch.astro';
 
 // Fixed navbar: BE Unconventional HQ's navbar, monochrome.
 // Syne links, frosted bar, underline grow + gray glow on hover.
@@ -40,9 +41,16 @@ const links: NavItem[] = [
     href: homeUrl,
     section: 'home',
     subsections: [
-      { label: 'Overview', href: homeUrl, kicker: '01' },
-      { label: 'Featured Initiative', href: `${homeUrl}#featured`, kicker: 'PUB' },
-      { label: 'Site Directory', href: `${homeUrl}#directory`, kicker: 'DIR' },
+      { label: 'Overview', href: `${homeUrl}#overview`, kicker: '01' },
+      { label: 'The Brands', href: `${homeUrl}#directory`, kicker: '02' },
+      { label: 'Meet Andrew', href: `${homeUrl}#about`, kicker: '03' },
+      { label: 'Photography', href: `${homeUrl}#photography`, kicker: '04' },
+      { label: 'Recent Work', href: `${homeUrl}#projects`, kicker: '05' },
+      { label: 'Notes from the Build', href: `${homeUrl}#writing`, kicker: '06' },
+      { label: 'In The Stream', href: `${homeUrl}#network`, kicker: '07' },
+      { label: 'The Kit', href: `${homeUrl}#gear`, kicker: '08' },
+      { label: 'Public Goals', href: `${homeUrl}#goals`, kicker: '09' },
+      { label: 'Work With Andrew', href: `${homeUrl}#work`, kicker: '10' },
     ],
   },
   {
@@ -50,9 +58,10 @@ const links: NavItem[] = [
     href: buildUrl,
     section: 'build',
     subsections: [
-      { label: 'Milestone Checklist', href: `${buildUrl}#brand-roadmap-dashboard`, kicker: '02' },
-      { label: 'BE Unconventional HQ', href: `${buildUrl}#brand-roadmap-dashboard`, kicker: 'BE' },
-      { label: 'Capture Create Caffeinate', href: `${buildUrl}#brand-roadmap-dashboard`, kicker: 'CCC' },
+      { label: 'Milestone Roadmap', href: `${buildUrl}#brand-roadmap-dashboard`, kicker: '01' },
+      { label: 'Core Engine: Andrew', href: `${buildUrl}#core-engine-heading`, kicker: 'ENG' },
+      { label: 'BE Unconventional HQ', href: `${buildUrl}#be-heading`, kicker: 'BE' },
+      { label: 'Capture Create Caffeinate', href: `${buildUrl}#ccc-heading`, kicker: 'CCC' },
     ],
   },
   {
@@ -60,11 +69,11 @@ const links: NavItem[] = [
     href: gearUrl,
     section: 'gear',
     subsections: [
-      { label: 'Camera Bodies', href: `${gearUrl}#bodies`, kicker: '03' },
-      { label: 'Zoom Lenses', href: `${gearUrl}#zooms`, kicker: 'ZM' },
-      { label: 'Prime Lenses', href: `${gearUrl}#primes`, kicker: 'PRM' },
-      { label: 'Lighting & Flash', href: `${gearUrl}#lighting`, kicker: 'LGT' },
-      { label: 'Audio Hardware', href: `${gearUrl}#audio`, kicker: 'AUD' },
+      { label: 'Camera Bodies', href: `${gearUrl}#bodies`, kicker: '01' },
+      { label: 'Zoom Lenses', href: `${gearUrl}#zooms`, kicker: '02' },
+      { label: 'Prime Lenses', href: `${gearUrl}#primes`, kicker: '03' },
+      { label: 'Lighting & Flash', href: `${gearUrl}#lighting`, kicker: '04' },
+      { label: 'Audio Hardware', href: `${gearUrl}#audio`, kicker: '05' },
       { label: 'Amazon Storefront', href: 'https://a.co/d/0i9uWbMj', kicker: 'AMZ' },
     ],
   },
@@ -73,10 +82,10 @@ const links: NavItem[] = [
     href: cafeUrl,
     section: 'cafe',
     subsections: [
-      { label: 'Espresso & Brew Bar', href: `${cafeUrl}#brew`, kicker: '04' },
-      { label: 'Grinders & Scales', href: `${cafeUrl}#gear`, kicker: 'BAR' },
-      { label: '9:16 Video Reels', href: `${cafeUrl}#reels`, kicker: 'VID' },
-      { label: 'James Coffee Co.', href: `${cafeUrl}#beans`, kicker: 'ROAST' },
+      { label: 'Espresso & Brew Bar', href: `${cafeUrl}#brew`, kicker: '01' },
+      { label: 'Grinders & Scales', href: `${cafeUrl}#gear`, kicker: '02' },
+      { label: '9:16 Video Reels', href: `${cafeUrl}#reels`, kicker: '03' },
+      { label: 'James Coffee Co.', href: `${cafeUrl}#beans`, kicker: '04' },
     ],
   },
   {
@@ -84,10 +93,10 @@ const links: NavItem[] = [
     href: aboutUrl,
     section: 'about',
     subsections: [
-      { label: 'About Andrew', href: aboutUrl, kicker: '05' },
-      { label: 'Meet the Creator', href: `${homeUrl}#about`, kicker: 'MEET' },
-      { label: 'Notes from the Build', href: `${homeUrl}#writing`, kicker: 'SUB' },
-      { label: 'Work with Andrew', href: `${homeUrl}#work`, kicker: 'DIR' },
+      { label: 'About Andrew', href: aboutUrl, kicker: '01' },
+      { label: 'Meet the Creator', href: `${homeUrl}#about`, kicker: '02' },
+      { label: 'Press & Media Kit', href: `${base ? `${base}/press/` : '/press/'}`, kicker: '03' },
+      { label: 'Work with Andrew', href: `${homeUrl}#work`, kicker: '04' },
     ],
   },
 ];
@@ -96,7 +105,7 @@ const currentPath = Astro.url.pathname.replace(/\/$/, '');
 const isHome = currentPath === '' || currentPath === base;
 const isAbout = currentPath === `${base}/about` || currentPath === '/about';
 ---
-<header class:list={['site-nav', { 'site-nav--home': isHome, 'at-top': isHome }]} id="top">
+<header class:list={['site-nav', { 'site-nav--home': isHome, 'at-top': isHome }]} id="site-header">
   <div class="nav-inner">
     <a class="wordmark" href={homeUrl} aria-label="Hey This Is Andrew, home" data-logo-home={isHome ? true : undefined}>
       <Image src={navLogo} alt="Hey This Is Andrew" class="wordmark-logo" width={800} />
@@ -150,11 +159,47 @@ const isAbout = currentPath === `${base}/about` || currentPath === '/about';
         ))}
       </ul>
     </nav>
-    <button type="button" class="menu-btn" aria-expanded="false" aria-controls="mobile-menu">
-      <span class="menu-btn-label">Menu</span>
-    </button>
+    <div class="nav-right-actions">
+      <button type="button" class="nav-search-btn" id="nav-search-trigger" aria-label="Search site (Press ⌘K or /)" title="Search gear, milestones, projects (⌘K)">
+        <svg class="search-trigger-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span class="nav-search-label font-mono">Search</span>
+        <span class="nav-search-key font-mono" aria-hidden="true">⌘K</span>
+      </button>
+      <button type="button" class="theme-toggle-btn" id="nav-theme-toggle" aria-label="Toggle light or dark theme" title="Toggle theme">
+        <svg class="theme-icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg class="theme-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+      <button type="button" class="menu-btn" aria-expanded="false" aria-controls="mobile-menu">
+        <span class="menu-btn-label">Menu</span>
+      </button>
+    </div>
   </div>
   <div class="mobile-menu" id="mobile-menu" hidden>
+    <div class="mobile-search-row">
+      <button type="button" class="mobile-search-trigger-btn" id="mobile-search-trigger" aria-label="Open search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span class="mobile-search-text">Search gear, milestones, projects...</span>
+        <span class="mobile-search-key font-mono">⌘K</span>
+      </button>
+    </div>
     <nav aria-label="Sections menu">
       <ul class="mobile-nav-list">
         {links.map((l) => (
@@ -189,6 +234,7 @@ const isAbout = currentPath === `${base}/about` || currentPath === '/about';
       </ul>
     </nav>
   </div>
+  <SiteSearch />
 </header>
 
 <script>
@@ -223,15 +269,22 @@ const isAbout = currentPath === `${base}/about` || currentPath === '/about';
     });
   }
 
-  // Dropdown accessibility: update aria-expanded and handle Escape key
+  // Dropdown accessibility: update aria-expanded and handle keyboard navigation
   const navItems = Array.from(document.querySelectorAll<HTMLElement>('.nav-item'));
   navItems.forEach((item) => {
     const mainLink = item.querySelector<HTMLAnchorElement>('.nav-link');
     const dropdown = item.querySelector<HTMLElement>('.dropdown-menu');
     if (!mainLink || !dropdown) return;
 
+    const subLinks = Array.from(dropdown.querySelectorAll<HTMLAnchorElement>('.dropdown-link'));
+
     const setExpanded = (expanded: boolean) => {
       mainLink.setAttribute('aria-expanded', String(expanded));
+      if (expanded) {
+        item.classList.add('is-open');
+      } else {
+        item.classList.remove('is-open');
+      }
     };
 
     item.addEventListener('mouseenter', () => setExpanded(true));
@@ -242,14 +295,50 @@ const isAbout = currentPath === `${base}/about` || currentPath === '/about';
         if (!item.contains(document.activeElement)) {
           setExpanded(false);
         }
-      }, 10);
+      }, 20);
     });
 
-    item.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
+    // Keyboard navigation: ArrowDown, ArrowUp, Escape, Home, End
+    mainLink.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setExpanded(true);
+        if (subLinks.length) subLinks[0].focus();
+      } else if (e.key === 'Escape') {
         setExpanded(false);
-        mainLink.focus();
       }
+    });
+
+    subLinks.forEach((subLink, index) => {
+      subLink.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          const next = subLinks[index + 1] || subLinks[0];
+          next.focus();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (index === 0) {
+            mainLink.focus();
+          } else {
+            subLinks[index - 1].focus();
+          }
+        } else if (e.key === 'Home') {
+          e.preventDefault();
+          subLinks[0]?.focus();
+        } else if (e.key === 'End') {
+          e.preventDefault();
+          subLinks[subLinks.length - 1]?.focus();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          setExpanded(false);
+          mainLink.focus();
+        }
+      });
+
+      // Close dropdown when selecting an item
+      subLink.addEventListener('click', () => {
+        setExpanded(false);
+      });
     });
   });
 
@@ -287,18 +376,82 @@ const isAbout = currentPath === `${base}/about` || currentPath === '/about';
     menuLinks.forEach((a) =>
       a.addEventListener('click', () => {
         setOpen(false);
-        menuBtn.focus();
+        (menuBtn as HTMLElement)?.focus();
       })
     );
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && isOpen()) {
         setOpen(false);
-        menuBtn.focus();
+        (menuBtn as HTMLElement)?.focus();
       }
     });
+
+    // Keyboard Tab focus trap inside open mobile menu
+    mobileMenu.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab') return;
+      const focusable = [menuBtn, ...menuLinks].filter(Boolean) as HTMLElement[];
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    });
+
+    // Touch swipe-up / swipe-left to dismiss mobile drawer
+    let touchStartY = 0;
+    let touchStartX = 0;
+    mobileMenu.addEventListener('touchstart', (e) => {
+      touchStartY = e.touches[0].clientY;
+      touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+
+    mobileMenu.addEventListener('touchend', (e) => {
+      const deltaY = e.changedTouches[0].clientY - touchStartY;
+      const deltaX = e.changedTouches[0].clientX - touchStartX;
+      if (deltaY < -40 || deltaX < -60) {
+        setOpen(false);
+        (menuBtn as HTMLElement)?.focus();
+      }
+    }, { passive: true });
+
     window.addEventListener('resize', () => {
       if (window.innerWidth > 860 && isOpen()) setOpen(false);
     });
+  }
+
+  // Theme toggle listener & persistence
+  const themeToggle = document.getElementById('nav-theme-toggle');
+  if (themeToggle) {
+    function applyNavTheme(theme: string) {
+      document.documentElement.setAttribute('data-theme', theme);
+      try {
+        localStorage.setItem('theme', theme);
+      } catch (e) {}
+      const label = theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
+      themeToggle?.setAttribute('aria-label', label);
+      themeToggle?.setAttribute('title', label);
+    }
+
+    themeToggle.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      const next = current === 'light' ? 'dark' : 'light';
+      applyNavTheme(next);
+    });
+
+    const initTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const initialLabel = initTheme === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
+    themeToggle.setAttribute('aria-label', initialLabel);
+    themeToggle.setAttribute('title', initialLabel);
   }
 
   // Scrollspy: keep the selected nav state connected to the visible section.
@@ -551,7 +704,8 @@ const isAbout = currentPath === `${base}/about` || currentPath === '/about';
     height: 16px;
   }
   .nav-item:hover .dropdown-menu,
-  .nav-item:focus-within .dropdown-menu {
+  .nav-item:focus-within .dropdown-menu,
+  .nav-item.is-open .dropdown-menu {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
@@ -567,6 +721,8 @@ const isAbout = currentPath === `${base}/about` || currentPath === '/about';
       0 0 1px rgba(255, 255, 255, 0.25);
     border-radius: 4px;
     padding: 0.4rem 0;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
   }
   .dropdown-list {
     list-style: none;
@@ -626,6 +782,121 @@ const isAbout = currentPath === `${base}/about` || currentPath === '/about';
     transform: translateX(0);
   }
 
+  /* Right actions bar */
+  .nav-right-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  /* Desktop search button */
+  .nav-search-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 40px;
+    padding: 0 0.85rem;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--ink);
+    cursor: pointer;
+    transition: var(--transition-smooth, all 0.35s cubic-bezier(0.16, 1, 0.3, 1));
+  }
+  .nav-search-btn:hover,
+  .nav-search-btn:focus-visible {
+    border-color: rgba(255, 255, 255, 0.6);
+    color: var(--color-white, #fff);
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .nav-search-btn:active {
+    transform: translateY(0);
+  }
+  .nav-search-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .nav-search-key {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.35rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: var(--muted, #888);
+    letter-spacing: 0.05em;
+  }
+  @media (max-width: 900px) {
+    .nav-search-label {
+      display: none;
+    }
+    .nav-search-btn {
+      padding: 0 0.6rem;
+    }
+  }
+  [data-theme="light"] .nav-search-btn {
+    border-color: rgba(0, 0, 0, 0.2);
+    color: #111;
+  }
+  [data-theme="light"] .nav-search-btn:hover,
+  [data-theme="light"] .nav-search-btn:focus-visible {
+    border-color: rgba(0, 0, 0, 0.6);
+    color: #000;
+    background: rgba(0, 0, 0, 0.04);
+  }
+  [data-theme="light"] .nav-search-key {
+    background: rgba(0, 0, 0, 0.06);
+    border-color: rgba(0, 0, 0, 0.15);
+    color: #555;
+  }
+
+  .theme-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--ink);
+    cursor: pointer;
+    padding: 0;
+    transition: var(--transition-smooth, all 0.35s cubic-bezier(0.16, 1, 0.3, 1));
+  }
+  .theme-toggle-btn:hover,
+  .theme-toggle-btn:focus-visible {
+    border-color: rgba(255, 255, 255, 0.6);
+    color: var(--color-white, #fff);
+    transform: translateY(-1px);
+  }
+  .theme-toggle-btn:active {
+    transform: translateY(0);
+  }
+
+  :root:not([data-theme="light"]) .theme-icon-moon,
+  [data-theme="dark"] .theme-icon-moon {
+    display: none;
+  }
+  :root:not([data-theme="light"]) .theme-icon-sun,
+  [data-theme="dark"] .theme-icon-sun {
+    display: block;
+  }
+  [data-theme="light"] .theme-icon-sun {
+    display: none;
+  }
+  [data-theme="light"] .theme-icon-moon {
+    display: block;
+  }
+  [data-theme="light"] .theme-toggle-btn {
+    border-color: rgba(0, 0, 0, 0.2);
+    color: #111;
+  }
+  [data-theme="light"] .theme-toggle-btn:hover,
+  [data-theme="light"] .theme-toggle-btn:focus-visible {
+    border-color: rgba(0, 0, 0, 0.6);
+    color: #000;
+  }
+
   /* Mobile menu button */
   .menu-btn {
     display: none;
@@ -663,8 +934,8 @@ const isAbout = currentPath === `${base}/about` || currentPath === '/about';
     opacity: 0;
     transform: translateY(-12px);
     will-change: transform, opacity;
-    transition: opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 0.22s cubic-bezier(0.05, 0.9, 0.15, 1),
+      transform 0.22s cubic-bezier(0.05, 0.9, 0.15, 1);
   }
   .mobile-menu.open {
     opacity: 1;
@@ -672,6 +943,49 @@ const isAbout = currentPath === `${base}/about` || currentPath === '/about';
   }
   .mobile-menu[hidden] {
     display: none;
+  }
+  .mobile-search-row {
+    padding: 1.15rem 1.5rem 0.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .mobile-search-trigger-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: var(--muted, #aaa);
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    text-align: left;
+    transition: all 0.2s ease;
+  }
+  .mobile-search-trigger-btn:hover,
+  .mobile-search-trigger-btn:focus-visible {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--ink, #fff);
+    color: var(--ink, #fff);
+  }
+  .mobile-search-key {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.35rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: var(--ink, #fff);
+  }
+  [data-theme="light"] .mobile-search-trigger-btn {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.15);
+    color: #444;
+  }
+  [data-theme="light"] .mobile-search-key {
+    background: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.2);
+    color: #111;
   }
   .mobile-nav-list {
     list-style: none;

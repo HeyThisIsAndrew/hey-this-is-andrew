@@ -485,55 +485,117 @@ export function handleRouteEnter(contentSelector = "main"): void {
   });
 }
 
+function playReceiveAnimation(target: HTMLElement): void {
+  if (prefersReducedMotion()) return;
+  const header =
+    target.querySelector<HTMLElement>(".section-header, header, h1, h2");
+  const el = (header ?? target) as HTMLElement;
+  el.style.transition = "none";
+  el.style.opacity = "0.55";
+  el.style.transform = "translateY(10px) scale(0.995)";
+  // Wait for smooth scroll to mostly complete before landing.
+  window.setTimeout(() => {
+    el.style.transition = `opacity ${DURATION.quick}ms ${EASING.snap}, transform ${DURATION.quick}ms ${EASING.snap}`;
+    el.style.opacity = "1";
+    el.style.transform = "none";
+    window.setTimeout(() => {
+      el.style.transition = "";
+      el.style.opacity = "";
+      el.style.transform = "";
+    }, DURATION.quick + 60);
+  }, 450);
+}
+
 /**
  * Anchor navigation with spatial awareness.
  *
- * Smooth-scrolls to the target section, then plays a short "receive"
- * animation on the section header so the arrival feels connected to
- * the nav selection — instead of an abrupt jump.
+ * Smooth-scrolls to the target section with sticky navigation offset,
+ * handles section permalink copying, and plays a short "receive"
+ * animation on the section header so arrival feels connected.
  */
 export function initAnchorTransitions(
-  selector = 'a[href^="/#"], a[href^="#"]'
+  selector = 'a[href*="#"]'
 ): void {
+  // Handle initial page load with hash
+  if (typeof window !== "undefined" && window.location.hash) {
+    const handleInitialHash = () => {
+      const hash = window.location.hash;
+      const target = document.querySelector<HTMLElement>(hash);
+      if (target) {
+        window.setTimeout(() => {
+          const navOffset = 76;
+          const targetTop = target.getBoundingClientRect().top + window.scrollY - navOffset;
+          window.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
+          playReceiveAnimation(target);
+        }, 150);
+      }
+    };
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", handleInitialHash);
+    } else {
+      handleInitialHash();
+    }
+  }
+
   document.addEventListener("click", (e) => {
     const link = (e.target as Element).closest?.(selector) as HTMLAnchorElement | null;
     if (!link) return;
     const href = link.getAttribute("href") || "";
-    const hash = href.includes("#") ? href.slice(href.indexOf("#")) : "";
+    if (!href.includes("#")) return;
+
+    // Check if the link points to the current page or is a pure hash
+    const [pathPart, hashPart] = href.split("#");
+    const hash = hashPart ? `#${hashPart}` : "";
     if (!hash || hash === "#") return;
-    const target = document.querySelector(hash);
+
+    const currentPath = window.location.pathname.replace(/\/$/, "");
+    const cleanPath = pathPart.replace(/\/$/, "");
+    const isSamePage =
+      !pathPart ||
+      href.startsWith("#") ||
+      (currentPath === "" && cleanPath === "") ||
+      cleanPath === currentPath ||
+      (cleanPath === "/" && currentPath === "");
+
+    if (!isSamePage) return; // Allow normal browser navigation to different pages
+
+    const target = document.querySelector<HTMLElement>(hash);
     if (!target) return;
 
     e.preventDefault();
     const reduced = prefersReducedMotion();
 
-    // Update the URL without a jump.
+    // If clicking a section anchor permalink, copy URL to clipboard
+    const isAnchorBtn = link.classList.contains("section-anchor") || Boolean(link.closest(".section-anchor"));
+    if (isAnchorBtn) {
+      const fullUrl = `${window.location.origin}${window.location.pathname}${hash}`;
+      try {
+        navigator.clipboard?.writeText(fullUrl).then(() => {
+          link.classList.add("is-copied");
+          window.setTimeout(() => link.classList.remove("is-copied"), 1800);
+        });
+      } catch {
+        // clipboard access restricted
+      }
+    }
+
+    // Update URL hash without jump
     history.pushState(null, "", hash);
 
-    target.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+    // Smooth scroll with sticky navbar offset (76px)
+    const isTop = hash === "#top" || hash === "#overview" || target.id === "overview" || target.id === "top";
+    const navOffset = 76;
+    const targetTop = isTop ? 0 : Math.max(0, target.getBoundingClientRect().top + window.scrollY - navOffset);
+    window.scrollTo({
+      top: targetTop,
+      behavior: reduced ? "auto" : "smooth",
+    });
 
     if (reduced) return;
 
-    // "Receive" animation: the section header lands as you arrive.
-    const header =
-      target.querySelector<HTMLElement>(".section-header, header, h1, h2");
-    const el = (header ?? target) as HTMLElement;
-    el.style.transition = "none";
-    el.style.opacity = "0.55";
-    el.style.transform = "translateY(10px) scale(0.995)";
-    // Wait for the smooth scroll to mostly complete before landing.
-    window.setTimeout(() => {
-      el.style.transition = `opacity ${DURATION.quick}ms ${EASING.snap}, transform ${DURATION.quick}ms ${EASING.snap}`;
-      el.style.opacity = "1";
-      el.style.transform = "none";
-      window.setTimeout(() => {
-        el.style.transition = "";
-        el.style.opacity = "";
-        el.style.transform = "";
-      }, DURATION.quick + 60);
-    }, 450);
+    playReceiveAnimation(target);
 
-    // Move keyboard focus for a11y (without scrolling again).
+    // Move keyboard focus for a11y (without scrolling again)
     if (target instanceof HTMLElement && !target.hasAttribute("tabindex")) {
       target.setAttribute("tabindex", "-1");
     }
@@ -555,21 +617,21 @@ export function initAnchorTransitions(
 export function initReveals(): void {
   const root = document.documentElement;
   root.classList.add('js');
-  const els = document.querySelectorAll('.sec-head, .reveal');
+  const els = document.querySelectorAll('.sec-head, .reveal, .section-header');
   if (prefersReducedMotion()) {
     // No animation, no hiding: content simply appears.
-    els.forEach((el) => el.classList.add('is-in'));
+    els.forEach((el) => el.classList.add('is-in', 'is-revealed'));
     return;
   }
   if (!('IntersectionObserver' in window) || els.length === 0) {
-    els.forEach((el) => el.classList.add('is-in'));
+    els.forEach((el) => el.classList.add('is-in', 'is-revealed'));
     return;
   }
   const io = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
         if (entry.isIntersecting) {
-          entry.target.classList.add('is-in');
+          entry.target.classList.add('is-in', 'is-revealed');
           io.unobserve(entry.target);
         }
       }

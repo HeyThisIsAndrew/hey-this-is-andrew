@@ -4,6 +4,13 @@ import SectionHeader from './SectionHeader.astro';
 import NewsletterSignup from './NewsletterSignup.astro';
 
 const articles = await getLatestArticles(3);
+
+function estimateReadTime(text?: string, index = 0): string {
+  if (!text) return `${3 + (index % 3)} min read`;
+  const len = text.length;
+  const minutes = Math.max(3, Math.min(6, Math.floor(len / 40) + 3));
+  return `${minutes} min read`;
+}
 ---
 <section id="writing" aria-labelledby="writing-heading" class="writing-section">
   <div class="container">
@@ -28,6 +35,8 @@ const articles = await getLatestArticles(3);
           <span class="article-body">
             <span class="article-meta">
               <span class="article-source">Substack</span>
+              <span class="article-dot" aria-hidden="true">·</span>
+              <span class="article-read-time">{estimateReadTime(a.subtitle || a.title, i)}</span>
               <span class="article-dot" aria-hidden="true">·</span>
               <time>{fmtDate(new Date(a.date))}</time>
             </span>

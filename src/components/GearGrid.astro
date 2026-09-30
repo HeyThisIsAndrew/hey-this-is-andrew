@@ -29,6 +29,35 @@ const AMAZON_STOREFRONT = 'https://www.amazon.com/shop/influencer-0931c541?ref=a
 ---
 
 <div class="gear-monolith" id="gear-monolith">
+  <!-- Gear Instant Search & Category Filter Toolbar -->
+  <div class="gear-filter-toolbar" role="search" aria-label="Filter gear loadout">
+    <div class="gear-search-wrap">
+      <svg class="gear-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input
+        type="search"
+        id="gear-search-input"
+        class="gear-search-input"
+        placeholder="Filter equipment (e.g. Sony, 24-70mm, Amaran, mic)..."
+        aria-label="Search gear"
+      />
+      <button type="button" id="gear-search-clear" class="gear-search-clear" aria-label="Clear search" hidden>×</button>
+    </div>
+    <div class="gear-category-chips" role="tablist" aria-label="Gear categories">
+      <button type="button" class="gear-chip active" data-cat="all" role="tab" aria-selected="true">All</button>
+      <button type="button" class="gear-chip" data-cat="bodies" role="tab" aria-selected="false">Cameras</button>
+      <button type="button" class="gear-chip" data-cat="lenses" role="tab" aria-selected="false">Lenses</button>
+      <button type="button" class="gear-chip" data-cat="lighting" role="tab" aria-selected="false">Lighting</button>
+      <button type="button" class="gear-chip" data-cat="audio" role="tab" aria-selected="false">Audio</button>
+      <button type="button" class="gear-chip" data-cat="tools" role="tab" aria-selected="false">Support</button>
+    </div>
+  </div>
+  <div id="gear-empty-state" class="gear-empty-state" hidden>
+    <p class="gear-empty-text">No equipment matches your search filter.</p>
+    <button type="button" id="gear-reset-btn" class="gear-reset-btn">Reset Filter</button>
+  </div>
   <!-- HERO BOX 01: CAMERA BODIES (FULL WIDTH, TWO-PANEL SPLIT: LINKS | PREVIEW WITH AMAZON STOREFRONT) -->
   {heroCat && (
     <div
@@ -438,6 +467,117 @@ const AMAZON_STOREFRONT = 'https://www.amazon.com/shop/influencer-0931c541?ref=a
 </div>
 
 <style>
+  /* Gear Filter & Search Toolbar */
+  .gear-filter-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  }
+  .gear-search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1 1 300px;
+    max-width: 480px;
+  }
+  .gear-search-icon {
+    position: absolute;
+    left: 1rem;
+    color: var(--muted, #888888);
+    pointer-events: none;
+  }
+  .gear-search-input {
+    width: 100%;
+    padding: 0.75rem 2.25rem 0.75rem 2.75rem;
+    background: var(--surface, #111111);
+    border: 1px solid var(--line, rgba(255, 255, 255, 0.15));
+    color: var(--ink, #ffffff);
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    outline: none;
+    transition: var(--transition-smooth);
+  }
+  .gear-search-input:focus {
+    border-color: var(--border-active, rgba(255, 255, 255, 0.5));
+    background: var(--surface-2, #1a1a1a);
+  }
+  .gear-search-clear {
+    position: absolute;
+    right: 0.75rem;
+    background: none;
+    border: none;
+    color: var(--muted, #888888);
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    line-height: 1;
+  }
+  .gear-search-clear:hover {
+    color: var(--ink, #ffffff);
+  }
+  .gear-category-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .gear-chip {
+    padding: 0.55rem 0.95rem;
+    background: transparent;
+    border: 1px solid var(--line, rgba(255, 255, 255, 0.15));
+    color: var(--muted, #888888);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+  }
+  .gear-chip:hover {
+    border-color: var(--border-active, rgba(255, 255, 255, 0.4));
+    color: var(--ink, #ffffff);
+    transform: translateY(-1px);
+  }
+  .gear-chip.active {
+    background: var(--ink, #ffffff);
+    color: var(--bg, #0a0a0a);
+    border-color: var(--ink, #ffffff);
+    font-weight: 700;
+  }
+  .gear-empty-state {
+    padding: 3.5rem 1.5rem;
+    text-align: center;
+    border: 1px dashed var(--line, rgba(255, 255, 255, 0.2));
+    background: var(--surface, #111111);
+    margin-bottom: 2rem;
+  }
+  .gear-empty-text {
+    font-family: var(--font-mono);
+    color: var(--muted, #888888);
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+    letter-spacing: 0.05em;
+  }
+  .gear-reset-btn {
+    padding: 0.6rem 1.25rem;
+    background: transparent;
+    border: 1px solid var(--border-active, rgba(255, 255, 255, 0.4));
+    color: var(--ink, #ffffff);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+  }
+  .gear-reset-btn:hover {
+    background: var(--surface-2, #1a1a1a);
+    color: var(--color-white, #ffffff);
+  }
+
   /* STRICT ZERO-EMPTY-SPACE ARCHITECTURAL MONOLITH */
   .gear-monolith {
     width: 100%;
@@ -624,6 +764,27 @@ const AMAZON_STOREFRONT = 'https://www.amazon.com/shop/influencer-0931c541?ref=a
     .gear-hero-links {
       border-right: none;
       border-bottom: 1px solid var(--line);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .gear-box-topbar {
+      padding: 1rem 0.85rem;
+      gap: 0.75rem;
+    }
+    .gear-hero-links,
+    .gear-hero-preview-col,
+    .gear-sub-links-col,
+    .gear-sub-preview-col {
+      padding: 1rem 0.85rem;
+    }
+    .amazon-preview-card {
+      padding: 1rem 0.85rem;
+    }
+    .camera-item-row,
+    .collage-item-row {
+      padding: 0.75rem 0.75rem;
+      gap: 0.65rem;
     }
   }
 
@@ -1172,6 +1333,98 @@ const AMAZON_STOREFRONT = 'https://www.amazon.com/shop/influencer-0931c541?ref=a
         row.addEventListener('click', () => selectItem(row));
         row.addEventListener('mouseenter', () => selectItem(row));
       });
+    });
+
+    // 3. INSTANT SEARCH & CATEGORY FILTER
+    const searchInput = document.getElementById('gear-search-input') as HTMLInputElement | null;
+    const clearBtn = document.getElementById('gear-search-clear') as HTMLButtonElement | null;
+    const chips = Array.from(document.querySelectorAll<HTMLButtonElement>('.gear-chip'));
+    const emptyState = document.getElementById('gear-empty-state');
+    const resetBtn = document.getElementById('gear-reset-btn');
+
+    let activeCategory = 'all';
+    let searchQuery = '';
+
+    function applyFilter() {
+      let totalVisible = 0;
+      const allBoxes = Array.from(document.querySelectorAll<HTMLElement>('.gear-hero-box, .gear-collage-box'));
+
+      allBoxes.forEach((box) => {
+        const catSlug = box.id.replace('gear-', '');
+        const matchesCategory = activeCategory === 'all' || 
+          catSlug === activeCategory || 
+          (activeCategory === 'support' && catSlug === 'tools') ||
+          (activeCategory === 'tools' && catSlug === 'tools');
+
+        if (!matchesCategory) {
+          box.hidden = true;
+          return;
+        }
+
+        const items = Array.from(box.querySelectorAll<HTMLElement>('.camera-item-row, .collage-item-row'));
+        let visibleItemsInBox = 0;
+
+        items.forEach((item) => {
+          const text = (item.textContent || '').toLowerCase();
+          const matchesSearch = !searchQuery || text.includes(searchQuery);
+          if (matchesSearch) {
+            item.style.display = '';
+            visibleItemsInBox++;
+          } else {
+            item.style.display = 'none';
+          }
+        });
+
+        if (visibleItemsInBox > 0) {
+          box.hidden = false;
+          totalVisible += visibleItemsInBox;
+        } else {
+          box.hidden = true;
+        }
+      });
+
+      if (emptyState) {
+        emptyState.hidden = totalVisible > 0;
+      }
+      if (clearBtn) {
+        clearBtn.hidden = !searchQuery;
+      }
+    }
+
+    chips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        chips.forEach((c) => {
+          c.classList.remove('active');
+          c.setAttribute('aria-selected', 'false');
+        });
+        chip.classList.add('active');
+        chip.setAttribute('aria-selected', 'true');
+        activeCategory = chip.dataset.cat || 'all';
+        applyFilter();
+      });
+    });
+
+    searchInput?.addEventListener('input', () => {
+      searchQuery = (searchInput.value || '').trim().toLowerCase();
+      applyFilter();
+    });
+
+    clearBtn?.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      searchQuery = '';
+      applyFilter();
+      searchInput?.focus();
+    });
+
+    resetBtn?.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      searchQuery = '';
+      activeCategory = 'all';
+      chips.forEach((c) => {
+        c.classList.toggle('active', c.dataset.cat === 'all');
+        c.setAttribute('aria-selected', c.dataset.cat === 'all' ? 'true' : 'false');
+      });
+      applyFilter();
     });
   })();
 </script>

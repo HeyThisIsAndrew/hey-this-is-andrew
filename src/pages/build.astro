@@ -29,9 +29,19 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
         lede="Active targets across infrastructure, authority, revenue, and industry access."
       />
 
+      <div class="milestones-progress-wrap" aria-live="polite">
+        <div class="milestones-progress-header">
+          <span class="milestones-progress-label font-mono">Verified Execution Tracker</span>
+          <span class="milestones-progress-stat font-mono" id="milestones-stat">0 of 4 Completed (0%)</span>
+        </div>
+        <div class="milestones-progress-bar-bg" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="4" aria-label="Milestone completion progress">
+          <div class="milestones-progress-fill" id="milestones-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+
       <div class="checklist-container">
         <!-- Milestone 1 -->
-        <div class="checklist-card">
+        <div class="checklist-card" data-milestone-card="m1">
           <div class="checklist-left">
             <input type="checkbox" id="m1" class="checklist-checkbox" aria-label="Toggle System Automation milestone" />
             <div class="checklist-info">
@@ -39,14 +49,14 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
               <p class="checklist-desc">Build self-hosted n8n infrastructure for automated social media distribution.</p>
             </div>
           </div>
-          <div class="status-badge in-progress">
+          <div class="status-badge in-progress" data-status-badge="m1" data-default-text="In Progress" data-default-class="in-progress">
             <span class="pulse-indicator"></span>
-            <span>In Progress</span>
+            <span class="badge-text">In Progress</span>
           </div>
         </div>
 
         <!-- Milestone 2 -->
-        <div class="checklist-card">
+        <div class="checklist-card" data-milestone-card="m2">
           <div class="checklist-left">
             <input type="checkbox" id="m2" class="checklist-checkbox" aria-label="Toggle Creator Tech Authority milestone" />
             <div class="checklist-info">
@@ -54,14 +64,14 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
               <p class="checklist-desc">Establish workflow and gear catalog bridging creator tools and production systems.</p>
             </div>
           </div>
-          <div class="status-badge in-progress">
+          <div class="status-badge in-progress" data-status-badge="m2" data-default-text="In Progress" data-default-class="in-progress">
             <span class="pulse-indicator"></span>
-            <span>In Progress</span>
+            <span class="badge-text">In Progress</span>
           </div>
         </div>
 
         <!-- Milestone 3 -->
-        <div class="checklist-card">
+        <div class="checklist-card" data-milestone-card="m3">
           <div class="checklist-left">
             <input type="checkbox" id="m3" class="checklist-checkbox" aria-label="Toggle Revenue & Partnerships milestone" />
             <div class="checklist-info">
@@ -69,14 +79,14 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
               <p class="checklist-desc">Scale direct UGC brand partnerships and affiliate pipelines.</p>
             </div>
           </div>
-          <div class="status-badge in-progress">
+          <div class="status-badge in-progress" data-status-badge="m3" data-default-text="In Progress" data-default-class="in-progress">
             <span class="pulse-indicator"></span>
-            <span>In Progress</span>
+            <span class="badge-text">In Progress</span>
           </div>
         </div>
 
         <!-- Milestone 4 -->
-        <div class="checklist-card">
+        <div class="checklist-card" data-milestone-card="m4">
           <div class="checklist-left">
             <input type="checkbox" id="m4" class="checklist-checkbox" aria-label="Toggle Industry Access milestone" />
             <div class="checklist-info">
@@ -84,8 +94,8 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
               <p class="checklist-desc">Secure accreditation and invitations to Sony Kando, Apple Keynote, and Meta Connect.</p>
             </div>
           </div>
-          <div class="status-badge queued">
-            <span>Queued</span>
+          <div class="status-badge queued" data-status-badge="m4" data-default-text="Queued" data-default-class="queued">
+            <span class="badge-text">Queued</span>
           </div>
         </div>
       </div>
@@ -222,17 +232,127 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 </BaseLayout>
 
 <script>
-  // Interactive Checkboxes persistence in localStorage
-  document.querySelectorAll('.checklist-checkbox').forEach((box) => {
-    const el = box as HTMLInputElement;
-    const saved = localStorage.getItem('goal_' + el.id);
-    if (saved === 'true') {
-      el.checked = true;
+  // Milestone state persistence & execution tracking
+  const STORAGE_KEY = 'hey_andrew_milestones_state_v1';
+
+  function initMilestones() {
+    const cards = Array.from(document.querySelectorAll<HTMLElement>('.checklist-card'));
+    const statEl = document.getElementById('milestones-stat');
+    const fillEl = document.getElementById('milestones-fill');
+    if (!cards.length) return;
+
+    let savedState: Record<string, boolean> = {};
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        savedState = JSON.parse(stored);
+      }
+    } catch {
+      savedState = {};
     }
-    el.addEventListener('change', () => {
-      localStorage.setItem('goal_' + el.id, String(el.checked));
+
+    function updateTracker() {
+      let completedCount = 0;
+      cards.forEach((card) => {
+        const checkbox = card.querySelector<HTMLInputElement>('.checklist-checkbox');
+        if (checkbox && checkbox.checked) {
+          completedCount++;
+        }
+      });
+
+      const total = cards.length;
+      const percent = Math.round((completedCount / total) * 100);
+      if (statEl) {
+        statEl.textContent = `${completedCount} of ${total} Completed (${percent}%)`;
+      }
+      if (fillEl) {
+        fillEl.style.width = `${percent}%`;
+        fillEl.setAttribute('aria-valuenow', String(completedCount));
+      }
+    }
+
+    function applyCardState(card: HTMLElement, checked: boolean) {
+      const badge = card.querySelector<HTMLElement>('.status-badge');
+      const badgeText = card.querySelector<HTMLElement>('.badge-text');
+      const pulse = card.querySelector<HTMLElement>('.pulse-indicator');
+
+      if (checked) {
+        card.classList.add('completed');
+        if (badge) {
+          badge.className = 'status-badge achieved';
+        }
+        if (badgeText) {
+          badgeText.textContent = 'Verified / Done';
+        }
+        if (pulse) {
+          pulse.style.display = 'none';
+        }
+      } else {
+        card.classList.remove('completed');
+        const defaultClass = badge?.dataset.defaultClass || 'in-progress';
+        const defaultText = badge?.dataset.defaultText || 'In Progress';
+        if (badge) {
+          badge.className = `status-badge ${defaultClass}`;
+        }
+        if (badgeText) {
+          badgeText.textContent = defaultText;
+        }
+        if (pulse && defaultClass === 'in-progress') {
+          pulse.style.display = '';
+        }
+      }
+    }
+
+    cards.forEach((card) => {
+      const checkbox = card.querySelector<HTMLInputElement>('.checklist-checkbox');
+      if (!checkbox) return;
+      const id = checkbox.id;
+
+      // Check both new store and legacy goal_m* key
+      const isSaved = savedState[id] !== undefined 
+        ? savedState[id] 
+        : localStorage.getItem('goal_' + id) === 'true';
+
+      if (isSaved) {
+        checkbox.checked = true;
+        applyCardState(card, true);
+      } else {
+        applyCardState(card, false);
+      }
+
+      const save = () => {
+        savedState[id] = checkbox.checked;
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(savedState));
+          localStorage.setItem('goal_' + id, String(checkbox.checked));
+        } catch {
+          // ignore localStorage quota errors
+        }
+        applyCardState(card, checkbox.checked);
+        updateTracker();
+      };
+
+      checkbox.addEventListener('change', save);
+
+      // Card-level click toggles checkbox if not clicking label/link directly
+      card.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (target === checkbox || target.closest('label, a')) return;
+        checkbox.checked = !checkbox.checked;
+        save();
+      });
     });
-  });
+
+    updateTracker();
+  }
+
+  // Support initial load and Astro view transitions
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMilestones);
+  } else {
+    initMilestones();
+  }
+  document.addEventListener('astro:page-load', initMilestones);
 </script>
 
 <style>
@@ -276,6 +396,45 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
   .roadmap-section {
     padding-top: 1rem;
   }
+  .milestones-progress-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .milestones-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.65rem;
+    gap: 1rem;
+  }
+  .milestones-progress-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .milestones-progress-stat {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: #22c55e;
+  }
+  .milestones-progress-bar-bg {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+  }
+  .milestones-progress-fill {
+    height: 100%;
+    background: #22c55e;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
   .checklist-container {
     display: flex;
     flex-direction: column;
@@ -290,11 +449,19 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
     padding: 1.25rem 1.5rem;
     background: var(--surface);
     border: 1px solid var(--border);
+    cursor: pointer;
     transition: border-color 0.25s ease, background-color 0.25s ease;
   }
   .checklist-card:hover {
     border-color: rgba(255, 255, 255, 0.35);
     background: var(--surface-2);
+  }
+  .checklist-card.completed {
+    border-color: rgba(34, 197, 94, 0.4);
+    background: rgba(34, 197, 94, 0.03);
+  }
+  .checklist-card.completed .checklist-title {
+    color: rgba(255, 255, 255, 0.85);
   }
   .checklist-left {
     display: flex;
@@ -347,6 +514,11 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
   .status-badge.queued {
     color: var(--muted);
     background: rgba(255, 255, 255, 0.03);
+  }
+  .status-badge.achieved {
+    color: #22c55e;
+    border-color: rgba(34, 197, 94, 0.35);
+    background: rgba(34, 197, 94, 0.08);
   }
   .pulse-indicator {
     width: 6px;

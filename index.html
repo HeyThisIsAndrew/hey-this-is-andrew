@@ -33,6 +33,17 @@
   <!-- Global Stylesheet -->
   <link rel="stylesheet" href="./styles.css" />
 
+  <!-- Prevent Theme Flash -->
+  <script>
+    (function() {
+      try {
+        const stored = localStorage.getItem('theme');
+        const theme = stored ? stored : (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {}
+    })();
+  </script>
+
   <!-- Schema.org JSON-LD Structured Data -->
   <script type="application/ld+json">
   {
@@ -52,6 +63,9 @@
 </head>
 <body>
 
+  <!-- Scroll Progress Indicator Bar -->
+  <div id="scroll-progress" class="scroll-progress-bar" role="progressbar" aria-label="Scroll progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+
   <!-- Persistent Header with Responsive Navigation -->
   <header class="site-header">
     <div class="container nav-container">
@@ -69,12 +83,30 @@
         </ul>
       </nav>
 
-      <!-- Mobile Hamburger Toggle -->
-      <button class="nav-toggle-btn" id="navToggleBtn" aria-label="Toggle navigation menu" aria-expanded="false">
-        <span class="hamburger-line"></span>
-        <span class="hamburger-line"></span>
-        <span class="hamburger-line"></span>
-      </button>
+      <!-- Navigation Actions: Theme Toggle & Mobile Hamburger -->
+      <div class="nav-actions">
+        <button type="button" class="theme-toggle-btn" id="themeToggleBtn" aria-label="Toggle light or dark theme" title="Toggle theme">
+          <svg class="theme-icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="theme-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+        <button class="nav-toggle-btn" id="navToggleBtn" aria-label="Toggle navigation menu" aria-expanded="false">
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -319,6 +351,10 @@
         drawer.classList.toggle('active');
         navBtn.setAttribute('aria-expanded', isOpen);
         document.body.style.overflow = isOpen ? 'hidden' : '';
+        if (isOpen) {
+          const firstLink = drawer.querySelector('a');
+          if (firstLink) firstLink.focus();
+        }
       });
 
       // Close drawer on link click
@@ -328,9 +364,213 @@
           drawer.classList.remove('active');
           navBtn.setAttribute('aria-expanded', 'false');
           document.body.style.overflow = '';
+          navBtn.focus();
         });
       });
+
+      // Escape key closes drawer
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && drawer.classList.contains('active')) {
+          navBtn.classList.remove('open');
+          drawer.classList.remove('active');
+          navBtn.setAttribute('aria-expanded', 'false');
+          document.body.style.overflow = '';
+          navBtn.focus();
+        }
+      });
+
+      // Focus trap inside drawer
+      drawer.addEventListener('keydown', (e) => {
+        if (e.key !== 'Tab') return;
+        const focusables = Array.from(drawer.querySelectorAll('a, button'));
+        if (!focusables.length) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      });
+
+      // Touch swipe dismiss
+      let touchY = 0;
+      let touchX = 0;
+      drawer.addEventListener('touchstart', (e) => {
+        touchY = e.touches[0].clientY;
+        touchX = e.touches[0].clientX;
+      }, { passive: true });
+
+      drawer.addEventListener('touchend', (e) => {
+        const dy = e.changedTouches[0].clientY - touchY;
+        const dx = e.changedTouches[0].clientX - touchX;
+        if (dy < -40 || dx < -60) {
+          navBtn.classList.remove('open');
+          drawer.classList.remove('active');
+          navBtn.setAttribute('aria-expanded', 'false');
+          document.body.style.overflow = '';
+          navBtn.focus();
+        }
+      }, { passive: true });
     }
+
+    // Hero entrance transition: triggers only once on page load
+    (function () {
+      let heroTriggered = false;
+      function triggerHeroEntrance() {
+        if (heroTriggered) return;
+        heroTriggered = true;
+        const heroEl = document.querySelector('.hero-content');
+        if (heroEl) {
+          heroEl.classList.add('hero-entered');
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        window.addEventListener('DOMContentLoaded', () => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(triggerHeroEntrance);
+          });
+        }, { once: true });
+      } else {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(triggerHeroEntrance);
+        });
+      }
+    })();
+
+    // Scroll progress indicator for main content
+    (function () {
+      const progressBar = document.getElementById('scroll-progress');
+      const main = document.getElementById('main-content') || document.querySelector('main');
+      if (!progressBar || !main) return;
+
+      let ticking = false;
+      function updateProgress() {
+        const mainRect = main.getBoundingClientRect();
+        const mainTop = mainRect.top + window.scrollY;
+        const mainHeight = main.offsetHeight || mainRect.height;
+        const viewportHeight = window.innerHeight;
+        const maxScroll = mainHeight - viewportHeight;
+
+        if (maxScroll <= 0) {
+          progressBar.style.transform = 'scaleX(1)';
+          progressBar.setAttribute('aria-valuenow', '100');
+          ticking = false;
+          return;
+        }
+
+        const currentScroll = window.scrollY - mainTop;
+        const progress = Math.min(Math.max(currentScroll / maxScroll, 0), 1);
+        progressBar.style.transform = 'scaleX(' + progress.toFixed(4) + ')';
+        progressBar.setAttribute('aria-valuenow', Math.round(progress * 100));
+        ticking = false;
+      }
+
+      function onScroll() {
+        if (!ticking) {
+          requestAnimationFrame(updateProgress);
+          ticking = true;
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll, { passive: true });
+      updateProgress();
+    })();
+
+    // Section header subtle opacity reveal via Intersection Observer
+    (function () {
+      document.documentElement.classList.add('js');
+      const headers = document.querySelectorAll('.section-header');
+      if (headers.length === 0) return;
+
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        headers.forEach(h => h.classList.add('is-revealed', 'is-in'));
+        return;
+      }
+
+      if (!('IntersectionObserver' in window)) {
+        headers.forEach(h => h.classList.add('is-revealed', 'is-in'));
+        return;
+      }
+
+      const observer = new IntersectionObserver((entries, obs) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-revealed', 'is-in');
+            obs.unobserve(entry.target);
+          }
+        });
+      }, {
+        threshold: 0.12,
+        rootMargin: '0px 0px -8% 0px'
+      });
+
+      headers.forEach(h => observer.observe(h));
+    })();
+
+    // Theme toggle logic
+    (function () {
+      const themeBtn = document.getElementById('themeToggleBtn');
+      if (!themeBtn) return;
+
+      function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        try {
+          localStorage.setItem('theme', theme);
+        } catch (e) {}
+        const label = theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
+        themeBtn.setAttribute('aria-label', label);
+        themeBtn.setAttribute('title', label);
+      }
+
+      themeBtn.addEventListener('click', () => {
+        const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+        const next = cur === 'light' ? 'dark' : 'light';
+        applyTheme(next);
+      });
+
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      const label = current === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
+      themeBtn.setAttribute('aria-label', label);
+      themeBtn.setAttribute('title', label);
+    })();
+
+    // Back to top floating button
+    (function () {
+      const topBtn = document.getElementById('backToTopBtn');
+      if (!topBtn) return;
+
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 600) {
+          topBtn.classList.add('visible');
+        } else {
+          topBtn.classList.remove('visible');
+        }
+      }, { passive: true });
+
+      topBtn.addEventListener('click', () => {
+        window.scrollTo({
+          top: 0,
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+        });
+      });
+    })();
   </script>
+
+  <!-- Back to Top Floating Button -->
+  <button type="button" class="back-to-top" id="backToTopBtn" aria-label="Back to top" title="Back to top">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M18 15l-6-6-6 6"/>
+    </svg>
+  </button>
 </body>
 </html>

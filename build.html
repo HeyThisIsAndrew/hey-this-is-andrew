@@ -29,6 +29,9 @@
 </head>
 <body>
 
+  <!-- Scroll Progress Indicator Bar -->
+  <div id="scroll-progress" class="scroll-progress-bar" role="progressbar" aria-label="Scroll progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+
   <!-- Persistent Header with Strict Navigation Sequence -->
   <header class="site-header">
     <div class="container nav-container">
@@ -386,6 +389,47 @@
         localStorage.setItem('goal_' + box.id, box.checked);
       });
     });
+
+    // Scroll progress indicator for main content
+    (function () {
+      const progressBar = document.getElementById('scroll-progress');
+      const main = document.getElementById('main-content') || document.querySelector('main');
+      if (!progressBar || !main) return;
+
+      let ticking = false;
+      function updateProgress() {
+        const mainRect = main.getBoundingClientRect();
+        const mainTop = mainRect.top + window.scrollY;
+        const mainHeight = main.offsetHeight || mainRect.height;
+        const viewportHeight = window.innerHeight;
+        const maxScroll = mainHeight - viewportHeight;
+
+        if (maxScroll <= 0) {
+          progressBar.style.width = '100%';
+          progressBar.setAttribute('aria-valuenow', '100');
+          ticking = false;
+          return;
+        }
+
+        const currentScroll = window.scrollY - mainTop;
+        const progress = Math.min(Math.max(currentScroll / maxScroll, 0), 1);
+        const percent = (progress * 100).toFixed(2);
+        progressBar.style.width = percent + '%';
+        progressBar.setAttribute('aria-valuenow', Math.round(progress * 100));
+        ticking = false;
+      }
+
+      function onScroll() {
+        if (!ticking) {
+          requestAnimationFrame(updateProgress);
+          ticking = true;
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll, { passive: true });
+      updateProgress();
+    })();
   </script>
 </body>
 </html>

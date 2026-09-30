@@ -76,11 +76,13 @@ import SectionHeader from './SectionHeader.astro';
           <div class="expanded-content" id={`panel-content-${i}`}>
             <div class="active-edge" aria-hidden="true"></div>
 
+            <!-- Metadata tags: strictly anchored in the UPPER RIGHT corner, referencing the hero -->
+            <div class="panel-metadata-tag">
+              <span class="chip chip--brand">{brand.kicker}</span>
+            </div>
+
+            <!-- Left content block: headline, deck, and CTA buttons -->
             <div class="content-inner">
-              {brand.logoSrc && (
-                <Image class="content-logo" src={brand.logoSrc} alt="" widths={[240, 480]} sizes="240px" format="webp" aria-hidden="true" loading="lazy" />
-              )}
-              <span class="kicker"><span class="chip chip--brand">{brand.kicker}</span></span>
               {brand.id === 'be' ? (
                 <h3 class="display headline">WHERE NERD CULTURE<br />GETS CINEMATIC.</h3>
               ) : (
@@ -109,6 +111,13 @@ import SectionHeader from './SectionHeader.astro';
                 </>
               )}
             </div>
+
+            <!-- Brand Logo: strictly anchored in the BOTTOM RIGHT corner -->
+            {brand.logoSrc && (
+              <div class="panel-logo-wrap">
+                <Image class="content-logo" src={brand.logoSrc} alt="" widths={[240, 480]} sizes="240px" format="webp" aria-hidden="true" loading="lazy" />
+              </div>
+            )}
 
             <div class="bottom-progress-bar" aria-hidden="true">
               <div class="progress-fill"></div>
@@ -206,35 +215,41 @@ import SectionHeader from './SectionHeader.astro';
   .accordion-hero {
     display: flex;
     flex-direction: row;
+    align-items: stretch;
     gap: clamp(8px, 1vw, 18px);
     width: 100%;
-    /* Aspect Ratio Lock: Exactly maintains 16 / 9 aspect ratio occupying 100% width */
-    aspect-ratio: 16 / 9;
     overflow: hidden;
     position: relative;
     background: var(--bg);
+    min-height: clamp(480px, 46vw, 760px);
+    height: clamp(480px, 46vw, 760px);
   }
 
   /* Panel Base: Balanced cinematic proportions across all desktop viewports.
-     Active panel: ~60% (flex 3), Collapsed panels: ~20% each (flex 1).
-     Total ratio 3:1:1 creates strong reframing while keeping collapsed windows recognizable. */
+     Active panel: expands fluidly to fill 16:9 widescreen stage.
+     Collapsed panels: compact vertical preview tabs on the side. */
   .accordion-panel {
-    flex: 1 1 0%;
-    min-width: 0;
     position: relative;
     background: #080808;
     margin: 0;
     overflow: hidden;
-    transition: flex 500ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    transition: flex 650ms cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: flex;
     text-align: left;
     color: var(--ink);
     font-family: var(--font-body);
+    height: 100%;
+  }
+
+  .accordion-panel:not(.active) {
+    flex: 0 0 clamp(88px, 7.5vw, 128px);
+    min-width: clamp(88px, 7.5vw, 128px);
+    cursor: pointer;
   }
 
   .accordion-panel.active {
-    flex: 3 1 0%;
+    flex: 1 1 0%;
     min-width: 0;
-    max-width: none;
   }
 
   /* Hover is a preview only: a slight widen, a frame, and a brighten.
@@ -242,7 +257,7 @@ import SectionHeader from './SectionHeader.astro';
      does that. */
   @media (hover: hover) {
     .accordion-panel:not(.active):hover {
-      flex: 1.15 1 0%;
+      flex: 0 0 clamp(110px, 9vw, 150px);
     }
     .accordion-panel:not(.active):hover .panel-bg img {
       filter: grayscale(25%) brightness(0.8) contrast(1.1);
@@ -360,33 +375,36 @@ import SectionHeader from './SectionHeader.astro';
     left: 50%;
     transform: translate(-50%, -50%) rotate(180deg);
     writing-mode: vertical-rl;
-    font-size: 0.78rem;
+    font-size: clamp(0.76rem, 0.88vw, 0.88rem);
     font-weight: 600;
-    letter-spacing: 0.3em;
+    letter-spacing: 0.32em;
     text-transform: uppercase;
     color: var(--ink-60);
     white-space: nowrap;
     margin: 0;
+    padding: 0 0.5rem;
     transition: color 0.3s ease, letter-spacing 0.4s ease;
   }
 
   .col-logo {
     position: absolute;
-    bottom: 1.75rem;
+    bottom: clamp(1.5rem, 2.2vw, 2.5rem);
     left: 50%;
     transform: translateX(-50%);
-    width: 44px;
-    height: 44px;
+    width: clamp(52px, 4.5vw, 76px);
+    height: clamp(52px, 4.5vw, 76px);
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0;
+    padding: 0.25rem;
+    box-sizing: border-box;
   }
 
   /* CCC's portrait lockup needs height to read; give it a taller box. */
   .brand-ccc .col-logo {
-    width: 54px;
-    height: 80px;
+    width: clamp(62px, 5.2vw, 92px);
+    height: clamp(78px, 6.8vw, 115px);
   }
 
   .logo-img {
@@ -431,26 +449,62 @@ import SectionHeader from './SectionHeader.astro';
     z-index: 6;
   }
 
-  /* Expansion reads spatially: logo -> chips -> headline -> deck -> CTA
-     arrive on a short beat as the panel geometry settles. Restrained:
-     8px rise, 60ms steps. */
-  .content-inner > * {
-    opacity: 0;
-    transform: translateY(8px);
-    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* Direction-aware smooth expansion for content & photography */
+  .accordion-panel.active[data-direction="left-to-right"] .content-inner {
+    animation: contentRevealLTR 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
-  .accordion-panel.active .content-inner > * {
-    opacity: 1;
-    transform: none;
+  .accordion-panel.active[data-direction="right-to-left"] .content-inner {
+    animation: contentRevealRTL 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
-  .accordion-panel.active .content-inner > *:nth-child(1) { transition-delay: 200ms; }
-  .accordion-panel.active .content-inner > *:nth-child(2) { transition-delay: 260ms; }
-  .accordion-panel.active .content-inner > *:nth-child(3) { transition-delay: 320ms; }
-  .accordion-panel.active .content-inner > *:nth-child(4) { transition-delay: 380ms; }
-  .accordion-panel.active .content-inner > *:nth-child(5) { transition-delay: 440ms; }
-  .accordion-panel.active .content-inner > *:nth-child(6) { transition-delay: 500ms; }
-  @media (prefers-reduced-motion: reduce) {
-    .content-inner > * { opacity: 1; transform: none; transition: none; }
+  .accordion-panel.active:not([data-direction]) .content-inner {
+    animation: contentRevealLTR 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes contentRevealLTR {
+    from {
+      opacity: 0;
+      transform: translateX(-30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes contentRevealRTL {
+    from {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .accordion-panel.active[data-direction="left-to-right"] .panel-bg img {
+    animation: imgPanLTR 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .accordion-panel.active[data-direction="right-to-left"] .panel-bg img {
+    animation: imgPanRTL 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes imgPanLTR {
+    from {
+      transform: scale(1.04) translateX(-2%);
+    }
+    to {
+      transform: scale(1) translateX(0);
+    }
+  }
+
+  @keyframes imgPanRTL {
+    from {
+      transform: scale(1.04) translateX(2%);
+    }
+    to {
+      transform: scale(1) translateX(0);
+    }
   }
 
   .active-edge {
@@ -597,14 +651,33 @@ import SectionHeader from './SectionHeader.astro';
     appearance: none;
   }
 
-  /* The big logo inside the open card: HQ's hero places it bottom-right.
-     This base rule must come BEFORE the mobile block below, so the
-     mobile in-flow placement wins on phones. */
+  /* Metadata tags: strictly in the UPPER RIGHT corner, referencing hero */
+  .panel-metadata-tag {
+    position: absolute;
+    top: clamp(1.75rem, 3.5vw, 2.75rem);
+    right: clamp(1.75rem, 3.5vw, 2.75rem);
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    pointer-events: none;
+  }
+
+  /* The big brand logo inside the open card: strictly in the BOTTOM RIGHT corner */
+  .panel-logo-wrap {
+    position: absolute;
+    bottom: clamp(2rem, 3.5vw, 4rem);
+    right: clamp(2rem, 3.5vw, 4.5rem);
+    z-index: 8;
+    pointer-events: none;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+  }
+
   .content-logo {
     display: block;
-    position: absolute;
-    bottom: clamp(2rem, 3.5vw, 4.5rem);
-    right: clamp(2rem, 3.5vw, 4.5rem);
     height: clamp(64px, 5.5vw, 130px);
     width: auto;
     max-width: clamp(240px, 18vw, 380px);
@@ -623,15 +696,10 @@ import SectionHeader from './SectionHeader.astro';
     max-width: clamp(180px, 14vw, 300px);
   }
 
-  /* Mobile: vertical stack, HQ pattern. The open panel jumps to the top
-     (order: -1); closed rows are 76px tap targets with the logo, name,
-     and nothing else. No rotation on phones; the play/pause button can
-     start it.
-     
-     SWAP, NOT SHIFT: The active panel always sits at the top (order: -1).
-     When you tap a different brand, the new active moves to the top and
-     the old active becomes a closed row in its place. Total height stays
-     constant (480px + 3×76px), so content below never shifts. */
+  /* Mobile: Mirroring beunconventionalhq.com mobile hero accordion architecture.
+     The selected active panel is at the top (order: -1) with a 16:9 banner and expanded content,
+     while collapsed inactive panels sit below as compact 64px horizontal bars.
+     Tapping any collapsed bar switches that brand to the active top slot. */
   @media (max-width: 768px) {
     .brand-accordion-section {
       padding-top: 0;
@@ -650,178 +718,347 @@ import SectionHeader from './SectionHeader.astro';
       max-height: none !important;
       overflow: visible !important;
       position: relative;
-      width: 100%;
+      width: 100% !important;
+      transform: none !important;
     }
 
+    /* 1. Track Layout: flex column, 6px gap */
     .accordion-hero {
       display: flex !important;
       flex-direction: column !important;
+      gap: 6px !important;
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: none !important;
       aspect-ratio: auto !important;
-      height: auto !important;
-      min-height: auto !important;
-      max-height: none !important;
-      gap: 12px !important;
       overflow: visible !important;
-      position: relative;
-      width: 100%;
-    }
-
-    /* Fixed heights: the open panel and the closed rows never change
-       size, so switching panels swaps which one is open without the
-       stack shifting or the page reflowing. */
-    .accordion-panel {
-      flex: none !important;
+      padding: 0 1rem !important;
+      box-sizing: border-box !important;
       width: 100% !important;
-      height: 76px !important;
-      min-height: 76px !important;
-      max-height: none !important;
-      order: 0;
-      position: relative;
-      overflow: hidden;
-      transition: height 450ms cubic-bezier(0.22, 0.61, 0.36, 1), order 0ms;
-    }
-
-    .accordion-panel.active {
-      height: auto !important;
-      min-height: 520px !important;
-      max-height: none !important;
-      order: 0; /* Expands IN PLACE without order: -1 hack */
-    }
-
-    /* Closed rows: logo left, name next to it. */
-    .collapsed-strip {
       position: relative !important;
-      inset: auto !important;
-      display: flex !important;
-      flex-direction: row !important;
-      width: 100% !important;
-      height: 76px !important;
-      padding: 0 1.25rem !important;
-      align-items: center !important;
-      justify-content: flex-start !important;
-      gap: 1rem !important;
-      opacity: 1 !important;
     }
 
-    .vertical-title {
-      position: static !important;
-      writing-mode: horizontal-tb !important;
-      transform: none !important;
-      margin-top: 0 !important;
-      font-size: 0.82rem !important;
-      letter-spacing: 0.18em !important;
-      flex: 1 !important;
-      text-align: left !important;
-      color: var(--ink) !important;
-    }
-
-    .col-logo {
-      position: static !important;
-      transform: none !important;
-      margin-top: 0 !important;
-      width: 64px !important;
-      height: 40px !important;
+    /* 2. Selected Active Panel (order: -1 puts it at the very top) */
+    .accordion-panel.active {
       order: -1 !important;
       flex: none !important;
+      width: 100% !important;
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      display: flex !important;
+      flex-direction: column !important;
+      position: relative !important;
+      overflow: hidden !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      background: #090909 !important;
+      border-radius: 2px !important;
+      cursor: default !important;
+      margin: 0 !important;
     }
 
-    /* CCC portrait logo on mobile rows: taller box. */
-    .brand-ccc .col-logo {
-      width: 44px !important;
-      height: 64px !important;
+    /* Active panel photo strictly adheres to 16:9 banner preview */
+    .accordion-panel.active .panel-bg {
+      position: relative !important;
+      inset: auto !important;
+      width: 100% !important;
+      aspect-ratio: 16 / 9 !important;
+      max-height: 32svh !important;
+      overflow: hidden !important;
+      z-index: 1 !important;
+      display: block !important;
     }
 
-    /* The open panel's trigger row is hidden on mobile; the content
-       carries the brand logo instead. */
+    .accordion-panel.active .panel-bg img {
+      width: 100% !important;
+      height: 100% !important;
+      aspect-ratio: 16 / 9 !important;
+      object-fit: cover !important;
+      position: relative !important;
+      inset: auto !important;
+      filter: grayscale(20%) brightness(0.65) contrast(1.1) !important;
+      display: block !important;
+    }
+
+    .accordion-panel.active .panel-scrims {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      background: linear-gradient(to top, rgba(9, 9, 9, 1) 0%, rgba(9, 9, 9, 0.7) 45%, rgba(9, 9, 9, 0.2) 75%, rgba(9, 9, 9, 0.4) 100%) !important;
+      pointer-events: none !important;
+      z-index: 2 !important;
+      display: block !important;
+    }
+
+    /* Active edge indicator */
+    .accordion-panel.active .active-edge {
+      display: block !important;
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      bottom: 0 !important;
+      width: 4px !important;
+      height: 100% !important;
+      background: var(--blood, #fff) !important;
+      opacity: 1 !important;
+      z-index: 8 !important;
+    }
+
+    /* Hide the collapsed trigger strip on the active panel */
     .accordion-panel.active .acc-trigger {
       display: none !important;
+      pointer-events: none !important;
     }
 
-    .expanded-content {
+    /* Display expanded content with headline, deck, and CTA */
+    .accordion-panel.active .expanded-content {
+      display: flex !important;
       position: relative !important;
       inset: auto !important;
       width: 100% !important;
       height: auto !important;
-      min-height: 520px !important;
+      min-height: 0 !important;
       opacity: 1 !important;
       pointer-events: auto !important;
-      transition: none !important;
-      display: flex !important;
       flex-direction: column !important;
-      justify-content: flex-end !important;
+      justify-content: flex-start !important;
       z-index: 5 !important;
-    }
-    .accordion-panel:not(.active) .expanded-content {
-      display: none !important;
+      transition: none !important;
+      animation: mobilePanelFade 0.25s ease-out forwards;
     }
 
-    .content-inner {
+    @keyframes mobilePanelFade {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .accordion-panel.active .content-inner {
       display: flex !important;
       flex-direction: column !important;
       align-items: flex-start !important;
       text-align: left !important;
       width: 100% !important;
+      box-sizing: border-box !important;
       height: auto !important;
-      min-height: 520px !important;
-      padding: 1.5rem 1.25rem 1.75rem !important;
-      background: linear-gradient(to top, rgba(8, 8, 8, 0.96) 0%, rgba(8, 8, 8, 0.75) 55%, transparent 90%) !important;
-      justify-content: flex-end !important;
+      padding: 1.25rem 1.25rem 1.5rem !important;
+      padding-top: 2.75rem !important; /* Space for upper-right kicker chip */
+      background: #090909 !important;
       position: relative !important;
+      z-index: 5 !important;
+      justify-content: flex-start !important;
     }
 
-    .accordion-panel .expanded-content .kicker,
-    .content-inner .kicker {
-      position: absolute !important;
-      top: 1.5rem !important;
-      left: 1.25rem !important;
-      margin: 0 !important;
-      z-index: 6 !important;
-    }
-
-    /* Open-panel logo sits at the bottom-right of the card, HQ style. */
-    .content-logo {
-      display: block !important;
-      position: static !important;
-      transform: none !important;
-      height: 52px !important;
-      width: auto !important;
-      max-width: 190px !important;
-      object-fit: contain !important;
-      order: 99 !important;
-      align-self: flex-end !important;
-      margin: auto 0 0 !important;
-      filter:
-        drop-shadow(0 0 14px rgba(240, 240, 240, 0.5))
-        drop-shadow(0 0 36px rgba(240, 240, 240, 0.28)) !important;
-    }
-
-    /* CCC portrait logo on mobile: taller so it's legible. */
-    .brand-ccc .content-logo {
-      height: 84px !important;
-      max-width: 140px !important;
-    }
-
-    .headline {
-      font-size: clamp(26px, 7.5vw, 38px) !important;
-    }
-
-    .deck {
-      font-size: 0.95rem !important;
-    }
-
-    .active-edge {
-      width: 100% !important;
-      height: 3px !important;
-      top: 0 !important;
-      bottom: auto !important;
-      left: 0 !important;
+    .accordion-panel.active .content-inner > * {
       opacity: 1 !important;
+      transform: none !important;
+      transition: none !important;
     }
 
-    .accordion-play-pause {
-      bottom: auto !important;
+    /* Metadata tags strictly anchored in upper right corner, referencing hero */
+    .accordion-panel.active .panel-metadata-tag {
+      position: absolute !important;
       top: 1rem !important;
-      right: 1rem !important;
+      right: 1.25rem !important;
+      margin: 0 !important;
+      z-index: 7 !important;
+      display: flex !important;
+      justify-content: flex-end !important;
+    }
+
+    /* Brand Logo strictly in bottom right corner */
+    .accordion-panel.active .panel-logo-wrap {
+      position: absolute !important;
+      bottom: 1.25rem !important;
+      right: 1.25rem !important;
+      z-index: 6 !important;
+      pointer-events: none !important;
+      display: flex !important;
+      align-items: flex-end !important;
+      justify-content: flex-end !important;
+    }
+
+    .accordion-panel.active .content-logo {
+      display: block !important;
+      height: 38px !important;
+      max-height: 44px !important;
+      width: auto !important;
+      max-width: 120px !important;
+      object-fit: contain !important;
+      filter: drop-shadow(0 0 10px rgba(240, 240, 240, 0.35)) !important;
+    }
+
+    .brand-ccc.active .content-logo {
+      height: 48px !important;
+      max-height: 52px !important;
+      max-width: 90px !important;
+    }
+
+    .accordion-panel.active .headline {
+      font-size: clamp(1.35rem, 5.5vw, 1.85rem) !important;
+      line-height: 1.15 !important;
+      margin: 0.2rem 0 0.6rem !important;
+      color: var(--ink) !important;
+      text-wrap: balance !important;
+      max-width: 100% !important;
+    }
+
+    .brand-be.active .headline {
+      max-width: 100% !important;
+    }
+
+    .accordion-panel.active .deck {
+      font-size: clamp(0.75rem, 2.5vw, 0.85rem) !important;
+      line-height: 1.55 !important;
+      letter-spacing: 0.1em !important;
+      max-width: 100% !important;
+      color: rgba(255, 255, 255, 0.72) !important;
+      -webkit-line-clamp: 3 !important;
+      display: -webkit-box !important;
+      -webkit-box-orient: vertical !important;
+      overflow: hidden !important;
+      margin: 0 !important;
+    }
+
+    .accordion-panel.active .content-inner .btn {
+      margin-top: 1rem !important;
+      min-height: 44px !important;
+      padding: 0.65rem 1.25rem !important;
+      font-size: 0.75rem !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 0.5rem !important;
+      width: auto !important;
+      max-width: calc(100% - 130px) !important;
+      z-index: 7 !important;
+    }
+
+    .accordion-panel.active .inquiry-link {
+      display: inline-flex !important;
+      align-items: center !important;
+      margin-top: 0.65rem !important;
+      font-size: 0.72rem !important;
+      min-height: 38px !important;
+      z-index: 7 !important;
+    }
+
+    .accordion-panel.active .teaser-tag {
+      display: inline-block !important;
+      margin-top: 1rem !important;
+      font-size: 0.68rem !important;
+      padding: 0.5rem 1rem !important;
+    }
+
+    /* 3. Collapsed Inactive Panels (height: 64px horizontal bar, order: 0) */
+    .accordion-panel:not(.active) {
+      order: 0 !important;
+      flex: none !important;
+      width: 100% !important;
+      height: 64px !important;
+      min-height: 64px !important;
+      max-height: 64px !important;
+      position: relative !important;
+      overflow: hidden !important;
+      cursor: pointer !important;
+      display: flex !important;
+      align-items: center !important;
+      background: rgba(14, 14, 14, 0.95) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border-radius: 2px !important;
+      transition: background-color 0.2s ease, border-color 0.2s ease !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    .accordion-panel:not(.active):hover,
+    .accordion-panel:not(.active):focus-within {
+      background: rgba(24, 24, 24, 0.98) !important;
+      border-color: rgba(255, 255, 255, 0.22) !important;
+    }
+
+    /* Hide background images, scrims, edge, and expanded content on collapsed panels */
+    .accordion-panel:not(.active) .panel-bg,
+    .accordion-panel:not(.active) .panel-scrims,
+    .accordion-panel:not(.active) .active-edge,
+    .accordion-panel:not(.active) .expanded-content {
+      display: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    /* Display trigger as a full-width clickable horizontal bar */
+    .accordion-panel:not(.active) .acc-trigger {
+      display: flex !important;
+      width: 100% !important;
+      height: 100% !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border: none !important;
+      background: transparent !important;
+      cursor: pointer !important;
+      pointer-events: auto !important;
+      align-items: center !important;
+    }
+
+    .accordion-panel:not(.active) .collapsed-strip {
+      display: flex !important;
+      width: 100% !important;
+      height: 100% !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      padding: 0 1.25rem !important;
+      box-sizing: border-box !important;
+      cursor: pointer !important;
+      pointer-events: auto !important;
+    }
+
+    /* Horizontal brand name on mobile */
+    .accordion-panel:not(.active) .vertical-title {
+      writing-mode: horizontal-tb !important;
+      transform: none !important;
+      font-size: 0.95rem !important;
+      font-weight: 700 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.08em !important;
+      color: var(--ink, #fff) !important;
+      opacity: 0.9 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      white-space: nowrap !important;
+    }
+
+    /* Brand logo in horizontal bar */
+    .accordion-panel:not(.active) .col-logo {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: flex-end !important;
+      width: auto !important;
+      height: 28px !important;
+      max-height: 28px !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    .accordion-panel:not(.active) .logo-img {
+      height: 24px !important;
+      max-height: 28px !important;
+      width: auto !important;
+      max-width: 90px !important;
+      object-fit: contain !important;
+    }
+
+    .accordion-panel:not(.active) .placeholder-icon {
+      width: 20px !important;
+      height: 20px !important;
+      color: var(--ink-60) !important;
+    }
+
+    .accordion-play-pause,
+    .bottom-progress-bar,
+    .brand-camera-close-btn {
+      display: none !important;
     }
   }
 
@@ -906,17 +1143,42 @@ import SectionHeader from './SectionHeader.astro';
     cursor: default;
   }
 
-  /* In full screen, the camera stage scales the panel optically.
-     Typography, line height, letter spacing, padding, and word positioning
-     must remain 100% identical in both views to prevent jarring text shift. */
-  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .content-inner,
-  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .headline,
-  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .deck,
-  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .expanded-content .kicker,
-  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .content-inner .btn,
-  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .inquiry-link,
-  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .content-logo {
-    /* Inherit base geometry and typography without reflow or shift */
+  /* In full screen, ensure typography and bottom controls fit gracefully within viewport bounds. */
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .content-inner {
+    padding: clamp(1.25rem, 3.5vw, 3.25rem) !important;
+    padding-left: calc(clamp(1.5rem, 3.5vw, 3.25rem) + var(--zoom-overflow-x, 0px)) !important;
+    padding-right: calc(clamp(1.5rem, 3.5vw, 3.25rem) + var(--zoom-overflow-x, 0px)) !important;
+    padding-bottom: calc(clamp(1.5rem, 3.5vw, 3rem) + var(--zoom-overflow-y, 0px)) !important;
+    max-width: min(58rem, 65vw) !important;
+    max-height: 90vh !important;
+    justify-content: flex-end !important;
+  }
+
+  /* Zoomed: metadata tags locked to upper right corner of visible viewport */
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .panel-metadata-tag {
+    top: calc(clamp(1.75rem, 3.5vw, 2.75rem) + var(--zoom-overflow-y, 0px)) !important;
+    right: calc(clamp(1.75rem, 3.5vw, 2.75rem) + var(--zoom-overflow-x, 0px)) !important;
+  }
+
+  /* Zoomed: logo locked to bottom right corner of visible viewport */
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .panel-logo-wrap {
+    bottom: calc(clamp(2rem, 3.5vw, 4rem) + var(--zoom-overflow-y, 0px)) !important;
+    right: calc(clamp(2rem, 3.5vw, 4.5rem) + var(--zoom-overflow-x, 0px)) !important;
+  }
+
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .headline {
+    font-size: clamp(1.8rem, 3.2vw, 3.8rem) !important;
+    line-height: 1.05 !important;
+    margin: 0.2rem 0 0.75rem !important;
+  }
+
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .deck {
+    font-size: clamp(0.75rem, 0.95vw, 1.05rem) !important;
+    line-height: 1.5 !important;
+  }
+
+  .brand-camera-viewport.is-zoomed:not(.is-closing) .accordion-panel.active .content-inner .btn {
+    margin-top: 1rem !important;
   }
 
   /* Reduced Motion */
@@ -972,6 +1234,21 @@ import SectionHeader from './SectionHeader.astro';
           if (this.activeIndex !== i) {
             this.manualOverride = true;
             this.goToPanel(i, true);
+          }
+        });
+      });
+
+      // Allow clicking anywhere on a collapsed inactive panel to activate it
+      this.panels.forEach((panel, i) => {
+        panel.addEventListener('click', (e) => {
+          if (this.activeIndex !== i) {
+            const target = e.target as HTMLElement;
+            if (!target.closest('a, button')) {
+              e.preventDefault();
+              e.stopPropagation();
+              this.manualOverride = true;
+              this.goToPanel(i, true);
+            }
           }
         });
       });
@@ -1055,20 +1332,27 @@ import SectionHeader from './SectionHeader.astro';
       this.updateProgressFill();
     }
 
-    goToPanel(index: number) {
+    goToPanel(index: number, isManual = false) {
       if (index === this.activeIndex) return;
+
+      const prevIndex = this.activeIndex;
+      const direction = index > prevIndex ? 'left-to-right' : 'right-to-left';
 
       const prevFill = this.panels[this.activeIndex].querySelector('.progress-fill') as HTMLElement;
       if (prevFill) prevFill.style.width = '0%';
 
-      this.panels[this.activeIndex].classList.remove('active');
+      const prevPanel = this.panels[this.activeIndex];
+      prevPanel.classList.remove('active');
+      prevPanel.dataset.direction = direction;
       this.triggers[this.activeIndex].setAttribute('aria-expanded', 'false');
 
       this.activeIndex = index;
 
       const newPanel = this.panels[this.activeIndex];
+      newPanel.dataset.direction = direction;
       newPanel.classList.add('active');
       this.triggers[this.activeIndex].setAttribute('aria-expanded', 'true');
+      this.section.dataset.direction = direction;
 
       if (this.announcer) {
         const title = newPanel.querySelector('.headline')?.textContent || '';
@@ -1193,6 +1477,8 @@ import SectionHeader from './SectionHeader.astro';
     init() {
       this.panels.forEach((p, i) => {
         p.addEventListener('click', (e) => {
+          if (window.innerWidth <= 768) return; // Allow direct link/button interactions in mobile stack
+
           const targetEl = e.target as HTMLElement;
 
           // Utility buttons (play/pause, close) handle their own actions
@@ -1270,10 +1556,19 @@ import SectionHeader from './SectionHeader.astro';
       this.initialStageTop = stageRect.top;
 
       // 2. Dynamic scale calculation:
-      // True full-screen cover scale: ensures active panel completely fills 100% of viewport width and height
+      // Full-bleed cover scale: ensures active 16:9 panel and background image fill 100% of the screen
+      // with zero black bars above or below on any screen ratio
       const scaleX = vpWidth / targetRect.width;
       const scaleY = vpHeight / targetRect.height;
-      const scale = Math.max(scaleX, scaleY) * 1.01;
+      const scale = Math.max(scaleX, scaleY);
+
+      // Safe viewport padding compensation:
+      // When scaled panel overflows viewport bounds horizontally or vertically,
+      // compensate content-inner and kicker insets so typography, buttons, and metadata remain 100% visible
+      const overflowX = Math.max(0, (targetRect.width * scale - vpWidth) / 2);
+      const overflowY = Math.max(0, (targetRect.height * scale - vpHeight) / 2);
+      panel.style.setProperty('--zoom-overflow-x', `${overflowX / scale}px`);
+      panel.style.setProperty('--zoom-overflow-y', `${overflowY / scale}px`);
 
       // 3. Target and viewport centers
       const targetCenterX = targetRect.left + targetRect.width / 2;
@@ -1324,7 +1619,12 @@ import SectionHeader from './SectionHeader.astro';
 
       const scaleX = vpWidth / targetRect.width;
       const scaleY = vpHeight / targetRect.height;
-      const scale = Math.max(scaleX, scaleY) * 1.01;
+      const scale = Math.max(scaleX, scaleY);
+
+      const overflowX = Math.max(0, (targetRect.width * scale - vpWidth) / 2);
+      const overflowY = Math.max(0, (targetRect.height * scale - vpHeight) / 2);
+      this.activePanel.style.setProperty('--zoom-overflow-x', `${overflowX / scale}px`);
+      this.activePanel.style.setProperty('--zoom-overflow-y', `${overflowY / scale}px`);
 
       const targetCenterX = targetRect.left + targetRect.width / 2;
       const targetCenterY = targetRect.top + targetRect.height / 2;
@@ -1374,6 +1674,10 @@ import SectionHeader from './SectionHeader.astro';
     }
 
     private cleanup() {
+      if (this.activePanel) {
+        this.activePanel.style.removeProperty('--zoom-overflow-x');
+        this.activePanel.style.removeProperty('--zoom-overflow-y');
+      }
       this.stage.style.transition = 'none';
       this.stage.style.transform = 'translate3d(0, 0, 0) scale(1)';
       this.viewport.classList.remove('is-zoomed', 'is-closing');

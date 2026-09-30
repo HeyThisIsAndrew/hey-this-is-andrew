@@ -23,14 +23,27 @@ const headingId =
   id ?? `sec-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`;
 ---
 
-<div class="sec-head">
+<div class="sec-head section-header">
   <p class="sec-eyebrow">
     {index && (
       <span class="sec-index" aria-hidden="true">{index}</span>
     )}
     <span class="sec-kicker">{kicker}</span>
   </p>
-  <h2 class="section-title" id={headingId}>{title}</h2>
+  <div class="section-title-wrap">
+    <h2 class="section-title" id={headingId}>{title}</h2>
+    <a
+      href={`#${headingId}`}
+      class="section-anchor section-anchor-link"
+      data-anchor-target={headingId}
+      data-target-id={headingId}
+      aria-label={`Direct link to ${title} section (click to copy)`}
+      title={`Copy link to ${title}`}
+    >
+      <span class="anchor-symbol" aria-hidden="true">#</span>
+      <span class="anchor-toast" aria-hidden="true">COPIED</span>
+    </a>
+  </div>
   {lede && <p class="section-lede">{lede}</p>}
   {linkLabel && linkHref && (
     <a
@@ -82,8 +95,69 @@ const headingId =
     letter-spacing: 0.08em;
   }
 
-  .sec-head .section-title {
+  .section-title-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    position: relative;
     margin: 0 0 1rem;
+  }
+
+  .sec-head .section-title {
+    margin: 0;
+    scroll-margin-top: 5.5rem;
+  }
+
+  .section-anchor {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    color: var(--muted);
+    opacity: 0;
+    transition: opacity 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    text-decoration: none;
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    font-weight: 500;
+    line-height: 1;
+    padding: 0 0.35rem;
+  }
+
+  .sec-head:hover .section-anchor,
+  .section-anchor:focus-visible {
+    opacity: 0.7;
+  }
+
+  .section-anchor:hover {
+    opacity: 1;
+    color: var(--ink);
+    transform: scale(1.15);
+  }
+
+  .anchor-toast {
+    position: absolute;
+    bottom: 130%;
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: #111;
+    border: 1px solid var(--border);
+    color: #22c55e;
+    font-size: 0.62rem;
+    font-family: var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.45rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    white-space: nowrap;
+    z-index: 10;
+  }
+
+  .section-anchor.is-copied .anchor-toast {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 
   .sec-head .section-lede {
