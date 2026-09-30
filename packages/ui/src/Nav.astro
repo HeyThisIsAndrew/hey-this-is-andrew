@@ -1,0 +1,1007 @@
+---
+/**
+ * Nav (@andrew/ui): the sticky site header. Frosted bar, Syne links with an
+ * underline grow, dropdown subsections, a mobile menu, an optional search
+ * trigger, and scrollspy on the home page.
+ *
+ * Data-driven: a site passes its links (the same data its Footer reads, so
+ * the two can never disagree). A site search modal goes in the default slot
+ * and listens for #nav-search-trigger / #mobile-search-trigger clicks.
+ */
+import type { LogoAsset, NavItem } from './types';
+
+interface Props {
+  logo: LogoAsset;
+  homeHref: string;
+  links: NavItem[];
+  /** Accessible name for the logo link. */
+  homeLabel?: string;
+  /** Renders the search trigger buttons (desktop bar and mobile menu). */
+  search?: { label: string; shortcut: string; ariaLabel: string; title: string; mobileText: string; mobileAria: string };
+  labels?: { menu?: string; close?: string; sections?: string; sectionsMenu?: string };
+}
+
+const { logo, homeHref, links, homeLabel = `${logo.alt}, home`, search, labels = {} } = Astro.props;
+const L = { menu: 'Menu', close: 'Close', sections: 'Sections', sectionsMenu: 'Sections menu', ...labels };
+const homePath = homeHref.replace(/\/$/, '');
+const currentPath = Astro.url.pathname.replace(/\/$/, '');
+const isHome = currentPath === homePath;
+---
+<header class:list={['site-nav', { 'site-nav--home': isHome, 'at-top': isHome }]} id="site-header" data-home-path={homePath}>
+  <div class="nav-inner">
+    <a class="wordmark" href={homeHref} aria-label={homeLabel} data-logo-home={isHome ? true : undefined}>
+      <img src={logo.src} width={logo.width} height={logo.height} alt={logo.alt} class="wordmark-logo" />
+    </a>
+    <nav aria-label={L.sections} class="desktop-nav">
+      <ul class="nav-links">
+        {links.map((l) => (
+          <li class="nav-item">
+            <div class="nav-link-wrap">
+              <a
+                href={l.href}
+                data-nav-link
+                data-section={l.section}
+                aria-haspopup={l.subsections.length > 0 ? "true" : undefined}
+                aria-expanded={l.subsections.length > 0 ? "false" : undefined}
+                class="nav-link"
+              >
+                <span>{l.label}</span>
+                {l.subsections.length > 0 && (
+                  <svg class="dropdown-chevron" width="8" height="6" viewBox="0 0 8 6" fill="none" aria-hidden="true">
+                    <path d="M1 1.5L4 4.5L7 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                )}
+              </a>
+            </div>
+            {l.subsections.length > 0 && (
+              <div class="dropdown-menu" role="menu" aria-label={`${l.label} subsections`}>
+                <div class="dropdown-inner">
+                  <ul class="dropdown-list">
+                    {l.subsections.map((sub) => (
+                      <li role="none">
+                        <a
+                          href={sub.href}
+                          class="dropdown-link"
+                          role="menuitem"
+                        >
+                          <span class="dropdown-kicker">{sub.kicker}</span>
+                          <span class="dropdown-label">{sub.label}</span>
+                          <span class="dropdown-arrow" aria-hidden="true">→</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </nav>
+    <div class="nav-right-actions">
+      {search && (
+      <button type="button" class="nav-search-btn" id="nav-search-trigger" aria-label={search.ariaLabel} title={search.title}>
+        <svg class="search-trigger-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span class="nav-search-label font-mono">{search.label}</span>
+        <span class="nav-search-key font-mono" aria-hidden="true">{search.shortcut}</span>
+      </button>
+      )}
+      {/* Theme toggle hidden: the site is dark-mode only for now (decision 6).
+          Restore by uncommenting this button and the theme script in BaseLayout.
+      <button type="button" class="theme-toggle-btn" id="nav-theme-toggle" aria-label="Toggle light or dark theme" title="Toggle theme">
+        <svg class="theme-icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg class="theme-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+      */}
+      <button type="button" class="menu-btn" aria-expanded="false" aria-controls="mobile-menu" data-close-label={L.close}>
+        <span class="menu-btn-label">{L.menu}</span>
+      </button>
+    </div>
+  </div>
+  <div class="mobile-menu" id="mobile-menu" hidden>
+    {search && (
+    <div class="mobile-search-row">
+      <button type="button" class="mobile-search-trigger-btn" id="mobile-search-trigger" aria-label={search.mobileAria}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span class="mobile-search-text">{search.mobileText}</span>
+        <span class="mobile-search-key font-mono">{search.shortcut}</span>
+      </button>
+    </div>
+    )}
+    <nav aria-label={L.sectionsMenu}>
+      <ul class="mobile-nav-list">
+        {links.map((l) => (
+          <li class="mobile-nav-item">
+            <div class="mobile-section-header">
+              <a
+                href={l.href}
+                class="mobile-main-link"
+              >
+                {l.label}
+              </a>
+            </div>
+            {l.subsections.length > 0 && (
+              <ul class="mobile-sub-list">
+                {l.subsections.map((sub) => (
+                  <li>
+                    <a
+                      href={sub.href}
+                      class="mobile-sub-link"
+                    >
+                      <span class="mobile-sub-kicker font-mono">{sub.kicker}</span>
+                      <span class="mobile-sub-label">{sub.label}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))}
+      </ul>
+    </nav>
+  </div>
+  <slot />
+</header>
+
+<script>
+  const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const menuLabels = {
+    menu: document.querySelector('.menu-btn-label')?.textContent ?? 'Menu',
+    close: (document.querySelector('.menu-btn') as HTMLElement | null)?.dataset.closeLabel ?? 'Close',
+  };
+
+  // Logo: on the homepage, return to top with a tactile press instead of
+  // reloading. On any other page, let the href="/" navigate home normally.
+  const logoHome = document.querySelector('[data-logo-home]');
+  if (logoHome) {
+    logoHome.addEventListener('click', (e) => {
+      const p = window.location.pathname.replace(/\/$/, '');
+      const homePath = document.getElementById('site-header')?.dataset.homePath ?? '';
+      const isHome = p === homePath || (homePath === '' && p === '/');
+      if (!isHome) return;
+      e.preventDefault();
+      const reduced = prefersReducedMotion();
+      window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+      if (!reduced) {
+        const el = logoHome as HTMLElement;
+        el.style.transition = 'transform 180ms cubic-bezier(0.2, 0.9, 0.25, 1)';
+        el.style.transform = 'scale(0.96)';
+        window.setTimeout(() => {
+          el.style.transform = 'scale(1)';
+          window.setTimeout(() => {
+            el.style.transition = '';
+            el.style.transform = '';
+          }, 200);
+        }, 140);
+      }
+    });
+  }
+
+  // Dropdown accessibility: update aria-expanded and handle keyboard navigation
+  const navItems = Array.from(document.querySelectorAll<HTMLElement>('.nav-item'));
+  navItems.forEach((item) => {
+    const mainLink = item.querySelector<HTMLAnchorElement>('.nav-link');
+    const dropdown = item.querySelector<HTMLElement>('.dropdown-menu');
+    if (!mainLink || !dropdown) return;
+
+    const subLinks = Array.from(dropdown.querySelectorAll<HTMLAnchorElement>('.dropdown-link'));
+
+    const setExpanded = (expanded: boolean) => {
+      mainLink.setAttribute('aria-expanded', String(expanded));
+      if (expanded) {
+        item.classList.add('is-open');
+      } else {
+        item.classList.remove('is-open');
+      }
+    };
+
+    item.addEventListener('mouseenter', () => setExpanded(true));
+    item.addEventListener('mouseleave', () => setExpanded(false));
+    item.addEventListener('focusin', () => setExpanded(true));
+    item.addEventListener('focusout', () => {
+      setTimeout(() => {
+        if (!item.contains(document.activeElement)) {
+          setExpanded(false);
+        }
+      }, 20);
+    });
+
+    // Keyboard navigation: ArrowDown, ArrowUp, Escape, Home, End
+    mainLink.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setExpanded(true);
+        if (subLinks.length) subLinks[0].focus();
+      } else if (e.key === 'Escape') {
+        setExpanded(false);
+      }
+    });
+
+    subLinks.forEach((subLink, index) => {
+      subLink.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          const next = subLinks[index + 1] || subLinks[0];
+          next.focus();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (index === 0) {
+            mainLink.focus();
+          } else {
+            subLinks[index - 1].focus();
+          }
+        } else if (e.key === 'Home') {
+          e.preventDefault();
+          subLinks[0]?.focus();
+        } else if (e.key === 'End') {
+          e.preventDefault();
+          subLinks[subLinks.length - 1]?.focus();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          setExpanded(false);
+          mainLink.focus();
+        }
+      });
+
+      // Close dropdown when selecting an item
+      subLink.addEventListener('click', () => {
+        setExpanded(false);
+      });
+    });
+  });
+
+  // Mobile menu: designed open/close — panel slides down, links displayed with subsections.
+  const menuBtn = document.querySelector('.menu-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+  if (menuBtn && mobileMenu) {
+    const label = menuBtn.querySelector('.menu-btn-label');
+    const menuLinks = Array.from(mobileMenu.querySelectorAll('a'));
+    const reduced = () => prefersReducedMotion();
+    let closeTimer = 0;
+
+    const setOpen = (open: boolean) => {
+      window.clearTimeout(closeTimer);
+      menuBtn.setAttribute('aria-expanded', String(open));
+      if (label) label.textContent = open ? menuLabels.close : menuLabels.menu;
+      if (open) {
+        mobileMenu.hidden = false;
+        void mobileMenu.offsetWidth;
+        mobileMenu.classList.add('open');
+        if (menuLinks.length) menuLinks[0].focus();
+      } else {
+        mobileMenu.classList.remove('open');
+        if (reduced()) {
+          mobileMenu.hidden = true;
+        } else {
+          closeTimer = window.setTimeout(() => {
+            mobileMenu.hidden = true;
+          }, 270);
+        }
+      }
+    };
+    const isOpen = () => !mobileMenu.hidden;
+    menuBtn.addEventListener('click', () => setOpen(!isOpen()));
+    menuLinks.forEach((a) =>
+      a.addEventListener('click', () => {
+        setOpen(false);
+        (menuBtn as HTMLElement)?.focus();
+      })
+    );
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isOpen()) {
+        setOpen(false);
+        (menuBtn as HTMLElement)?.focus();
+      }
+    });
+
+    // Keyboard Tab focus trap inside open mobile menu
+    mobileMenu.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab') return;
+      const focusable = [menuBtn, ...menuLinks].filter(Boolean) as HTMLElement[];
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    });
+
+    // Touch swipe-up / swipe-left to dismiss mobile drawer
+    let touchStartY = 0;
+    let touchStartX = 0;
+    mobileMenu.addEventListener('touchstart', (e) => {
+      touchStartY = e.touches[0].clientY;
+      touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+
+    mobileMenu.addEventListener('touchend', (e) => {
+      const deltaY = e.changedTouches[0].clientY - touchStartY;
+      const deltaX = e.changedTouches[0].clientX - touchStartX;
+      if (deltaY < -40 || deltaX < -60) {
+        setOpen(false);
+        (menuBtn as HTMLElement)?.focus();
+      }
+    }, { passive: true });
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 860 && isOpen()) setOpen(false);
+    });
+  }
+
+  // Theme toggle listener & persistence
+  const themeToggle = document.getElementById('nav-theme-toggle');
+  if (themeToggle) {
+    function applyNavTheme(theme: string) {
+      document.documentElement.setAttribute('data-theme', theme);
+      try {
+        localStorage.setItem('theme', theme);
+      } catch (e) {}
+      const label = theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
+      themeToggle?.setAttribute('aria-label', label);
+      themeToggle?.setAttribute('title', label);
+    }
+
+    themeToggle.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      const next = current === 'light' ? 'dark' : 'light';
+      applyNavTheme(next);
+    });
+
+    const initTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const initialLabel = initTheme === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
+    themeToggle.setAttribute('aria-label', initialLabel);
+    themeToggle.setAttribute('title', initialLabel);
+  }
+
+  // Scrollspy: keep the selected nav state connected to the visible section.
+  // BUG FIX: When scrolled to the very top of the site (Hero section), NO section link
+  // (including Lanes) should be highlighted.
+  const spyLinks = Array.from(document.querySelectorAll<HTMLElement>('[data-nav-link][data-section]'));
+  if (spyLinks.length && 'IntersectionObserver' in window) {
+    const sections = spyLinks
+      .map((a) => document.getElementById(a.getAttribute('data-section') || ''))
+      .filter(Boolean) as HTMLElement[];
+
+    const setActive = (id: string | null) => {
+      spyLinks.forEach((a) => {
+        const on = Boolean(id && a.getAttribute('data-section') === id);
+        a.classList.toggle('active', on);
+        if (on) a.setAttribute('aria-current', 'true');
+        else a.removeAttribute('aria-current');
+      });
+    };
+
+    const isAtTopOrHero = () => {
+      if (window.scrollY < 80) return true;
+      const dirEl = document.getElementById('directory');
+      if (dirEl) {
+        const top = dirEl.getBoundingClientRect().top;
+        if (top > window.innerHeight * 0.45) return true;
+      }
+      return false;
+    };
+
+    let currentActiveId: string | null = null;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (isAtTopOrHero()) {
+          setActive(null);
+          return;
+        }
+
+        entries.forEach((en) => {
+          if (en.isIntersecting) {
+            currentActiveId = en.target.id;
+          }
+        });
+
+        if (isAtTopOrHero()) {
+          setActive(null);
+        } else if (currentActiveId) {
+          setActive(currentActiveId);
+        }
+      },
+      { rootMargin: '-38% 0px -55% 0px', threshold: 0 }
+    );
+    sections.forEach((s) => io.observe(s));
+
+    // Clear active state immediately on scroll when returning to top / hero
+    window.addEventListener(
+      'scroll',
+      () => {
+        if (isAtTopOrHero()) {
+          setActive(null);
+        }
+      },
+      { passive: true }
+    );
+
+    // Dynamic scroll tracking: removes border and shadow artifacts when sitting flush against the hero
+    const updateNavScroll = () => {
+      const nav = document.querySelector('.site-nav');
+      if (!nav) return;
+      if (window.scrollY > 4) {
+        nav.classList.add('scrolled');
+        nav.classList.remove('at-top');
+      } else {
+        nav.classList.add('at-top');
+        nav.classList.remove('scrolled');
+      }
+    };
+    window.addEventListener('scroll', updateNavScroll, { passive: true });
+    updateNavScroll();
+
+    // Initial check on load
+    if (isAtTopOrHero()) {
+      setActive(null);
+    }
+  }
+</script>
+
+<style>
+  .site-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10, 10, 10, 0.85);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: none;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6), inset 0 -1px 0 rgba(255, 255, 255, 0.15);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  .site-nav--home.at-top {
+    border-bottom: none;
+    box-shadow: none;
+  }
+  .site-nav--home.scrolled {
+    border-bottom: none;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6), inset 0 -1px 0 rgba(255, 255, 255, 0.15);
+  }
+  .site-nav:has(.mobile-menu.open) {
+    z-index: 120;
+  }
+  .site-nav:not(.at-top):hover {
+    background: rgba(22, 22, 22, 0.95);
+    box-shadow:
+      0 4px 30px rgba(0, 0, 0, 0.6),
+      0 4px 40px rgba(200, 200, 200, 0.08),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+  }
+  .site-nav--home.at-top:hover {
+    background: rgba(22, 22, 22, 0.95);
+    box-shadow: none;
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1rem clamp(1.5rem, 3.5vw, 4rem) !important;
+    margin: 0 !important;
+  }
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    margin-right: auto;
+    text-decoration: none;
+    transition: filter 0.3s ease;
+  }
+  .wordmark-logo {
+    display: block;
+    height: 3rem;
+    width: auto;
+  }
+  @media (pointer: coarse), (max-width: 1023px) {
+    .wordmark {
+      min-height: 44px;
+    }
+  }
+  .wordmark:hover {
+    filter: brightness(1.15) drop-shadow(0 0 12px rgba(240, 240, 240, 0.35));
+  }
+
+  /* Desktop Navigation */
+  .desktop-nav {
+    display: flex;
+    align-items: center;
+  }
+  .nav-links {
+    display: flex;
+    gap: 1.8rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .nav-item {
+    position: relative;
+  }
+  .nav-link-wrap {
+    display: flex;
+    align-items: center;
+  }
+  .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    position: relative;
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(245, 245, 245, 0.8);
+    text-decoration: none;
+    padding: 0.75rem 0.35rem;
+    transition: color 0.25s ease, text-shadow 0.25s ease, transform 0.18s cubic-bezier(0.2, 0.9, 0.25, 1);
+  }
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0.35rem;
+    left: 0.35rem;
+    right: 0.35rem;
+    height: 1px;
+    background: var(--color-accent, #fff);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.25s ease;
+  }
+  .nav-link:hover,
+  .nav-link:focus-visible,
+  .nav-item:hover .nav-link,
+  .nav-item:focus-within .nav-link {
+    color: var(--color-accent-text, #fff);
+    text-shadow: 0 0 12px rgba(240, 240, 240, 0.6);
+  }
+  .nav-link:hover::after,
+  .nav-link:focus-visible::after,
+  .nav-item:hover .nav-link::after,
+  .nav-item:focus-within .nav-link::after {
+    transform: scaleX(1);
+  }
+  .nav-link.active {
+    color: var(--color-accent-text, #fff);
+  }
+  .nav-link.active::after {
+    transform: scaleX(1);
+  }
+  .nav-link:active {
+    transform: scale(0.96);
+  }
+
+  /* Dropdown Chevron */
+  .dropdown-chevron {
+    opacity: 0.5;
+    transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+  }
+  .nav-item:hover .dropdown-chevron,
+  .nav-item:focus-within .dropdown-chevron {
+    transform: rotate(180deg);
+    opacity: 0.95;
+  }
+
+  /* Smooth-Transitioning Dropdown Menu */
+  .dropdown-menu {
+    position: absolute;
+    top: calc(100% - 0.25rem);
+    left: 50%;
+    transform: translateX(-50%) translateY(6px);
+    min-width: 220px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+      visibility 0.24s;
+    z-index: 150;
+  }
+  /* Hit-area bridge prevents accidental mouseout */
+  .dropdown-menu::before {
+    content: '';
+    position: absolute;
+    top: -14px;
+    left: 0;
+    right: 0;
+    height: 16px;
+  }
+  .nav-item:hover .dropdown-menu,
+  .nav-item:focus-within .dropdown-menu,
+  .nav-item.is-open .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+  }
+  .dropdown-inner {
+    background: rgba(12, 12, 12, 0.96);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow:
+      0 16px 40px rgba(0, 0, 0, 0.8),
+      0 0 1px rgba(255, 255, 255, 0.25);
+    border-radius: 0;
+    padding: 0.4rem 0;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+  }
+  .dropdown-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .dropdown-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(235, 235, 235, 0.75);
+    text-decoration: none;
+    transition: background-color 0.18s ease, color 0.18s ease, padding-left 0.18s ease;
+    white-space: nowrap;
+  }
+  .dropdown-kicker {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 0.08em;
+    min-width: 1.75rem;
+    transition: color 0.18s ease;
+  }
+  .dropdown-label {
+    flex: 1;
+  }
+  .dropdown-arrow {
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    font-size: 0.75rem;
+    color: var(--color-accent-text, #fff);
+  }
+  .dropdown-link:hover,
+  .dropdown-link:focus-visible {
+    background: rgba(255, 255, 255, 0.07);
+    color: #ffffff;
+    padding-left: 1.15rem;
+  }
+  .dropdown-link:hover .dropdown-kicker,
+  .dropdown-link:focus-visible .dropdown-kicker {
+    color: rgba(255, 255, 255, 0.9);
+  }
+  .dropdown-link:hover .dropdown-arrow,
+  .dropdown-link:focus-visible .dropdown-arrow {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* Right actions bar */
+  .nav-right-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  /* Desktop search button */
+  .nav-search-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 44px;
+    padding: 0 0.85rem;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--ink);
+    cursor: pointer;
+    transition: var(--transition-smooth, all 0.35s cubic-bezier(0.16, 1, 0.3, 1));
+  }
+  .nav-search-btn:hover,
+  .nav-search-btn:focus-visible {
+    border-color: rgba(255, 255, 255, 0.6);
+    color: var(--color-white, #fff);
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .nav-search-btn:active {
+    transform: translateY(0);
+  }
+  .nav-search-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .nav-search-key {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.35rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: var(--muted, #888);
+    letter-spacing: 0.05em;
+  }
+  @media (max-width: 900px) {
+    .nav-search-label {
+      display: none;
+    }
+    .nav-search-btn {
+      padding: 0 0.6rem;
+    }
+  }
+  [data-theme="light"] .nav-search-btn {
+    border-color: rgba(0, 0, 0, 0.2);
+    color: #111;
+  }
+  [data-theme="light"] .nav-search-btn:hover,
+  [data-theme="light"] .nav-search-btn:focus-visible {
+    border-color: rgba(0, 0, 0, 0.6);
+    color: #000;
+    background: rgba(0, 0, 0, 0.04);
+  }
+  [data-theme="light"] .nav-search-key {
+    background: rgba(0, 0, 0, 0.06);
+    border-color: rgba(0, 0, 0, 0.15);
+    color: #555;
+  }
+
+  .theme-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--ink);
+    cursor: pointer;
+    padding: 0;
+    transition: var(--transition-smooth, all 0.35s cubic-bezier(0.16, 1, 0.3, 1));
+  }
+  .theme-toggle-btn:hover,
+  .theme-toggle-btn:focus-visible {
+    border-color: rgba(255, 255, 255, 0.6);
+    color: var(--color-white, #fff);
+    transform: translateY(-1px);
+  }
+  .theme-toggle-btn:active {
+    transform: translateY(0);
+  }
+
+  :root:not([data-theme="light"]) .theme-icon-moon,
+  [data-theme="dark"] .theme-icon-moon {
+    display: none;
+  }
+  :root:not([data-theme="light"]) .theme-icon-sun,
+  [data-theme="dark"] .theme-icon-sun {
+    display: block;
+  }
+  [data-theme="light"] .theme-icon-sun {
+    display: none;
+  }
+  [data-theme="light"] .theme-icon-moon {
+    display: block;
+  }
+  [data-theme="light"] .theme-toggle-btn {
+    border-color: rgba(0, 0, 0, 0.2);
+    color: #111;
+  }
+  [data-theme="light"] .theme-toggle-btn:hover,
+  [data-theme="light"] .theme-toggle-btn:focus-visible {
+    border-color: rgba(0, 0, 0, 0.6);
+    color: #000;
+  }
+
+  /* Mobile menu button */
+  .menu-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 1rem;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: rgba(245, 245, 245, 0.9);
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.25s ease, border-color 0.25s ease, transform 0.18s cubic-bezier(0.2, 0.9, 0.25, 1);
+  }
+  .menu-btn:hover,
+  .menu-btn:focus-visible {
+    color: var(--color-accent-text);
+    border-color: rgba(255, 255, 255, 0.6);
+  }
+  .menu-btn:active {
+    transform: scale(0.94);
+  }
+
+  /* Mobile menu panel */
+  .mobile-menu {
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(10, 10, 10, 0.98);
+    padding-bottom: env(safe-area-inset-bottom);
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-12px);
+    will-change: transform, opacity;
+    transition: opacity 0.22s cubic-bezier(0.05, 0.9, 0.15, 1),
+      transform 0.22s cubic-bezier(0.05, 0.9, 0.15, 1);
+  }
+  .mobile-menu.open {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .mobile-menu[hidden] {
+    display: none;
+  }
+  .mobile-search-row {
+    padding: 1.15rem 1.5rem 0.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .mobile-search-trigger-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: var(--muted, #aaa);
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    text-align: left;
+    transition: all 0.2s ease;
+  }
+  .mobile-search-trigger-btn:hover,
+  .mobile-search-trigger-btn:focus-visible {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--ink, #fff);
+    color: var(--ink, #fff);
+  }
+  .mobile-search-key {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.35rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: var(--ink, #fff);
+  }
+  [data-theme="light"] .mobile-search-trigger-btn {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.15);
+    color: #444;
+  }
+  [data-theme="light"] .mobile-search-key {
+    background: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.2);
+    color: #111;
+  }
+  .mobile-nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    max-height: calc(85vh - 4rem);
+    overflow-y: auto;
+  }
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .mobile-section-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    padding-bottom: 0.35rem;
+  }
+  .mobile-main-link {
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #ffffff;
+    text-decoration: none;
+  }
+  .mobile-sub-list {
+    list-style: none;
+    margin: 0.3rem 0 0 0.5rem;
+    padding-left: 0.75rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .mobile-sub-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 38px;
+    padding: 0.25rem 0;
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(245, 245, 245, 0.7);
+    text-decoration: none;
+    transition: color 0.2s ease, padding-left 0.2s ease;
+  }
+  .mobile-sub-kicker {
+    font-size: 0.6rem;
+    color: rgba(255, 255, 255, 0.35);
+    min-width: 1.6rem;
+  }
+  .mobile-sub-link:hover,
+  .mobile-sub-link:active {
+    color: var(--color-accent-text, #ffffff);
+    padding-left: 0.25rem;
+  }
+
+  @media (max-width: 860px) {
+    .site-nav .desktop-nav { display: none; }
+    .site-nav .menu-btn { display: inline-flex; }
+    .nav-inner { gap: 1rem; }
+    .wordmark-logo { height: 1.75rem; }
+    .site-nav {
+      background: #0a0a0a;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+    .site-nav:hover { background: #0a0a0a; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-menu,
+    .dropdown-menu,
+    .dropdown-chevron,
+    .dropdown-link,
+    .site-nav nav a,
+    .menu-btn {
+      transition: none !important;
+    }
+  }
+</style>

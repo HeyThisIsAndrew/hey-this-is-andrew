@@ -1,0 +1,855 @@
+---
+import { getInstagramPhotos } from '../lib/instagram';
+import SectionHeader from '@andrew/ui/SectionHeader.astro';
+
+// Photography portfolio: parallel vertical elevators.
+// Four columns (two on mobile), each a continuous vertical reel.
+// Columns alternate direction and speed. Photos keep their natural
+// aspect ratios — vertical and horizontal mix as part of the composition.
+// Clicking a photo zooms it into the fullscreen viewer (spatial system).
+
+// Self-hosted photos only (public/images/instagram, via npm run sync:instagram).
+const instagramPhotos = await getInstagramPhotos(32);
+const categoryLabels: Record<'cocktails' | 'bar' | 'product', string> = {
+  cocktails: 'Cocktails',
+  bar: 'Bars',
+  product: 'Product',
+};
+
+interface DisplayPhoto {
+  id: string;
+  url: string;
+  width?: number;
+  height?: number;
+  caption: string;
+  category: 'cocktails' | 'bar' | 'product';
+  location: string;
+  venue?: string;
+  event?: string;
+  permalink?: string;
+}
+
+
+const rawDisplayPhotos: DisplayPhoto[] = instagramPhotos.map((p) => ({
+  id: p.id,
+  url: p.url,
+  width: p.width,
+  height: p.height,
+  caption: p.caption,
+  category: p.category,
+  location: p.location || (p.category === 'bar' ? 'Bar & Venue' : categoryLabels[p.category]),
+  venue: p.venue,
+  event: p.event,
+  permalink: p.permalink,
+}));
+
+// Deduplicate displayPhotos by ID, URL, and caption so each project appears exactly once
+const seenIds = new Set<string>();
+const seenUrls = new Set<string>();
+const seenCaps = new Set<string>();
+const displayPhotos: DisplayPhoto[] = [];
+
+for (const p of rawDisplayPhotos) {
+  if (seenIds.has(p.id) || seenUrls.has(p.url)) continue;
+  if (p.caption && p.caption !== 'Capture Create Caffeinate' && seenCaps.has(p.caption)) continue;
+  seenIds.add(p.id);
+  seenUrls.add(p.url);
+  if (p.caption) seenCaps.add(p.caption);
+  displayPhotos.push(p);
+}
+
+// Distribute photos across 4 columns for visual rhythm.
+const COLUMN_COUNT = 4;
+const columns: number[][] = Array.from({ length: COLUMN_COUNT }, () => []);
+displayPhotos.forEach((_, i) => {
+  columns[i % COLUMN_COUNT].push(i);
+});
+
+const directions = ['up', 'down', 'up', 'down'];
+const durations = [58, 74, 66, 82];
+---
+
+{displayPhotos.length === 0 && import.meta.env.DEV && (
+  <p style="padding:2rem;border:1px dashed #555;color:#bbb;font-family:monospace">
+    TODO (Andrew): no self-hosted photos yet. Run npm run sync:instagram (see src/data/instagram-media-todo.md).
+  </p>
+)}
+{displayPhotos.length > 0 && (
+<section id="photography" class="photo-section" aria-labelledby="photography-title">
+  <div class="photo-zoom-backdrop" aria-hidden="true"></div>
+  <div class="photo-intro">
+    <SectionHeader
+      kicker="Photography"
+      index="02"
+      title="Shot on the job."
+      lede="Bar and beverage photography. The work behind Capture Create Caffeinate. Available for select photography work."
+      id="photography-title"
+    />
+  </div>
+
+  <div class="photo-grid-container">
+    <div class="photo-stage-wrap">
+      <div id="camera-stage" class="camera-stage">
+        <div class="photo-wall" role="region" aria-label="Photography portfolio, vertical image reels">
+    {columns.map((col, ci) => (
+      <div
+        class="photo-column"
+        data-direction={directions[ci]}
+        style={`--reel-duration: ${durations[ci]}s`}
+      >
+        <div class="photo-track">
+          <div class="photo-set">
+            {col.map((pi) => {
+              const p = displayPhotos[pi];
+              if (!p) return null;
+              return (
+                <button
+                  type="button"
+                  class="photo-item"
+                  data-camera-zoom
+                  data-photo-index={pi}
+                  aria-label={`View photo: ${p.caption}`}
+                >
+                  <img
+                    src={p.url}
+                    alt={p.caption}
+                    width={p.width ?? 440}
+                    height={p.height}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <span class="photo-tag">{p.location || categoryLabels[p.category] || 'Cocktails'}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    ))}
+        </div><!-- /.photo-wall -->
+      </div><!-- /#camera-stage -->
+    </div><!-- /.photo-stage-wrap -->
+  </div><!-- /.photo-grid-container -->
+
+  <p class="photo-note">
+    All photographs by Andrew. The cocktails and dishes pictured are the bar's.
+    The photography is his. <a href="#about">More about the work</a>.
+  </p>
+</section>
+)}
+
+<style>
+  .photo-section {
+    position: relative;
+    padding: var(--space-section) 0;
+    overflow: hidden;
+  }
+  .photo-intro {
+    position: relative;
+    z-index: 10;
+    transition: opacity 0.4s ease;
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 0 clamp(1.25rem, 4vw, 2.5rem);
+  }
+  .photo-section.is-zoomed .photo-intro {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .photo-grid-container {
+    width: 100%;
+    max-width: var(--maxw);
+    margin-inline: auto;
+    position: relative;
+    padding-inline: clamp(1rem, 3vw, 2.5rem);
+  }
+
+  .photo-wall {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: clamp(12px, 1.5vw, 24px);
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 2rem 0 0;
+    /* Tall enough to feel like reels with proportional height across 4K displays */
+    height: clamp(540px, 75vh, 1600px);
+    min-height: 520px;
+    /* Fade the top and bottom edges so the reels dissolve. */
+    mask-image: linear-gradient(to bottom, transparent 0, black 8%, black 92%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 8%, black 92%, transparent 100%);
+  }
+
+  .photo-column {
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+  }
+
+  .photo-track {
+    display: flex;
+    flex-direction: column;
+    /* Seamless loop: two identical sets, translate -50%. */
+    animation: reel var(--reel-duration, 70s) linear infinite;
+    will-change: transform;
+  }
+  .photo-column[data-direction="down"] .photo-track {
+    animation-direction: reverse;
+  }
+  /* Pause the reel you're inspecting. */
+  .photo-column:hover .photo-track,
+  .photo-column:focus-within .photo-track {
+    animation-play-state: paused;
+  }
+
+  /* JS-driven reels: the keyframe animation is replaced by WAAPI
+     (compositor-thread, no main-thread jitter) plus pointer drag.
+     Applied only when the script initializes, so no-JS still gets
+     the CSS autoplay. */
+  .photo-wall.js-reels {
+    touch-action: pan-y;
+    cursor: grab;
+  }
+  .photo-wall.js-reels.is-dragging {
+    cursor: grabbing;
+    touch-action: none;
+  }
+  .photo-wall.js-reels .photo-track {
+    animation: none;
+  }
+  .photo-wall.js-reels .photo-item {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .photo-wall.js-reels .photo-item img {
+    -webkit-user-drag: none;
+    pointer-events: none;
+  }
+
+  @keyframes reel {
+    from { transform: translateY(0); }
+    to { transform: translateY(-50%); }
+  }
+
+  .photo-set {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(12px, 1.5vw, 24px);
+    padding-bottom: clamp(12px, 1.5vw, 24px);
+  }
+
+  .photo-item {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: #111;
+    cursor: pointer;
+    overflow: hidden;
+    /* Fixed cell aspect ratios to prevent distortion on wide displays */
+    aspect-ratio: 4 / 5;
+    transition: border-color 0.3s ease, transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  .photo-item:nth-child(3n + 1) {
+    aspect-ratio: 16 / 9;
+  }
+  .photo-item:nth-child(3n + 2) {
+    aspect-ratio: 1 / 1;
+  }
+  .photo-item:nth-child(3n) {
+    aspect-ratio: 4 / 5;
+  }
+
+  .photo-item img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    /* Subtle cinematic grade at rest, full color on hover. */
+    filter: grayscale(0.35) contrast(1.02);
+    transition: filter 0.4s ease, transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .photo-item:hover img,
+  .photo-item:focus-visible img {
+    filter: grayscale(0) contrast(1.05);
+    transform: scale(1.03);
+  }
+  .photo-item:hover,
+  .photo-item:focus-visible {
+    border-color: rgba(255, 255, 255, 0.35);
+    outline: none;
+  }
+  .photo-item:active {
+    transform: scale(0.98);
+  }
+
+  .photo-tag {
+    position: absolute;
+    left: 0.6rem;
+    bottom: 0.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.85);
+    background: rgba(0, 0, 0, 0.65);
+    padding: 0.3rem 0.55rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+  .photo-item:hover .photo-tag,
+  .photo-item:focus-visible .photo-tag {
+    opacity: 1;
+  }
+
+  .photo-note {
+    max-width: var(--maxw);
+    margin: 2.5rem auto 0;
+    padding: 0 clamp(1.25rem, 4vw, 2.5rem);
+    font-size: 0.85rem;
+    color: var(--color-white-muted, #888);
+    text-align: center;
+  }
+  .photo-note a {
+    color: var(--color-accent-text, #f0f0f0);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* Mobile: two columns, shorter reels — the concept adapts, not hidden. */
+  @media (max-width: 767px) {
+    .photo-wall {
+      grid-template-columns: repeat(2, 1fr);
+      height: 74vh;
+      min-height: 480px;
+    }
+    /* On mobile show columns 1 and 3 (up-direction pair) for variety. */
+    .photo-column:nth-child(2),
+    .photo-column:nth-child(4) {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .photo-track {
+      animation: none;
+    }
+    .photo-wall {
+      height: auto;
+      min-height: 0;
+      mask-image: none;
+      -webkit-mask-image: none;
+    }
+    .photo-item img {
+      filter: none;
+    }
+  }
+
+  /* Camera stage: the viewport wrapper for the zoom effect.
+     The entire photo wall scales from a transform-origin, simulating
+     a camera lens moving closer. Overflow hidden on the wrapper ensures
+     the scaled content flows past the screen edges cleanly. */
+  .photo-stage-wrap {
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+  }
+  .photo-stage-wrap.is-zoomed,
+  .photo-section.is-zoomed {
+    overflow: visible;
+    z-index: 50;
+  }
+
+  .photo-zoom-backdrop {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #080808;
+    z-index: 45;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+  .photo-stage-wrap.is-zoomed .photo-zoom-backdrop,
+  .photo-section.is-zoomed .photo-zoom-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .camera-stage {
+    transform-origin: center center;
+    transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+    will-change: transform;
+    width: 100%;
+    position: relative;
+  }
+
+  .camera-stage.is-zoomed {
+    z-index: 50;
+  }
+
+  .camera-stage.is-zoomed .photo-wall {
+    mask-image: none !important;
+    -webkit-mask-image: none !important;
+  }
+
+  .camera-stage.is-zoomed .photo-column {
+    overflow: visible;
+  }
+
+  .camera-stage.is-zoomed .photo-item {
+    cursor: pointer;
+  }
+
+  .camera-stage.is-zoomed .photo-item img {
+    transform: none !important;
+  }
+
+  .photo-item[data-camera-zoom] {
+    cursor: pointer;
+  }
+  @media (max-width: 900px) {
+    .photo-wall {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .photo-set {
+      gap: 12px;
+      padding-bottom: 12px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .camera-stage {
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+
+<script>
+  // Manual reel control: AUTO MOVEMENT + USER CONTROL + CAMERA ZOOM
+  (() => {
+    const wall = document.querySelector('.photo-wall');
+    const stage = document.getElementById('camera-stage');
+    const stageWrap = document.querySelector('.photo-stage-wrap');
+    const photoSection = document.querySelector('.photo-section');
+    if (!wall || !stage || !('requestAnimationFrame' in window)) return;
+    wall.classList.add('js-reels');
+
+    const reduced = () =>
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const IDLE_RESUME_MS = 2500;
+    const DRAG_THRESHOLD_PX = 8;
+    const WHEEL_NUDGE = 0.35;
+
+    let zoomPaused = false;
+    let isZoomed = false;
+    let activeTarget: HTMLElement | null = null;
+    let frozenReel: Reel | null = null;
+
+    interface Reel {
+      column: HTMLElement;
+      track: HTMLElement;
+      anim: Animation | null;
+      direction: 1 | -1; // +1 content moves down, -1 content moves up
+      baseDuration: number; // seconds per full loop (from CSS var)
+      setH: number;
+      dragging: boolean;
+      hoverPaused: boolean;
+      idleTimer: number;
+      visible: boolean;
+      updatePlayState?: () => void;
+    }
+
+    const reels: Reel[] = [];
+    const columns = Array.from(
+      wall.querySelectorAll<HTMLElement>('.photo-column')
+    ).filter((c) => c.offsetParent !== null || c.style.display !== 'none');
+
+    const measure = (reel: Reel) => {
+      reel.setH = reel.track.scrollHeight / 2 || 1;
+    };
+
+    const pauseReels = () => {
+      zoomPaused = true;
+      reels.forEach((r) => r.updatePlayState?.());
+    };
+
+    const resumeReels = () => {
+      zoomPaused = false;
+      reels.forEach((r) => r.updatePlayState?.());
+    };
+
+    columns.forEach((column) => {
+      const track = column.querySelector<HTMLElement>('.photo-track');
+      if (!track) return;
+      const duration =
+        parseFloat(
+          getComputedStyle(column).getPropertyValue('--reel-duration')
+        ) || 70;
+      const reel: Reel = {
+        column,
+        track,
+        anim: null,
+        direction: column.dataset.direction === 'down' ? 1 : -1,
+        baseDuration: duration,
+        setH: 1,
+        dragging: false,
+        hoverPaused: false,
+        idleTimer: 0,
+        visible: true,
+      };
+      reels.push(reel);
+
+      const createAnim = () => {
+        if (reduced()) return;
+        const keyframes =
+          reel.direction === 1
+            ? [{ transform: 'translateY(-50%)' }, { transform: 'translateY(0)' }]
+            : [{ transform: 'translateY(0)' }, { transform: 'translateY(-50%)' }];
+        reel.anim = track.animate(keyframes, {
+          duration: reel.baseDuration * 1000,
+          iterations: Infinity,
+          easing: 'linear',
+        });
+      };
+
+      const updatePlayState = () => {
+        if (!reel.anim) return;
+        if (reel === frozenReel) {
+          if (reel.anim.playState === 'running') reel.anim.pause();
+          return;
+        }
+        const shouldPlay =
+          !zoomPaused && !reel.dragging && !reel.hoverPaused && reel.visible && reel.idleTimer === 0;
+        if (shouldPlay && reel.anim.playState === 'paused') reel.anim.play();
+        else if (!shouldPlay && reel.anim.playState === 'running') reel.anim.pause();
+      };
+      reel.updatePlayState = updatePlayState;
+
+      const pauseIdle = () => {
+        window.clearTimeout(reel.idleTimer);
+        reel.idleTimer = window.setTimeout(() => {
+          reel.idleTimer = 0;
+          updatePlayState();
+        }, IDLE_RESUME_MS);
+        updatePlayState();
+      };
+
+      column.addEventListener('mouseenter', () => {
+        reel.hoverPaused = true;
+        updatePlayState();
+      });
+      column.addEventListener('mouseleave', () => {
+        reel.hoverPaused = false;
+        updatePlayState();
+      });
+
+      let startY = 0;
+      let startTime = 0;
+      let moved = 0;
+      let isPointerActive = false;
+
+      column.addEventListener('pointerdown', (e) => {
+        if (isZoomed) return;
+        if (e.isPrimary === false) return;
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        startY = e.clientY;
+        startTime = typeof reel.anim?.currentTime === 'number' ? reel.anim.currentTime : 0;
+        moved = 0;
+        isPointerActive = true;
+      });
+
+      column.addEventListener('pointermove', (e) => {
+        if (!isPointerActive || isZoomed || e.isPrimary === false) return;
+        const dy = e.clientY - startY;
+        moved = Math.max(moved, Math.abs(dy));
+        if (moved > DRAG_THRESHOLD_PX) {
+          reel.dragging = true;
+          wall.classList.add('is-dragging');
+          window.clearTimeout(reel.idleTimer);
+          reel.idleTimer = 0;
+          updatePlayState();
+
+          if (reel.anim && typeof startTime === 'number') {
+            const dt = (dy / reel.setH) * reel.baseDuration * 1000;
+            reel.anim.currentTime = startTime + (reel.direction === 1 ? dt : -dt);
+          }
+        }
+      });
+
+      const endDrag = () => {
+        if (!isPointerActive) return;
+        isPointerActive = false;
+        if (reel.dragging) {
+          reel.dragging = false;
+          wall.classList.remove('is-dragging');
+          pauseIdle();
+        }
+      };
+      column.addEventListener('pointerup', endDrag);
+      column.addEventListener('pointercancel', endDrag);
+
+      column.addEventListener(
+        'click',
+        (e) => {
+          if (reel.dragging || moved > DRAG_THRESHOLD_PX) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        },
+        true
+      );
+
+      column.addEventListener('dragstart', (e) => e.preventDefault());
+
+      column.addEventListener(
+        'wheel',
+        (e) => {
+          if (isZoomed || reel.dragging || !reel.anim) return;
+          const dy = (e.deltaY || 0) * WHEEL_NUDGE;
+          const dt = (dy / reel.setH) * reel.baseDuration * 1000;
+          const cur = reel.anim.currentTime ?? 0;
+          reel.anim.currentTime = cur + (reel.direction === 1 ? dt : -dt);
+          pauseIdle();
+        },
+        { passive: true }
+      );
+      createAnim();
+    });
+
+    if (!reels.length) return;
+
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((en) => {
+            const reel = reels.find((r) => r.column === en.target);
+            if (reel) {
+              reel.visible = en.isIntersecting;
+              reel.updatePlayState?.();
+            }
+          });
+        },
+        { threshold: 0 }
+      );
+      reels.forEach((r) => io.observe(r.column));
+    }
+
+    reels.forEach(measure);
+    window.addEventListener('resize', () => reels.forEach(measure));
+
+    let currentScale = 1;
+    let currentTx = 0;
+    let currentTy = 0;
+
+    // Delegated click listener on wall so every item click (original or loop) is handled reliably
+    wall.addEventListener('click', (e) => {
+      const item = (e.target as HTMLElement).closest<HTMLElement>('.photo-item');
+      if (!item) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (isZoomed) {
+        if (item === activeTarget) {
+          // Clicking the active photo resets zoom
+          resetZoom();
+        } else {
+          // Clicking another photo pans the camera directly to it!
+          panToElement(item);
+        }
+      } else {
+        zoomToElement(item);
+      }
+    });
+
+    // ---- Stage-Transform Camera Dolly & Pan ----
+    function zoomToElement(target: HTMLElement) {
+      if (isZoomed) {
+        if (target === activeTarget) {
+          resetZoom();
+        } else {
+          panToElement(target);
+        }
+        return;
+      }
+
+      // 1. Identify clicked item & its column
+      const column = target.closest<HTMLElement>('.photo-column');
+      const targetReel = reels.find((r) => r.column === column) ?? null;
+
+      // 2. Freeze ONLY the selected item's column:
+      // Neighboring columns continue moving smoothly.
+      frozenReel = targetReel;
+      if (targetReel?.anim && targetReel.anim.playState === 'running') {
+        targetReel.anim.pause();
+      }
+
+      // 3. Capture geometry BEFORE transforming
+      const stageRect = stage.getBoundingClientRect();
+      const stageCX = stageRect.left + stageRect.width / 2;
+      const stageCY = stageRect.top + stageRect.height / 2;
+
+      const rect = target.getBoundingClientRect();
+      const imgCX = rect.left + rect.width / 2;
+      const imgCY = rect.top + rect.height / 2;
+
+      const vpCX = window.innerWidth / 2;
+      const vpCY = window.innerHeight / 2;
+
+      // Camera scale: fills the viewport with target as clear focal point
+      const scaleX = window.innerWidth / rect.width;
+      const scaleY = window.innerHeight / rect.height;
+      const targetScale = Math.max(2.2, Math.min(2.8, Math.max(scaleX * 0.82, scaleY * 0.82)));
+
+      // Exact camera offset with center-origin math:
+      const tx = (vpCX - stageCX) / targetScale - (imgCX - stageCX);
+      const ty = (vpCY - stageCY) / targetScale - (imgCY - stageCY);
+
+      currentScale = targetScale;
+      currentTx = tx;
+      currentTy = ty;
+
+      // 4. Mark state
+      isZoomed = true;
+      activeTarget = target;
+      target.classList.add('is-active');
+      stage.classList.add('is-zoomed');
+      stageWrap?.classList.add('is-zoomed');
+      photoSection?.classList.add('is-zoomed');
+
+      // 5. Lock body scrolling
+      document.body.style.overflow = 'hidden';
+
+      // 6. Apply camera transform to entire stage
+      stage.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
+      stage.style.transform = `scale(${currentScale}) translate(${currentTx}px, ${currentTy}px)`;
+    }
+
+    function panToElement(newTarget: HTMLElement) {
+      if (!isZoomed) {
+        zoomToElement(newTarget);
+        return;
+      }
+      if (newTarget === activeTarget) {
+        resetZoom();
+        return;
+      }
+
+      // 1. Identify new column & freeze it, while resuming previously frozen column
+      const column = newTarget.closest<HTMLElement>('.photo-column');
+      const targetReel = reels.find((r) => r.column === column) ?? null;
+
+      const prevFrozen = frozenReel;
+      frozenReel = targetReel;
+      if (prevFrozen && prevFrozen !== targetReel) {
+        prevFrozen.updatePlayState?.();
+      }
+      if (targetReel?.anim && targetReel.anim.playState === 'running') {
+        targetReel.anim.pause();
+      }
+
+      // 2. Switch active classes
+      if (activeTarget) {
+        activeTarget.classList.remove('is-active');
+      }
+      activeTarget = newTarget;
+      newTarget.classList.add('is-active');
+
+      // 3. Compute delta from newTarget current position to viewport center
+      const rect = newTarget.getBoundingClientRect();
+      const imgCX = rect.left + rect.width / 2;
+      const imgCY = rect.top + rect.height / 2;
+
+      const vpCX = window.innerWidth / 2;
+      const vpCY = window.innerHeight / 2;
+
+      const dx = vpCX - imgCX;
+      const dy = vpCY - imgCY;
+
+      // Shift camera translation in stage coordinates
+      currentTx += dx / currentScale;
+      currentTy += dy / currentScale;
+
+      // 4. Smooth camera pan without resetting or exiting
+      stage.style.transition = 'transform 0.65s cubic-bezier(0.25, 1, 0.5, 1)';
+      stage.style.transform = `scale(${currentScale}) translate(${currentTx}px, ${currentTy}px)`;
+    }
+
+    function resetZoom() {
+      if (!isZoomed) return;
+
+      isZoomed = false;
+      stage.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
+      stage.style.transform = 'none';
+      currentScale = 1;
+      currentTx = 0;
+      currentTy = 0;
+
+      stage.classList.remove('is-zoomed');
+      stageWrap?.classList.remove('is-zoomed');
+      photoSection?.classList.remove('is-zoomed');
+
+      if (activeTarget) {
+        activeTarget.classList.remove('is-active');
+        activeTarget = null;
+      }
+
+      document.body.style.overflow = '';
+
+      // Resume previously frozen reel:
+      const prevFrozen = frozenReel;
+      frozenReel = null;
+      if (prevFrozen) {
+        prevFrozen.updatePlayState?.();
+      }
+    }
+
+    // Clicking stage background or backdrop when zoomed resets
+    stage.addEventListener('click', (e) => {
+      if (!isZoomed) return;
+      const item = (e.target as HTMLElement).closest('.photo-item');
+      if (item) return; // Handled by item/wall listener
+      e.preventDefault();
+      e.stopPropagation();
+      resetZoom();
+    });
+
+    const backdrop = document.querySelector('.photo-zoom-backdrop');
+    if (backdrop) {
+      backdrop.addEventListener('click', (e) => {
+        if (isZoomed) {
+          e.preventDefault();
+          resetZoom();
+        }
+      });
+    }
+
+    // Clicking stage wrapper outside photo items when zoomed resets
+    stageWrap?.addEventListener('click', (e) => {
+      if (isZoomed) {
+        resetZoom();
+      }
+    });
+
+    // ESC key resets
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isZoomed) {
+        e.preventDefault();
+        resetZoom();
+      }
+    });
+
+    // Browser navigation resets
+    window.addEventListener('popstate', () => {
+      if (isZoomed) resetZoom();
+    });
+  })();
+</script>

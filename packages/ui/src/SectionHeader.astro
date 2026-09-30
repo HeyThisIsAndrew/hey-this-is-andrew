@@ -1,0 +1,213 @@
+---
+/**
+ * SectionHeader (@andrew/ui): the one section-header pattern every section uses.
+ * Editorial notebook, not HQ chalk: a mono eyebrow with a file-tab index,
+ * a strong title, an optional lede, an optional link, and a hairline rule
+ * closed with a small registration square. Tactile, square, monochrome.
+ */
+interface Props {
+  /** File-tab number, e.g. "01". Omit where numbering would be noise. */
+  index?: string;
+  kicker: string;
+  title: string;
+  lede?: string;
+  linkLabel?: string;
+  linkHref?: string;
+  linkExternal?: boolean;
+  /** Explicit heading id for aria-labelledby. Defaults to a slug of the title. */
+  id?: string;
+}
+
+const { index, kicker, title, lede, linkLabel, linkHref, linkExternal = false, id } = Astro.props;
+const headingId =
+  id ?? `sec-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`;
+---
+
+<div class="sec-head section-header">
+  <p class="sec-eyebrow">
+    {index && (
+      <span class="sec-index" aria-hidden="true">{index}</span>
+    )}
+    <span class="sec-kicker">{kicker}</span>
+  </p>
+  <div class="section-title-wrap">
+    <h2 class="section-title" id={headingId}>{title}</h2>
+    {/* Deep link: scripts/section-anchors.ts copies it to the clipboard. */}
+    <a
+      href={`#${headingId}`}
+      class="section-anchor section-anchor-link"
+      data-anchor-target={headingId}
+      data-target-id={headingId}
+      aria-label={`Direct link to ${title} section (click to copy)`}
+      title={`Copy link to ${title}`}
+    >
+      <span class="anchor-symbol" aria-hidden="true">#</span>
+      <span class="anchor-toast" aria-hidden="true">COPIED</span>
+    </a>
+  </div>
+  {lede && <p class="section-lede">{lede}</p>}
+  {linkLabel && linkHref && (
+    <a
+      class="sec-link"
+      href={linkHref}
+      target={linkExternal ? '_blank' : undefined}
+      rel={linkExternal ? 'noopener' : undefined}
+    >
+      {linkLabel}
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+        <path d="M1 11L11 1M11 1H3M11 1V9" stroke="currentColor" stroke-width="1.5" />
+      </svg>
+    </a>
+  )}
+  <span class="sec-rule" aria-hidden="true"><i></i></span>
+</div>
+
+<style>
+  .sec-head {
+    margin-bottom: clamp(2rem, 4vw, 3.25rem);
+    max-width: 62rem;
+  }
+
+  .sec-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 0 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* File-tab index: the imperfect artifact on the clean system. */
+  .sec-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.45rem;
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+  }
+
+  .section-title-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    position: relative;
+    margin: 0 0 1rem;
+  }
+
+  .sec-head .section-title {
+    margin: 0;
+    scroll-margin-top: 5.5rem;
+  }
+
+  .section-anchor {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    color: var(--muted);
+    opacity: 0;
+    transition: opacity 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    text-decoration: none;
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    font-weight: 500;
+    line-height: 1;
+    padding: 0 0.35rem;
+  }
+
+  .sec-head:hover .section-anchor,
+  .section-anchor:focus-visible {
+    opacity: 0.7;
+  }
+
+  .section-anchor:hover {
+    opacity: 1;
+    color: var(--ink);
+    transform: scale(1.15);
+  }
+
+  .anchor-toast {
+    position: absolute;
+    bottom: 130%;
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: #111;
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-size: 0.62rem;
+    font-family: var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.45rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    white-space: nowrap;
+    z-index: 10;
+  }
+
+  .section-anchor.is-copied .anchor-toast {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .sec-head .section-lede {
+    margin: 0 0 1.25rem;
+  }
+
+  .sec-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--border);
+    text-underline-offset: 4px;
+    margin-bottom: 1.5rem;
+  }
+
+  .sec-link:hover {
+    text-decoration-color: var(--ink);
+  }
+
+  @media (pointer: coarse), (max-width: 1023px) {
+    .sec-link {
+      min-height: 44px;
+    }
+    .section-anchor {
+      min-width: 44px;
+      min-height: 44px;
+    }
+  }
+
+  /* Hairline rule with a registration square, like a print mark. */
+  .sec-rule {
+    display: block;
+    position: relative;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .sec-rule i {
+    position: absolute;
+    left: 0;
+    top: -2.5px;
+    width: 6px;
+    height: 6px;
+    background: var(--ink);
+  }
+</style>

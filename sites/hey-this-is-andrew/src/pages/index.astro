@@ -1,0 +1,73 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import BrandCarousel from '../components/BrandCarousel.astro';
+import BrandsSection from '../components/BrandsSection.astro';
+import AboutSection from '../components/AboutSection.astro';
+import PhotographyPortfolio from '../components/PhotographyPortfolio.astro';
+import ProjectsSection from '../components/ProjectsSection.astro';
+import WritingSection from '../components/WritingSection.astro';
+import NetworkSection from '../components/NetworkSection.astro';
+import GoalsChecklist from '../components/GoalsChecklist.astro';
+import GearGrid from '../components/GearGrid.astro';
+import NowBand from '../components/NowBand.astro';
+import WorkWithAndrew from '../components/WorkWithAndrew.astro';
+import StorefrontCTA from '../components/StorefrontCTA.astro';
+import SectionHeader from '@andrew/ui/SectionHeader.astro';
+import { getCollection } from 'astro:content';
+import { getLatestVideo, getLatestVideos } from '../lib/latest-content';
+import { getNetworkFeed } from '../lib/network';
+import type { LatestItem } from '../lib/latest-content';
+
+const projects = (await getCollection('projects'))
+  .sort((a, b) => +b.data.date - +a.data.date);
+// Recent Work leads with the latest video only. Articles live in
+// Notes from the Build; they are not duplicated here.
+const latestVideo = await getLatestVideo();
+const latest: LatestItem[] = latestVideo ? [latestVideo] : [];
+const videos = await getLatestVideos(3);
+const goals = (await getCollection('goals')).sort((a, b) => a.data.order - b.data.order);
+const networkItems = await getNetworkFeed(8);
+const gear = (await getCollection('gear'))
+  .sort((a, b) => a.data.order - b.data.order);
+---
+<BaseLayout
+  title="HEY_THISISANDREW · Creator, Photographer, Coffee Drinker"
+  description="Andrew Baxter documents the messy middle of building creative brands: the shoots, the edits, the gear, and everything learned along the way."
+>
+  <h1 class="vh">HEY_THISISANDREW: Creator, Photographer, Coffee Drinker</h1>
+  <BrandCarousel videos={videos} />
+
+  <BrandsSection />
+
+  <AboutSection />
+
+  <PhotographyPortfolio />
+
+  <ProjectsSection projects={projects} latest={latest} />
+
+  <WritingSection />
+
+  <NetworkSection items={networkItems} />
+
+  <section id="gear" aria-labelledby="gear-heading">
+    <div class="container">
+      <SectionHeader id="gear-heading" index="06" kicker="The kit" title="Gear" lede="Behind the work. Updated as it evolves." />
+      <GearGrid categories={gear} />
+      <div id="gear-storefront">
+        <StorefrontCTA />
+      </div>
+    </div>
+  </section>
+
+  <section id="goals" aria-labelledby="goals-heading">
+    <div class="container">
+      <SectionHeader id="goals-heading" index="07" kicker="Building in public" title="Goals" lede="Goals / Building in public." />
+      <GoalsChecklist groups={goals} />
+    </div>
+  </section>
+
+  <NowBand />
+
+  <WorkWithAndrew />
+</BaseLayout>
+

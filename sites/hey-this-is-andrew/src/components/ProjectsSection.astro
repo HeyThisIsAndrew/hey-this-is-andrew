@@ -1,0 +1,50 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import type { LatestItem } from '../lib/latest-content';
+import ProjectCard from './ProjectCard.astro';
+import LatestCard from './LatestCard.astro';
+import WorkflowStrip from './WorkflowStrip.astro';
+import SectionHeader from '@andrew/ui/SectionHeader.astro';
+
+interface Props { projects: CollectionEntry<'projects'>[]; latest: LatestItem[] }
+const { projects, latest } = Astro.props;
+// Featured projects lead the grid; the flag prioritizes, it never excludes.
+// (Both current entries are featured, so filtering on !featured emptied this.)
+const ordered = [...projects].sort(
+  (a, b) => Number(b.data.featured) - Number(a.data.featured) || +b.data.date - +a.data.date
+);
+---
+<section id="projects" aria-labelledby="projects-heading">
+  <div class="container">
+    <SectionHeader id="projects-heading" index="03" kicker="Proof of process" title="Recent work" lede="Work behind the scenes: shoots, edits, and building in public." />
+
+    {latest.length > 0 && (
+      <div class="featured" id="featured">
+        {latest.map((item) => <LatestCard item={item} />)}
+      </div>
+    )}
+    {ordered.length > 0 && (
+      <div class="project-grid" id="projects-grid">
+        {ordered.map((p) => <ProjectCard project={p} />)}
+      </div>
+    )}
+
+    <div id="projects-workflow">
+      <WorkflowStrip />
+    </div>
+  </div>
+</section>
+
+<style>
+  .featured {
+    display: grid;
+    gap: var(--gap);
+    margin-top: 2.5rem;
+  }
+  .project-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    gap: var(--gap);
+    margin-top: var(--gap);
+  }
+</style>
