@@ -1,0 +1,52 @@
+# GitHub Pages deploy for sites/__SITE__.
+#
+# GitHub Pages publishes ONE site per repository. To make this site the
+# repository's Pages site, copy this file to .github/workflows/ (replacing
+# the current Pages workflow) and set BASE_PATH below. For any additional
+# site, deploy with a host that builds from a sub-folder (Cloudflare Pages,
+# Netlify, Vercel): root directory sites/__SITE__, build command
+# "pnpm install && pnpm run build", output directory "dist".
+name: Deploy __SITE__ to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter __SITE__ run build
+        env:
+          SITE_URL: https://YOUR-USERNAME.github.io
+          BASE_PATH: /YOUR-REPOSITORY-NAME/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./sites/__SITE__/dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

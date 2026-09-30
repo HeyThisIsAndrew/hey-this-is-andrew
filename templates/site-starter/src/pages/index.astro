@@ -1,0 +1,47 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import BrandAccordion from '@andrew/ui/BrandAccordion.astro';
+import SectionHeader from '@andrew/ui/SectionHeader.astro';
+import QuoteBand from '@andrew/ui/QuoteBand.astro';
+import { getCollection } from 'astro:content';
+import { PANELS } from '../data/panels';
+import { SITE } from '../data/site';
+
+const posts = (await getCollection('posts')).sort((a, b) => +b.data.date - +a.data.date);
+---
+<BaseLayout title={`${SITE.name} · Home`}>
+  <h1 class="vh">{SITE.name}</h1>
+
+  <section id="directory" aria-labelledby="directory-heading" class="brands">
+    <div class="container">
+      <SectionHeader id="directory-heading" index="01" kicker="The brands" title="What we build" />
+    </div>
+    <BrandAccordion panels={PANELS} />
+  </section>
+
+  <section id="posts" aria-labelledby="posts-heading">
+    <div class="container">
+      <SectionHeader id="posts-heading" index="02" kicker="Writing" title="Posts" lede="From src/content/posts." />
+      <ul class="posts">
+        {posts.map((p) => (
+          <li>
+            <h3>{p.data.title}</h3>
+            <p>{p.data.summary}</p>
+            <time datetime={p.data.date.toISOString()}>{p.data.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</time>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <QuoteBand eyebrow="A quote" quote="Replace this with a line you live by." attribution="Someone" />
+</BaseLayout>
+
+<style>
+  .brands { padding-bottom: 0; }
+  .posts { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+  .posts li { border: 1px solid var(--hairline); background: var(--surface); padding: 1.25rem; }
+  .posts h3 { margin: 0 0 0.4rem; font-family: var(--font-display); }
+  .posts p { margin: 0 0 0.6rem; color: var(--muted); }
+  .posts time { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); }
+</style>

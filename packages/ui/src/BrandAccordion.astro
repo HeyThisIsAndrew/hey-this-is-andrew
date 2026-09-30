@@ -11,7 +11,7 @@
  *    Hover (fine pointers, 768px+) only PEEKS: 28px wider, art sharpens, the
  *    frame lights up. Hover never opens a panel; a click or the keyboard does.
  *  - Panel 0 is rendered open on the server (`is-open`, aria-expanded="true").
- *  - Rotation: 8s per panel on a requestAnimationFrame clock that only runs
+ *  - Rotation: `interval` ms per panel (default 8s) on a requestAnimationFrame clock that only runs
  *    while visible and not held. Held by hover, focus inside and a touch in
  *    progress; the first manual choice stops it; the toggle restarts it. Off
  *    by default below 768px and never with prefers-reduced-motion. The open
@@ -35,10 +35,12 @@ interface Props {
   panels: AccordionPanel[];
   /** Enables the fullscreen brand view (click the open panel). Desktop only. */
   fullscreen?: boolean;
+  /** Auto-rotation interval in ms (HQ uses 7000; the personal site 8000). */
+  interval?: number;
   labels?: Partial<AccordionLabels>;
 }
 
-const { panels, fullscreen = false, labels: labelProp = {} } = Astro.props;
+const { panels, fullscreen = false, interval = 8000, labels: labelProp = {} } = Astro.props;
 const labels: AccordionLabels = {
   play: 'Play auto-rotation',
   pause: 'Pause auto-rotation',
@@ -49,7 +51,7 @@ const labels: AccordionLabels = {
 };
 const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180px)';
 ---
-<div class="bacc" data-bacc data-avoid-fab data-fullscreen={fullscreen ? '' : undefined} style={`--acc-n: ${panels.length}`}>
+<div class="bacc" data-bacc data-avoid-fab data-interval={interval} data-fullscreen={fullscreen ? '' : undefined} style={`--acc-n: ${panels.length}`}>
     <div class="bacc-viewport" data-bacc-viewport>
       <button type="button" class="bacc-close" data-bacc-close hidden aria-label={labels.closeAria}>
         <span class="bacc-close-key" aria-hidden="true">{labels.closeKey}</span>
@@ -847,7 +849,6 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
 </style>
 
 <script>
-  const DURATION = 8000;
   const MOBILE = '(max-width: 767px)';
   const REDUCED = '(prefers-reduced-motion: reduce)';
 
@@ -864,6 +865,7 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
     const stage = root.querySelector<HTMLElement>('[data-bacc-stage]')!;
     const closeBtn = root.querySelector<HTMLButtonElement>('[data-bacc-close]');
     const fullscreen = root.hasAttribute('data-fullscreen');
+    const DURATION = Number(root.dataset.interval) || 8000;
     if (!panels.length || triggers.some((t) => !t)) return;
 
     const reduced = window.matchMedia(REDUCED);

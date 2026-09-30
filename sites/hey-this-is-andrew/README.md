@@ -1,47 +1,42 @@
-# Hey This Is Andrew — personal landing page
+# HEY_THISISANDREW: the personal site
 
-Astro 7 starter scaffold for Andrew's build-in-public landing page.
-Dark cinematic theme: near-black canvas, red accent (#E23A3F) pulled from Andrew's reference.
+Astro 7, static output, GitHub Pages. Dark, square, monochrome; the one red
+on the site is the BE Unconventional HQ panel in the brand accordion (a BE
+brand context). Built from the shared blocks in `packages/` (see the root
+`README.md` and `ARCHITECTURE.md`).
 
-## Run it
+## Run it (from the repository root)
 
 ```sh
-npm install
-npm run dev     # local dev server
-npm run build   # production build to dist/
-npm run preview # preview the production build
+pnpm install
+pnpm dev                                             # http://localhost:3000
+pnpm --filter hey-this-is-andrew build               # production build to dist/
+pnpm --filter hey-this-is-andrew test                # unit tests
+pnpm --filter hey-this-is-andrew test:dist           # checks the built site (run after build)
+pnpm --filter hey-this-is-andrew sync:instagram      # self-host new "Shot on the Job" photos
+pnpm --filter hey-this-is-andrew build:marks         # regenerate the wordmark + favicon set
 ```
 
-## Structure
+## Where things live
 
 ```
-src/
-  content/            # everything Andrew updates lives here (markdown)
-    config.ts         # collection schemas (projects, goals, gear)
-    projects/*.md     # recent work + process notes
-    goals/*.md        # milestone groups for the progress checklist
-    gear/*.md         # equipment inventory by category
-  components/         # one .astro file per page section
-  data/brands.ts      # the three brand cards (name, tagline, link)
-  layouts/            # BaseLayout: head, fonts, nav, footer, <slot />
-  styles/             # tokens.css (palette/type) + global.css
-  pages/index.astro   # assembles the sections top to bottom
-public/
-  brand-logos/        # drop brand logo SVGs here (see README inside)
-  hero-media/         # drop hero still/clip here (see README inside)
+src/content/        projects, goals, gear (Markdown; edit, commit, deploy)
+src/data/           brands (accordion), nav (header + footer), services (DRAFT),
+                    storefront, workflow, now, instagram-feed.json
+src/components/     this site's sections (shared blocks come from @andrew/ui)
+src/layouts/        BaseLayout.astro: the one layout every page uses
+src/styles/         theme.css (overrides on @andrew/tokens), global.css
+public/images/instagram/   self-hosted portfolio photos (sync:instagram)
+scripts/            sync-instagram, build-brand-marks, audit-dist, tests
+legacy/             the original static prototype (not built, not deployed)
 ```
 
-## The build-in-public workflow
+## Rules this site keeps
 
-Updating the checklist, gear list, or projects never touches components.
-Edit a markdown file in `src/content/`, commit, redeploy. That is the
-transparent process the page is selling, so the architecture models it.
-
-## Still placeholder
-
-- Brand logos: `public/brand-logos/` (wordmark fallback renders until then)
-- Hero background media: `public/hero-media/`
-- Project entries: the two in `src/content/projects/` are samples, replace
-  with real shoots
-- Favicon: add `public/favicon.svg`
-- Fonts load from Google Fonts; self-host later if preferred
+- Wordmark: `HEY_THISISANDREW`, one underscore; stacked as `HEY_` over
+  `THISISANDREW`. The SVG is generated from Syne 800 outlines
+  (`scripts/build-brand-marks.mjs`).
+- No colour in UI chrome except the BE panel; no em dashes in copy; no
+  rounded frames; the film grain never animates.
+- Portfolio photos are self-hosted, never hotlinked from Instagram's
+  expiring CDN.
