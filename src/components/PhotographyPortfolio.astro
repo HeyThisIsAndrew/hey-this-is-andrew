@@ -1,6 +1,5 @@
 ---
 import { getInstagramPhotos } from '../lib/instagram';
-import { portfolioPhotos, categoryLabels } from '../data/portfolio';
 import SectionHeader from './SectionHeader.astro';
 
 // Photography portfolio: parallel vertical elevators.
@@ -9,12 +8,19 @@ import SectionHeader from './SectionHeader.astro';
 // aspect ratios — vertical and horizontal mix as part of the composition.
 // Clicking a photo zooms it into the fullscreen viewer (spatial system).
 
-// Fetch live photos directly from Instagram Graph API (or cached local JSON)
+// Self-hosted photos only (public/images/instagram, via npm run sync:instagram).
 const instagramPhotos = await getInstagramPhotos(32);
+const categoryLabels: Record<'cocktails' | 'bar' | 'product', string> = {
+  cocktails: 'Cocktails',
+  bar: 'Bars',
+  product: 'Product',
+};
 
 interface DisplayPhoto {
   id: string;
   url: string;
+  width?: number;
+  height?: number;
   caption: string;
   category: 'cocktails' | 'bar' | 'product';
   location: string;
@@ -23,27 +29,19 @@ interface DisplayPhoto {
   permalink?: string;
 }
 
-const rawBase = import.meta.env.BASE_URL;
-const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 
-const rawDisplayPhotos: DisplayPhoto[] = instagramPhotos.length > 0
-  ? instagramPhotos.map((p) => ({
-      id: p.id,
-      url: p.url,
-      caption: p.caption,
-      category: p.category,
-      location: p.location || (p.category === 'bar' ? 'Bar & Venue' : categoryLabels[p.category]),
-      venue: p.venue,
-      event: p.event,
-      permalink: p.permalink,
-    }))
-  : portfolioPhotos.map((p, idx) => ({
-      id: `fallback-${idx}`,
-      url: `${base}/portfolio/${p.file}`,
-      caption: p.caption,
-      category: p.category,
-      location: p.category === 'bar' ? 'Bar & Venue' : categoryLabels[p.category],
-    }));
+const rawDisplayPhotos: DisplayPhoto[] = instagramPhotos.map((p) => ({
+  id: p.id,
+  url: p.url,
+  width: p.width,
+  height: p.height,
+  caption: p.caption,
+  category: p.category,
+  location: p.location || (p.category === 'bar' ? 'Bar & Venue' : categoryLabels[p.category]),
+  venue: p.venue,
+  event: p.event,
+  permalink: p.permalink,
+}));
 
 // Deduplicate displayPhotos by ID, URL, and caption so each project appears exactly once
 const seenIds = new Set<string>();
@@ -71,6 +69,12 @@ const directions = ['up', 'down', 'up', 'down'];
 const durations = [58, 74, 66, 82];
 ---
 
+{displayPhotos.length === 0 && import.meta.env.DEV && (
+  <p style="padding:2rem;border:1px dashed #555;color:#bbb;font-family:monospace">
+    TODO (Andrew): no self-hosted photos yet. Run npm run sync:instagram (see src/data/instagram-media-todo.md).
+  </p>
+)}
+{displayPhotos.length > 0 && (
 <section id="photography" class="photo-section" aria-labelledby="photography-title">
   <div class="photo-zoom-backdrop" aria-hidden="true"></div>
   <div class="photo-intro">
@@ -109,10 +113,10 @@ const durations = [58, 74, 66, 82];
                   <img
                     src={p.url}
                     alt={p.caption}
-                    width="440"
+                    width={p.width ?? 440}
+                    height={p.height}
                     loading="lazy"
                     decoding="async"
-                    crossorigin="anonymous"
                   />
                   <span class="photo-tag">{p.location || categoryLabels[p.category] || 'Cocktails'}</span>
                 </button>
@@ -132,6 +136,7 @@ const durations = [58, 74, 66, 82];
     The photography is his. <a href="#about">More about the work</a>.
   </p>
 </section>
+)}
 
 <style>
   .photo-section {

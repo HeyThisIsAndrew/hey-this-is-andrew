@@ -33,7 +33,10 @@ export interface InstagramMediaItem {
 
 export interface InstagramPhoto {
   id: string;
+  /** Site-relative URL of the self-hosted file. Never an Instagram CDN URL. */
   url: string;
+  width?: number;
+  height?: number;
   caption: string;
   fullCaption?: string;
   permalink: string;
@@ -368,169 +371,62 @@ function categorizePhoto(caption: string): 'cocktails' | 'bar' | 'product' {
 }
 
 /**
- * Fetch photography items from Instagram Graph API with automated fallback to cached JSON
+ * The "Shot on the Job" photos, SELF-HOSTED ONLY (audit defect 5).
+ *
+ * Reads src/data/instagram-feed.json and returns only the photos whose image
+ * is stored under public/images/instagram/ (written by
+ * scripts/sync-instagram.mjs). No remote Instagram URL reaches the page:
+ * those are signed and expire, which would break the grid without warning.
+ * The build makes no network request here; freshness comes from the sync,
+ * which the deploy workflow runs before every build.
  */
 export async function getInstagramPhotos(limit = 32): Promise<InstagramPhoto[]> {
   const now = Date.now();
-
-  // 1. Return in-memory cache if fresh
   if (memoryPhotosCache && now - memoryPhotosCache.timestamp < CACHE_TTL_MS) {
     return memoryPhotosCache.data.slice(0, limit);
   }
 
-  // 2. Read local JSON fallback if present
-  let fallbackData: InstagramPhoto[] = [];
+  let rows: any[] = [];
   try {
     const feedFile = path.resolve(process.cwd(), 'src/data/instagram-feed.json');
-    if (fs.existsSync(feedFile)) {
-      const raw = JSON.parse(fs.readFileSync(feedFile, 'utf8'));
-      fallbackData = raw.map((p: any) => {
-        const meta = extractPhotoLocation(p.fullCaption || p.caption || '', p.permalink, p.id);
-        return {
-          ...p,
-          location: p.location || meta.location,
-          venue: p.venue || meta.venue,
-          event: p.event || meta.event,
-        };
-      });
-    }
+    if (fs.existsSync(feedFile)) rows = JSON.parse(fs.readFileSync(feedFile, 'utf8'));
   } catch {
-    // Ignore
+    rows = [];
   }
 
-  const token = getInstagramAccessToken();
-  if (!token) {
-    return fallbackData.slice(0, limit);
-  }
-
-  // Check and run auto-refresh if due
-  try {
-    await autoRefreshTokenIfNeeded();
-  } catch {
-    // Non-blocking
-  }
-
-  try {
-    const currentToken = getInstagramAccessToken();
-    const fields = 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,children{id,media_url,media_type}';
-    const url = `https://graph.instagram.com/me/media?fields=${fields}&access_token=${encodeURIComponent(currentToken)}&limit=${Math.max(limit, 35)}`;
-
-    const ctrl = new AbortController();
-    const timeout = setTimeout(() => ctrl.abort(), 9000);
-
-    const res = await fetch(url, { signal: ctrl.signal });
-    clearTimeout(timeout);
-
-    if (!res.ok) {
-      console.warn(`[Instagram] API error: ${res.status} ${res.statusText}`);
-      // If unauthorized (code 190 / expired), attempt immediate refresh
-      if (res.status === 400 || res.status === 401) {
-        console.info('[Instagram] Attempting token refresh after auth failure...');
-        const refreshed = await refreshInstagramToken();
-        if (refreshed.success && refreshed.accessToken) {
-          // Retry once with new token
-          const retryRes = await fetch(
-            `https://graph.instagram.com/me/media?fields=${fields}&access_token=${encodeURIComponent(refreshed.accessToken)}&limit=${Math.max(limit, 35)}`
-          );
-          if (retryRes.ok) {
-            const retryJson = await retryRes.json();
-            if (retryJson.data && Array.isArray(retryJson.data)) {
-              return processInstagramMedia(retryJson.data, limit);
-            }
-          }
-        }
-      }
-      return fallbackData.slice(0, limit);
-    }
-
-    const json = await res.json();
-    if (!json.data || !Array.isArray(json.data)) {
-      return fallbackData.slice(0, limit);
-    }
-
-    const processed = processInstagramMedia(json.data, limit);
-    return processed;
-  } catch (err: any) {
-    console.warn('[Instagram] Fetch failed, using cache:', err?.message || err);
-    return fallbackData.slice(0, limit);
-  }
-}
-
-function processInstagramMedia(rawItems: any[], limit: number): InstagramPhoto[] {
+  const base = (import.meta.env?.BASE_URL ?? '/').replace(/\/?$/, '/');
   const photos: InstagramPhoto[] = [];
-  const seenPermalinks = new Set<string>();
-  const seenCaptions = new Set<string>();
-
-  for (const item of rawItems) {
-    const rawCaption = item.caption || '';
-    const cleanCaption = rawCaption.split('\n')[0].trim() || 'Capture Create Caffeinate';
-    const category = categorizePhoto(rawCaption);
-
-    if (item.permalink && seenPermalinks.has(item.permalink)) continue;
-    if (cleanCaption && cleanCaption !== 'Capture Create Caffeinate' && seenCaptions.has(cleanCaption)) continue;
-
-    if (item.children?.data?.length) {
-      // Pick the primary photo from the carousel (first valid image)
-      const primaryPhoto = item.children.data.find((c: any) => c.media_url && c.media_type !== 'VIDEO') || item.children.data[0];
-      if (primaryPhoto && primaryPhoto.media_url) {
-        const meta = extractPhotoLocation(rawCaption, item.permalink, primaryPhoto.id);
-        photos.push({
-          id: primaryPhoto.id,
-          url: primaryPhoto.media_url,
-          caption: cleanCaption,
-          fullCaption: rawCaption,
-          permalink: item.permalink,
-          mediaType: 'CAROUSEL_ITEM',
-          category,
-          location: meta.location,
-          venue: meta.venue,
-          event: meta.event,
-          timestamp: item.timestamp,
-          orientation: 'vertical',
-        });
-        if (item.permalink) seenPermalinks.add(item.permalink);
-        if (cleanCaption) seenCaptions.add(cleanCaption);
-      }
-    } else {
-      const url = item.media_type === 'VIDEO' ? item.thumbnail_url : item.media_url;
-      if (url) {
-        const meta = extractPhotoLocation(rawCaption, item.permalink, item.id);
-        photos.push({
-          id: item.id,
-          url,
-          caption: cleanCaption,
-          fullCaption: rawCaption,
-          permalink: item.permalink,
-          mediaType: item.media_type,
-          category,
-          location: meta.location,
-          venue: meta.venue,
-          event: meta.event,
-          timestamp: item.timestamp,
-          orientation: 'vertical',
-        });
-        if (item.permalink) seenPermalinks.add(item.permalink);
-        if (cleanCaption) seenCaptions.add(cleanCaption);
-      }
+  let skipped = 0;
+  for (const p of rows) {
+    const local = typeof p.localImage === 'string' ? p.localImage : '';
+    if (!local || !fs.existsSync(path.resolve(process.cwd(), 'public', local))) {
+      skipped++;
+      continue;
     }
-
-    if (photos.length >= limit) break;
+    const caption = p.fullCaption || p.caption || '';
+    const meta = extractPhotoLocation(caption, p.permalink, p.id);
+    photos.push({
+      id: p.id,
+      url: `${base}${local}`,
+      width: p.width,
+      height: p.height,
+      caption: p.caption || 'Capture Create Caffeinate',
+      fullCaption: p.fullCaption,
+      permalink: p.permalink,
+      mediaType: p.mediaType,
+      category: p.category || categorizePhoto(caption),
+      location: p.location || meta.location,
+      venue: p.venue || meta.venue,
+      event: p.event || meta.event,
+      timestamp: p.timestamp,
+      orientation: p.orientation || 'vertical',
+    });
+  }
+  if (skipped) {
+    console.warn(`[Instagram] ${skipped} photo(s) have no self-hosted file yet; run npm run sync:instagram (see src/data/instagram-media-todo.md).`);
   }
 
-  // Update memory cache
-  memoryPhotosCache = {
-    data: photos,
-    timestamp: Date.now(),
-  };
-
-  // Write to disk cache for build fallback
-  try {
-    const feedFile = path.resolve(process.cwd(), 'src/data/instagram-feed.json');
-    fs.writeFileSync(feedFile, JSON.stringify(photos, null, 2), 'utf8');
-  } catch {
-    // Non-fatal
-  }
-
+  memoryPhotosCache = { data: photos, timestamp: now };
   return photos.slice(0, limit);
 }
 
