@@ -6,8 +6,10 @@
  * - Automatic token refresh: Meta allows refreshing tokens that are between 24 hours
  *   and 60 days old. This client automatically refreshes tokens weekly / before expiry.
  * - Extracts and flattens photos from single posts, carousels, and video thumbnails.
- * - Persistent caching to src/data/instagram-feed.json and token metadata to
- *   src/data/instagram-token.json so builds succeed even offline or without active network.
+ * - Persistent caching to src/data/instagram-feed.json so builds succeed offline.
+ * - Token metadata may be written to src/data/instagram-token.json on a LOCAL
+ *   machine only: that file is gitignored and must never be committed. The
+ *   access token lives only in the INSTAGRAM_ACCESS_TOKEN repository secret.
  * - Graceful fallback so the site is never broken if Instagram rate limits or fails.
  */
 
