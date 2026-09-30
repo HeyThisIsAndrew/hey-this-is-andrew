@@ -50,30 +50,37 @@ Dependency direction is one way: `sites/*` and `templates/*` depend on
 | Footer | `packages/ui/src/Footer.astro` | personal site, starter |
 | SectionHeader | `packages/ui/src/SectionHeader.astro` | every section of the personal site, starter |
 | QuoteBand | `packages/ui/src/QuoteBand.astro` | personal site About page, starter |
+| NewTag, ViewAllLink, FilterTabs | `packages/ui/src/*.astro` | personal site (Latest, every condensed section, filters) |
 | icons | `packages/ui/src/icons.ts` | nav data of both |
 | base / chips / cta styles | `packages/ui/src/styles/*.css` | both |
 | section-anchor script | `packages/ui/src/scripts/section-anchors.ts` | both |
 
-### Personal site homepage: section-to-component map
+### Personal site homepage: section-to-component map (after Prompt 2)
 
-Section 1.1 of the brief named an expected set of components; the site's
-existing names were kept where they already existed (no parallel system).
+The homepage is a funnel: one overall section per topic, the depth on its
+archive page behind "View all". Composition: `src/pages/index.astro` →
+`src/components/HomeSections.astro` (the hero is a slot, so the hero
+concepts under `/preview/hero-*` render the identical page).
 
-| order | section (anchor) | component | brief's name | data source |
+| order | section (anchor) | component | archive page | data source |
 | --- | --- | --- | --- | --- |
-| 0 | header | `@andrew/ui/Nav` + `SiteSearch` (slot) | Nav | `src/data/nav.ts` |
-| 1 | hero carousel (`#overview`) | `BrandCarousel.astro` | Hero | latest YouTube videos (`src/lib/latest-content.ts`) |
-| 2 | The brands (`#directory`, alias `#brands`) | `BrandsSection.astro` → `@andrew/ui/BrandAccordion` | BrandAccordion | `src/data/brands.ts` |
-| 3 | Meet the creator (`#about`) | `AboutSection.astro` | MeetTheCreator | in component (About copy) |
-| 4 | Shot on the job (`#photography`) | `PhotographyPortfolio.astro` | PhotoGrid | `src/data/instagram-feed.json` + `public/images/instagram/` |
-| 5 | Recent work (`#projects`) | `ProjectsSection.astro`, `ProjectCard.astro`, `LatestCard.astro`, `WorkflowStrip.astro` | ProjectsSection, ProjectCard, LatestCard, WorkflowStrip | `projects` collection, `src/data/workflow.ts` |
-| 6 | Notes from the build (`#writing`) + the one newsletter signup | `WritingSection.astro`, `NewsletterSignup.astro` | WritingSection | Substack (`getLatestArticles`) |
-| 7 | Activity across the brands (`#network`) | `NetworkSection.astro` | ActivityFeed | `src/lib/network.ts` (YouTube, Substack, BE RSS, projects) |
-| 8 | Gear (`#gear`) | `GearGrid.astro` + `StorefrontCTA.astro` | GearGrid, StorefrontCTA | `gear` collection, `src/data/storefront.ts` |
-| 9 | Goals (`#goals`) | `GoalsChecklist.astro` | GoalsChecklist | `goals` collection (The Big Goals first) |
-| 10 | Now band | `NowBand.astro` | NowBand | `src/data/now.ts` |
-| 11 | What I do (`#work`) | `WorkWithAndrew.astro` | ServicesSection | `src/data/services.ts` (DRAFT) |
-| 12 | footer | `@andrew/ui/Footer` | Footer | `src/data/nav.ts` |
+| 0 | header | `@andrew/ui/Nav` + `SiteSearch` (slot) | | `src/data/nav.ts` |
+| 1 | hero (`#overview`) | `BrandCarousel.astro` (unchanged; concepts pending) | | latest YouTube videos |
+| 2 | The brands (`#directory`, alias `#brands`) | `BrandsSection.astro` → `@andrew/ui/BrandAccordion` | | `src/data/brands.ts` |
+| 3 | Meet the creator + Now line (`#about`) | `AboutSection.astro` | `/about/`, `/now/` | About copy, `src/data/now.ts` |
+| 4 | Selected work (`#projects`, alias `#photography`) | `SelectedWork.astro` (LatestCard, ProjectCard, photo strip, WorkflowStrip) | `/work/` | `projects` collection, `instagram-feed.json` + `src/assets/instagram/`, `workflow.ts` |
+| 5 | Latest (`#latest`, aliases `#writing`, `#network`) | `LatestSection.astro` → `LatestFeed.astro` + `@andrew/ui/FilterTabs` | `/latest/` (+ `/rss.xml`) | `src/lib/network.ts` |
+| 6 | Goals (`#goals`) | `GoalsSummary.astro` → `GoalsChecklist.astro` | `/goals/` | `goals` collection |
+| 7 | What I do (`#work`) | `WorkWithAndrew.astro` (variant home) | `/services/` | `src/data/services.ts` (DRAFT) |
+| 8 | The kit (`#gear`) | `KitSection.astro` → `StorefrontCTA.astro` | `/gear/` (GearGrid) | `src/data/storefront.ts`, `gear` collection |
+| 9 | Newsletter (`#newsletter`) | `NewsletterSection.astro` → `NewsletterSignup.astro` (the only signup on the site) | | Substack |
+| 10 | footer | `@andrew/ui/Footer` | | `src/data/nav.ts` |
+
+Brief's names → this site's: Hero = BrandCarousel, MeetTheCreator =
+AboutSection, PhotoGrid = PhotographyPortfolio (on `/work`), ActivityFeed =
+LatestFeed, ServicesSection = WorkWithAndrew, NowBand (on `/now`).
+Archive pages (`/work`, `/latest`, `/goals`, `/services`, `/now`, `/gear`)
+share `src/layouts/ArchiveLayout.astro`. `/feed` redirects to `/latest`.
 
 Every page uses `src/layouts/BaseLayout.astro` (one layout: head, favicon
 set, canonical, grain, Nav, Footer, video player, live banner).
