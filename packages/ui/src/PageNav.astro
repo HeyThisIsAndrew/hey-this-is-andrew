@@ -254,14 +254,32 @@ const { items = [], heading = 'On this page', selector = 'main h2[id]' } = Astro
     .page-nav.is-open .pn-list a {
       min-height: var(--tap-min, 44px);
     }
-    /* Closed, the tab stays slim to keep off the page, and the handle's hit
-       area runs past it to a full 44px. */
-    .pn-handle {
-      right: auto;
-      width: max(100%, var(--tap-min, 44px));
-    }
+    /* Closed, the tab is ONLY its ticks: 44px wide and about as tall as the
+       ticks, so it takes the taps on itself and nothing beside it. Its
+       hidden heading and labels used to keep their width and line height,
+       which made a 118 x 268px invisible target over the photos and brand
+       rows on the left of every phone screen. The labels stay in the
+       accessibility tree (font-size 0, not display: none). */
     .page-nav:not(.is-open) {
-      overflow: visible;
+      /* + its 1px border, so the handle inside is a full 44 x 44 at least. */
+      width: calc(var(--tap-min, 44px) + 1px);
+      min-height: calc(var(--tap-min, 44px) + 2px);
+      justify-content: center;
+      padding: 0.75rem 0;
+      align-items: center;
+    }
+    .page-nav:not(.is-open) .pn-head {
+      display: none;
+    }
+    .page-nav:not(.is-open) .pn-list {
+      gap: 7px;
+    }
+    .page-nav:not(.is-open) .pn-list a {
+      gap: 0;
+    }
+    .page-nav:not(.is-open) .pn-label {
+      font-size: 0;
+      line-height: 0;
     }
     .page-nav.is-open .pn-label {
       font-size: 0.85rem;

@@ -3,13 +3,15 @@
  * ChromeMeta (@andrew/ui): the viewport and theme-color tags, shared so every
  * site gets the same phone status bar.
  *
- * `viewport-fit=cover` makes env(safe-area-inset-top) report the real status
- * bar / Dynamic Island height. Nav uses it to paint that strip solid
- * (`.safe-area-blackout`) and to push its own content below it. Without it,
- * iOS 26 Safari lets the page scroll visibly behind the status bar, which is
- * what a reader saw on the personal site while BE Unconventional HQ stayed
- * black. theme-color matches the --chrome token for browsers that tint
- * their own bar from it.
+ * EXACTLY BE Unconventional HQ's tags (src/layouts/Layout.astro): no
+ * `viewport-fit=cover`. HQ's black status bar does not come from these tags.
+ * It comes from its header being `position: fixed` at the top of the screen
+ * on a near-opaque black background: iOS Safari (26) paints the status bar /
+ * Dynamic Island area in the colour of a fixed header touching the top, and
+ * no longer reads theme-color. See Nav.astro. A previous version added
+ * viewport-fit=cover and painted the strip itself while the header was
+ * `sticky`, which is not what HQ does, and the area still showed the page
+ * through on an iPhone 17 Pro Max. theme-color stays for other browsers.
  */
 interface Props {
   /** Must equal --chrome in @andrew/tokens. */
@@ -18,7 +20,7 @@ interface Props {
   interactiveWidget?: 'resizes-content' | 'resizes-visual' | 'overlays-content';
 }
 const { color = '#000000', interactiveWidget } = Astro.props;
-const viewport = ['width=device-width', 'initial-scale=1', 'viewport-fit=cover', interactiveWidget && `interactive-widget=${interactiveWidget}`].filter(Boolean).join(', ');
+const viewport = ['width=device-width', 'initial-scale=1', interactiveWidget && `interactive-widget=${interactiveWidget}`].filter(Boolean).join(', ');
 ---
 <meta name="viewport" content={viewport} />
 <meta name="theme-color" content={color} />
