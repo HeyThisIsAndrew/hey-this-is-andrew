@@ -2,7 +2,7 @@
 
 The site shows only photos stored in `src/assets/instagram/`. These
 posts are in the feed but their image could not be downloaded. Run
-`npm run sync:instagram` from your machine (with `INSTAGRAM_ACCESS_TOKEN`
+`npm run sync:instagram` from your machine (with `CCC_INSTAGRAM_ACCESS_TOKEN`
 set, or before the cached URLs expire), or save the image yourself as
 `src/assets/instagram/<id>.webp`.
 

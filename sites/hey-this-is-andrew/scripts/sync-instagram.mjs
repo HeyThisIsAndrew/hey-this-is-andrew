@@ -13,8 +13,10 @@
  * remote Instagram URL ever reaches the page.
  *
  * Sources, in order:
- *   1. The Instagram Graph API, when INSTAGRAM_ACCESS_TOKEN is set (fresh,
+ *   1. The Instagram Graph API, when CCC_INSTAGRAM_ACCESS_TOKEN is set (fresh,
  *      unexpired URLs for new posts and for any photo not yet downloaded).
+ *      The photos are Capture Create Caffeinate's. CCC_INSTAGRAM_USER_ID is
+ *      optional: without it the token's own account (`me`) is read.
  *   2. The URLs already cached in instagram-feed.json (valid until they
  *      expire; the current set expires 2026-10-05).
  *
@@ -32,7 +34,8 @@ const OUT_DIR = path.join(root, 'src/assets/instagram');
 const TODO = path.join(root, 'src/data/instagram-media-todo.md');
 const LIMIT = 35;
 
-const token = (process.env.INSTAGRAM_ACCESS_TOKEN || '').trim();
+const token = (process.env.CCC_INSTAGRAM_ACCESS_TOKEN || '').trim();
+const userId = (process.env.CCC_INSTAGRAM_USER_ID || '').trim() || 'me';
 
 async function fetchWithTimeout(url, ms = 15000) {
   const ctrl = new AbortController();
@@ -77,11 +80,11 @@ function fromApi(items) {
 
 async function readApi() {
   if (!token) {
-    console.log('[sync:instagram] No INSTAGRAM_ACCESS_TOKEN: using cached URLs only.');
+    console.log('[sync:instagram] No CCC_INSTAGRAM_ACCESS_TOKEN: using cached URLs only.');
     return [];
   }
   const fields = 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,children{id,media_url,media_type}';
-  const url = `https://graph.instagram.com/me/media?fields=${fields}&limit=${LIMIT}&access_token=${encodeURIComponent(token)}`;
+  const url = `https://graph.instagram.com/${encodeURIComponent(userId)}/media?fields=${fields}&limit=${LIMIT}&access_token=${encodeURIComponent(token)}`;
   try {
     const res = await fetchWithTimeout(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -150,7 +153,7 @@ async function main() {
       '',
       'The site shows only photos stored in `src/assets/instagram/`. These',
       'posts are in the feed but their image could not be downloaded. Run',
-      '`npm run sync:instagram` from your machine (with `INSTAGRAM_ACCESS_TOKEN`',
+      '`npm run sync:instagram` from your machine (with `CCC_INSTAGRAM_ACCESS_TOKEN`',
       'set, or before the cached URLs expire), or save the image yourself as',
       '`src/assets/instagram/<id>.webp`.',
       '',

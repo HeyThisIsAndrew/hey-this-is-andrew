@@ -37,13 +37,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
         working-directory: .
-      # Self-host the "Shot on the Job" photos before the build: the page
-      # only ever shows files under public/images/instagram/ (never a signed,
-      # expiring Instagram CDN URL). Non-fatal by design.
+      # Self-host the "Shot on the Job" photos (Capture Create Caffeinate's
+      # Instagram) before the build: the page only ever shows files under
+      # src/assets/instagram/ (never a signed, expiring Instagram CDN URL).
+      # Non-fatal by design: without the token it uses the cached URLs.
       - name: Sync Instagram photos
         run: pnpm run sync:instagram
         env:
-          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          CCC_INSTAGRAM_ACCESS_TOKEN: ${{ secrets.CCC_INSTAGRAM_ACCESS_TOKEN }}
+          CCC_INSTAGRAM_USER_ID: ${{ secrets.CCC_INSTAGRAM_USER_ID }}
       - name: Unit tests
         run: pnpm test
       - name: Build
