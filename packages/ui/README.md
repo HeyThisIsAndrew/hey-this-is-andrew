@@ -9,10 +9,11 @@ a block looks only by overriding tokens in its own theme file.
 
 | import | what it is | props (short) |
 | --- | --- | --- |
-| `@andrew/ui/BrandAccordion.astro` | the brand accordion (HQ's hero accordion mechanics) | `panels`, `fullscreen?`, `interval?`, `labels?` |
+| `@andrew/ui/BrandAccordion.astro` | the brand accordion: HQ's hero accordion, mechanics and look one to one (sizes in `--acc-u`) | `panels`, `fullscreen?`, `interval?`, `labels?` |
 | `@andrew/ui/ChromeMeta.astro` | the viewport (`viewport-fit=cover`) and `theme-color` tags; put it in every layout's `<head>` | `color?` (must equal `--chrome`), `interactiveWidget?` |
 | `@andrew/ui/Nav.astro` | sticky header, dropdowns, mobile menu, scrollspy; paints the phone status-bar strip solid (`--chrome`) and clears it | `logo`, `homeHref`, `links`, `search?`; default slot for a search modal |
-| `@andrew/ui/Footer.astro` | brand block, Explore list, social icons, legal row | `logo`, `tagline`, `explore`, `socials`, `copyright`, `privacyHref`, `notes?` |
+| `@andrew/ui/Footer.astro` | brand block, one row of primary links, social icons, legal row | `logo`, `tagline`, `explore`, `socials`, `copyright`, `privacyHref`, `utility?` (small links beside Privacy), `notes?` |
+| `@andrew/ui/PageNav.astro` | BE Unconventional HQ's side panel: the page's sections as ticks on the left edge, words on hover (desktop) or tap (touch); active-section tracking | `items?` (defaults to the page's `h2[id]`s; a heading can set `data-pn-label`), `heading?`, `selector?` |
 | `@andrew/ui/SectionHeader.astro` | the one section heading pattern | `kicker`, `title`, `index?`, `lede?`, `linkLabel?`, `linkHref?`, `id?` |
 | `@andrew/ui/QuoteBand.astro` | standalone quote band | `eyebrow`, `quote`, `attribution`, `label?` |
 | `@andrew/ui/icons` | social icon library (`SOCIAL_LINE_ICONS`) | |

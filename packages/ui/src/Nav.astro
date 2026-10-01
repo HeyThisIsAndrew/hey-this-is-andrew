@@ -131,6 +131,9 @@ const isHome = currentPath === homePath;
       </button>
     </div>
     )}
+    {/* Top level only. A page's own sections are in the side panel
+        (PageNav.astro), as on BE Unconventional HQ; listing every one here
+        made the menu a wall of links. */}
     <nav aria-label={L.sectionsMenu}>
       <ul class="mobile-nav-list">
         {links.map((l) => (
@@ -143,21 +146,6 @@ const isHome = currentPath === homePath;
                 {l.label}
               </a>
             </div>
-            {l.subsections.length > 0 && (
-              <ul class="mobile-sub-list">
-                {l.subsections.map((sub) => (
-                  <li>
-                    <a
-                      href={sub.href}
-                      class="mobile-sub-link"
-                    >
-                      <span class="mobile-sub-kicker font-mono">{sub.kicker}</span>
-                      <span class="mobile-sub-label">{sub.label}</span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
           </li>
         ))}
       </ul>
@@ -346,25 +334,16 @@ const isHome = currentPath === homePath;
       }
     });
 
-    // Touch swipe-up / swipe-left to dismiss mobile drawer
-    // (a swipe up only closes once the panel has nothing left to scroll)
-    let touchStartY = 0;
-    let touchStartX = 0;
-    let atEnd = true;
-    mobileMenu.addEventListener('touchstart', (e) => {
-      touchStartY = e.touches[0].clientY;
-      touchStartX = e.touches[0].clientX;
-      atEnd = mobileMenu.scrollTop + mobileMenu.clientHeight >= mobileMenu.scrollHeight - 1;
-    }, { passive: true });
-
-    mobileMenu.addEventListener('touchend', (e) => {
-      const deltaY = e.changedTouches[0].clientY - touchStartY;
-      const deltaX = e.changedTouches[0].clientX - touchStartX;
-      if ((deltaY < -40 && atEnd) || deltaX < -60) {
-        setOpen(false);
-        (menuBtn as HTMLElement)?.focus();
-      }
-    }, { passive: true });
+    // The menu closes ONLY on Close, a link, a tap outside it, or Escape.
+    // It used to close on a swipe up or left as well, and an upward swipe is
+    // exactly what scrolling its links is: it shut itself under the reader's
+    // finger on every iPhone (100% repro on an iPhone 17 Pro Max).
+    const header = mobileMenu.closest('header');
+    document.addEventListener('click', (e) => {
+      if (!isOpen()) return;
+      const t = e.target as Node | null;
+      if (t && header && !header.contains(t)) setOpen(false);
+    });
 
     window.addEventListener('resize', () => {
       if (window.innerWidth > 860 && isOpen()) setOpen(false);
@@ -459,6 +438,16 @@ const isHome = currentPath === homePath;
       },
       { passive: true }
     );
+
+    // The bar's real height, measured (HQ's Navbar publishes the same): for
+    // components sized against the bar, such as the brand accordion. Kept
+    // apart from a site's own --nav-h, which a site may set by hand.
+    const bar = document.querySelector<HTMLElement>('.site-nav');
+    if (bar && 'ResizeObserver' in window) {
+      const publish = () => document.documentElement.style.setProperty('--nav-bar-h', `${Math.round(bar.getBoundingClientRect().height)}px`);
+      new ResizeObserver(publish).observe(bar);
+      publish();
+    }
 
     // Dynamic scroll tracking: removes border and shadow artifacts when sitting flush against the hero
     const updateNavScroll = () => {

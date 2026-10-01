@@ -11,6 +11,7 @@ import '../styles/parallax.css';
 import Nav from '@andrew/ui/Nav.astro';
 import Footer from '@andrew/ui/Footer.astro';
 import ChromeMeta from '@andrew/ui/ChromeMeta.astro';
+import PageNav from '@andrew/ui/PageNav.astro';
 import SiteSearch from '../components/SiteSearch.astro';
 import LiveBanner from '../components/LiveBanner.astro';
 import VideoPlayer from '../components/VideoPlayer.astro';
@@ -19,7 +20,7 @@ import VideoPlayer from '../components/VideoPlayer.astro';
 // The footer uses it too, at 2x its 5rem height.
 import logoPng from '../assets/brand-logos/hey-thisisandrew.png';
 import { getImage } from 'astro:assets';
-import { NAV_LINKS, FOOTER_EXPLORE, SOCIALS, PRIVACY_HREF, SEARCH_TRIGGER, homeUrl } from '../data/nav';
+import { NAV_LINKS, FOOTER_EXPLORE, FOOTER_UTILITY, SOCIALS, PRIVACY_HREF, SEARCH_TRIGGER, homeUrl } from '../data/nav';
 const navLogo = await getImage({ src: logoPng, height: 96, format: 'png' });
 const footerLogo = await getImage({ src: logoPng, height: 160, format: 'png' });
 
@@ -124,6 +125,9 @@ const canonical = new URL(Astro.url.pathname, 'https://heythisisandrew.github.io
         <slot />
       </main>
     </div>
+    {/* Outside the camera stage: it is fixed to the screen, and the stage is
+        transformed during a route zoom. */}
+    <PageNav />
     <Footer
       logo={{ src: footerLogo.src, width: Number(footerLogo.attributes.width), height: Number(footerLogo.attributes.height), alt: 'HEY_THISISANDREW' }}
       tagline="Creator, photographer, coffee drinker."
@@ -131,6 +135,7 @@ const canonical = new URL(Astro.url.pathname, 'https://heythisisandrew.github.io
       socials={SOCIALS}
       copyright="© 2026 Andrew Baxter. All rights reserved."
       privacyHref={PRIVACY_HREF}
+      utility={FOOTER_UTILITY}
       notes={['Built in public with Astro.', 'All process, no perfectionism.']}
     />
     <VideoPlayer />

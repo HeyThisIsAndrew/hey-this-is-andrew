@@ -1016,6 +1016,11 @@ hubSections.forEach((s) => {
         });
 
         li.appendChild(a);
+        // Results are built here, so they lack the scoped-style attribute
+        // Astro puts on the component's own markup, and none of the result
+        // styles applied (they rendered as bare underlined links). Copy it.
+        const scope = Array.from(this.resultsList?.attributes ?? []).find((at) => at.name.startsWith('data-astro-cid-'));
+        if (scope) [li, ...li.querySelectorAll('*')].forEach((el) => el.setAttribute(scope.name, ''));
         this.resultsList?.appendChild(li);
       });
     }

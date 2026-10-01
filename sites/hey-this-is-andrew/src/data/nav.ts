@@ -74,21 +74,12 @@ export const NAV_LINKS: NavItem[] = [
   },
 ];
 
-const FOOTER_ONLY: FooterLink[] = [
-  { label: 'Work', href: page('work') },
-  { label: 'Latest', href: page('latest') },
-  { label: 'Goals', href: page('goals') },
-  { label: 'Services', href: page('services') },
-  { label: 'Now', href: page('now') },
-  { label: 'Links', href: page('links') },
-  { label: 'Press kit', href: page('press') },
-  { label: 'Sitemap', href: page('sitemap') },
-];
+// The footer lists the top-level destinations only, in one row (the same
+// five as the header and the phone menu). Every other page is reached from
+// inside the site; Sitemap, which lists them all, sits in the legal row.
+export const FOOTER_EXPLORE: FooterLink[] = NAV_LINKS.map(({ label, href }) => ({ label, href }));
 
-export const FOOTER_EXPLORE: FooterLink[] = [
-  ...NAV_LINKS.map(({ label, href }) => ({ label, href })),
-  ...FOOTER_ONLY,
-];
+export const FOOTER_UTILITY: FooterLink[] = [{ label: 'Sitemap', href: page('sitemap') }];
 
 export const PRIVACY_HREF = page('privacy');
 

@@ -1,0 +1,469 @@
+---
+/**
+ * PageNav (@andrew/ui): the page's sections as a panel pinned to the left
+ * edge. BE Unconventional HQ's FloatingPageNav (src/components/
+ * FloatingPageNav.astro), lifted for every site.
+ *
+ * COLLAPSED IS TICKS, EXPANDED IS WORDS. At rest it is a column of short
+ * rules, one per section, the current one drawn long. On a mouse it opens on
+ * hover or focus, exactly as on HQ. HQ hides it below 1200px; here it stays,
+ * as a tap-to-open handle on touch screens and narrow windows: a tap opens
+ * the labels, a tap on one jumps there and closes the panel, a tap outside
+ * (or Escape) closes it.
+ *
+ * The entries are the page's own section headings (every <h2 id> in <main>
+ * that a reader can see), collected when the page loads, so a new section is
+ * in the panel without anyone remembering to add it. Pass `items` to list
+ * something else. Fewer than two and the panel does not show.
+ *
+ * The labels are CLIPPED, never `display: none` (HQ): a hidden label leaves
+ * a screen reader a nav of unnamed links.
+ */
+interface Props {
+  /** Explicit entries (id of an element on this page + its label). */
+  items?: { id: string; label: string }[];
+  /** The nav's accessible name and visible heading. */
+  heading?: string;
+  /** Selector for the headings to collect when `items` is not given. */
+  selector?: string;
+}
+const { items = [], heading = 'On this page', selector = 'main h2[id]' } = Astro.props;
+---
+<nav class="page-nav" aria-label={heading} data-page-nav data-selector={selector} hidden={items.length < 2 ? true : undefined}>
+  <button type="button" class="pn-handle" aria-expanded="false" data-pn-handle>
+    <span class="pn-sr">Show the sections on this page</span>
+  </button>
+  <p class="pn-head" aria-hidden="true">{heading}</p>
+  <ul class="pn-list" data-pn-list>
+    {items.map((entry) => (
+      <li class="pn-item">
+        <a href={`#${entry.id}`} data-pn-link={entry.id}>
+          <span class="pn-tick" aria-hidden="true"></span>
+          <span class="pn-label">{entry.label}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</nav>
+
+<style>
+  /* Pinned to the viewport, not to a column (HQ: a sticky box inherited the
+     column's edge and landed on the content at 4K). Under the site header,
+     over the page. */
+  .page-nav {
+    position: fixed;
+    left: env(safe-area-inset-left, 0px);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 70vh;
+    padding: 1rem 1rem 1rem 0.9rem;
+    border: 1px solid transparent;
+    border-left: none;
+    border-radius: 0 10px 10px 0;
+    background: transparent;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    transition:
+      background 0.28s ease,
+      border-color 0.28s ease,
+      box-shadow 0.28s ease,
+      padding 0.28s ease;
+  }
+  .page-nav[hidden] {
+    display: none;
+  }
+  .page-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .page-nav.is-open,
+  .page-nav:focus-within {
+    background: rgba(12, 12, 12, 0.94);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6);
+    padding-right: 1.5rem;
+  }
+  @media (hover: hover) and (pointer: fine) and (min-width: 1200px) {
+    .page-nav:hover {
+      background: rgba(12, 12, 12, 0.94);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6);
+      padding-right: 1.5rem;
+    }
+  }
+
+  .pn-head {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-muted, #9a9a9a);
+    white-space: nowrap;
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: opacity 0.28s ease, max-height 0.28s ease;
+  }
+  .page-nav.is-open .pn-head,
+  .page-nav:focus-within .pn-head {
+    opacity: 1;
+    max-height: 2rem;
+  }
+
+  .pn-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+  .pn-list a {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    text-decoration: none;
+    color: var(--text-muted, #9a9a9a);
+    transition: color 0.2s ease;
+  }
+  .pn-list a:hover,
+  .pn-list a:focus-visible {
+    color: var(--text, #f0f0f0);
+  }
+  .pn-list a:focus-visible {
+    outline: 2px solid var(--focus-ring, #f0f0f0);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+
+  /* At rest: one short rule per section. */
+  .pn-tick {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 2px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.28);
+    transition: width 0.25s ease, background 0.25s ease;
+  }
+  .pn-list a:hover .pn-tick {
+    background: rgba(255, 255, 255, 0.6);
+  }
+  /* The current section: long and bright (HQ draws it in its red; this is
+     the site's accent, white on the monochrome personal site). */
+  .pn-list a.active .pn-tick {
+    width: 26px;
+    background: var(--color-accent-text, #ededed);
+  }
+  .pn-list a.active {
+    color: var(--text, #f0f0f0);
+  }
+
+  /* Clipped, not hidden. */
+  .pn-label {
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    line-height: 1.4;
+    transition: max-width 0.28s ease, opacity 0.22s ease;
+  }
+  .page-nav.is-open .pn-label,
+  .page-nav:focus-within .pn-label {
+    max-width: 15rem;
+    opacity: 1;
+  }
+  @media (hover: hover) and (pointer: fine) and (min-width: 1200px) {
+    .page-nav:hover .pn-head {
+      opacity: 1;
+      max-height: 2rem;
+    }
+    .page-nav:hover .pn-label {
+      max-width: 15rem;
+      opacity: 1;
+    }
+  }
+
+  /* The handle: on a mouse at 1200px and up the panel opens on hover, so the
+     handle is not there. Everywhere else it covers the collapsed ticks and a
+     tap on it opens the panel; once open it steps aside so the links take
+     the taps. */
+  .pn-handle {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+  .pn-handle:focus-visible {
+    outline: 2px solid var(--focus-ring, #f0f0f0);
+    outline-offset: -2px;
+    border-radius: 0 10px 10px 0;
+  }
+  .page-nav.is-open .pn-handle {
+    display: none;
+  }
+  .pn-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  @media (hover: hover) and (pointer: fine) and (min-width: 1200px) {
+    .pn-handle {
+      display: none;
+    }
+  }
+  /* Touch and narrow windows: the collapsed panel is a visible tab, with
+     room to hit, since there is no hover to discover it by. */
+  @media (hover: none), (max-width: 1199px) {
+    .page-nav {
+      padding: 0.75rem 0.6rem 0.75rem 0.5rem;
+      background: rgba(12, 12, 12, 0.72);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+    .pn-list {
+      gap: 0.6rem;
+    }
+    .pn-tick {
+      width: 12px;
+    }
+    .pn-list a.active .pn-tick {
+      width: 20px;
+    }
+    .page-nav.is-open {
+      padding: 1rem 1.5rem 1rem 0.9rem;
+    }
+    .page-nav.is-open .pn-list {
+      gap: 0.25rem;
+    }
+    /* Open on a phone, each entry is a full-size tap target. */
+    .page-nav.is-open .pn-list a {
+      min-height: var(--tap-min, 44px);
+    }
+    /* Closed, the tab stays slim to keep off the page, and the handle's hit
+       area runs past it to a full 44px. */
+    .pn-handle {
+      right: auto;
+      width: max(100%, var(--tap-min, 44px));
+    }
+    .page-nav:not(.is-open) {
+      overflow: visible;
+    }
+    .page-nav.is-open .pn-label {
+      font-size: 0.85rem;
+    }
+  }
+
+  /* Out of the way while a full-screen view is up. */
+  :global(html.modal-open) .page-nav,
+  :global(html.menu-open) .page-nav {
+    visibility: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .page-nav,
+    .pn-head,
+    .pn-label,
+    .pn-tick,
+    .pn-list a {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  /*
+    The active-section logic is HQ's (FloatingPageNav.astro), which carries the
+    write-ups for the bugs it fixes: one rule decides (resolveActive), the
+    observer only says "look again"; a click or a #hash pins the answer until
+    the reader scrolls; the last sections, which can never reach the line, win
+    at the bottom of the page.
+  */
+  // A heading may name its entry (data-pn-label), e.g. a hero whose heading
+  // is a logo image; otherwise its text, else its image's alt.
+  function labelOf(el: HTMLElement): string {
+    const text = (el.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return el.dataset.pnLabel || text || el.querySelector('img')?.alt || '';
+  }
+
+  function visible(el: HTMLElement): boolean {
+    if (el.closest('[hidden], [aria-hidden="true"], .sr-only, .visually-hidden')) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 1 && r.height > 1;
+  }
+
+  function initPageNav() {
+    const nav = document.querySelector<HTMLElement>('[data-page-nav]');
+    if (!nav || nav.dataset.ready) return;
+    nav.dataset.ready = '1';
+    const list = nav.querySelector<HTMLUListElement>('[data-pn-list]')!;
+    const handle = nav.querySelector<HTMLButtonElement>('[data-pn-handle]')!;
+
+    // Build the entries from the page's headings unless they were given.
+    if (!list.children.length) {
+      const headings = Array.from(document.querySelectorAll<HTMLElement>(nav.dataset.selector || 'main h2[id]')).filter((h) => visible(h) && labelOf(h));
+      for (const h of headings) {
+        const li = document.createElement('li');
+        li.className = 'pn-item';
+        const a = document.createElement('a');
+        a.href = `#${h.id}`;
+        a.dataset.pnLink = h.id;
+        const tick = document.createElement('span');
+        tick.className = 'pn-tick';
+        tick.setAttribute('aria-hidden', 'true');
+        const label = document.createElement('span');
+        label.className = 'pn-label';
+        label.textContent = labelOf(h);
+        a.append(tick, label);
+        li.append(a);
+        list.append(li);
+      }
+    }
+    const links = Array.from(list.querySelectorAll<HTMLAnchorElement>('[data-pn-link]'));
+    const headings = links
+      .map((link) => document.getElementById(link.dataset.pnLink ?? ''))
+      .filter((el): el is HTMLElement => Boolean(el));
+    if (headings.length < 2) {
+      nav.hidden = true;
+      return;
+    }
+    nav.hidden = false;
+    // Every attribute this copies from the Astro scope must exist on the
+    // created elements too, or the scoped styles miss them.
+    const scope = Array.from(nav.attributes).find((a) => a.name.startsWith('data-astro-cid-'));
+    if (scope) list.querySelectorAll('li, a, span').forEach((el) => el.setAttribute(scope.name, ''));
+
+    // ─── Open and close (touch and narrow windows) ───────────────────────
+    const setOpen = (open: boolean) => {
+      nav.classList.toggle('is-open', open);
+      handle.setAttribute('aria-expanded', String(open));
+      // Closing lets go of focus too: the panel also opens on :focus-within
+      // (for the keyboard), so a link left focused after a tap kept it open.
+      if (!open && nav.contains(document.activeElement)) (document.activeElement as HTMLElement).blur();
+    };
+    handle.addEventListener('click', (e) => {
+      setOpen(true);
+      // From the keyboard, focus moves into the list; a tap leaves it alone.
+      if (e.detail === 0) links.find((l) => l.classList.contains('active'))?.focus({ preventScroll: true });
+    });
+    document.addEventListener('click', (e) => {
+      if (nav.classList.contains('is-open') && !nav.contains(e.target as Node)) setOpen(false);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && nav.classList.contains('is-open')) {
+        setOpen(false);
+        handle.focus();
+      }
+    });
+
+    // ─── Which section is current (HQ) ───────────────────────────────────
+    const setActive = (id: string) => {
+      links.forEach((link) => {
+        const on = link.dataset.pnLink === id;
+        link.classList.toggle('active', on);
+        if (on) link.setAttribute('aria-current', 'true');
+        else link.removeAttribute('aria-current');
+      });
+    };
+    let pinnedId: string | null = null;
+    const zoneTop = () => (document.querySelector('.site-nav')?.getBoundingClientRect().bottom ?? 0) + 16;
+    const resolveActive = () => {
+      if (pinnedId) return;
+      const ZONE_TOP = zoneTop();
+      const ZONE_BOTTOM = window.innerHeight * 0.5;
+      const atBottom = Math.ceil(window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 10;
+      if (atBottom) {
+        const started = headings.filter((h) => h.getBoundingClientRect().top < window.innerHeight);
+        const last = started[started.length - 1] ?? headings[headings.length - 1];
+        if (last?.id) return setActive(last.id);
+      }
+      const onScreen = headings.filter((h) => {
+        const top = h.getBoundingClientRect().top;
+        return top >= ZONE_TOP && top < ZONE_BOTTOM;
+      });
+      if (onScreen[0]?.id) return setActive(onScreen[0].id);
+      const passed = headings.filter((h) => h.getBoundingClientRect().top < ZONE_TOP);
+      const fallback = passed.length ? passed[passed.length - 1] : headings[0];
+      if (fallback?.id) setActive(fallback.id);
+    };
+    const observer = new IntersectionObserver(() => resolveActive(), { rootMargin: '-80px 0px -50% 0px', threshold: 0 });
+    headings.forEach((h) => observer.observe(h));
+    resolveActive();
+
+    // A click (or a #hash) is an answer: pinned until the reader scrolls,
+    // and not released by the smooth scroll the click itself starts.
+    let releaseArmed = true;
+    const armReleaseWhenSettled = () => {
+      releaseArmed = false;
+      let previous = window.scrollY;
+      let still = 0;
+      const deadline = Date.now() + 2000;
+      const tick = () => {
+        const now = window.scrollY;
+        still = Math.abs(now - previous) <= 1 ? still + 1 : 0;
+        previous = now;
+        if (still >= 3 || Date.now() > deadline) {
+          releaseArmed = true;
+          return;
+        }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
+    links.forEach((link) => {
+      link.addEventListener('click', (event) => {
+        const id = link.dataset.pnLink;
+        const target = id ? document.getElementById(id) : null;
+        if (!id || !target) return;
+        event.preventDefault();
+        pinnedId = id;
+        setActive(id);
+        if (event.detail > 0) link.blur();
+        setOpen(false);
+        armReleaseWhenSettled();
+        target.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        history.replaceState(null, '', `#${id}`);
+      });
+    });
+    const pinFromHash = () => {
+      const id = decodeURIComponent(location.hash.slice(1));
+      if (!id || !links.some((l) => l.dataset.pnLink === id) || !document.getElementById(id)) return;
+      pinnedId = id;
+      setActive(id);
+      armReleaseWhenSettled();
+    };
+    pinFromHash();
+    window.addEventListener('hashchange', pinFromHash);
+    const releasePin = () => {
+      if (releaseArmed) pinnedId = null;
+    };
+    const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ', 'Spacebar']);
+    window.addEventListener('wheel', releasePin, { passive: true });
+    window.addEventListener('touchmove', releasePin, { passive: true });
+    window.addEventListener('keydown', (e) => {
+      if (SCROLL_KEYS.has(e.key)) releasePin();
+    });
+    let t: ReturnType<typeof setTimeout> | null = null;
+    window.addEventListener('scroll', () => {
+      if (t) clearTimeout(t);
+      t = setTimeout(resolveActive, 50);
+    }, { passive: true });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initPageNav);
+  else initPageNav();
+</script>
