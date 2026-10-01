@@ -27,6 +27,15 @@
  *    Nothing brand-specific is written in this file.
  *  - `fullscreen` adds the "brand view": a camera dolly into the open panel
  *    (the personal site's addition to HQ's mechanics). Desktop only.
+ *  - Geometry: the OPEN panel is a true 16:9 box (desktop and the phone's
+ *    media frame), sized from the viewport height and capped by the width;
+ *    the collapsed strips share what is left. The brand view fits that same
+ *    16:9 box on screen whole (contain, never cover) and sets the copy in a
+ *    caption band under it, at screen size: the copy is never scaled with
+ *    the camera and never sits on the art in the view.
+ *  - Copy never reflows while a panel grows or shrinks (it is laid out at
+ *    the open width and the panel clips it), and it crossfades with the
+ *    panel motion instead of popping in and out.
  */
 import { Image } from 'astro:assets';
 import type { AccordionPanel, AccordionLabels } from './types';
@@ -154,6 +163,7 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
           <svg class="bacc-icon-play" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
         </button>
       </div>
+      {fullscreen && <div class="bacc-caption" data-bacc-caption hidden></div>}
     </div>
   <p class="bacc-sr" aria-live="polite" data-bacc-announcer></p>
 </div>
@@ -177,11 +187,18 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
   /* ─── TRACK ─────────────────────────────────────────────────────────── */
   .bacc {
     position: relative;
+    /* The track's 16:9 geometry reads this width (cqw). The root stays in
+       the page flow when the brand view fixes the viewport, so the panel
+       sizes never change on the way in or out. */
+    container-type: inline-size;
   }
   .bacc-viewport {
     position: relative;
     width: 100%;
     overflow: hidden;
+    /* The brand view's backdrop fades with the camera, both ways. */
+    background-color: transparent;
+    transition: background-color 700ms cubic-bezier(0.25, 1, 0.5, 1);
   }
   .bacc-stage {
     position: relative;
@@ -190,19 +207,24 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
   }
   .bacc-track {
     --strip: var(--acc-strip);
+    /* The open panel is 16:9: as wide as the viewport height allows (so the
+       section heading and the panel fit one screen), capped so the strips
+       keep at least their design width. The strips share the rest. */
+    --open-w: min(
+      calc((100svh - var(--nav-h, 0px) - 10rem) * 16 / 9),
+      calc(100cqw - (var(--acc-n) - 1) * (var(--strip) + var(--acc-gap)))
+    );
     display: flex;
     gap: var(--acc-gap);
     width: 100%;
     overflow: hidden;
-    aspect-ratio: 16 / 7;
-    min-height: 460px;
-    height: calc(75vh - var(--nav-h) - 36px);
+    height: calc(var(--open-w) * 9 / 16);
     background: var(--page-bg);
   }
 
   .bacc-panel {
     position: relative;
-    flex: 0 0 var(--strip);
+    flex: 1 1 0%;
     min-width: 0;
     overflow: hidden;
     background: #111;
@@ -212,7 +234,7 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
       flex-basis var(--acc-duration) var(--acc-ease);
   }
   .bacc-panel.is-open {
-    flex: 1 1 0%;
+    flex: 0 0 var(--open-w);
   }
   /* The active edge: a pseudo-element, so opening a panel shifts nothing. */
   .bacc-panel::before {
@@ -291,11 +313,13 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
     position: absolute;
     inset: 0;
     background: linear-gradient(to top, rgba(8, 8, 8, 0.92) 0%, rgba(8, 8, 8, 0.25) 60%, rgba(8, 8, 8, 0.1) 100%);
+    transition: opacity 700ms cubic-bezier(0.25, 1, 0.5, 1);
   }
+  /* Open: shade only the lower-left corner the copy sits in. */
   .bacc-panel.is-open .bacc-media::after {
     background:
-      linear-gradient(90deg, rgba(8, 8, 8, 0.94) 0%, rgba(8, 8, 8, 0.7) 32%, rgba(8, 8, 8, 0.15) 62%, rgba(8, 8, 8, 0) 80%),
-      linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.6) 25%, transparent 45%);
+      linear-gradient(90deg, rgba(8, 8, 8, 0.82) 0%, rgba(8, 8, 8, 0.45) 30%, rgba(8, 8, 8, 0) 55%),
+      linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.35) 30%, transparent 50%);
   }
 
   /* Teaser card (no art yet). */
@@ -437,31 +461,43 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
   }
 
   /* ─── OPEN CONTENT ──────────────────────────────────────────────────── */
+  /* Laid out at a fixed width (never the panel's animating width), so the
+     lines never re-wrap mid-transition; the panel clips it. Hidden copy is
+     `visibility: hidden`: no clicks, no focus, nothing in the a11y tree. */
   .bacc-content {
-    --pad: clamp(1.5rem, 4vw, 3.75rem);
+    --pad: clamp(1.25rem, 2.6vw, 2.75rem);
     position: absolute;
     left: 0;
     bottom: 0;
     z-index: 6;
-    width: min(100%, var(--open-w, 100%));
-    max-width: clamp(34rem, 52vw, 75rem);
+    box-sizing: border-box;
+    width: min(var(--open-w, 100%), 40rem);
     padding: var(--pad);
-    padding-bottom: clamp(2rem, 3.5vw, 3.25rem);
-    display: none;
+    padding-bottom: clamp(1.5rem, 2.6vw, 2.5rem);
+    display: flex;
     flex-direction: column;
     align-items: flex-start;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition:
+      opacity 0.25s ease,
+      transform 0.25s ease,
+      visibility 0s linear 0.25s;
   }
+  /* In: as the panel finishes opening, on the panel's own easing. */
   .bacc-panel.is-open .bacc-content {
-    display: flex;
-    animation: bacc-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
-  }
-  @keyframes bacc-rise {
-    from { opacity: 0; transform: translateY(14px); }
-    to { opacity: 1; transform: none; }
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition:
+      opacity 0.45s ease calc(var(--acc-duration) * 0.45),
+      transform var(--acc-duration) var(--acc-ease) calc(var(--acc-duration) * 0.25),
+      visibility 0s linear 0s;
   }
   .bacc-headline {
-    margin: 0 0 0.9rem;
-    font: 800 clamp(2rem, 3.4vw, 5rem) / 1.05 var(--font-display);
+    margin: 0 0 0.75rem;
+    font: 800 clamp(1.35rem, 2vw, 2.35rem) / 1.1 var(--font-display);
     text-transform: uppercase;
     color: #ffffff;
     max-width: 18ch;
@@ -469,28 +505,24 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
   }
   .bacc-deck {
     margin: 0;
-    max-width: min(70ch, 100%);
-    font: 500 clamp(0.85rem, 1vw, 1.2rem) / 1.65 var(--font-body);
-    letter-spacing: 0.22em;
+    max-width: 52ch;
+    font: 500 clamp(0.74rem, 0.82vw, 0.92rem) / 1.6 var(--font-body);
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.72);
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    color: rgba(255, 255, 255, 0.76);
   }
   .bacc-cta {
     display: inline-flex;
     align-items: center;
     gap: 0.6rem;
     min-height: var(--tap-min);
-    margin-top: 1.4rem;
-    padding: 1rem 2.5rem;
+    margin-top: 1.1rem;
+    padding: 0.8rem 1.6rem;
     border: 1px solid var(--accordion-cta-border);
     background: rgba(8, 8, 8, 0.35);
     color: #ffffff;
-    font: 700 0.8rem / 1.2 var(--font-display);
-    letter-spacing: 0.18em;
+    font: 700 0.74rem / 1.2 var(--font-display);
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     text-decoration: none;
     transition: background-color 0.3s cubic-bezier(0.25, 0.8, 0.2, 1), color 0.3s ease, box-shadow 0.3s ease;
@@ -597,12 +629,6 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
      So a resize is a new clip, never a repaint (HQ measured 637ms/s of
      raster without this). --open-w is the track less the strips and gaps. */
   @media (min-width: 768px) {
-    .bacc-track {
-      container-type: inline-size;
-    }
-    .bacc-panel {
-      --open-w: calc(100cqw - (var(--acc-n) - 1) * (var(--strip) + var(--acc-gap)));
-    }
     .bacc-media > :global(img),
     .bacc-media > .bacc-teaser {
       position: absolute;
@@ -618,9 +644,10 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
       width: var(--open-w);
     }
   }
+  /* Hover peeks: the strip widens a little (the open panel keeps its 16:9). */
   @media (hover: hover) and (pointer: fine) and (min-width: 768px) {
     .bacc-panel:not(.is-open):hover {
-      flex-basis: calc(var(--strip) + 28px);
+      flex-grow: 1.3;
     }
   }
 
@@ -653,7 +680,7 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
       position: relative;
       inset: auto;
       flex: none;
-      height: 196px;
+      aspect-ratio: 16 / 9;
       overflow: hidden;
     }
     .bacc-panel.is-open .bacc-media::after {
@@ -666,28 +693,23 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
       max-width: none;
       padding: 0.25rem 1rem 1rem 1.25rem;
       background: #090909;
-      overflow: hidden;
-      animation: none;
     }
     .bacc-chips {
       top: 1rem;
       left: 1.25rem;
       right: 4.5rem;
     }
+    /* Whole copy, never clamped: the open panel is tall enough for the
+       longest brand at 375px. */
     .bacc-headline {
-      font-size: clamp(1.35rem, 6vw, 1.9rem);
+      font-size: clamp(1.2rem, 5.4vw, 1.5rem);
       line-height: 1.12;
       max-width: none;
-      margin-bottom: 0.6rem;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      margin-bottom: 0.55rem;
     }
     .bacc-deck {
-      font-size: 0.78rem;
-      letter-spacing: 0.1em;
-      -webkit-line-clamp: 3;
+      font-size: 0.74rem;
+      letter-spacing: 0.08em;
     }
     .bacc-cta {
       margin-top: 1rem;
@@ -697,6 +719,13 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
     }
     .bacc-teaser-tag {
       margin-top: 1rem;
+    }
+    /* Rows swap places at once on phones, so the closing row drops its
+       copy and chip at once too (fading, they crossed its name label);
+       the opening panel's copy still fades in. */
+    .bacc-panel:not(.is-open) .bacc-content,
+    .bacc-panel:not(.is-open) .bacc-chips {
+      transition: none;
     }
     /* A collapsed row: blurred art behind, name left, logo right. */
     .bacc-label {
@@ -750,7 +779,10 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
     width: 100vw;
     height: 100dvh;
     z-index: 1000;
-    background: #080808;
+    background-color: #080808;
+  }
+  .bacc-viewport.is-zoomed.is-closing {
+    background-color: transparent;
   }
   .bacc-stage {
     transition: transform 700ms cubic-bezier(0.25, 1, 0.5, 1);
@@ -809,21 +841,80 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
   .bacc-viewport.is-zoomed .bacc-panel.is-open {
     cursor: default;
   }
-  /* In the view, the corners track the visible viewport (the scaled panel
-     can overflow it) and the chip keeps clear of the close control, which
-     sits top-right while the chip sits top-left. */
-  .bacc-viewport.is-zoomed:not(.is-closing) .bacc-panel.is-open .bacc-chips {
-    top: calc(clamp(1.5rem, 3vw, 2.75rem) + var(--zoom-overflow-y, 0px));
-    left: calc(clamp(1.5rem, 3vw, 2.75rem) + var(--zoom-overflow-x, 0px));
-    right: auto;
+  /* In the view the art is shown whole and unshaded: the copy leaves the
+     panel (it would scale with the camera) for the caption band below. */
+  .bacc-viewport.is-zoomed .bacc-track {
+    background: transparent;
   }
   .bacc-viewport.is-zoomed:not(.is-closing) .bacc-panel.is-open .bacc-content {
-    padding-left: calc(clamp(1.5rem, 3.5vw, 3.25rem) + var(--zoom-overflow-x, 0px));
-    padding-bottom: calc(clamp(1.5rem, 3.5vw, 3rem) + var(--zoom-overflow-y, 0px));
+    opacity: 0;
+    visibility: hidden;
+    transform: none;
+    transition: opacity 0.2s ease, visibility 0s linear 0.2s;
   }
-  .bacc-viewport.is-zoomed:not(.is-closing) .bacc-panel.is-open .bacc-logo {
-    left: calc(100% - var(--logo-w) - clamp(1.5rem, 3vw, 3rem) - var(--zoom-overflow-x, 0px));
-    bottom: calc(clamp(1.5rem, 3vw, 3rem) + var(--zoom-overflow-y, 0px));
+  .bacc-viewport.is-zoomed:not(.is-closing) .bacc-panel.is-open .bacc-media::after {
+    opacity: 0;
+  }
+  /* Closing: the copy returns as the camera lands, on its easing. */
+  .bacc-viewport.is-closing .bacc-panel.is-open .bacc-content {
+    transition:
+      opacity 0.35s ease 0.4s,
+      transform 0.35s ease 0.4s,
+      visibility 0s linear 0s;
+  }
+
+  /* The caption band: the open brand's copy at screen size, under the art,
+     left-aligned to it. Geometry (--cap-x/y/w) is set by the camera. */
+  .bacc-caption {
+    position: absolute;
+    left: var(--cap-x, 2rem);
+    top: var(--cap-y, 70vh);
+    z-index: 3;
+    width: var(--cap-w, calc(100vw - 4rem));
+    opacity: 0;
+    transform: translateY(16px);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .bacc-caption[hidden] {
+    display: none;
+  }
+  .bacc-caption.is-shown {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    /* Rises with the camera: same duration and easing, opacity a beat later. */
+    transition:
+      opacity 0.45s ease 0.25s,
+      transform 700ms cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  .bacc-caption .bacc-content {
+    position: static;
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    column-gap: clamp(1.5rem, 3vw, 3rem);
+    align-items: start;
+    width: auto;
+    max-width: none;
+    padding: 0;
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition: none;
+  }
+  .bacc-caption .bacc-headline {
+    grid-column: 1;
+    grid-row: 1 / span 4;
+    margin: 0;
+    font-size: clamp(1.3rem, 1.9vw, 2.2rem);
+    max-width: 22ch;
+  }
+  .bacc-caption .bacc-content > :not(.bacc-headline) {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .bacc-caption .bacc-cta {
+    margin-top: 0.9rem;
   }
 
   /* ─── REDUCED MOTION: no autoplay (script), no zoom effects ─────────── */
@@ -831,6 +922,7 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
     .bacc-panel,
     .bacc-panel::before,
     .bacc-logo,
+    .bacc-viewport,
     .bacc-stage,
     .bacc-media > :global(img),
     .bacc-media > .bacc-teaser {
@@ -842,8 +934,12 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
     .bacc-panel:not(.is-open):hover .bacc-media > .bacc-teaser {
       --zoom: 1;
     }
-    .bacc-panel.is-open .bacc-content {
-      animation: none;
+    .bacc-content,
+    .bacc-panel.is-open .bacc-content,
+    .bacc-media::after,
+    .bacc-caption,
+    .bacc-caption.is-shown {
+      transition: none !important;
     }
   }
 </style>
@@ -864,6 +960,7 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
     const viewport = root.querySelector<HTMLElement>('[data-bacc-viewport]')!;
     const stage = root.querySelector<HTMLElement>('[data-bacc-stage]')!;
     const closeBtn = root.querySelector<HTMLButtonElement>('[data-bacc-close]');
+    const caption = root.querySelector<HTMLElement>('[data-bacc-caption]');
     const fullscreen = root.hasAttribute('data-fullscreen');
     const DURATION = Number(root.dataset.interval) || 8000;
     if (!panels.length || triggers.some((t) => !t)) return;
@@ -1016,31 +1113,91 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
     reduced.addEventListener('change', onMedia);
     mobile.addEventListener('change', onMedia);
 
-    /* ─── Fullscreen brand view: a camera dolly into the open panel ─── */
+    /* ─── Fullscreen brand view: a camera dolly into the open panel ───
+       The 16:9 panel is fitted WHOLE (contain) into the screen above a
+       caption band, and the copy is set in that band at screen size. The
+       copy is never inside the scaled stage while the view is open, so the
+       camera cannot blow it up or lay it over the art. */
+    const EDGE = 32; // px kept clear around the art + caption block
+    const BAND_GAP = 24; // px between the art and the caption
     const camera = {
       isZoomed: false,
       isClosing: false,
       panel: null as HTMLElement | null,
       restX: 0,
       restY: 0,
+      /* Clone the open panel's copy into the caption layer (ids and the
+         region role stay on the original, which is hidden meanwhile). */
+      fillCaption(panel: HTMLElement) {
+        if (!caption) return;
+        const copy = panel.querySelector<HTMLElement>('.bacc-content');
+        caption.replaceChildren();
+        if (!copy) return;
+        const clone = copy.cloneNode(true) as HTMLElement;
+        clone.removeAttribute('id');
+        clone.removeAttribute('role');
+        clone.removeAttribute('aria-labelledby');
+        caption.appendChild(clone);
+        if (panel.dataset.accent) caption.dataset.accent = panel.dataset.accent;
+        else delete caption.dataset.accent;
+        caption.hidden = false;
+      },
+      captionHeight(width: number) {
+        if (!caption || caption.hidden) return 0;
+        caption.style.setProperty('--cap-w', `${width}px`);
+        return caption.getBoundingClientRect().height;
+      },
+      /* Untransformed geometry (offsets, not client rects), so a resize
+         while the view is open measures the panel, not the camera. */
       measure(panel: HTMLElement) {
-        const r = panel.getBoundingClientRect();
-        const s = stage.getBoundingClientRect();
+        const r = { width: panel.offsetWidth, height: panel.offsetHeight, x: panel.offsetLeft, y: panel.offsetTop };
         const vw = window.innerWidth;
         const vh = window.innerHeight;
-        const scale = Math.max(vw / r.width, vh / r.height);
-        panel.style.setProperty('--zoom-overflow-x', `${Math.max(0, (r.width * scale - vw) / 2) / scale}px`);
-        panel.style.setProperty('--zoom-overflow-y', `${Math.max(0, (r.height * scale - vh) / 2) / scale}px`);
-        const tx = vw / 2 - scale * (r.left + r.width / 2 - s.left);
-        const ty = vh / 2 - scale * (r.top + r.height / 2 - s.top);
-        return { tx, ty, scale, s };
+        /* The close control sits top-right; the art never runs under it. */
+        const closeR = closeBtn && !closeBtn.hidden ? closeBtn.getBoundingClientRect() : null;
+        const solve = (top: number) => {
+          const fit = (capH: number) =>
+            Math.min((vw - 2 * EDGE) / r.width, (vh - top - EDGE - (capH ? capH + BAND_GAP : 0)) / r.height);
+          /* The caption's height depends on its width (the art's width), and
+             the art's size on the caption's height: two passes settle it. */
+          let capH = this.captionHeight(Math.min(vw - 2 * EDGE, r.width * fit(0)));
+          let scale = fit(capH);
+          capH = this.captionHeight(r.width * scale);
+          scale = fit(capH);
+          const artW = r.width * scale;
+          const artH = r.height * scale;
+          const blockH = artH + (capH ? capH + BAND_GAP : 0);
+          const x0 = (vw - artW) / 2;
+          const y0 = Math.max(top, top + (vh - top - EDGE - blockH) / 2);
+          return { scale, artW, artH, x0, y0 };
+        };
+        let g = solve(EDGE);
+        if (closeR && g.x0 + g.artW > closeR.left - 8 && g.y0 < closeR.bottom + 8) g = solve(closeR.bottom + 12);
+        const { scale, artW, artH, x0, y0 } = g;
+        if (caption) {
+          caption.style.setProperty('--cap-x', `${x0}px`);
+          caption.style.setProperty('--cap-y', `${y0 + artH + BAND_GAP}px`);
+          caption.style.setProperty('--cap-w', `${artW}px`);
+        }
+        return { tx: x0 - scale * r.x, ty: y0 - scale * r.y, scale };
       },
       open(panel: HTMLElement) {
         if (this.isZoomed || this.isClosing) return;
         this.isZoomed = true;
         this.panel = panel;
         holds.zoom = true;
-        const { tx, ty, scale, s } = this.measure(panel);
+        this.fillCaption(panel);
+        if (closeBtn) closeBtn.hidden = false;
+        const s = stage.getBoundingClientRect();
+        /* Hold the stage at its in-page width: the fixed viewport is wider
+           by the scrollbar, which would re-flow the strips (and shift a
+           panel that is not the first) as the view opens. */
+        stage.style.width = `${s.width}px`;
+        /* Keep the accordion's place in the page while its viewport is
+           fixed, so the page behind does not move up (it shows through as
+           the backdrop fades out on the way back). */
+        root.style.height = `${root.offsetHeight}px`;
+        const { tx, ty, scale } = this.measure(panel);
         this.restX = s.left;
         this.restY = s.top;
         const gutter = window.innerWidth - document.documentElement.clientWidth;
@@ -1048,19 +1205,18 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
         viewport.classList.remove('is-closing');
         viewport.classList.add('is-zoomed');
         document.body.style.overflow = 'hidden';
-        if (closeBtn) {
-          closeBtn.hidden = false;
-          closeBtn.focus({ preventScroll: true });
-        }
+        closeBtn?.focus({ preventScroll: true });
         stage.style.transition = 'none';
         if (reduced.matches) {
           stage.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
+          caption?.classList.add('is-shown');
           return;
         }
         stage.style.transform = `translate3d(${this.restX}px, ${this.restY}px, 0) scale(1)`;
         void stage.offsetWidth;
         stage.style.transition = '';
         stage.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
+        caption?.classList.add('is-shown');
       },
       recalc() {
         if (!this.panel || this.isClosing) return;
@@ -1072,22 +1228,35 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
         if (!this.isZoomed || this.isClosing) return;
         this.isClosing = true;
         viewport.classList.add('is-closing');
+        caption?.classList.remove('is-shown');
         if (reduced.matches) return this.cleanup();
         stage.style.transition = '';
         stage.style.transform = `translate3d(${this.restX}px, ${this.restY}px, 0) scale(1)`;
-        const done = () => this.isClosing && this.cleanup();
-        stage.addEventListener('transitionend', done, { once: true });
-        window.setTimeout(done, 750);
+        /* Ends on the STAGE's own transitionend (children's bubble up and
+           must not end it early), with a timer as the safety net. */
+        const onEnd = (e: TransitionEvent) => {
+          if (e.target === stage && e.propertyName === 'transform') done();
+        };
+        const done = () => {
+          stage.removeEventListener('transitionend', onEnd);
+          if (this.isClosing) this.cleanup();
+        };
+        stage.addEventListener('transitionend', onEnd);
+        window.setTimeout(done, 900);
       },
       cleanup() {
-        this.panel?.style.removeProperty('--zoom-overflow-x');
-        this.panel?.style.removeProperty('--zoom-overflow-y');
         stage.style.transition = 'none';
         stage.style.transform = '';
+        stage.style.width = '';
+        root.style.height = '';
         viewport.classList.remove('is-zoomed', 'is-closing');
         document.body.style.overflow = '';
         document.body.style.paddingRight = '';
         if (closeBtn) closeBtn.hidden = true;
+        if (caption) {
+          caption.hidden = true;
+          caption.replaceChildren();
+        }
         const panel = this.panel;
         this.isZoomed = false;
         this.isClosing = false;
