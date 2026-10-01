@@ -7,7 +7,7 @@
  * src/lib/newsletter.ts). The form UI stays the same when a direct
  * provider is connected — only NEWSLETTER_PROVIDER changes.
  */
-import { NEWSLETTER_PROVIDER, NEWSLETTER_ENDPOINT } from '../lib/newsletter';
+import { NEWSLETTER_PROVIDER, NEWSLETTER_ENDPOINT, SUBSTACK_SUBSCRIBE_URL } from '../lib/newsletter';
 ---
 
 <div class="newsletter" role="region" aria-labelledby="newsletter-heading">
@@ -35,17 +35,21 @@ import { NEWSLETTER_PROVIDER, NEWSLETTER_ENDPOINT } from '../lib/newsletter';
   </form>
 </div>
 
-<script define:vars={{ provider: NEWSLETTER_PROVIDER, endpoint: NEWSLETTER_ENDPOINT }}>
+<script define:vars={{ provider: NEWSLETTER_PROVIDER, endpoint: NEWSLETTER_ENDPOINT, subscribeUrl: SUBSTACK_SUBSCRIBE_URL }}>
+  /* The signup completes on Substack, as src/lib/newsletter.ts documents:
+     the subscribe page opens with the email prefilled. It used to fire a
+     no-cors POST at Substack's private API (which cannot carry JSON and
+     whose answer the page can never read) and then announce "You're on
+     the list" regardless, so a failed signup still looked like success.
+     A "direct" provider, once connected, confirms only on a real 2xx. */
   const form = document.getElementById('newsletter-form');
   const input = document.getElementById('newsletter-email');
   const error = document.getElementById('newsletter-error');
-  // NOTE: define:vars values must be JSON-serializable literals — never
-  // import or reference TS modules here (raw TS imports in define:vars
-  // broke a past deploy). The subscribe URL is rebuilt from the same
-  // constant the server module uses.
-  const SUBSTACK_SUBSCRIBE = 'https://thisiscoffeetalk.substack.com/subscribe';
   const valid = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
-  form?.addEventListener('submit', (e) => {
+  const done = (html) => {
+    form.innerHTML = `<div class="newsletter-success" role="status">${html}</div>`;
+  };
+  form?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = (input.value || '').trim();
     if (!valid(email)) {
@@ -55,38 +59,38 @@ import { NEWSLETTER_PROVIDER, NEWSLETTER_ENDPOINT } from '../lib/newsletter';
     }
     if (error) error.hidden = true;
 
-    const btn = form.querySelector('.newsletter-btn');
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = 'Joining...';
+    if (provider === 'direct' && endpoint) {
+      const btn = form.querySelector('.newsletter-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Joining...'; }
+      try {
+        const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+        if (!res.ok) throw new Error(String(res.status));
+        done('<span class="success-icon" aria-hidden="true">✓</span><p class="newsletter-done">You\'re on the list. Check your inbox.</p>');
+      } catch {
+        if (btn) { btn.disabled = false; btn.textContent = 'Subscribe'; }
+        if (error) { error.textContent = 'That did not go through. Please try again.'; error.hidden = false; }
+      }
+      return;
     }
 
-    try {
-      fetch('https://thisiscoffeetalk.substack.com/api/v1/free', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        mode: 'no-cors',
-        body: JSON.stringify({ email }),
-      }).catch(() => {});
-    } catch (err) {}
-
-    try {
-      localStorage.setItem('newsletter_subscribed', 'true');
-    } catch (e) {}
-
-    setTimeout(() => {
-      form.innerHTML = `
-        <div class="newsletter-success" role="status">
-          <span class="success-icon" aria-hidden="true">✓</span>
-          <p class="newsletter-done">You're on the list. Check your inbox.</p>
-        </div>
-      `;
-    }, 250);
+    // Substack: open its subscribe page (a user gesture, so not blocked);
+    // if a blocker stops the new tab, go there in this one.
+    const url = `${subscribeUrl}?email=${encodeURIComponent(email)}`;
+    // (No 'noopener' feature: with it, window.open always returns null.)
+    const tab = window.open(url, '_blank');
+    if (tab) tab.opener = null;
+    if (!tab) {
+      window.location.href = url;
+      return;
+    }
+    done(`<p class="newsletter-done">Almost there: confirm on Substack in the new tab. <a href="${url}" target="_blank" rel="noopener">Open it again</a></p>`);
   });
 </script>
 
 <style>
-  .newsletter-success {
+  /* Injected by the script above, so these are global (scoped styles never
+     reached them). */
+  :global(.newsletter-success) {
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -99,7 +103,7 @@ import { NEWSLETTER_PROVIDER, NEWSLETTER_ENDPOINT } from '../lib/newsletter';
     letter-spacing: 0.04em;
     animation: newsletterFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .success-icon {
+  :global(.success-icon) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -177,10 +181,15 @@ import { NEWSLETTER_PROVIDER, NEWSLETTER_ENDPOINT } from '../lib/newsletter';
     color: var(--ink);
     font-size: 0.85rem;
   }
-  .newsletter-done {
+  :global(.newsletter-done) {
     margin: 0;
     font-size: 1rem;
     color: var(--ink);
+  }
+  :global(.newsletter-done a) {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
   @media (max-width: 480px) {
     .newsletter-row { flex-direction: column; }
