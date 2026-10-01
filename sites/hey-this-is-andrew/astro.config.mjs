@@ -33,7 +33,8 @@ export default defineConfig({
   integrations: [
     sitemap({
       // Hero concept previews and the 404 are not pages to index.
-      filter: (page) => !page.includes('/preview/') && !page.includes('/404'),
+      // /events/ is hidden until there is a real event (the page is kept).
+      filter: (page) => !page.includes('/preview/') && !page.includes('/404') && !page.includes('/events/'),
     }),
   ],
 });
