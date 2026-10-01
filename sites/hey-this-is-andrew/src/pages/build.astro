@@ -267,7 +267,8 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
       }
       if (fillEl) {
         fillEl.style.width = `${percent}%`;
-        fillEl.setAttribute('aria-valuenow', String(completedCount));
+        // aria-valuenow belongs on the progressbar (the fill's parent).
+        fillEl.parentElement?.setAttribute('aria-valuenow', String(completedCount));
       }
     }
 
@@ -542,7 +543,8 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
   .brand-progression-title {
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: 1.25rem;
+    /* 4.2vw: "UNCONVENTIONAL" fits its card on a 375px phone. */
+    font-size: clamp(0.95rem, 4.2vw, 1.25rem);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--ink);
@@ -648,5 +650,13 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
     color: var(--muted);
     line-height: 1.5;
     margin: 0;
+  }
+  /* This page's section titles carry long words ("ENTERTAINMENT" needs
+     16em at the site's tracked display face), so on phones they set
+     smaller than the site default to stay on screen. */
+  @media (max-width: 560px) {
+    .build-page :global(.section-title) {
+      font-size: 5.4vw;
+    }
   }
 </style>
