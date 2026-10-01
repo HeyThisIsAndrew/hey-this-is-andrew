@@ -1,12 +1,12 @@
 ---
 /**
- * Selected Work (homepage, condensed): merges "Shot on the job", "Recent
- * work" and the workflow strip. The latest video, the featured projects, a
- * strip of photographs and the pipeline, then View all -> /work.
+ * Selected Work (homepage, condensed): the latest video, the featured
+ * projects and the pipeline, then View all -> /work. No photo strip: the
+ * photo elevator ("Shot on the job") sits right above it on the homepage,
+ * so a strip here showed the same photos twice (removed 2026-10-01).
  * Keeps #projects as a landing anchor for old links (#photography is the
  * photo elevator itself, which sits on the homepage after About).
  */
-import { Image } from 'astro:assets';
 import { getCollection } from 'astro:content';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
 import ViewAllLink from '@andrew/ui/ViewAllLink.astro';
@@ -14,7 +14,6 @@ import LatestCard from './LatestCard.astro';
 import ProjectCard from './ProjectCard.astro';
 import WorkflowStrip from './WorkflowStrip.astro';
 import { getLatestVideo } from '../lib/latest-content';
-import { getInstagramPhotos } from '../lib/instagram';
 
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
@@ -23,7 +22,6 @@ const latestVideo = await getLatestVideo();
 const projects = (await getCollection('projects'))
   .sort((a, b) => Number(b.data.featured) - Number(a.data.featured) || +b.data.date - +a.data.date)
   .slice(0, 2);
-const photos = await getInstagramPhotos(6);
 ---
 <section id="projects" aria-labelledby="work-heading" class="selected-work">
   <div class="container">
@@ -39,18 +37,6 @@ const photos = await getInstagramPhotos(6);
       <div class="sw-projects">
         {projects.map((p) => <ProjectCard project={p} />)}
       </div>
-    )}
-
-    {photos.length > 0 && (
-      <ul class="sw-photos" aria-label="Photography">
-        {photos.map((p) => (
-          <li>
-            <a href={`${base}/work/#photography`} class="sw-photo">
-              <Image src={p.image} alt={p.caption} widths={[240, 360, 540]} sizes="(max-width: 767px) 33vw, 16vw" format="webp" loading="lazy" decoding="async" />
-            </a>
-          </li>
-        ))}
-      </ul>
     )}
 
     <WorkflowStrip />
@@ -73,39 +59,5 @@ const photos = await getInstagramPhotos(6);
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
     gap: var(--gap);
     margin-top: var(--gap);
-  }
-  .sw-photos {
-    list-style: none;
-    margin: var(--gap) 0 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: clamp(6px, 1vw, 12px);
-  }
-  @media (min-width: 768px) {
-    .sw-photos {
-      grid-template-columns: repeat(6, minmax(0, 1fr));
-    }
-  }
-  .sw-photo {
-    display: block;
-    aspect-ratio: 4 / 5;
-    overflow: hidden;
-    background: var(--surface);
-  }
-  .sw-photo :global(img) {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.6s ease;
-  }
-  .sw-photo:hover :global(img),
-  .sw-photo:focus-visible :global(img) {
-    transform: scale(1.04);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .sw-photo :global(img) {
-      transition: none;
-    }
   }
 </style>

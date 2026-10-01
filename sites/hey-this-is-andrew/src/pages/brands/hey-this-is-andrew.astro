@@ -30,6 +30,14 @@ const LANES = [
     desc: 'The hospitality content brand. Photography and video for bars and restaurants.',
     href: `${base}/brands/capture-create-caffeinate/`,
   },
+  // No page or link yet: listed (all three lanes, per the heading) with its
+  // own copy and tag from src/data/brands.ts, as a row that goes nowhere.
+  {
+    name: 'Sip the Magic',
+    desc: 'Something is brewing. Sip the Magic is coming together. More soon.',
+    href: '',
+    tag: 'In the works',
+  },
 ];
 ---
 
@@ -66,15 +74,23 @@ const LANES = [
       <ul class="lane-list">
         {LANES.map((lane) => (
           <li class="lane-item">
-            <a class="lane-link" href={lane.href}>
-              <span class="lane-name">{lane.name}</span>
-              <span class="lane-desc">{lane.desc}</span>
-              <span class="lane-arrow" aria-hidden="true">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M1 11L11 1M11 1H3M11 1V9" stroke="currentColor" stroke-width="1.5" />
-                </svg>
-              </span>
-            </a>
+            {lane.href ? (
+              <a class="lane-link" href={lane.href}>
+                <span class="lane-name">{lane.name}</span>
+                <span class="lane-desc">{lane.desc}</span>
+                <span class="lane-arrow" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M1 11L11 1M11 1H3M11 1V9" stroke="currentColor" stroke-width="1.5" />
+                  </svg>
+                </span>
+              </a>
+            ) : (
+              <div class="lane-link is-static">
+                <span class="lane-name">{lane.name}</span>
+                <span class="lane-desc">{lane.desc}</span>
+                <span class="lane-tag">{lane.tag}</span>
+              </div>
+            )}
           </li>
         ))}
       </ul>
@@ -111,7 +127,7 @@ const LANES = [
     </section>
   </div>
 
-  <WorkWithAndrew />
+  <WorkWithAndrew index="03" />
 </BaseLayout>
 
 <style>
@@ -225,6 +241,30 @@ const LANES = [
 
   .lane-link:hover .lane-arrow {
     color: var(--ink);
+  }
+
+  /* Sip the Magic: listed, not linked (no page yet). */
+  .lane-link.is-static:hover {
+    background: none;
+  }
+  .lane-tag {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    font: 600 0.62rem / 1.2 var(--font-mono);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  @media (max-width: 600px) {
+    .lane-tag {
+      grid-column: 1;
+      grid-row: auto;
+      justify-self: start;
+      margin-top: 0.35rem;
+    }
   }
 
   .hub-latest {
