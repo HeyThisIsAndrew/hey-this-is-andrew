@@ -10,7 +10,7 @@ a block looks only by overriding tokens in its own theme file.
 | import | what it is | props (short) |
 | --- | --- | --- |
 | `@andrew/ui/BrandAccordion.astro` | the brand accordion: HQ's hero accordion, mechanics and look one to one (sizes in `--acc-u`) | `panels`, `fullscreen?`, `interval?`, `labels?` |
-| `@andrew/ui/ChromeMeta.astro` | the viewport (`viewport-fit=cover`) and `theme-color` tags; put it in every layout's `<head>` | `color?` (must equal `--chrome`), `interactiveWidget?` |
+| `@andrew/ui/ChromeMeta.astro` | the viewport tag (HQ's, exactly) and the site's chrome colour: phone header, page edge and status bar / Dynamic Island area, plus matching theme-color; put it in every layout's `<head>` | `color?` (any solid colour, default black), `lightColor?` (light-mode chrome), `interactiveWidget?` |
 | `@andrew/ui/Nav.astro` | sticky header, dropdowns, mobile menu, scrollspy; paints the phone status-bar strip solid (`--chrome`) and clears it | `logo`, `homeHref`, `links`, `search?`; default slot for a search modal |
 | `@andrew/ui/Footer.astro` | brand block, one row of primary links, social icons, legal row | `logo`, `tagline`, `explore`, `socials`, `copyright`, `privacyHref`, `utility?` (small links beside Privacy), `notes?` |
 | `@andrew/ui/PageNav.astro` | BE Unconventional HQ's side panel: the page's sections as ticks on the left edge, words on hover (desktop) or tap (touch); active-section tracking | `items?` (defaults to the page's `h2[id]`s; a heading can set `data-pn-label`), `heading?`, `selector?` |

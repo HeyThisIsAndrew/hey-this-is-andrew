@@ -14,13 +14,44 @@
  * through on an iPhone 17 Pro Max. theme-color stays for other browsers.
  */
 interface Props {
-  /** Must equal --chrome in @andrew/tokens. */
+  /**
+   * THE site's chrome colour: the phone header's background, the page behind
+   * it, and so the status bar / Dynamic Island area (iOS Safari 26+ colours
+   * it from the fixed header; older iOS and Android read theme-color). Any
+   * solid CSS colour: '#000000', '#3b1f5c' for a purple bar, '#ffffff'. One
+   * value here sets all of it (the --chrome token).
+   */
   color?: string;
+  /**
+   * Optional light-mode chrome. When set, the light colour applies under
+   * `prefers-color-scheme: light` (unless the page pins data-theme="dark")
+   * and whenever <html data-theme="light">, and theme-color gets a tag per
+   * scheme. Safari picks dark or light status-bar text from the colour.
+   */
+  lightColor?: string;
   /** `interactive-widget` value (the personal site resizes for the keyboard). */
   interactiveWidget?: 'resizes-content' | 'resizes-visual' | 'overlays-content';
 }
-const { color = '#000000', interactiveWidget } = Astro.props;
+const { color = '#000000', lightColor, interactiveWidget } = Astro.props;
 const viewport = ['width=device-width', 'initial-scale=1', interactiveWidget && `interactive-widget=${interactiveWidget}`].filter(Boolean).join(', ');
+// A colour value only; nothing that could close the style element.
+const safe = (c: string) => c.replace(/[<>{};]/g, '');
+const css =
+  `html:root{--chrome:${safe(color)}}` +
+  (lightColor
+    ? `@media (prefers-color-scheme: light){html:root:not([data-theme="dark"]){--chrome:${safe(lightColor)}}}` +
+      `html:root[data-theme="light"]{--chrome:${safe(lightColor)}}`
+    : '');
 ---
 <meta name="viewport" content={viewport} />
-<meta name="theme-color" content={color} />
+{lightColor ? (
+  <>
+    <meta name="theme-color" content={color} media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content={lightColor} media="(prefers-color-scheme: light)" />
+  </>
+) : (
+  <meta name="theme-color" content={color} />
+)}
+{/* `html:root` outranks the token file's `:root`, whatever order the
+    stylesheets load in. */}
+<style is:inline set:html={css}></style>

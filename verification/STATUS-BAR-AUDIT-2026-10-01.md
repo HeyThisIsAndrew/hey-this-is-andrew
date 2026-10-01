@@ -62,6 +62,19 @@ the top edge, at the top, middle and bottom of the page):
   rows on the left of the screen opened the panel. It is now its visible
   44px tab.
 
+## Other colours (other sites, light mode)
+
+The status bar takes the colour of the fixed header, so it is whatever the
+site's chrome colour is. One setting per site, in its layout:
+`<ChromeMeta color="#3b1f5c" />` makes the phone header, the page edge, the
+status bar and theme-color purple; `lightColor="#ffffff"` adds a light-mode
+chrome (system light mode, or `<html data-theme="light">`). Safari picks dark
+or light status-bar text from the colour. Tested on the starter: purple in
+dark mode, white in light mode, header fixed in both. Limits: the colour must
+be solid (a see-through or blurred header gives Safari nothing to sample),
+and a full light theme still needs the header's own text and the page
+colours to switch, which the sites do not have yet (both are dark-only).
+
 ## Not verifiable here
 
 No iPhone in the build machine: the emulator renders neither the Dynamic

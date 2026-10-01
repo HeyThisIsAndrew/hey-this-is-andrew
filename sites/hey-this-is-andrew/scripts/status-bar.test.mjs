@@ -41,6 +41,7 @@ assert.match(phone[1], /backdrop-filter:\s*none/, 'no blur on the phone header')
 // 4. HQ's exact viewport tag, theme-color black, used by the layout.
 assert.doesNotMatch(meta.replace(/\/\*[\s\S]*?\*\//g, ''), /viewport-fit=cover/, 'HQ has no viewport-fit=cover');
 assert.match(meta, /color = '#000000'/, 'theme-color must default to black');
+assert.match(meta, /html:root\{--chrome:/, 'ChromeMeta must set the --chrome colour the header and status bar use');
 assert.match(layout, /<ChromeMeta/, 'the layout must use ChromeMeta');
 
 console.log('status-bar: ok');
