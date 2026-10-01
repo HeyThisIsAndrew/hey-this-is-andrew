@@ -37,12 +37,17 @@ const deployFile = path.join(to, 'deploy/github-pages.yml');
 fs.writeFileSync(deployFile, fs.readFileSync(deployFile, 'utf8').replaceAll('__SITE__', name));
 
 console.log(`Created sites/${name}. Installing...`);
-execSync('pnpm install', { cwd: root, stdio: 'inherit' });
+// The running pnpm when started as `pnpm new-site`; otherwise corepack's
+// (works without a global pnpm, e.g. `corepack pnpm new-site`).
+const pnpmCmd = process.env.npm_execpath && /pnpm/.test(process.env.npm_execpath)
+  ? `"${process.execPath}" "${process.env.npm_execpath}"`
+  : 'corepack pnpm';
+execSync(`${pnpmCmd} install`, { cwd: root, stdio: 'inherit' });
 console.log(`
 Next:
   1. sites/${name}/src/styles/theme.css   set your colours
   2. sites/${name}/src/data/site.ts       name, links, socials
   3. sites/${name}/src/data/panels.ts     the brand panels
   4. sites/${name}/src/content/posts/     your posts
-  5. pnpm --filter ${name} dev            then open http://localhost:4321
+  5. corepack pnpm --filter ${name} dev   then open http://localhost:4321
 `);
