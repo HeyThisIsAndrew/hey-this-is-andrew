@@ -117,11 +117,14 @@ for (const size of [16, 32, 48, 64, 180, 512]) {
 }
 out('public/favicon.ico', ico(pngs));
 
-/* Link preview: the stacked lockup centred on the site black. */
+/* Link preview (and the press kit's wordmark download): Andrew's own logo
+   file, src/assets/brand-logos/hey-thisisandrew.png, centred on the site
+   black. Placed as-is (only scaled), never redrawn from the SVG above. */
 {
-  const W = 1200, H = 630, maxW = 620;
-  const scale = maxW / st.w;
-  const w = st.w * scale, h = st.h * scale;
-  const body = `<g transform="translate(${((W - w) / 2).toFixed(2)} ${((H - h) / 2).toFixed(2)}) scale(${scale.toFixed(4)})">${st.body}</g>`;
-  out('public/og-image.png', await sharp(Buffer.from(svgDoc(W, H, body, { bg: BG }))).png().toBuffer());
+  const W = 1200, H = 630, maxW = 760;
+  const logo = await sharp('src/assets/brand-logos/hey-thisisandrew.png').resize({ width: maxW, kernel: 'lanczos3' }).toBuffer({ resolveWithObject: true });
+  const png = await sharp({ create: { width: W, height: H, channels: 4, background: BG } })
+    .composite([{ input: logo.data, left: Math.round((W - logo.info.width) / 2), top: Math.round((H - logo.info.height) / 2) }])
+    .png().toBuffer();
+  out('public/og-image.png', png);
 }

@@ -13,14 +13,14 @@ import Footer from '@andrew/ui/Footer.astro';
 import SiteSearch from '../components/SiteSearch.astro';
 import LiveBanner from '../components/LiveBanner.astro';
 import VideoPlayer from '../components/VideoPlayer.astro';
-import wordmark from '../assets/brand-logos/hey-thisisandrew.svg';
 // Andrew's own logo file (restored from b9cc358) is the nav logo, shown
 // as-is: one PNG at 2x the nav's largest height (3rem), never redrawn.
-// The footer still uses the SVG lockup above.
+// The footer uses it too, at 2x its 5rem height.
 import logoPng from '../assets/brand-logos/hey-thisisandrew.png';
 import { getImage } from 'astro:assets';
 import { NAV_LINKS, FOOTER_EXPLORE, SOCIALS, PRIVACY_HREF, SEARCH_TRIGGER, homeUrl } from '../data/nav';
 const navLogo = await getImage({ src: logoPng, height: 96, format: 'png' });
+const footerLogo = await getImage({ src: logoPng, height: 160, format: 'png' });
 
 interface Props {
   title: string;
@@ -107,7 +107,9 @@ const canonical = new URL(Astro.url.pathname, 'https://heythisisandrew.github.io
   </head>
   <body>
     <!-- Scroll Progress Indicator Bar -->
-    <div id="scroll-progress" class="scroll-progress-bar" role="progressbar" aria-label="Scroll progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <!-- Decorative: the browser's own scrollbar already says where you are. -->
+    <div id="scroll-progress" class="scroll-progress-bar" aria-hidden="true"></div>
     <Nav
       logo={{ src: navLogo.src, width: Number(navLogo.attributes.width), height: Number(navLogo.attributes.height), alt: 'HEY_THISISANDREW' }}
       homeHref={homeUrl}
@@ -118,12 +120,12 @@ const canonical = new URL(Astro.url.pathname, 'https://heythisisandrew.github.io
     </Nav>
     <LiveBanner />
     <div id="site-camera-stage" class="site-camera-stage">
-      <main id="main-content">
+      <main id="main-content" tabindex="-1">
         <slot />
       </main>
     </div>
     <Footer
-      logo={{ src: wordmark.src, width: wordmark.width, height: wordmark.height, alt: 'HEY_THISISANDREW' }}
+      logo={{ src: footerLogo.src, width: Number(footerLogo.attributes.width), height: Number(footerLogo.attributes.height), alt: 'HEY_THISISANDREW' }}
       tagline="Creator, photographer, coffee drinker."
       explore={FOOTER_EXPLORE}
       socials={SOCIALS}
@@ -260,7 +262,6 @@ const canonical = new URL(Astro.url.pathname, 'https://heythisisandrew.github.io
 
           if (maxScroll <= 0) {
             targetBar.style.transform = 'scaleX(1)';
-            targetBar.setAttribute('aria-valuenow', '100');
             ticking = false;
             return;
           }
@@ -268,7 +269,6 @@ const canonical = new URL(Astro.url.pathname, 'https://heythisisandrew.github.io
           const currentScroll = window.scrollY - mainTop;
           const progress = Math.min(Math.max(currentScroll / maxScroll, 0), 1);
           targetBar.style.transform = `scaleX(${progress.toFixed(4)})`;
-          targetBar.setAttribute('aria-valuenow', Math.round(progress * 100).toString());
           ticking = false;
         }
 
