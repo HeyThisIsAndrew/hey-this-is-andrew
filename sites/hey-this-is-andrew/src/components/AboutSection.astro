@@ -37,7 +37,7 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
       <figure class="about-portrait">
         <span class="tape" aria-hidden="true"></span>
         <span class="headshot-crop">
-          <Image src={portraitImg} alt="Andrew Baxter" widths={[400, 600, 800, 1200, 1600]} sizes="(max-width: 767px) 80vw, (min-width: 1920px) 28.5rem, 340px" format="webp" loading="lazy" decoding="async" class="headshot-img" />
+          <Image src={portraitImg} alt="Andrew Baxter" widths={[400, 600, 800, 1200, 1600]} sizes="(max-width: 767px) 60vw, (min-width: 1920px) 27rem, 320px" format="webp" loading="lazy" decoding="async" class="headshot-img" />
         </span>
         <figcaption>
           <strong>Andrew Baxter</strong>
@@ -47,9 +47,9 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 
       <div class="about-copy">
         <h3 class="display about-headline">WHERE THE MESSY MIDDLE<br />GETS BUILT IN PUBLIC</h3>
-        <p>If you want to build something real, you have to show the work. Hey This Is Andrew is an independent hub for the creative process, where building three brands, commercial beverage photography, and creative automation happen out in the open. No shortcuts, no artificial templates: just honest documentation of the messy middle.</p>
-        {full && <p>Founded and documented by Andrew Baxter. More than a decade across technology, creative production, and hospitality photography gives him a grounded, working knowledge of how ideas are actually built, tested, and shipped.</p>}
-        <p class="about-punchline font-display">BE HONEST. BUILD IN PUBLIC. <strong>HEY_THISISANDREW.</strong></p>
+        <p class="about-body">If you want to build something real, you have to show the work. Hey This Is Andrew is an independent hub for the creative process, where building three brands, commercial beverage photography, and creative automation happen out in the open. No shortcuts, no artificial templates: just honest documentation of the messy middle.</p>
+        {full && <p class="about-body">Founded and documented by Andrew Baxter. More than a decade across technology, creative production, and hospitality photography gives him a grounded, working knowledge of how ideas are actually built, tested, and shipped.</p>}
+        <p class="about-punchline"><span>BE HONEST.</span> <span>BUILD IN PUBLIC.</span> <strong>HEY_THISISANDREW.</strong></p>
         {!full && (
           /* The Now band, folded in as one line (full list at /now). */
           <p class="about-now">
@@ -86,8 +86,17 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 </section>
 
 <style>
+  /* Spacing and type scale: BE Unconventional HQ's "Inside the HQ"
+     (home.css .ihq-*, .hsh-*), measured at 1512 and 390. HQ's root is
+     12.8px from 768 up and this site's is not (16px to 1099, 12px to 1919,
+     then scaled with the window), so from 768 up the values are HQ's own
+     pixels times --u: 1px, growing above 1920 as the rest of this site does.
+     Below 768 both roots are 16px and HQ's rem values carry over as they are.
+     Monochrome: no HQ red. */
   .about-section {
-    padding: clamp(4rem, 8vw, 7rem) 0;
+    --u: 1px;
+    --about-gap: 64px;
+    padding: var(--about-gap) 0;
     border-top: 1px solid var(--line);
     position: relative;
     z-index: 2;
@@ -97,11 +106,18 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
   /* BE-style section bar: logo | title | categories — rule — link.
      Single horizontal line, HQ's "INSIDE THE HQ" pattern in monochrome.
      HEY_THISISANDREW wordmark (Syne 800) is the logo. */
+  @media (min-width: 768px) {
+    .about-section { --about-gap: clamp(96px, 8vw, 128px); }
+  }
+  @media (min-width: 1920px) {
+    .about-section { --u: calc(100vw / 1512); }
+  }
   .about-bar {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    margin-bottom: clamp(2rem, 4vw, 3.25rem);
+    column-gap: calc(11.52 * var(--u));
+    row-gap: calc(5.12 * var(--u));
+    margin-bottom: clamp(calc(19.2 * var(--u)), 3vw, calc(32 * var(--u)));
     flex-wrap: wrap;
   }
   .about-logo {
@@ -115,8 +131,9 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
   .about-bar-title {
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: 1.05rem;
-    letter-spacing: 0.06em;
+    font-size: clamp(calc(16.64 * var(--u)), 2.1vw, calc(23.68 * var(--u)));
+    line-height: 1;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--ink);
     margin: 0;
@@ -124,7 +141,7 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
   }
   .about-bar-cats {
     font-family: var(--font-mono);
-    font-size: 0.68rem;
+    font-size: calc(8.96 * var(--u));
     font-weight: 500;
     letter-spacing: 0.22em;
     text-transform: uppercase;
@@ -137,9 +154,26 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
     background: var(--border);
     min-width: 2rem;
   }
-  @media (max-width: 640px) {
-    .about-bar-cats { display: none; }
-    .about-bar { gap: 0.75rem; }
+  /* Phones, as HQ: icon and title on the first row, the categories and the
+     link sharing the second, no rule. */
+  @media (max-width: 767px) {
+    .about-bar {
+      margin-bottom: 24px;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas:
+        'icon title title'
+        'cats cats link';
+      column-gap: 0.7rem;
+      row-gap: 0.55rem;
+    }
+    .about-bar-icon { grid-area: icon; }
+    /* HQ's 1.15rem, held to the row on a 375 phone ("Meet The Creator" is
+       longer than "Inside the HQ"), and free to wrap if it ever must. */
+    .about-bar-title { grid-area: title; font-size: min(1.15rem, 4.4vw); letter-spacing: 0.06em; white-space: normal; }
+    .about-bar-cats { grid-area: cats; font-size: 0.62rem; letter-spacing: 0.18em; white-space: normal; }
+    .about-bar-rule { display: none; }
+    .about-bar-link { grid-area: link; justify-self: end; font-size: 0.7rem; }
   }
 
   .about-bar-icon {
@@ -148,14 +182,14 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
     color: var(--ink);
   }
   .about-bar-icon svg {
-    width: 1.15rem;
-    height: 1.15rem;
+    width: calc(30 * var(--u));
+    height: calc(30 * var(--u));
   }
   .about-bar-link {
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: calc(8.96 * var(--u));
     font-weight: 600;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--muted);
     text-decoration: none;
@@ -169,8 +203,8 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
   /* Kicker row: icon + title + tags + rule + link, HQ's "INSIDE THE HQ" bar. */
   .about-grid {
     display: grid;
-    grid-template-columns: minmax(0, 28.333rem) minmax(0, 1fr);
-    gap: clamp(2rem, 5vw, 5rem);
+    grid-template-columns: minmax(0, calc(320 * var(--u))) minmax(0, 1fr);
+    gap: clamp(calc(25.6 * var(--u)), 5vw, calc(64 * var(--u)));
     align-items: center;
   }
   @media (max-width: 767px) {
@@ -178,8 +212,10 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
       grid-template-columns: 1fr;
       gap: 2.25rem;
     }
-    .about-portrait {
-      width: min(75vw, 300px);
+    /* .about-grid prefix: the base .about-portrait rule further down sets
+       width: 100% and used to win, so the phone size never applied. */
+    .about-grid .about-portrait {
+      width: min(60vw, 260px);
       max-width: none;
       margin-left: auto;
       margin-right: auto;
@@ -187,6 +223,8 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
       transform: none;
     }
     .about-portrait figcaption { text-align: center; }
+    .about-grid .about-portrait figcaption strong { font-size: 1rem; }
+    .about-grid .about-portrait figcaption span { font-size: 0.7rem; }
   }
 
   /* Taped portrait frame, HQ style: vertical portrait format.
@@ -195,16 +233,16 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
   .about-portrait {
     position: relative;
     margin: 0;
-    max-width: 28.333rem;
+    max-width: calc(320 * var(--u));
     width: 100%;
-    transform: rotate(-1.5deg);
+    transform: rotate(-2deg);
     border: 1px solid rgba(255, 255, 255, 0.25);
     background: #0b0b0b;
     padding: 0.65rem 0.65rem 0;
   }
   .headshot-crop {
     display: block;
-    aspect-ratio: 3.8 / 5;
+    aspect-ratio: 1;
     overflow: hidden;
     background: #060606;
     position: relative;
@@ -214,7 +252,7 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: 52% 20%;
+    object-position: 50% 30%;
     filter: grayscale(0.12) contrast(1.05);
   }
   .tape {
@@ -230,21 +268,21 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
     z-index: 2;
   }
   .about-portrait figcaption {
-    padding: 1rem 0.4rem 1rem;
+    padding: calc(12.8 * var(--u)) 0.4rem 1rem;
   }
   .about-portrait figcaption strong {
     display: block;
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: 1rem;
+    font-size: calc(12.8 * var(--u));
     line-height: 1.1;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
   .about-portrait figcaption span {
     display: block;
-    margin-top: 0.35rem;
-    font-size: 0.7rem;
+    margin-top: calc(3.2 * var(--u));
+    font-size: calc(8.96 * var(--u));
     line-height: 1.2;
     font-weight: 600;
     letter-spacing: 0.2em;
@@ -253,37 +291,55 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
   }
 
   .about-headline {
-    font-size: clamp(2rem, 3.8vw, 3.2rem);
+    font-size: clamp(calc(21.76 * var(--u)), 2.6vw, calc(40.96 * var(--u)));
     font-weight: 800;
-    line-height: 1.05;
-    letter-spacing: -0.01em;
+    line-height: 1.04;
+    letter-spacing: normal;
     text-transform: uppercase;
     color: var(--ink);
-    margin: 0 0 1.5rem;
+    margin: 0;
+    max-width: 24ch;
     text-wrap: balance;
   }
-  .about-copy p {
-    color: rgba(245, 245, 245, 0.78);
-    font-size: 1.02rem;
-    line-height: 1.75;
-    margin: 0 0 1.25rem;
-    max-width: 62ch;
+  /* Body: HQ's .ihq-body. Scales with the window like the headline does
+     (16px at 1512, 16.8px on a phone), in a 78ch column. */
+  .about-body {
+    margin: calc(17.92 * var(--u)) 0 0;
+    max-width: 78ch;
+    font-size: max(calc(13.44 * var(--u)), min(1.05vw, calc(19 * var(--u))));
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.68);
   }
-  .about-copy p strong { color: var(--ink); }
+  /* The tagline: HQ's motto, set the same size and weight, in white. It had
+     been losing to the body paragraph rule and rendering as body text. */
   .about-punchline {
-    font-size: 1.05rem;
-    letter-spacing: 0.14em;
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: calc(14.08 * var(--u));
+    row-gap: calc(2.56 * var(--u));
+    margin: calc(25.6 * var(--u)) 0 0;
+    font-family: var(--font-display);
+    font-size: clamp(calc(12.8 * var(--u)), 1.6vw, calc(19.2 * var(--u)));
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--muted);
-    margin: 1.75rem 0 2rem;
+    color: var(--ink);
   }
   .about-punchline strong {
-    color: var(--ink);
     font-weight: 800;
+  }
+  /* Phones: HQ's rem values, both roots being 16px here. */
+  @media (max-width: 767px) {
+    .about-headline { font-size: clamp(1.6rem, 7.5vw, 2.2rem); }
+    .about-body { margin-top: 1.4rem; font-size: 1.05rem; }
+    .about-punchline { flex-direction: column; margin-top: 2rem; font-size: 1rem; column-gap: 1.1rem; row-gap: 0.2rem; }
+    .about-portrait figcaption { padding-top: 1rem; }
+    .about-portrait figcaption span { margin-top: 0.25rem; }
   }
   /* Now line (the former Now band, folded into Meet the Creator). */
   .about-now {
-    margin: -0.75rem 0 2rem;
+    margin: 2rem 0 0;
     padding: 0.9rem 0 0;
     border-top: 1px solid var(--line);
     font-size: 0.85rem;

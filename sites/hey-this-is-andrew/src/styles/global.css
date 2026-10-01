@@ -2,7 +2,7 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; overflow-x: clip; scroll-padding-top: 96px; background-color: #000; scrollbar-gutter: stable; }
+html { scroll-behavior: smooth; overflow-x: clip; scroll-padding-top: calc(96px + env(safe-area-inset-top, 0px)); background-color: #000; scrollbar-gutter: stable; }
 
 /* Andrew's 14" MacBook Pro calibration: at 100% browser zoom on standard laptop/desktop
    (1100px-1919px), site reads like 75% zoom.
@@ -36,10 +36,10 @@ img { max-width: 100%; display: block; }
 
 a { color: inherit; }
 
-/* Top safe area: the viewport meta omits viewport-fit=cover (matching BE
-   Unconventional HQ), so the browser keeps page content inside the safe
-   area and the system renders the Dynamic Island / status-bar region black
-   (theme-color #000000). No overlay div needed. */
+/* Top safe area: the viewport is viewport-fit=cover (ChromeMeta.astro in
+   @andrew/ui), so env(safe-area-inset-top) is the real status-bar height.
+   Nav paints that strip solid (.safe-area-blackout) and pads itself below
+   it; anything else pinned to the top of the screen adds the inset too. */
 
 /* Navigation height, published for the hero: the fixed bar's
    actual occupied space = safe-area inset + nav-inner padding
@@ -142,7 +142,7 @@ html.modal-open body {
    does not jump sideways on desktop when the scrollbar disappears. */
 html.menu-open .site-nav,
 html.modal-open .site-nav {
-  padding-right: var(--scrollbar-gutter, 0px);
+  padding-right: calc(var(--scrollbar-gutter, 0px) + env(safe-area-inset-right, 0px));
 }
 
 /* ---- Restrained scroll reveals (driven by initReveals in spatial.ts) ----
@@ -423,7 +423,7 @@ html.js .section-header.is-revealed {
 /* GPU-Accelerated Thin scroll-progress indicator bar at the very top of the page */
 .scroll-progress-bar {
   position: fixed;
-  top: 0;
+  top: env(safe-area-inset-top, 0px);
   left: 0;
   height: 2px;
   width: 100%;
@@ -539,8 +539,8 @@ html.js .section-header.is-revealed {
 /* Minimalist Back to Top Floating Button */
 .back-to-top {
   position: fixed;
-  bottom: 2rem;
-  right: 2rem;
+  bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+  right: calc(2rem + env(safe-area-inset-right, 0px));
   width: 44px;
   height: 44px;
   background: var(--surface);
@@ -630,8 +630,8 @@ html.js .section-header.is-revealed {
 /* Skip link: first stop for keyboard users, visible only when focused. */
 .skip-link {
   position: fixed;
-  top: 0.75rem;
-  left: 0.75rem;
+  top: calc(0.75rem + env(safe-area-inset-top, 0px));
+  left: calc(0.75rem + env(safe-area-inset-left, 0px));
   z-index: 2000;
   display: inline-flex;
   align-items: center;
@@ -643,7 +643,7 @@ html.js .section-header.is-revealed {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   text-decoration: none;
-  transform: translateY(-200%);
+  transform: translateY(calc(-100% - 1rem - env(safe-area-inset-top, 0px)));
 }
 .skip-link:focus,
 .skip-link:focus-visible {

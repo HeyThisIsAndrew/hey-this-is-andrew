@@ -27,6 +27,11 @@ const homePath = homeHref.replace(/\/$/, '');
 const currentPath = Astro.url.pathname.replace(/\/$/, '');
 const isHome = currentPath === homePath;
 ---
+{/* The status bar / Dynamic Island strip, painted solid at every scroll
+    position and above every overlay (HQ's .safe-area-blackout). Its height
+    is env(safe-area-inset-top), so it is 0 tall anywhere without one.
+    Needs viewport-fit=cover, which ChromeMeta.astro sets. */}
+<div class="safe-area-blackout" aria-hidden="true"></div>
 <header class:list={['site-nav', { 'site-nav--home': isHome, 'at-top': isHome }]} id="site-header" data-home-path={homePath}>
   <div class="nav-inner">
     <a class="wordmark" href={homeHref} aria-label={homeLabel} data-logo-home={isHome ? true : undefined}>
@@ -283,6 +288,14 @@ const isHome = currentPath === homePath;
       if (label) label.textContent = open ? menuLabels.close : menuLabels.menu;
       if (open) {
         mobileMenu.hidden = false;
+        // The panel scrolls inside whatever the screen leaves below the bar
+        // (taller on a phone now that the bar clears the status bar).
+        mobileMenu.scrollTop = 0;
+        // Layout position, not the client rect: the closed panel is still
+        // translated 12px up for its entrance.
+        const bar = mobileMenu.offsetParent as HTMLElement | null;
+        const menuTop = (bar ? bar.getBoundingClientRect().top : 0) + mobileMenu.offsetTop;
+        mobileMenu.style.setProperty('--menu-top', `${Math.max(0, menuTop)}px`);
         void mobileMenu.offsetWidth;
         mobileMenu.classList.add('open');
         if (menuLinks.length) menuLinks[0].focus();
@@ -334,17 +347,20 @@ const isHome = currentPath === homePath;
     });
 
     // Touch swipe-up / swipe-left to dismiss mobile drawer
+    // (a swipe up only closes once the panel has nothing left to scroll)
     let touchStartY = 0;
     let touchStartX = 0;
+    let atEnd = true;
     mobileMenu.addEventListener('touchstart', (e) => {
       touchStartY = e.touches[0].clientY;
       touchStartX = e.touches[0].clientX;
+      atEnd = mobileMenu.scrollTop + mobileMenu.clientHeight >= mobileMenu.scrollHeight - 1;
     }, { passive: true });
 
     mobileMenu.addEventListener('touchend', (e) => {
       const deltaY = e.changedTouches[0].clientY - touchStartY;
       const deltaX = e.changedTouches[0].clientX - touchStartX;
-      if (deltaY < -40 || deltaX < -60) {
+      if ((deltaY < -40 && atEnd) || deltaX < -60) {
         setOpen(false);
         (menuBtn as HTMLElement)?.focus();
       }
@@ -467,10 +483,29 @@ const isHome = currentPath === homePath;
 </script>
 
 <style>
+  .safe-area-blackout {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top, 0px);
+    background: var(--chrome, #000);
+    z-index: 100000;
+    pointer-events: none;
+  }
   .site-nav {
     position: sticky;
     top: 0;
     z-index: 100;
+    /* Clear the status bar: the nav's own (solid, on phones) background
+       runs up under the blackout strip, its content starts below it. */
+    padding-top: env(safe-area-inset-top, 0px);
+    /* Held sideways, the body keeps clear of the notch (base.css); the bar
+       still runs edge to edge, its content stays inside. */
+    margin-left: calc(-1 * env(safe-area-inset-left, 0px));
+    margin-right: calc(-1 * env(safe-area-inset-right, 0px));
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
     background: rgba(10, 10, 10, 0.85);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
@@ -489,16 +524,21 @@ const isHome = currentPath === homePath;
   .site-nav:has(.mobile-menu.open) {
     z-index: 120;
   }
-  .site-nav:not(.at-top):hover {
-    background: rgba(22, 22, 22, 0.95);
-    box-shadow:
-      0 4px 30px rgba(0, 0, 0, 0.6),
-      0 4px 40px rgba(200, 200, 200, 0.08),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.2);
-  }
-  .site-nav--home.at-top:hover {
-    background: rgba(22, 22, 22, 0.95);
-    box-shadow: none;
+  /* Mouse only. On a phone :hover sticks after a tap, and this rule
+     (more specific than the phone rule below) turned the solid bar 5%
+     see-through for the rest of the visit. */
+  @media (hover: hover) and (pointer: fine) {
+    .site-nav:not(.at-top):hover {
+      background: rgba(22, 22, 22, 0.95);
+      box-shadow:
+        0 4px 30px rgba(0, 0, 0, 0.6),
+        0 4px 40px rgba(200, 200, 200, 0.08),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+    }
+    .site-nav--home.at-top:hover {
+      background: rgba(22, 22, 22, 0.95);
+      box-shadow: none;
+    }
   }
   .nav-inner {
     display: flex;
@@ -876,6 +916,11 @@ const isHome = currentPath === homePath;
     opacity: 1;
     transform: translateY(0);
   }
+  .mobile-menu {
+    max-height: calc(100dvh - var(--menu-top, 0px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
   .mobile-menu[hidden] {
     display: none;
   }
@@ -990,12 +1035,21 @@ const isHome = currentPath === homePath;
     .site-nav .menu-btn { display: inline-flex; }
     .nav-inner { gap: 1rem; }
     .wordmark-logo { height: 1.75rem; }
-    .site-nav {
-      background: #0a0a0a;
+  }
+
+  /* Phones (portrait, and landscape where the width passes 860): the
+     header is the status bar's colour, solid, with no blur, so the top of
+     the screen is one black band from the Dynamic Island down to the nav's
+     bottom rule. Same rule as HQ's responsive-mobile.css #navbar. */
+  @media (max-width: 860px), (orientation: landscape) and (max-height: 500px) {
+    .site-nav,
+    .site-nav:hover,
+    .site-nav:not(.at-top):hover,
+    .site-nav--home.at-top:hover {
+      background: var(--chrome, #000);
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
     }
-    .site-nav:hover { background: #0a0a0a; }
   }
 
   @media (prefers-reduced-motion: reduce) {

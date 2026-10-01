@@ -20,7 +20,7 @@
       <iframe
         class="vp-iframe"
         title="YouTube video player"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowfullscreen
       ></iframe>
     </div>
@@ -36,6 +36,7 @@
 
 <script>
   import { flipZoomOpen, lockBody, trapFocus, prefersReducedMotion } from '../lib/spatial.ts';
+  import { playWhenReady } from '../lib/youtube-start.ts';
 
   const player = document.getElementById('video-player');
   if (player) {
@@ -49,6 +50,7 @@
     let opener: HTMLElement | null = null;
     let isPaused = false;
     let isMuted = false;
+    let cancelStart: (() => void) | null = null;
 
     function videoId(url: string) {
       const m = url.match(/[?&]v=([^&]+)/) || url.match(/youtu\.be\/([^?]+)/);
@@ -66,7 +68,12 @@
       isPaused = false;
       isMuted = false;
       if (iframe) {
-        (iframe as HTMLIFrameElement).src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&enablejsapi=1`;
+        // No autoplay=1: the player is started by command once it is ready
+        // (youtube-start.ts). The origin lets the jsapi answer this page.
+        const frame = iframe as HTMLIFrameElement;
+        frame.src = `https://www.youtube-nocookie.com/embed/${id}?rel=0&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
+        cancelStart?.();
+        cancelStart = playWhenReady(frame);
       }
       if (title) title.textContent = label || 'Video';
       if (ytLink) (ytLink as HTMLAnchorElement).href = url;
@@ -91,8 +98,11 @@
         player.hidden = true;
         player.setAttribute('aria-hidden', 'true');
       }
-      // Stop the video.
-      if (iframe) (iframe as HTMLIFrameElement).src = '';
+      // Stop the video. about:blank, never '': an empty src resolves to this
+      // page's own URL and loads the whole site inside the frame.
+      cancelStart?.();
+      cancelStart = null;
+      if (iframe) (iframe as HTMLIFrameElement).src = 'about:blank';
       if (unlock) { unlock(); unlock = null; }
       if (untrap) { untrap(); untrap = null; }
       if (opener) opener.focus();
@@ -205,10 +215,14 @@
     height: 100%;
     border: 0;
   }
+  /* As wide as the screen above it: it was sized by its content (a 60vw
+     title plus a no-wrap link), which ran off both edges of a phone. */
   .vp-meta {
     margin-top: 1.25rem;
+    width: min(92vw, 1100px);
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 1.25rem;
     pointer-events: auto;
   }
@@ -217,7 +231,8 @@
     font-size: 0.95rem;
     font-weight: 700;
     color: rgba(245, 245, 245, 0.9);
-    max-width: 60vw;
+    flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -237,8 +252,8 @@
   }
   .vp-btn {
     position: absolute;
-    top: 1.25rem;
-    right: 1.25rem;
+    top: calc(1.25rem + env(safe-area-inset-top, 0px));
+    right: calc(1.25rem + env(safe-area-inset-right, 0px));
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -259,6 +274,15 @@
   }
   .vp-btn:active {
     transform: scale(0.92);
+  }
+
+  @media (max-width: 600px) {
+    .vp-meta {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.6rem;
+    }
+    .vp-title { max-width: 100%; }
   }
 
   @media (prefers-reduced-motion: reduce) {

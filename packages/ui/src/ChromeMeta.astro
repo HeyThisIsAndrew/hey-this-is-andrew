@@ -1,0 +1,24 @@
+---
+/**
+ * ChromeMeta (@andrew/ui): the viewport and theme-color tags, shared so every
+ * site gets the same phone status bar.
+ *
+ * `viewport-fit=cover` makes env(safe-area-inset-top) report the real status
+ * bar / Dynamic Island height. Nav uses it to paint that strip solid
+ * (`.safe-area-blackout`) and to push its own content below it. Without it,
+ * iOS 26 Safari lets the page scroll visibly behind the status bar, which is
+ * what a reader saw on the personal site while BE Unconventional HQ stayed
+ * black. theme-color matches the --chrome token for browsers that tint
+ * their own bar from it.
+ */
+interface Props {
+  /** Must equal --chrome in @andrew/tokens. */
+  color?: string;
+  /** `interactive-widget` value (the personal site resizes for the keyboard). */
+  interactiveWidget?: 'resizes-content' | 'resizes-visual' | 'overlays-content';
+}
+const { color = '#000000', interactiveWidget } = Astro.props;
+const viewport = ['width=device-width', 'initial-scale=1', 'viewport-fit=cover', interactiveWidget && `interactive-widget=${interactiveWidget}`].filter(Boolean).join(', ');
+---
+<meta name="viewport" content={viewport} />
+<meta name="theme-color" content={color} />

@@ -10,7 +10,8 @@ a block looks only by overriding tokens in its own theme file.
 | import | what it is | props (short) |
 | --- | --- | --- |
 | `@andrew/ui/BrandAccordion.astro` | the brand accordion (HQ's hero accordion mechanics) | `panels`, `fullscreen?`, `interval?`, `labels?` |
-| `@andrew/ui/Nav.astro` | sticky header, dropdowns, mobile menu, scrollspy | `logo`, `homeHref`, `links`, `search?`; default slot for a search modal |
+| `@andrew/ui/ChromeMeta.astro` | the viewport (`viewport-fit=cover`) and `theme-color` tags; put it in every layout's `<head>` | `color?` (must equal `--chrome`), `interactiveWidget?` |
+| `@andrew/ui/Nav.astro` | sticky header, dropdowns, mobile menu, scrollspy; paints the phone status-bar strip solid (`--chrome`) and clears it | `logo`, `homeHref`, `links`, `search?`; default slot for a search modal |
 | `@andrew/ui/Footer.astro` | brand block, Explore list, social icons, legal row | `logo`, `tagline`, `explore`, `socials`, `copyright`, `privacyHref`, `notes?` |
 | `@andrew/ui/SectionHeader.astro` | the one section heading pattern | `kicker`, `title`, `index?`, `lede?`, `linkLabel?`, `linkHref?`, `id?` |
 | `@andrew/ui/QuoteBand.astro` | standalone quote band | `eyebrow`, `quote`, `attribution`, `label?` |

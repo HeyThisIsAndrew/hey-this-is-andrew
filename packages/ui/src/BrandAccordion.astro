@@ -791,8 +791,8 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
      is open, then above everything, including the sticky site header. */
   .bacc-close {
     position: fixed;
-    top: 1.5rem;
-    right: 1.5rem;
+    top: calc(1.5rem + env(safe-area-inset-top, 0px));
+    right: calc(1.5rem + env(safe-area-inset-right, 0px));
     z-index: 1100;
     display: flex;
     align-items: center;
@@ -1151,8 +1151,16 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
          while the view is open measures the panel, not the camera. */
       measure(panel: HTMLElement) {
         const r = { width: panel.offsetWidth, height: panel.offsetHeight, x: panel.offsetLeft, y: panel.offsetTop };
+        /* A phone or iPad's status bar and home indicator (viewport-fit=cover)
+           are not room for the art. */
+        const probe = document.createElement('div');
+        probe.style.cssText = 'position:fixed;top:0;left:0;visibility:hidden;pointer-events:none;height:env(safe-area-inset-top,0px);width:env(safe-area-inset-bottom,0px)';
+        document.body.append(probe);
+        const safeTop = probe.offsetHeight;
+        const safeBottom = probe.offsetWidth;
+        probe.remove();
         const vw = window.innerWidth;
-        const vh = window.innerHeight;
+        const vh = window.innerHeight - safeBottom;
         /* The close control sits top-right; the art never runs under it. */
         const closeR = closeBtn && !closeBtn.hidden ? closeBtn.getBoundingClientRect() : null;
         const solve = (top: number) => {
@@ -1171,7 +1179,7 @@ const OPEN_SIZES = '(max-width: 767px) calc(100vw - 32px), calc(100vw - 2 * 180p
           const y0 = Math.max(top, top + (vh - top - EDGE - blockH) / 2);
           return { scale, artW, artH, x0, y0 };
         };
-        let g = solve(EDGE);
+        let g = solve(EDGE + safeTop);
         if (closeR && g.x0 + g.artW > closeR.left - 8 && g.y0 < closeR.bottom + 8) g = solve(closeR.bottom + 12);
         const { scale, artW, artH, x0, y0 } = g;
         if (caption) {

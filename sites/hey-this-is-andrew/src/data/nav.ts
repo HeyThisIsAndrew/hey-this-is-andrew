@@ -57,7 +57,7 @@ export const NAV_LINKS: NavItem[] = [
     subsections: [
       { label: 'Espresso & Brew Bar', href: `${page('cafe')}#brew`, kicker: '01' },
       { label: 'Grinders & Scales', href: `${page('cafe')}#gear`, kicker: '02' },
-      { label: '9:16 Video Reels', href: `${page('cafe')}#reels`, kicker: '03' },
+      { label: '9:16 Reel Note', href: `${page('cafe')}#reels`, kicker: '03' },
       { label: 'James Coffee Co.', href: `${page('cafe')}#beans`, kicker: '04' },
     ],
   },
