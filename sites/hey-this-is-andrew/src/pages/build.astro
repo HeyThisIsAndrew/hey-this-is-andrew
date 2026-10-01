@@ -4,6 +4,21 @@ import SectionHeader from '@andrew/ui/SectionHeader.astro';
 
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
+
+// The Core Engine milestones and Andrew's ACTUAL status for each. This is
+// the only source of the tracker: the boxes are display-only (they were
+// visitor checkboxes saved to the visitor's own browser, so anyone could
+// "complete" Andrew's milestones). Update a status here to change the page.
+type MilestoneStatus = 'done' | 'in-progress' | 'queued';
+const MILESTONES: { id: string; title: string; desc: string; status: MilestoneStatus }[] = [
+  { id: 'm1', title: 'System Automation', desc: 'Build self-hosted n8n infrastructure for automated social media distribution.', status: 'in-progress' },
+  { id: 'm2', title: 'Creator Tech Authority', desc: 'Establish workflow and gear catalog bridging creator tools and production systems.', status: 'in-progress' },
+  { id: 'm3', title: 'Revenue & Partnerships', desc: 'Scale direct UGC brand partnerships and affiliate pipelines.', status: 'in-progress' },
+  { id: 'm4', title: 'Industry Access', desc: 'Secure accreditation and invitations to Sony Kando, Apple Keynote, and Meta Connect.', status: 'queued' },
+];
+const STATUS_LABEL: Record<MilestoneStatus, string> = { done: 'Done', 'in-progress': 'In Progress', queued: 'Queued' };
+const doneCount = MILESTONES.filter((m) => m.status === 'done').length;
+const donePercent = Math.round((doneCount / MILESTONES.length) * 100);
 ---
 
 <BaseLayout
@@ -29,76 +44,37 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
         lede="Active targets across infrastructure, authority, revenue, and industry access."
       />
 
-      <div class="milestones-progress-wrap" aria-live="polite">
+      <div class="milestones-progress-wrap">
         <div class="milestones-progress-header">
           <span class="milestones-progress-label font-mono">Verified Execution Tracker</span>
-          <span class="milestones-progress-stat font-mono" id="milestones-stat">0 of 4 Completed (0%)</span>
+          <span class="milestones-progress-stat font-mono">{doneCount} of {MILESTONES.length} Completed ({donePercent}%)</span>
         </div>
-        <div class="milestones-progress-bar-bg" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="4" aria-label="Milestone completion progress">
-          <div class="milestones-progress-fill" id="milestones-fill" style="width: 0%;"></div>
-        </div>
-      </div>
-
-      <div class="checklist-container">
-        <!-- Milestone 1 -->
-        <div class="checklist-card" data-milestone-card="m1">
-          <div class="checklist-left">
-            <input type="checkbox" id="m1" class="checklist-checkbox" aria-label="Toggle System Automation milestone" />
-            <div class="checklist-info">
-              <label for="m1" class="checklist-title">System Automation</label>
-              <p class="checklist-desc">Build self-hosted n8n infrastructure for automated social media distribution.</p>
-            </div>
-          </div>
-          <div class="status-badge in-progress" data-status-badge="m1" data-default-text="In Progress" data-default-class="in-progress">
-            <span class="pulse-indicator"></span>
-            <span class="badge-text">In Progress</span>
-          </div>
-        </div>
-
-        <!-- Milestone 2 -->
-        <div class="checklist-card" data-milestone-card="m2">
-          <div class="checklist-left">
-            <input type="checkbox" id="m2" class="checklist-checkbox" aria-label="Toggle Creator Tech Authority milestone" />
-            <div class="checklist-info">
-              <label for="m2" class="checklist-title">Creator Tech Authority</label>
-              <p class="checklist-desc">Establish workflow and gear catalog bridging creator tools and production systems.</p>
-            </div>
-          </div>
-          <div class="status-badge in-progress" data-status-badge="m2" data-default-text="In Progress" data-default-class="in-progress">
-            <span class="pulse-indicator"></span>
-            <span class="badge-text">In Progress</span>
-          </div>
-        </div>
-
-        <!-- Milestone 3 -->
-        <div class="checklist-card" data-milestone-card="m3">
-          <div class="checklist-left">
-            <input type="checkbox" id="m3" class="checklist-checkbox" aria-label="Toggle Revenue & Partnerships milestone" />
-            <div class="checklist-info">
-              <label for="m3" class="checklist-title">Revenue &amp; Partnerships</label>
-              <p class="checklist-desc">Scale direct UGC brand partnerships and affiliate pipelines.</p>
-            </div>
-          </div>
-          <div class="status-badge in-progress" data-status-badge="m3" data-default-text="In Progress" data-default-class="in-progress">
-            <span class="pulse-indicator"></span>
-            <span class="badge-text">In Progress</span>
-          </div>
-        </div>
-
-        <!-- Milestone 4 -->
-        <div class="checklist-card" data-milestone-card="m4">
-          <div class="checklist-left">
-            <input type="checkbox" id="m4" class="checklist-checkbox" aria-label="Toggle Industry Access milestone" />
-            <div class="checklist-info">
-              <label for="m4" class="checklist-title">Industry Access</label>
-              <p class="checklist-desc">Secure accreditation and invitations to Sony Kando, Apple Keynote, and Meta Connect.</p>
-            </div>
-          </div>
-          <div class="status-badge queued" data-status-badge="m4" data-default-text="Queued" data-default-class="queued">
-            <span class="badge-text">Queued</span>
-          </div>
+        <div class="milestones-progress-bar-bg" role="progressbar" aria-valuenow={doneCount} aria-valuemin="0" aria-valuemax={MILESTONES.length} aria-label="Milestones completed">
+          <div class="milestones-progress-fill" style={`width: ${donePercent}%;`}></div>
         </div>
       </div>
+
+      <ul class="checklist-container">
+        {MILESTONES.map((m) => (
+          <li class:list={['checklist-card', { completed: m.status === 'done' }]} data-milestone-card={m.id}>
+            <div class="checklist-left">
+              <span class:list={['checklist-mark', { 'is-done': m.status === 'done' }]} aria-hidden="true">
+                {m.status === 'done' && (
+                  <svg viewBox="0 0 16 16" width="12" height="12" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="square" /></svg>
+                )}
+              </span>
+              <div class="checklist-info">
+                <h3 class="checklist-title">{m.title}</h3>
+                <p class="checklist-desc">{m.desc}</p>
+              </div>
+            </div>
+            <div class:list={['status-badge', m.status === 'done' ? 'achieved' : m.status]}>
+              {m.status === 'in-progress' && <span class="pulse-indicator"></span>}
+              <span class="badge-text">{STATUS_LABEL[m.status]}</span>
+            </div>
+          </li>
+        ))}
+      </ul>
 
       <!-- 2. Sub-Brand Roadmap: BE Unconventional HQ -->
       <div class="sub-brand-block">
@@ -231,130 +207,6 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
   </div>
 </BaseLayout>
 
-<script>
-  // Milestone state persistence & execution tracking
-  const STORAGE_KEY = 'hey_andrew_milestones_state_v1';
-
-  function initMilestones() {
-    const cards = Array.from(document.querySelectorAll<HTMLElement>('.checklist-card'));
-    const statEl = document.getElementById('milestones-stat');
-    const fillEl = document.getElementById('milestones-fill');
-    if (!cards.length) return;
-
-    let savedState: Record<string, boolean> = {};
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        savedState = JSON.parse(stored);
-      }
-    } catch {
-      savedState = {};
-    }
-
-    function updateTracker() {
-      let completedCount = 0;
-      cards.forEach((card) => {
-        const checkbox = card.querySelector<HTMLInputElement>('.checklist-checkbox');
-        if (checkbox && checkbox.checked) {
-          completedCount++;
-        }
-      });
-
-      const total = cards.length;
-      const percent = Math.round((completedCount / total) * 100);
-      if (statEl) {
-        statEl.textContent = `${completedCount} of ${total} Completed (${percent}%)`;
-      }
-      if (fillEl) {
-        fillEl.style.width = `${percent}%`;
-        // aria-valuenow belongs on the progressbar (the fill's parent).
-        fillEl.parentElement?.setAttribute('aria-valuenow', String(completedCount));
-      }
-    }
-
-    function applyCardState(card: HTMLElement, checked: boolean) {
-      const badge = card.querySelector<HTMLElement>('.status-badge');
-      const badgeText = card.querySelector<HTMLElement>('.badge-text');
-      const pulse = card.querySelector<HTMLElement>('.pulse-indicator');
-
-      if (checked) {
-        card.classList.add('completed');
-        if (badge) {
-          badge.className = 'status-badge achieved';
-        }
-        if (badgeText) {
-          badgeText.textContent = 'Verified / Done';
-        }
-        if (pulse) {
-          pulse.style.display = 'none';
-        }
-      } else {
-        card.classList.remove('completed');
-        const defaultClass = badge?.dataset.defaultClass || 'in-progress';
-        const defaultText = badge?.dataset.defaultText || 'In Progress';
-        if (badge) {
-          badge.className = `status-badge ${defaultClass}`;
-        }
-        if (badgeText) {
-          badgeText.textContent = defaultText;
-        }
-        if (pulse && defaultClass === 'in-progress') {
-          pulse.style.display = '';
-        }
-      }
-    }
-
-    cards.forEach((card) => {
-      const checkbox = card.querySelector<HTMLInputElement>('.checklist-checkbox');
-      if (!checkbox) return;
-      const id = checkbox.id;
-
-      // Check both new store and legacy goal_m* key
-      const isSaved = savedState[id] !== undefined 
-        ? savedState[id] 
-        : localStorage.getItem('goal_' + id) === 'true';
-
-      if (isSaved) {
-        checkbox.checked = true;
-        applyCardState(card, true);
-      } else {
-        applyCardState(card, false);
-      }
-
-      const save = () => {
-        savedState[id] = checkbox.checked;
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(savedState));
-          localStorage.setItem('goal_' + id, String(checkbox.checked));
-        } catch {
-          // ignore localStorage quota errors
-        }
-        applyCardState(card, checkbox.checked);
-        updateTracker();
-      };
-
-      checkbox.addEventListener('change', save);
-
-      // Card-level click toggles checkbox if not clicking label/link directly
-      card.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        if (target === checkbox || target.closest('label, a')) return;
-        checkbox.checked = !checkbox.checked;
-        save();
-      });
-    });
-
-    updateTracker();
-  }
-
-  // Support initial load and Astro view transitions
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initMilestones);
-  } else {
-    initMilestones();
-  }
-  document.addEventListener('astro:page-load', initMilestones);
-</script>
 
 <style>
   .build-page {
@@ -440,7 +292,9 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    margin-bottom: 3.5rem;
+    margin: 0 0 3.5rem;
+    padding: 0;
+    list-style: none;
   }
   .checklist-card {
     display: flex;
@@ -450,12 +304,7 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
     padding: 1.25rem 1.5rem;
     background: var(--surface);
     border: 1px solid var(--border);
-    cursor: pointer;
     transition: border-color 0.25s ease, background-color 0.25s ease;
-  }
-  .checklist-card:hover {
-    border-color: rgba(255, 255, 255, 0.35);
-    background: var(--surface-2);
   }
   .checklist-card.completed {
     border-color: rgba(255, 255, 255, 0.4);
@@ -470,13 +319,20 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
     gap: 1.25rem;
     flex: 1 1 auto;
   }
-  .checklist-checkbox {
-    margin-top: 0.25rem;
+  /* Display-only status mark (not a control). */
+  .checklist-mark {
+    display: inline-grid;
+    place-items: center;
+    margin-top: 0.2rem;
     width: 1.2rem;
     height: 1.2rem;
-    accent-color: var(--ink);
-    cursor: pointer;
     flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: #080808;
+  }
+  .checklist-mark.is-done {
+    background: var(--ink);
+    border-color: var(--ink);
   }
   .checklist-title {
     display: block;
@@ -486,7 +342,7 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--ink);
-    cursor: pointer;
+    margin: 0;
   }
   .checklist-desc {
     font-size: 0.92rem;
