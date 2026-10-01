@@ -89,4 +89,4 @@ goals pulse ignored reduced motion (`GoalsChecklist.astro`).
 | NEW tag | `packages/ui/src/NewTag.astro` | `/latest/` | Items published in the last 7 days. | White "NEW" tag on black text; never on items with an unknown date. |
 | Nav underline | `packages/ui/src/Nav.astro`, `packages/tokens/tokens.css` | any page, desktop | Hover a nav link. | White underline scales in from the left with a soft white glow. |
 | No dead anchors | `site/scripts/audit-dist.mjs` | all | `test:dist`. | Passes (it fails on any internal `#id` whose page lacks that id). |
-| Hero concepts | `site/src/components/hero/*`, `site/src/pages/preview/hero-{a,b,c}.astro` | `/preview/hero-a/` etc. | Load; view source. | `noindex`; not in `sitemap-0.xml`. `/` renders concept B (`HeroStatement.astro`), the same hero as `/preview/hero-b/`. |
+| Hero concepts | `site/src/components/hero/*`, `site/src/pages/preview/hero-{a,b,c,d}.astro` | `/preview/hero-a/` to `/preview/hero-d/` | Load; view source. | `noindex`; not in `sitemap-0.xml`. `/` renders concept B (`HeroStatement.astro`), the same hero as `/preview/hero-b/`. |
