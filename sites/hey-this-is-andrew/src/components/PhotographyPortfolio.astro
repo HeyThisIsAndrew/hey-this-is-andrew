@@ -7,8 +7,14 @@ import SectionHeader from '@andrew/ui/SectionHeader.astro';
 // Photography portfolio: parallel vertical elevators.
 // Four columns (two on mobile), each a continuous vertical reel.
 // Columns alternate direction and speed. Photos keep their natural
-// aspect ratios — vertical and horizontal mix as part of the composition.
-// Clicking a photo zooms it into the fullscreen viewer (spatial system).
+// aspect ratios (vertical and horizontal mix as part of the composition),
+// so a photo is never cropped to a sliver of itself.
+// Clicking a photo dollies the camera in just far enough to show the whole
+// photo; the neighbouring reels stay on screen and tappable.
+//
+// Rendered UNCONDITIONALLY (it is the homepage's photography section, right
+// after About): with no synced photos it shows a short empty state, never
+// nothing.
 
 // Self-hosted photos only (src/assets/instagram, via the sync:instagram script).
 const instagramPhotos = await getInstagramPhotos(32);
@@ -65,29 +71,29 @@ displayPhotos.forEach((_, i) => {
 
 const directions = ['up', 'down', 'up', 'down'];
 const durations = [58, 74, 66, 82];
-// The note links to the About page: #about exists only on the homepage,
-// and this section renders on /work.
+// The note links to the About page (this section also renders on /work,
+// where there is no #about).
 const aboutUrl = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/about/`;
+// Each reel renders its photos twice: the CSS/WAAPI loop translates the
+// track by -50%, which is seamless only over two identical sets. The copy
+// is aria-hidden and out of the tab order.
+const SETS = [0, 1];
 ---
 
-{displayPhotos.length === 0 && import.meta.env.DEV && (
-  <p style="padding:2rem;border:1px dashed #555;color:#bbb;font-family:monospace">
-    TODO (Andrew): no self-hosted photos yet. Run npm run sync:instagram (see src/data/instagram-media-todo.md).
-  </p>
-)}
-{displayPhotos.length > 0 && (
 <section id="photography" class="photo-section" aria-labelledby="photography-title">
   <div class="photo-zoom-backdrop" aria-hidden="true"></div>
   <div class="photo-intro">
     <SectionHeader
       kicker="Photography"
-      index="02"
       title="Shot on the job."
       lede="Bar and beverage photography. The work behind Capture Create Caffeinate. Available for select photography work."
       id="photography-title"
     />
   </div>
 
+  {displayPhotos.length === 0 ? (
+    <p class="photo-empty">The photographs could not be loaded right now. Please check back soon.</p>
+  ) : (
   <div class="photo-grid-container">
     <div class="photo-stage-wrap">
       <div id="camera-stage" class="camera-stage">
@@ -99,7 +105,8 @@ const aboutUrl = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/about/`;
         style={`--reel-duration: ${durations[ci]}s`}
       >
         <div class="photo-track">
-          <div class="photo-set">
+          {SETS.map((set) => (
+          <div class="photo-set" aria-hidden={set === 1 ? 'true' : undefined}>
             {col.map((pi) => {
               const p = displayPhotos[pi];
               if (!p) return null;
@@ -109,6 +116,8 @@ const aboutUrl = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/about/`;
                   class="photo-item"
                   data-camera-zoom
                   data-photo-index={pi}
+                  tabindex={set === 1 ? -1 : undefined}
+                  style={`aspect-ratio: ${p.image.width} / ${p.image.height}`}
                   aria-label={`View photo: ${p.caption}`}
                 >
                   <Image
@@ -125,6 +134,7 @@ const aboutUrl = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/about/`;
               );
             })}
           </div>
+          ))}
         </div>
       </div>
     ))}
@@ -132,13 +142,13 @@ const aboutUrl = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/about/`;
       </div><!-- /#camera-stage -->
     </div><!-- /.photo-stage-wrap -->
   </div><!-- /.photo-grid-container -->
+  )}
 
   <p class="photo-note">
     All photographs by Andrew. The cocktails and dishes pictured are the bar's.
     The photography is his. <a href={aboutUrl}>More about the work</a>.
   </p>
 </section>
-)}
 
 <style>
   .photo-section {
@@ -250,19 +260,11 @@ const aboutUrl = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/about/`;
     background: #111;
     cursor: pointer;
     overflow: hidden;
-    /* Fixed cell aspect ratios to prevent distortion on wide displays */
+    /* The cell takes the photo's own aspect ratio (inline style), so the
+       whole photo shows. Forced 16:9 / 1:1 / 4:5 cells cut portrait photos
+       to slivers. */
     aspect-ratio: 4 / 5;
     transition: border-color 0.3s ease, transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
-  }
-
-  .photo-item:nth-child(3n + 1) {
-    aspect-ratio: 16 / 9;
-  }
-  .photo-item:nth-child(3n + 2) {
-    aspect-ratio: 1 / 1;
-  }
-  .photo-item:nth-child(3n) {
-    aspect-ratio: 4 / 5;
   }
 
   .photo-item img {
@@ -307,6 +309,16 @@ const aboutUrl = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/about/`;
   .photo-item:hover .photo-tag,
   .photo-item:focus-visible .photo-tag {
     opacity: 1;
+  }
+
+  .photo-empty {
+    max-width: var(--maxw);
+    margin: 1.5rem auto 0;
+    padding: 2.5rem clamp(1.25rem, 4vw, 2.5rem);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--color-white-muted, #888);
+    font-size: 0.9rem;
+    text-align: center;
   }
 
   .photo-note {
@@ -361,8 +373,11 @@ const aboutUrl = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/about/`;
     position: relative;
     width: 100%;
   }
+  /* `is-camera` holds from the moment the camera moves in until it has
+     landed back out (longer than `is-zoomed`, which drives the backdrop and
+     the header fade), so the return is never clipped by the section. */
   .photo-stage-wrap.is-zoomed,
-  .photo-section.is-zoomed {
+  .photo-section.is-camera {
     overflow: visible;
     z-index: 50;
   }
@@ -385,7 +400,7 @@ const aboutUrl = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/about/`;
   }
 
   .camera-stage {
-    transform-origin: center center;
+    transform-origin: 0 0;
     transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
     will-change: transform;
     width: 100%;
@@ -647,9 +662,67 @@ const aboutUrl = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/about/`;
     reels.forEach(measure);
     window.addEventListener('resize', () => reels.forEach(measure));
 
-    let currentScale = 1;
-    let currentTx = 0;
-    let currentTy = 0;
+    /* Load every photo once the section is near: lazy images inside the
+       clipped, moving reels were left as empty dark tiles. */
+    const section = photoSection as HTMLElement | null;
+    if (section && 'IntersectionObserver' in window) {
+      const near = new IntersectionObserver((entries) => {
+        if (!entries.some((en) => en.isIntersecting)) return;
+        section.querySelectorAll<HTMLImageElement>('.photo-item img').forEach((img) => { img.loading = 'eager'; });
+        near.disconnect();
+      }, { rootMargin: '800px 0px' });
+      near.observe(section);
+    }
+
+    /* ---- Camera: translate(X, Y) scale(s) about the stage's top-left ----
+       Every move (open, pan to a neighbour, close) is computed from the
+       photos' untransformed geometry, so it is exact at any zoom. */
+    let s = 1;
+    let X = 0;
+    let Y = 0;
+    let closeTimer = 0;
+    const EASE = 'cubic-bezier(0.25, 1, 0.5, 1)';
+
+    const navBottom = () => {
+      const nav = document.querySelector('.site-nav');
+      return nav ? Math.max(0, nav.getBoundingClientRect().bottom) : 0;
+    };
+
+    function apply(ms: number) {
+      stage.style.transition = ms ? `transform ${ms}ms ${EASE}` : 'none';
+      stage.style.transform = `translate(${X}px, ${Y}px) scale(${s})`;
+    }
+
+    /* Just far enough in to show the WHOLE photo: it may take at most 72%
+       of the width and 82% of the height under the header, so the
+       neighbouring reels and the photos above and below stay in view. */
+    function focusOn(target: HTMLElement, ms: number) {
+      const sr = stage.getBoundingClientRect();
+      const tr = target.getBoundingClientRect();
+      const ux = (tr.left - sr.left) / s;
+      const uy = (tr.top - sr.top) / s;
+      const uw = tr.width / s;
+      const uh = tr.height / s;
+      const top = navBottom();
+      const vw = document.documentElement.clientWidth;
+      const vh = window.innerHeight;
+      const next = Math.min(3, Math.max(1.1, Math.min((vw * 0.72) / uw, ((vh - top) * 0.82) / uh)));
+      const originX = sr.left - X;
+      const originY = sr.top - Y;
+      s = next;
+      X = vw / 2 - originX - s * (ux + uw / 2);
+      Y = top + (vh - top) / 2 - originY - s * (uy + uh / 2);
+      apply(ms);
+    }
+
+    function setFrozen(target: HTMLElement | null) {
+      const column = target?.closest<HTMLElement>('.photo-column') ?? null;
+      const next = reels.find((r) => r.column === column) ?? null;
+      const prev = frozenReel;
+      frozenReel = next;
+      if (prev && prev !== next) prev.updatePlayState?.();
+      if (next?.anim && next.anim.playState === 'running') next.anim.pause();
+    }
 
     // Delegated click listener on wall so every item click (original or loop) is handled reliably
     wall.addEventListener('click', (e) => {
@@ -660,79 +733,35 @@ const aboutUrl = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/about/`;
       e.stopPropagation();
 
       if (isZoomed) {
-        if (item === activeTarget) {
-          // Clicking the active photo resets zoom
-          resetZoom();
-        } else {
-          // Clicking another photo pans the camera directly to it!
-          panToElement(item);
-        }
+        if (item === activeTarget) resetZoom();
+        else panToElement(item);
       } else {
         zoomToElement(item);
       }
     });
 
-    // ---- Stage-Transform Camera Dolly & Pan ----
     function zoomToElement(target: HTMLElement) {
       if (isZoomed) {
-        if (target === activeTarget) {
-          resetZoom();
-        } else {
-          panToElement(target);
-        }
+        if (target === activeTarget) resetZoom();
+        else panToElement(target);
         return;
       }
+      window.clearTimeout(closeTimer);
+      // Freeze ONLY the selected photo's reel; the neighbours keep moving.
+      setFrozen(target);
 
-      // 1. Identify clicked item & its column
-      const column = target.closest<HTMLElement>('.photo-column');
-      const targetReel = reels.find((r) => r.column === column) ?? null;
+      // Lock scrolling without the page reflowing under the camera.
+      const gutter = window.innerWidth - document.documentElement.clientWidth;
+      if (gutter > 0) document.body.style.paddingRight = `${gutter}px`;
+      document.body.style.overflow = 'hidden';
 
-      // 2. Freeze ONLY the selected item's column:
-      // Neighboring columns continue moving smoothly.
-      frozenReel = targetReel;
-      if (targetReel?.anim && targetReel.anim.playState === 'running') {
-        targetReel.anim.pause();
-      }
-
-      // 3. Capture geometry BEFORE transforming
-      const stageRect = stage.getBoundingClientRect();
-      const stageCX = stageRect.left + stageRect.width / 2;
-      const stageCY = stageRect.top + stageRect.height / 2;
-
-      const rect = target.getBoundingClientRect();
-      const imgCX = rect.left + rect.width / 2;
-      const imgCY = rect.top + rect.height / 2;
-
-      const vpCX = window.innerWidth / 2;
-      const vpCY = window.innerHeight / 2;
-
-      // Camera scale: fills the viewport with target as clear focal point
-      const scaleX = window.innerWidth / rect.width;
-      const scaleY = window.innerHeight / rect.height;
-      const targetScale = Math.max(2.2, Math.min(2.8, Math.max(scaleX * 0.82, scaleY * 0.82)));
-
-      // Exact camera offset with center-origin math:
-      const tx = (vpCX - stageCX) / targetScale - (imgCX - stageCX);
-      const ty = (vpCY - stageCY) / targetScale - (imgCY - stageCY);
-
-      currentScale = targetScale;
-      currentTx = tx;
-      currentTy = ty;
-
-      // 4. Mark state
       isZoomed = true;
       activeTarget = target;
       target.classList.add('is-active');
       stage.classList.add('is-zoomed');
       stageWrap?.classList.add('is-zoomed');
-      photoSection?.classList.add('is-zoomed');
-
-      // 5. Lock body scrolling
-      document.body.style.overflow = 'hidden';
-
-      // 6. Apply camera transform to entire stage
-      stage.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
-      stage.style.transform = `scale(${currentScale}) translate(${currentTx}px, ${currentTy}px)`;
+      photoSection?.classList.add('is-zoomed', 'is-camera');
+      focusOn(target, reduced() ? 0 : 600);
     }
 
     function panToElement(newTarget: HTMLElement) {
@@ -744,74 +773,42 @@ const aboutUrl = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/about/`;
         resetZoom();
         return;
       }
-
-      // 1. Identify new column & freeze it, while resuming previously frozen column
-      const column = newTarget.closest<HTMLElement>('.photo-column');
-      const targetReel = reels.find((r) => r.column === column) ?? null;
-
-      const prevFrozen = frozenReel;
-      frozenReel = targetReel;
-      if (prevFrozen && prevFrozen !== targetReel) {
-        prevFrozen.updatePlayState?.();
-      }
-      if (targetReel?.anim && targetReel.anim.playState === 'running') {
-        targetReel.anim.pause();
-      }
-
-      // 2. Switch active classes
-      if (activeTarget) {
-        activeTarget.classList.remove('is-active');
-      }
+      setFrozen(newTarget);
+      activeTarget?.classList.remove('is-active');
       activeTarget = newTarget;
       newTarget.classList.add('is-active');
-
-      // 3. Compute delta from newTarget current position to viewport center
-      const rect = newTarget.getBoundingClientRect();
-      const imgCX = rect.left + rect.width / 2;
-      const imgCY = rect.top + rect.height / 2;
-
-      const vpCX = window.innerWidth / 2;
-      const vpCY = window.innerHeight / 2;
-
-      const dx = vpCX - imgCX;
-      const dy = vpCY - imgCY;
-
-      // Shift camera translation in stage coordinates
-      currentTx += dx / currentScale;
-      currentTy += dy / currentScale;
-
-      // 4. Smooth camera pan without resetting or exiting
-      stage.style.transition = 'transform 0.65s cubic-bezier(0.25, 1, 0.5, 1)';
-      stage.style.transform = `scale(${currentScale}) translate(${currentTx}px, ${currentTy}px)`;
+      focusOn(newTarget, reduced() ? 0 : 650);
     }
 
+    /* Back out from the same photo: the reel stays frozen and the zoomed
+       layout (unmasked, unclipped reels) stays in place until the camera
+       has landed, so nothing moves or re-crops under the return. */
     function resetZoom() {
       if (!isZoomed) return;
-
       isZoomed = false;
-      stage.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
-      stage.style.transform = 'none';
-      currentScale = 1;
-      currentTx = 0;
-      currentTy = 0;
-
-      stage.classList.remove('is-zoomed');
-      stageWrap?.classList.remove('is-zoomed');
+      s = 1;
+      X = 0;
+      Y = 0;
+      const ms = reduced() ? 0 : 600;
+      apply(ms);
       photoSection?.classList.remove('is-zoomed');
-
       if (activeTarget) {
         activeTarget.classList.remove('is-active');
         activeTarget = null;
       }
-
-      document.body.style.overflow = '';
-
-      // Resume previously frozen reel:
-      const prevFrozen = frozenReel;
-      frozenReel = null;
-      if (prevFrozen) {
-        prevFrozen.updatePlayState?.();
-      }
+      const finish = () => {
+        window.clearTimeout(closeTimer);
+        if (isZoomed) return; // reopened meanwhile
+        stage.style.transition = '';
+        stage.style.transform = '';
+        stage.classList.remove('is-zoomed');
+        stageWrap?.classList.remove('is-zoomed');
+        photoSection?.classList.remove('is-camera');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        setFrozen(null);
+      };
+      closeTimer = window.setTimeout(finish, ms + 40);
     }
 
     // Clicking stage background or backdrop when zoomed resets
