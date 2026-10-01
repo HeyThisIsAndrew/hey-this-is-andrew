@@ -14,7 +14,13 @@ import SiteSearch from '../components/SiteSearch.astro';
 import LiveBanner from '../components/LiveBanner.astro';
 import VideoPlayer from '../components/VideoPlayer.astro';
 import wordmark from '../assets/brand-logos/hey-thisisandrew.svg';
+// Andrew's own logo file (restored from b9cc358) is the nav logo, shown
+// as-is: one PNG at 2x the nav's largest height (3rem), never redrawn.
+// The footer still uses the SVG lockup above.
+import logoPng from '../assets/brand-logos/hey-thisisandrew.png';
+import { getImage } from 'astro:assets';
 import { NAV_LINKS, FOOTER_EXPLORE, SOCIALS, PRIVACY_HREF, SEARCH_TRIGGER, homeUrl } from '../data/nav';
+const navLogo = await getImage({ src: logoPng, height: 96, format: 'png' });
 
 interface Props {
   title: string;
@@ -103,7 +109,7 @@ const canonical = new URL(Astro.url.pathname, 'https://heythisisandrew.github.io
     <!-- Scroll Progress Indicator Bar -->
     <div id="scroll-progress" class="scroll-progress-bar" role="progressbar" aria-label="Scroll progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
     <Nav
-      logo={{ src: wordmark.src, width: wordmark.width, height: wordmark.height, alt: 'HEY_THISISANDREW' }}
+      logo={{ src: navLogo.src, width: Number(navLogo.attributes.width), height: Number(navLogo.attributes.height), alt: 'HEY_THISISANDREW' }}
       homeHref={homeUrl}
       links={NAV_LINKS}
       search={SEARCH_TRIGGER}

@@ -8,10 +8,16 @@
  * section below shows inside the first viewport, the way HQ's hero keeps
  * its panels on screen. `line` swaps the one line (D uses a line that does
  * not repeat the Meet the Creator headline).
+ *
+ * The portrait renders at full strength: no wash over the photo and no
+ * filter on it (Andrew's call, 2026-10-01: the dimmed version looked faded).
+ * The only shading is a soft gradient behind the text block itself.
+ * The wordmark is Andrew's own logo file (hey-thisisandrew.png, restored
+ * from b9cc358), shown as-is: resized for the screen, never redrawn.
  */
 import { Image } from 'astro:assets';
 import portrait from '../../assets/hero-media/portrait.jpg';
-import wordmark from '../../assets/brand-logos/hey-thisisandrew.svg';
+import wordmark from '../../assets/brand-logos/hey-thisisandrew.png';
 
 interface Props {
   peek?: boolean;
@@ -26,13 +32,14 @@ const {
   <div class="hs-media" aria-hidden="true">
     <Image src={portrait} alt="" widths={[960, 1440, 1920, 2560]} sizes="100vw" format="webp" loading="eager" fetchpriority="high" />
   </div>
-  <div class="hs-scrim" aria-hidden="true"></div>
   <div class="container hs-content">
-    <h2 id="hero-statement-title" class="hs-wordmark">
-      <img src={wordmark.src} width={wordmark.width} height={wordmark.height} alt="HEY_THISISANDREW" />
-    </h2>
-    <p class="hs-line">{line}</p>
-    <a class="btn btn-primary hs-cta" href="#directory">See the brands <span aria-hidden="true">↓</span></a>
+    <div class="hs-copy">
+      <h2 id="hero-statement-title" class="hs-wordmark">
+        <Image src={wordmark} alt="HEY_THISISANDREW" widths={[420, 640, 820, 1049]} sizes="min(92vw, 820px)" format="png" loading="eager" />
+      </h2>
+      <p class="hs-line">{line}</p>
+      <a class="btn btn-primary hs-cta" href="#directory">See the brands <span aria-hidden="true">↓</span></a>
+    </div>
   </div>
 </section>
 
@@ -62,23 +69,31 @@ const {
     height: 100%;
     object-fit: cover;
     object-position: 60% 25%;
-    filter: grayscale(0.2) contrast(1.05);
-  }
-  .hs-scrim {
-    position: absolute;
-    inset: 0;
-    background:
-      linear-gradient(90deg, rgba(8, 8, 8, 0.92) 0%, rgba(8, 8, 8, 0.55) 45%, rgba(8, 8, 8, 0.1) 75%),
-      linear-gradient(to top, rgba(8, 8, 8, 0.95) 0%, transparent 45%);
   }
   .hs-content {
     position: relative;
     z-index: 1;
   }
+  /* Readability help for the copy only: a soft dark falloff sized to the
+     text block, never a wash over the photo. */
+  .hs-copy {
+    position: relative;
+    width: fit-content;
+    max-width: 100%;
+  }
+  .hs-copy::before {
+    content: '';
+    position: absolute;
+    inset: -3rem -4rem -2.5rem -6rem;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(closest-side, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.28) 55%, transparent);
+  }
   .hs-wordmark {
     margin: 0;
   }
-  .hs-wordmark img {
+  .hs-wordmark :global(img) {
+    display: block;
     width: min(92vw, 820px);
     height: auto;
   }
