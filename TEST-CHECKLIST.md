@@ -16,7 +16,7 @@ screenshots per item: `VERIFICATION.md`, `verification/screenshots/`.
 - [ ] 7 · `/#gear` (load directly) and `/gear/` Lenses tab · D · content readable immediately, nothing dim after the jump or tab switch
 - [ ] 8 · footer · M · a social icon link measures 44x44
 - [ ] 9 · `/gear/` · D · click a camera: selection bar, alpha mark, G MASTER are white/gray, no red
-- [ ] 10 · `/` hero · D · hover the image: glitch fringe black/white only
+- [ ] 10 · `/brands/hey-this-is-andrew/` portrait · D · hover the image: glitch fringe black/white only
 - [ ] 11 · `/gear/` + CCC panel · D · no gold on the storefront button, pill, badge, CCC chip edge or CTA
 - [ ] 12 · `/` search (Cmd/Ctrl+K, type "goal"), newsletter submit, section `#` copy · D · no green anywhere
 - [ ] 13 · `/` search "goal" · D · IN-PROGRESS badges gray, not yellow
@@ -35,7 +35,7 @@ screenshots per item: `VERIFICATION.md`, `verification/screenshots/`.
 - [ ] 26 · `/goals/` Content Engine · D · "First hospitality brand collaboration" shows UP NEXT
 - [ ] 27 · `/goals/` Landing Page v1 · D · every task shows a DONE tag
 - [ ] 28 · nav "Build in Public" dropdown · D · reads "02 CORE ENGINE"; `/build/` heading "Core Engine"
-- [ ] 29 · `/` hero, click "02" · D+M · WATCH ON YOUTUBE white-outlined and legible
+- [x] 29 · retired: the carousel left `/` for hero B; nothing renders it now
 - [ ] 30 · nav right side · D · no theme toggle; source shows it commented out; `<html data-theme="dark">`
 - [ ] 31 · accordion pause button · D · aria-label "Pause auto-rotation" while rotating, "Play auto-rotation" after clicking a strip; no aria-pressed
 - [ ] 32 · any nav dropdown · D · square corners
@@ -59,7 +59,7 @@ screenshots per item: `VERIFICATION.md`, `verification/screenshots/`.
 - [ ] `/sitemap/` · D · lists Work, Latest, Goals, Services, Now
 - [ ] `/latest/` · D · NEW tag (white on black) only on items from the last 7 days
 - [ ] nav links · D · hover: white underline scales in from the left with a soft glow
-- [ ] `/preview/hero-a/`, `-b/`, `-c/` · D+M · render; source has `noindex`; `/` still shows the carousel
+- [ ] `/preview/hero-a/`, `-b/`, `-c/` · D+M · render; source has `noindex`; `/` shows hero B (portrait, wordmark, one line, SEE THE BRANDS)
 
 ## C. Viewport matrix (Prompt 1 section 1.6)
 
@@ -82,7 +82,7 @@ Viewports: 375x812, 390x844, 768x1024, 1280x800, 1440x900, 1920x1080,
 - [ ] footer links resolve: Work, Latest, Goals, Services, Now, Links, Press kit, Sitemap, Privacy
 - [ ] accordion CTAs: beunconventionalhq.com, the.fotoapp.co, the mailto inquiry
 - [ ] search opens with Cmd/Ctrl+K and `/`, returns results, Escape closes it
-- [ ] hero slide buttons and pause work
+- [ ] hero SEE THE BRANDS lands on the brands heading below the sticky header
 - [ ] `/gear/` category tabs filter correctly
 - [ ] photo grid click-to-zoom and Escape (once photos are synced)
 - [ ] Back-to-top appears after scrolling and returns to the top

@@ -40,7 +40,7 @@ locally (the same Syne / Inter / JetBrains Mono files Google serves).
 | 7 | `site/src/lib/spatial.ts`, `site/src/components/GearGrid.astro`, `packages/ui/src/FilterTabs.astro` | `/#gear`, `/gear/` | Load `/#gear` directly (no scrolling). On `/gear/`, click the Lenses tab. | Content is readable immediately; nothing sits dim/invisible after a jump or tab switch. |
 | 8 | `packages/ui/src/Footer.astro`, `site/src/styles/global.css`, `packages/ui/src/styles/cta.css`, `packages/ui/src/SectionHeader.astro`, `packages/ui/src/Nav.astro` | `/` at 390x844 | DevTools: measure a footer social icon link. | 44x44px. |
 | 9 | `site/src/components/GearGrid.astro` | `/gear/` | Click a camera in the manifest. | Selection bar, alpha mark and "G MASTER" are white/gray; schematics gray; no red. |
-| 10 | `site/src/styles/global.css` | `/` desktop | Hover the hero image. | Glitch fringe is white/black only; no red or cyan. |
+| 10 | `site/src/styles/global.css` | `/brands/hey-this-is-andrew/` desktop (the homepage carousel that also used it was retired for hero B) | Hover the portrait. | Glitch fringe is white/black only; no red or cyan. |
 | 11 | `site/src/components/GearGrid.astro`, `packages/ui/src/BrandAccordion.astro`, `site/src/styles/theme.css` | `/gear/`, `/#directory` | Look at "View on Amazon Storefront", the influencer pill, badge text; open the CCC panel. | No gold anywhere; storefront button is white-outline, inverts to white on hover; CCC chip edge and CTA white. |
 | 12 | `site/src/components/GearGrid.astro`, `site/src/components/NewsletterSignup.astro`, `packages/ui/src/SectionHeader.astro`, `site/src/components/SiteSearch.astro`, `site/src/pages/build.astro` | `/`, `/gear/`, `/build/` | Press Cmd/Ctrl+K, type `goal`; submit the newsletter form; click a section `#` link. | Status badges, pulse dot, COPIED toast and success tick are white/gray; no green. |
 | 13 | `site/src/components/SiteSearch.astro` | `/` | Cmd/Ctrl+K, type `goal`. | IN-PROGRESS badges gray, not yellow. |
@@ -59,7 +59,7 @@ locally (the same Syne / Inter / JetBrains Mono files Google serves).
 | 26 | `site/src/components/GoalsChecklist.astro` | `/goals/` | Read Content Engine's third task. | Shows an "UP NEXT" status tag. |
 | 27 | same | `/goals/` | Read Landing Page v1. | Every task shows a visible "DONE" tag. |
 | 28 | `site/src/data/nav.ts`, `site/src/pages/build.astro` | any page, then `/build/` | Hover "Build in Public"; follow "Core Engine". | Dropdown reads "02 / CORE ENGINE"; the heading on `/build/` reads "Core Engine". |
-| 29 | `site/src/components/BrandCarousel.astro` | `/` | Click "02 / …" under the hero. | "WATCH ON YOUTUBE" is white-outlined and legible, same as slide 1. |
+| 29 | `site/src/components/BrandCarousel.astro` | none: retired | The carousel left `/` when hero B was chosen (2026-09-30). The fix stays in the file, which nothing renders now. | Nothing to check on the live site. |
 | 30 | `packages/ui/src/Nav.astro`, `site/src/layouts/BaseLayout.astro` | any page | Look at the nav's right side; view source for `nav-theme-toggle`. | No toggle rendered; its code is present but commented out; `<html data-theme="dark">`. |
 | 31 | `packages/ui/src/BrandAccordion.astro` | `/#directory` desktop | Inspect the pause button's `aria-label`; click a strip; inspect again; click the button; inspect again. | "Pause auto-rotation" while rotating, "Play auto-rotation" after a manual choice, "Pause…" after pressing it; no `aria-pressed`. |
 | 32 | `packages/ui/src/Nav.astro`, `site/src/styles/global.css`, `site/src/pages/sitemap.astro` | any page | Hover a nav item. | Dropdown corners square (radius 0). |
@@ -89,4 +89,4 @@ goals pulse ignored reduced motion (`GoalsChecklist.astro`).
 | NEW tag | `packages/ui/src/NewTag.astro` | `/latest/` | Items published in the last 7 days. | White "NEW" tag on black text; never on items with an unknown date. |
 | Nav underline | `packages/ui/src/Nav.astro`, `packages/tokens/tokens.css` | any page, desktop | Hover a nav link. | White underline scales in from the left with a soft white glow. |
 | No dead anchors | `site/scripts/audit-dist.mjs` | all | `test:dist`. | Passes (it fails on any internal `#id` whose page lacks that id). |
-| Hero concepts | `site/src/components/hero/*`, `site/src/pages/preview/hero-{a,b,c}.astro` | `/preview/hero-a/` etc. | Load; view source. | `noindex`; not in `sitemap-0.xml`; `/` still shows the carousel. |
+| Hero concepts | `site/src/components/hero/*`, `site/src/pages/preview/hero-{a,b,c}.astro` | `/preview/hero-a/` etc. | Load; view source. | `noindex`; not in `sitemap-0.xml`. `/` renders concept B (`HeroStatement.astro`), the same hero as `/preview/hero-b/`. |

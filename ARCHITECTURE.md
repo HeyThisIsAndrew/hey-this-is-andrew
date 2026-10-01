@@ -65,7 +65,7 @@ concepts under `/preview/hero-*` render the identical page).
 | order | section (anchor) | component | archive page | data source |
 | --- | --- | --- | --- | --- |
 | 0 | header | `@andrew/ui/Nav` + `SiteSearch` (slot) | | `src/data/nav.ts` |
-| 1 | hero (`#overview`) | `BrandCarousel.astro` (unchanged; concepts pending) | | latest YouTube videos |
+| 1 | hero (`#overview`) | `hero/HeroStatement.astro` (concept B, chosen 2026-09-30) | | portrait + wordmark (static) |
 | 2 | The brands (`#directory`, alias `#brands`) | `BrandsSection.astro` → `@andrew/ui/BrandAccordion` | | `src/data/brands.ts` |
 | 3 | Meet the creator + Now line (`#about`) | `AboutSection.astro` | `/about/`, `/now/` | About copy, `src/data/now.ts` |
 | 4 | Selected work (`#projects`, alias `#photography`) | `SelectedWork.astro` (LatestCard, ProjectCard, photo strip, WorkflowStrip) | `/work/` | `projects` collection, `instagram-feed.json` + `src/assets/instagram/`, `workflow.ts` |
@@ -76,7 +76,8 @@ concepts under `/preview/hero-*` render the identical page).
 | 9 | Newsletter (`#newsletter`) | `NewsletterSection.astro` → `NewsletterSignup.astro` (the only signup on the site) | | Substack |
 | 10 | footer | `@andrew/ui/Footer` | | `src/data/nav.ts` |
 
-Brief's names → this site's: Hero = BrandCarousel, MeetTheCreator =
+Brief's names → this site's: Hero = HeroStatement (the old
+BrandCarousel is no longer rendered anywhere), MeetTheCreator =
 AboutSection, PhotoGrid = PhotographyPortfolio (on `/work`), ActivityFeed =
 LatestFeed, ServicesSection = WorkWithAndrew, NowBand (on `/now`).
 Archive pages (`/work`, `/latest`, `/goals`, `/services`, `/now`, `/gear`)
