@@ -35,3 +35,29 @@ photos stand in for the Instagram sync, as in the earlier boards.
   closed to `about:blank`. Worth one tap on a real iPhone.
 - The status bar emulation sets the same 59px safe area an iPhone 15/16
   reports; the island and clock are drawn on afterwards.
+
+## My own regression sweep (before vs after, every page)
+
+All 23 built pages, full length, at 390 and 1512, before (0c55f79) against
+after, compared pixel by pixel with motion turned off:
+
+- **1512:** every page identical except the three intended changes: Meet
+  the Creator (home, /about, the hero preview routes), the Cafe card, and the
+  Cafe line on /sitemap. Below those sections only a sub-pixel shift (text
+  anti-aliasing on the footer), confirmed by measuring: the About section is
+  the only section whose height changed (+10px), and the page grew by
+  exactly that.
+- **390:** the same, plus the top 75px of every page: the phone nav is now
+  pure black (#000, the status bar colour) instead of #0a0a0a. Intended.
+- Checks: unit tests, Pages-base build and built-site audit pass; axe 0
+  violations on all 19 pages at both sizes; no clipped text at 375, 390, 768;
+  7-viewport matrix clear; anchors land under the nav at 390, 1280, 1512,
+  1920; type check 40 errors, the same as before.
+
+**Flagged for Andrew, not changed:** the "Now" line inside Meet the Creator
+is 10px at 1512. It sat close to the old 12px body; next to the new 16px
+body (HQ's size) it reads as fine print. HQ has no equivalent line, so the
+template gives no answer.
+
+**Not verifiable here, handed to Muse** (`verification/muse-test-prompt-2026-10-01.md`):
+a real iPhone's status bar, real YouTube playback, touch gestures.
