@@ -82,6 +82,7 @@ Viewports: 375x812, 390x844, 768x1024, 1280x800, 1440x900, 1920x1080,
 - [ ] footer links resolve: Work, Latest, Goals, Services, Now, Links, Press kit, Sitemap, Privacy
 - [ ] accordion CTAs: beunconventionalhq.com, the.fotoapp.co, the mailto inquiry
 - [ ] search opens with Cmd/Ctrl+K and `/`, returns results, Escape closes it
+- [ ] `/preview/hero-d/` · D+M · THE BRANDS heading and the top of the accordion show without scrolling; wordmark and line once each; line reads ONE FOUNDER. THREE BRANDS. PICK A LANE.; `noindex` in source
 - [ ] hero SEE THE BRANDS lands on the brands heading below the sticky header
 - [ ] `/gear/` category tabs filter correctly
 - [ ] photo grid click-to-zoom and Escape (once photos are synced)
