@@ -20,7 +20,7 @@ interface Props {
    *  visible key hint (Andrew's call, 2026-10-02): the shortcut still works
    *  and is announced to assistive tech through `keyShortcuts`
    *  (aria-keyshortcuts, e.g. "Meta+K Control+K /"). */
-  search?: { label: string; ariaLabel: string; title: string; mobileText: string; mobileAria: string; keyShortcuts?: string };
+  search?: { label?: string; ariaLabel: string; title: string; mobileText: string; mobileAria: string; keyShortcuts?: string };
   labels?: { menu?: string; close?: string; sections?: string; sectionsMenu?: string };
 }
 
@@ -29,6 +29,13 @@ const L = { menu: 'Menu', close: 'Close', sections: 'Sections', sectionsMenu: 'S
 const homePath = homeHref.replace(/\/$/, '');
 const currentPath = Astro.url.pathname.replace(/\/$/, '');
 const isHome = currentPath === homePath;
+/* A page link is current on its own page (and pages under it), and only
+   there. Home is never lit by this: on the home page the scrollspy decides. */
+const isCurrent = (href: string) => {
+  const path = href.split('#')[0].replace(/\/$/, '');
+  if (!path || path === homePath || /^https?:/.test(path)) return false;
+  return currentPath === path || currentPath.startsWith(`${path}/`);
+};
 ---
 {/* HQ's .safe-area-blackout, kept as HQ has it: env(safe-area-inset-top)
     tall, which is 0 under HQ's viewport (no viewport-fit=cover). The black
@@ -47,10 +54,11 @@ const isHome = currentPath === homePath;
               <a
                 href={l.href}
                 data-nav-link
-                data-section={l.section}
+                data-spy={isHome && l.spy?.length ? l.spy.join(' ') : undefined}
                 aria-haspopup={l.subsections.length > 0 ? "true" : undefined}
                 aria-expanded={l.subsections.length > 0 ? "false" : undefined}
-                class="nav-link"
+                aria-current={isCurrent(l.href) ? 'page' : undefined}
+                class:list={['nav-link', { active: isCurrent(l.href) }]}
               >
                 <span>{l.label}</span>
                 {l.subsections.length > 0 && (
@@ -92,7 +100,6 @@ const isHome = currentPath === homePath;
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <span class="nav-search-label font-mono">{search.label}</span>
       </button>
       )}
       {/* Theme toggle hidden: the site is dark-mode only for now (decision 6).
@@ -141,7 +148,8 @@ const isHome = currentPath === homePath;
             <div class="mobile-section-header">
               <a
                 href={l.href}
-                class="mobile-main-link"
+                class:list={['mobile-main-link', { active: isCurrent(l.href) }]}
+                aria-current={isCurrent(l.href) ? 'page' : undefined}
               >
                 {l.label}
               </a>
@@ -395,70 +403,46 @@ const isHome = currentPath === homePath;
     themeToggle.setAttribute('title', initialLabel);
   }
 
-  // Scrollspy: keep the selected nav state connected to the visible section.
-  // BUG FIX: When scrolled to the very top of the site (Hero section), NO section link
-  // (including Lanes) should be highlighted.
-  const spyLinks = Array.from(document.querySelectorAll<HTMLElement>('[data-nav-link][data-section]'));
-  if (spyLinks.length && 'IntersectionObserver' in window) {
-    const sections = spyLinks
-      .map((a) => document.getElementById(a.getAttribute('data-section') || ''))
-      .filter(Boolean) as HTMLElement[];
-
+  // Scrollspy (home page only): a nav link lights only while the section that
+  // IS its destination is current (data-spy, e.g. Gear's own section). It used
+  // to light the nearest matching id and hold it, so About stayed lit from
+  // Meet The Creator (a preview, not the About page) all the way through What
+  // I do. Sections with no destination of their own light nothing. Page links
+  // are lit on their own page by the server (aria-current="page").
+  const spyLinks = Array.from(document.querySelectorAll<HTMLElement>('[data-nav-link][data-spy]'));
+  if (spyLinks.length) {
+    const sections = Array.from(document.querySelectorAll<HTMLElement>('main section[id]')).filter(
+      (s) => !s.parentElement?.closest('main section[id]'),
+    );
     const setActive = (id: string | null) => {
       spyLinks.forEach((a) => {
-        const on = Boolean(id && a.getAttribute('data-section') === id);
+        const on = Boolean(id && (a.dataset.spy ?? '').split(' ').includes(id));
         a.classList.toggle('active', on);
-        if (on) a.setAttribute('aria-current', 'true');
+        if (on) a.setAttribute('aria-current', 'location');
         else a.removeAttribute('aria-current');
       });
     };
-
-    const isAtTopOrHero = () => {
-      if (window.scrollY < 80) return true;
-      const dirEl = document.getElementById('directory');
-      if (dirEl) {
-        const top = dirEl.getBoundingClientRect().top;
-        if (top > window.innerHeight * 0.45) return true;
+    let queued = false;
+    const update = () => {
+      queued = false;
+      const line = window.innerHeight * 0.4;
+      let current: HTMLElement | null = null;
+      for (const s of sections) {
+        const r = s.getBoundingClientRect();
+        if (r.top <= line && r.bottom > line) current = s;
       }
-      return false;
+      setActive(window.scrollY < 80 ? null : current?.id ?? null);
     };
-
-    let currentActiveId: string | null = null;
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (isAtTopOrHero()) {
-          setActive(null);
-          return;
-        }
-
-        entries.forEach((en) => {
-          if (en.isIntersecting) {
-            currentActiveId = en.target.id;
-          }
-        });
-
-        if (isAtTopOrHero()) {
-          setActive(null);
-        } else if (currentActiveId) {
-          setActive(currentActiveId);
-        }
-      },
-      { rootMargin: '-38% 0px -55% 0px', threshold: 0 }
-    );
-    sections.forEach((s) => io.observe(s));
-
-    // Clear active state immediately on scroll when returning to top / hero
-    window.addEventListener(
-      'scroll',
-      () => {
-        if (isAtTopOrHero()) {
-          setActive(null);
-        }
-      },
-      { passive: true }
-    );
-
+    const queue = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(update);
+    };
+    window.addEventListener('scroll', queue, { passive: true });
+    window.addEventListener('resize', queue, { passive: true });
+    update();
+  }
+  {
     // Dynamic scroll tracking: removes border and shadow artifacts when sitting flush against the hero
     const updateNavScroll = () => {
       const nav = document.querySelector('.site-nav');
@@ -473,11 +457,6 @@ const isHome = currentPath === homePath;
     };
     window.addEventListener('scroll', updateNavScroll, { passive: true });
     updateNavScroll();
-
-    // Initial check on load
-    if (isAtTopOrHero()) {
-      setActive(null);
-    }
   }
 </script>
 
@@ -768,57 +747,41 @@ const isHome = currentPath === homePath;
     gap: 0.75rem;
   }
 
-  /* Desktop search button */
+  /* The search trigger: the magnifier alone, at every width (Andrew,
+     2026-10-02). No label, no box, no border; a 44px square to tap. Its
+     name ("Search site") is the aria-label. */
   .nav-search-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    /* The button standard's md height (cta.css), sm padding: a nav control. */
+    justify-content: center;
+    width: var(--btn-h-md);
     height: var(--btn-h-md);
-    padding: 0 var(--btn-px-sm);
+    padding: 0;
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 0;
     border-radius: var(--btn-radius);
     color: var(--ink);
     cursor: pointer;
-    transition: var(--transition-smooth, all 0.35s cubic-bezier(0.16, 1, 0.3, 1));
+    transition: color 0.2s ease, transform 0.2s ease;
   }
   .nav-search-btn:hover,
   .nav-search-btn:focus-visible {
-    border-color: rgba(255, 255, 255, 0.6);
     color: var(--color-white, #fff);
     transform: translateY(-1px);
-    background: rgba(255, 255, 255, 0.05);
   }
   .nav-search-btn:active {
     transform: translateY(0);
   }
-  .nav-search-label {
-    font-size: var(--btn-fs-sm);
-    font-weight: 700;
-    letter-spacing: var(--btn-ls);
-    text-transform: uppercase;
-  }
-  @media (max-width: 900px) {
-    .nav-search-label {
-      display: none;
-    }
-    /* Icon only: a square md control (it was held wide by the key hint). */
-    .nav-search-btn {
-      justify-content: center;
-      width: var(--btn-h-md);
-      padding: 0;
-    }
+  .nav-search-btn .search-trigger-icon {
+    width: 18px;
+    height: 18px;
   }
   [data-theme="light"] .nav-search-btn {
-    border-color: rgba(0, 0, 0, 0.2);
     color: #111;
   }
   [data-theme="light"] .nav-search-btn:hover,
   [data-theme="light"] .nav-search-btn:focus-visible {
-    border-color: rgba(0, 0, 0, 0.6);
     color: #000;
-    background: rgba(0, 0, 0, 0.04);
   }
 
   .theme-toggle-btn {

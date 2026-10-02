@@ -33,6 +33,8 @@ interface DisplayPhoto {
   venue?: string;
   event?: string;
   permalink?: string;
+  /** An Instagram reel: its frame shows here, the film plays on Instagram. */
+  video: boolean;
 }
 
 
@@ -45,6 +47,7 @@ const rawDisplayPhotos: DisplayPhoto[] = instagramPhotos.map((p) => ({
   venue: p.venue,
   event: p.event,
   permalink: p.permalink,
+  video: p.mediaType === 'VIDEO' && Boolean(p.permalink),
 }));
 
 // Deduplicate displayPhotos by ID, URL, and caption so each project appears exactly once
@@ -116,9 +119,10 @@ const SETS = [0, 1];
                   class="photo-item"
                   data-camera-zoom
                   data-photo-index={pi}
+                  data-video-url={p.video ? p.permalink : undefined}
                   tabindex={set === 1 ? -1 : undefined}
                   style={`aspect-ratio: ${p.image.width} / ${p.image.height}`}
-                  aria-label={`View photo: ${p.caption}`}
+                  aria-label={p.video ? `View video: ${p.caption}` : `View photo: ${p.caption}`}
                 >
                   <Image
                     src={p.image}
@@ -143,6 +147,15 @@ const SETS = [0, 1];
     </div><!-- /.photo-stage-wrap -->
   </div><!-- /.photo-grid-container -->
   )}
+  {/* A reel in the elevator is its frame; the film is on Instagram (its
+      files are signed links that expire, so it cannot play here reliably).
+      Zoomed onto a reel, this is its play path. Photos get none. */}
+  <a class="btn btn-primary photo-watch" href="#" target="_blank" rel="noopener" hidden data-photo-watch>
+    Watch video on Instagram
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M2 12L12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
+    </svg>
+  </a>
 
   <p class="photo-note">
     All photographs by Andrew. The cocktails and dishes pictured are the bar's.
@@ -380,6 +393,23 @@ const SETS = [0, 1];
   .photo-section.is-camera {
     overflow: visible;
     z-index: 50;
+  }
+
+  .photo-watch {
+    position: fixed;
+    left: 50%;
+    bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    z-index: 60;
+    transform: translateX(-50%);
+    background: #080808;
+    white-space: nowrap;
+  }
+  .photo-watch[hidden] {
+    display: none;
+  }
+  .photo-watch:hover,
+  .photo-watch:focus-visible {
+    transform: translateX(-50%) translateY(-2px);
   }
 
   .photo-zoom-backdrop {
@@ -722,6 +752,15 @@ const SETS = [0, 1];
       apply(ms);
     }
 
+    // The play path of a zoomed reel; nothing for a photo.
+    const watch = document.querySelector<HTMLAnchorElement>('[data-photo-watch]');
+    function setWatch(target: HTMLElement | null) {
+      if (!watch) return;
+      const url = target?.dataset.videoUrl;
+      if (url) watch.href = url;
+      watch.hidden = !url;
+    }
+
     function setFrozen(target: HTMLElement | null) {
       const column = target?.closest<HTMLElement>('.photo-column') ?? null;
       const next = reels.find((r) => r.column === column) ?? null;
@@ -768,6 +807,7 @@ const SETS = [0, 1];
       stage.classList.add('is-zoomed');
       stageWrap?.classList.add('is-zoomed');
       photoSection?.classList.add('is-zoomed', 'is-camera');
+      setWatch(target);
       focusOn(target, reduced() ? 0 : 600);
     }
 
@@ -784,6 +824,7 @@ const SETS = [0, 1];
       activeTarget?.classList.remove('is-active');
       activeTarget = newTarget;
       newTarget.classList.add('is-active');
+      setWatch(newTarget);
       focusOn(newTarget, reduced() ? 0 : 650);
     }
 
@@ -799,6 +840,7 @@ const SETS = [0, 1];
       const ms = reduced() ? 0 : 600;
       apply(ms);
       photoSection?.classList.remove('is-zoomed');
+      setWatch(null);
       if (activeTarget) {
         activeTarget.classList.remove('is-active');
         activeTarget = null;

@@ -1,27 +1,23 @@
 ---
 /**
- * Selected Work (homepage, condensed): the latest video, the featured
- * projects and the pipeline, then View all -> /work. No photo strip: the
+ * Selected Work (homepage, condensed): the latest video and the featured
+ * projects, then View all -> /work. The pipeline (WorkflowStrip) lives on
+ * /work only: the homepage is the overview (Andrew, 2026-10-02). No photo strip: the
  * photo elevator ("Shot on the job") sits right above it on the homepage,
  * so a strip here showed the same photos twice (removed 2026-10-01).
  * Keeps #projects as a landing anchor for old links (#photography is the
  * photo elevator itself, which sits on the homepage after About).
  */
-import { getCollection } from 'astro:content';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
 import ViewAllLink from '@andrew/ui/ViewAllLink.astro';
 import LatestCard from './LatestCard.astro';
 import ProjectCard from './ProjectCard.astro';
-import WorkflowStrip from './WorkflowStrip.astro';
-import { getLatestVideo } from '../lib/latest-content';
+import { getHomeFeatured } from '../lib/home-featured';
 
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 
-const latestVideo = await getLatestVideo();
-const projects = (await getCollection('projects'))
-  .sort((a, b) => Number(b.data.featured) - Number(a.data.featured) || +b.data.date - +a.data.date)
-  .slice(0, 2);
+const { latestVideo, projects } = await getHomeFeatured();
 ---
 <section id="projects" aria-labelledby="work-heading" class="selected-work">
   <div class="container">
@@ -38,8 +34,6 @@ const projects = (await getCollection('projects'))
         {projects.map((p) => <ProjectCard project={p} />)}
       </div>
     )}
-
-    <WorkflowStrip />
 
     <ViewAllLink href={`${base}/work/`} what="work" />
   </div>

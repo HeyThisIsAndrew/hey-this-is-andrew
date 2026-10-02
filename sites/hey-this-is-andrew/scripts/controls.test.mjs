@@ -58,4 +58,23 @@ assert.doesNotMatch(filterTabs, /padding: 0 1\.1rem/, 'filter tabs have the stan
 const global = read(new URL('../src/styles/global.css', import.meta.url));
 assert.match(global, /\.back-to-top \{[^}]*width: var\(--btn-h-md\);[^}]*padding: 0;/, 'back-to-top is a square md control with no UA padding');
 
+// 5. The one-pass fixes (Andrew, 2026-10-02, "shippable").
+const pageNav = read(new URL('PageNav.astro', ui));
+assert.match(pageNav, /window\.scrollTo\(\{ top: 0, behavior \}\)/, 'the side panel Top link scrolls to 0');
+assert.match(pageNav, /list\.prepend\(li\)/, 'a page without a Top heading gets a Top entry (e.g. /work)');
+assert.match(layout, /if \(e\.defaultPrevented\) return;/, "the layout's hash handler leaves a link a component already handled");
+assert.doesNotMatch(nav, /nav-search-label/, 'the search trigger is the icon only, no SEARCH text');
+assert.match(nav, /\.nav-search-btn \{[^}]*border: 0;[^}]*\}/, 'the search trigger has no border or box');
+assert.match(nav, /aria-current=\{isCurrent\(l\.href\) \? 'page' : undefined\}/, 'a page link is current on its own page only');
+assert.match(nav, /data-spy=/, 'the home scrollspy lights only a link whose own section is current');
+assert.doesNotMatch(nav, /currentActiveId/, 'the old sticky scrollspy (About lit through What I do) is gone');
+assert.match(navData, /label: 'Gear',[\s\S]*?spy: \['gear'\]/, 'Gear: one label, lit at the Gear section');
+assert.doesNotMatch(navData, /Production & Gear|'The Kit'|Meet Andrew/, 'one name per destination in the nav');
+assert.match(bacc, /--logo-zone:/, 'the collapsed name is centred above the logo zone (CCC overlap)');
+assert.match(bacc, /'copy logo'/, 'brand view: one stack bottom left, the logo bottom right');
+assert.match(bacc, /'chips chips'/, 'brand view: the chips upper left');
+const elevator = read(new URL('../src/components/PhotographyPortfolio.astro', import.meta.url));
+assert.match(elevator, /data-video-url=\{p\.video \? p\.permalink : undefined\}/, 'elevator reels carry their Instagram link');
+assert.match(elevator, /Watch video on Instagram/, 'a zoomed reel has a play path');
+
 console.log('controls: ok');

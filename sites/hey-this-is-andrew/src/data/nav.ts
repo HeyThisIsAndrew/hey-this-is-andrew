@@ -16,13 +16,13 @@ export const NAV_LINKS: NavItem[] = [
     section: 'home',
     subsections: [
       { label: 'Overview', href: `${homeUrl}#overview`, kicker: '01' },
-      { label: 'The Brands', href: `${homeUrl}#directory`, kicker: '02' },
-      { label: 'Meet Andrew', href: `${homeUrl}#about`, kicker: '03' },
-      { label: 'Selected Work', href: page('work'), kicker: '04' },
+      { label: 'Brands', href: `${homeUrl}#directory`, kicker: '02' },
+      { label: 'Meet The Creator', href: `${homeUrl}#about`, kicker: '03' },
+      { label: 'Work', href: page('work'), kicker: '04' },
       { label: 'Latest', href: page('latest'), kicker: '05' },
       { label: 'Goals', href: page('goals'), kicker: '06' },
-      { label: 'What I Do', href: page('services'), kicker: '07' },
-      { label: 'The Kit', href: page('gear'), kicker: '08' },
+      { label: 'What I do', href: page('services'), kicker: '07' },
+      { label: 'Gear', href: page('gear'), kicker: '08' },
       { label: 'Now', href: page('now'), kicker: '09' },
     ],
   },
@@ -38,9 +38,14 @@ export const NAV_LINKS: NavItem[] = [
     ],
   },
   {
-    label: 'Production & Gear',
+    // One label everywhere (nav, side panel, the home section, the page).
+    label: 'Gear',
     href: page('gear'),
     section: 'gear',
+    // The home page's Gear section IS this destination: the scrollspy lights
+    // Gear there and nowhere else. No other item has a home section of its
+    // own (Meet The Creator previews About; it does not light it).
+    spy: ['gear'],
     subsections: [
       { label: 'Camera Bodies', href: `${page('gear')}#gear-bodies`, kicker: '01' },
       { label: 'Zoom Lenses', href: `${page('gear')}#gear-zooms`, kicker: '02' },
@@ -67,9 +72,9 @@ export const NAV_LINKS: NavItem[] = [
     section: 'about',
     subsections: [
       { label: 'About Andrew', href: page('about'), kicker: '01' },
-      { label: 'Meet the Creator', href: `${homeUrl}#about`, kicker: '02' },
+      { label: 'Meet The Creator', href: `${homeUrl}#about`, kicker: '02' },
       { label: 'Press & Media Kit', href: page('press'), kicker: '03' },
-      { label: 'Work with Andrew', href: page('services'), kicker: '04' },
+      { label: 'What I do', href: page('services'), kicker: '04' },
     ],
   },
 ];

@@ -16,6 +16,11 @@
  * in the panel without anyone remembering to add it. Pass `items` to list
  * something else. Fewer than two and the panel does not show.
  *
+ * The first entry is always TOP, and Top means scroll position 0: the
+ * heading a page marks `data-pn-label="Top"` (a hero) is that entry, and a
+ * page without one gets it added. Jumping to the hero heading instead left
+ * the page scrolled past its own top by the heading's offset.
+ *
  * The labels are CLIPPED, never `display: none` (HQ): a hidden label leaves
  * a screen reader a nav of unnamed links.
  */
@@ -352,10 +357,37 @@ const { items = [], heading = 'On this page', selector = 'main h2[id]' } = Astro
         list.append(li);
       }
     }
+    // Top first. A heading labelled "Top" is it; otherwise add one, aimed at
+    // <main> (its top is the page's top once the header is cleared).
+    const first = list.querySelector<HTMLAnchorElement>('[data-pn-link]');
+    const firstEl = first ? document.getElementById(first.dataset.pnLink ?? '') : null;
+    if (first && firstEl?.dataset.pnLabel === 'Top') {
+      first.dataset.pnTop = '';
+    } else if (first) {
+      const li = document.createElement('li');
+      li.className = 'pn-item';
+      const a = document.createElement('a');
+      a.href = '#top';
+      a.dataset.pnLink = '';
+      a.dataset.pnTop = '';
+      const tick = document.createElement('span');
+      tick.className = 'pn-tick';
+      tick.setAttribute('aria-hidden', 'true');
+      const label = document.createElement('span');
+      label.className = 'pn-label';
+      label.textContent = 'Top';
+      a.append(tick, label);
+      li.append(a);
+      list.prepend(li);
+    }
+    const main = document.querySelector<HTMLElement>('main');
     const links = Array.from(list.querySelectorAll<HTMLAnchorElement>('[data-pn-link]'));
-    const headings = links
-      .map((link) => document.getElementById(link.dataset.pnLink ?? ''))
-      .filter((el): el is HTMLElement => Boolean(el));
+    // One key per link: the heading's id, "" for an added Top.
+    const keyOf = (link: HTMLElement) => link.dataset.pnLink ?? '';
+    const targetOf = (link: HTMLElement) => ('pnTop' in link.dataset && !link.dataset.pnLink ? main : document.getElementById(keyOf(link)));
+    const pairs = links.map((link) => ({ link, el: targetOf(link) })).filter((p): p is { link: HTMLAnchorElement; el: HTMLElement } => Boolean(p.el));
+    const headings = pairs.map((p) => p.el);
+    const keyFor = (el: HTMLElement) => keyOf(pairs.find((p) => p.el === el)!.link);
     if (headings.length < 2) {
       nav.hidden = true;
       return;
@@ -392,32 +424,34 @@ const { items = [], heading = 'On this page', selector = 'main h2[id]' } = Astro
     // ─── Which section is current (HQ) ───────────────────────────────────
     const setActive = (id: string) => {
       links.forEach((link) => {
-        const on = link.dataset.pnLink === id;
+        const on = keyOf(link) === id;
         link.classList.toggle('active', on);
         if (on) link.setAttribute('aria-current', 'true');
         else link.removeAttribute('aria-current');
       });
     };
-    let pinnedId: string | null = null;
+    let pinnedId: string | null = null; // a link key ("" is an added Top)
     const zoneTop = () => (document.querySelector('.site-nav')?.getBoundingClientRect().bottom ?? 0) + 16;
     const resolveActive = () => {
-      if (pinnedId) return;
+      if (pinnedId !== null) return;
       const ZONE_TOP = zoneTop();
       const ZONE_BOTTOM = window.innerHeight * 0.5;
       const atBottom = Math.ceil(window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 10;
       if (atBottom) {
         const started = headings.filter((h) => h.getBoundingClientRect().top < window.innerHeight);
         const last = started[started.length - 1] ?? headings[headings.length - 1];
-        if (last?.id) return setActive(last.id);
+        if (last) return setActive(keyFor(last));
       }
       const onScreen = headings.filter((h) => {
         const top = h.getBoundingClientRect().top;
         return top >= ZONE_TOP && top < ZONE_BOTTOM;
       });
-      if (onScreen[0]?.id) return setActive(onScreen[0].id);
+      // At the very top, Top is current whatever is in the zone.
+      if (window.scrollY < 4) return setActive(keyFor(headings[0]));
+      if (onScreen[0]) return setActive(keyFor(onScreen[0]));
       const passed = headings.filter((h) => h.getBoundingClientRect().top < ZONE_TOP);
       const fallback = passed.length ? passed[passed.length - 1] : headings[0];
-      if (fallback?.id) setActive(fallback.id);
+      if (fallback) setActive(keyFor(fallback));
     };
     const observer = new IntersectionObserver(() => resolveActive(), { rootMargin: '-80px 0px -50% 0px', threshold: 0 });
     headings.forEach((h) => observer.observe(h));
@@ -445,22 +479,29 @@ const { items = [], heading = 'On this page', selector = 'main h2[id]' } = Astro
     };
     links.forEach((link) => {
       link.addEventListener('click', (event) => {
-        const id = link.dataset.pnLink;
-        const target = id ? document.getElementById(id) : null;
-        if (!id || !target) return;
+        const id = keyOf(link);
+        const target = targetOf(link);
+        if (!target) return;
         event.preventDefault();
         pinnedId = id;
         setActive(id);
         if (event.detail > 0) link.blur();
         setOpen(false);
         armReleaseWhenSettled();
-        target.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+        if ('pnTop' in link.dataset) {
+          // Top is the top: scroll position 0, and no #hash left behind.
+          window.scrollTo({ top: 0, behavior });
+          history.replaceState(null, '', location.pathname + location.search);
+          return;
+        }
+        target.scrollIntoView({ block: 'start', behavior });
         history.replaceState(null, '', `#${id}`);
       });
     });
     const pinFromHash = () => {
       const id = decodeURIComponent(location.hash.slice(1));
-      if (!id || !links.some((l) => l.dataset.pnLink === id) || !document.getElementById(id)) return;
+      if (!id || !links.some((l) => keyOf(l) === id) || !document.getElementById(id)) return;
       pinnedId = id;
       setActive(id);
       armReleaseWhenSettled();

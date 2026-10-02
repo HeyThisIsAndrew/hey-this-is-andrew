@@ -9,10 +9,14 @@ import ViewAllLink from '@andrew/ui/ViewAllLink.astro';
 import FilterTabs from '@andrew/ui/FilterTabs.astro';
 import LatestFeed from './LatestFeed.astro';
 import { getNetworkFeed } from '../lib/network';
+import { getHomeFeaturedTitles } from '../lib/home-featured';
 
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
-const items = await getNetworkFeed(6);
+// A preview: four items, leaving out what Selected work (right above)
+// already features, so nothing shows twice. The rest is on /latest.
+const featured = await getHomeFeaturedTitles();
+const items = (await getNetworkFeed(12)).filter((i) => !featured.has(i.title.trim().toLowerCase())).slice(0, 4);
 ---
 <section id="latest" aria-labelledby="latest-heading" class="latest-section">
   <span id="writing" class="anchor-alias" aria-hidden="true"></span>

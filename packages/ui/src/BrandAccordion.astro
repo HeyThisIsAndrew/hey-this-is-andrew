@@ -432,9 +432,22 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
     cursor: default;
   }
   /* A strip's label: vertical, centred (HQ .acc-label, 0.95rem / 0.3em). */
+  /* The vertical name is centred in the strip ABOVE the logo's zone (the
+     logo box, its distance from the foot, and a gap), never in the whole
+     strip: centred in the whole strip, "CAPTURE CREATE CAFFEINATE" ran into
+     its logo at 1280 x 800 (23px of overlap). */
+  .bacc {
+    --logo-h: 104px;
+    --logo-zone: calc(var(--logo-h) + 17.92 * var(--u) + 16px);
+  }
+  @media (max-width: 1599px) {
+    .bacc {
+      --logo-h: 84px;
+    }
+  }
   .bacc-label {
     position: absolute;
-    top: 50%;
+    top: calc((100% - var(--logo-zone)) / 2);
     left: 50%;
     writing-mode: vertical-rl;
     transform: translate(-50%, -50%) rotate(180deg);
@@ -463,7 +476,7 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
     left: calc(50% - var(--logo-w) / 2);
     bottom: calc(17.92 * var(--u));
     width: var(--logo-w);
-    height: 104px;
+    height: var(--logo-h);
     display: grid;
     place-items: center;
     opacity: 0.95;
@@ -1149,7 +1162,7 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
     transition: opacity 0.2s ease, transform 0.2s ease;
   }
   .bacc-caption[hidden] {
-    display: none;
+    display: none !important; /* over the fill view's grid */
   }
   .bacc-caption.is-shown {
     opacity: 1;
@@ -1198,43 +1211,119 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
   .bacc-caption .bacc-deck {
     -webkit-line-clamp: 3;
   }
-  /* Fill: the copy over the art's foot, on a scrim, at screen size. */
+  /* FILL: the open panel's own structure at screen size (the hero and the
+     in-page panel): the chips upper left, ONE stack bottom left (headline,
+     deck, then the CTA under the deck, the inquiry quieter under that), the
+     brand's logo bottom right on the stack's baseline. Each sits in its own
+     grid area, so nothing can float into the middle or overlap. */
+  .bacc-viewport.is-fill {
+    --fill-pad: clamp(calc(19.2 * var(--u)), 4vw, calc(48 * var(--u)));
+  }
   .bacc-viewport.is-fill .bacc-caption {
     left: 0;
     right: 0;
-    top: auto;
+    top: var(--view-band);
     bottom: 0;
     width: auto;
-    padding: 7rem clamp(1.5rem, 5vw, 5rem) 2.75rem;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.72) 50%, rgba(0, 0, 0, 0) 100%);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'chips chips'
+      '. .'
+      'copy logo';
+    column-gap: clamp(1.5rem, 4vw, 4rem);
+    padding: var(--fill-pad);
+    background:
+      linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.62) 30%, rgba(0, 0, 0, 0) 60%),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0) 24%);
+  }
+  .bacc-viewport.is-fill .bacc-caption .bacc-chips {
+    grid-area: chips;
+    align-self: start;
+    margin: 0;
   }
   .bacc-viewport.is-fill .bacc-caption .bacc-content {
-    max-width: 72rem;
+    grid-area: copy;
+    align-self: end;
+    display: block;
+    max-width: 46rem;
   }
-  /* Phones: one column, a larger headline, the scrim reaches higher. */
+  .bacc-viewport.is-fill .bacc-caption .bacc-headline {
+    max-width: 24ch;
+    margin: 0 0 0.75rem;
+  }
+  .bacc-viewport.is-fill .bacc-caption .bacc-cta {
+    margin-top: 1.25rem;
+  }
+  .bacc-viewport.is-fill .bacc-caption .bacc-inquiry {
+    display: flex;
+    width: max-content;
+    margin-top: 0.5rem;
+  }
+  .bacc-caption-logo {
+    grid-area: logo;
+    align-self: end;
+    justify-self: end;
+    position: relative;
+    display: grid;
+    place-items: end;
+    width: clamp(110px, 12vw, 220px);
+    height: clamp(60px, 7vw, 120px);
+  }
+  .bacc-caption-logo :global(img) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: right bottom;
+  }
+  .bacc-caption-logo .bacc-logo-word {
+    font: 800 clamp(1.4rem, 2.4vw, 2.2rem) / 1 var(--font-display);
+    letter-spacing: 0.08em;
+    color: #fff;
+  }
+  /* Phones: one column. The logo sits on its own row over the stack, so a
+     full-width stack never runs under it. */
   @media (max-width: 767px), (orientation: landscape) and (max-height: 520px) {
     .bacc-viewport.is-fill .bacc-caption {
-      padding: 5rem max(1.25rem, env(safe-area-inset-right, 0px)) calc(1.75rem + env(safe-area-inset-bottom, 0px)) max(1.25rem, env(safe-area-inset-left, 0px));
-      background: linear-gradient(to top, rgba(0, 0, 0, 0.94) 0%, rgba(0, 0, 0, 0.8) 55%, rgba(0, 0, 0, 0) 100%);
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        'chips'
+        '.'
+        'logo'
+        'copy';
+      grid-template-rows: auto minmax(0, 1fr) auto auto;
+      row-gap: 1rem;
+      padding: 1rem max(1.25rem, env(safe-area-inset-right, 0px)) calc(1.75rem + env(safe-area-inset-bottom, 0px)) max(1.25rem, env(safe-area-inset-left, 0px));
+      background:
+        linear-gradient(to top, rgba(0, 0, 0, 0.94) 0%, rgba(0, 0, 0, 0.8) 42%, rgba(0, 0, 0, 0) 72%),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0) 20%);
     }
     .bacc-viewport.is-fill .bacc-caption .bacc-chips {
       --chip-fs: 0.68rem;
       --chip-py: 0.4rem;
       gap: 0.5rem;
-      margin-bottom: 0.9rem;
+    }
+    .bacc-caption-logo {
+      justify-self: start;
+      place-items: end start;
+      width: 140px;
+      height: 52px;
+    }
+    .bacc-caption-logo :global(img) {
+      object-position: left bottom;
     }
     .bacc-viewport.is-fill .bacc-caption .bacc-content {
-      display: block;
       max-width: 40rem;
     }
     .bacc-viewport.is-fill .bacc-caption .bacc-headline {
       max-width: none;
-      margin: 0 0 0.8rem;
       font-size: clamp(1.45rem, 6.6vw, 2rem);
       -webkit-line-clamp: 4;
     }
     .bacc-viewport.is-fill .bacc-caption .bacc-deck {
-      -webkit-line-clamp: 3;
       letter-spacing: 0.08em;
       line-height: 1.6;
     }
@@ -1246,8 +1335,33 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
       white-space: normal;
     }
     .bacc-viewport.is-fill .bacc-caption .bacc-inquiry {
-      display: inline-flex;
-      margin-top: 0.9rem;
+      display: flex;
+    }
+  }
+  /* Landscape phones: wide and short, so the logo goes back to the right of
+     the stack. */
+  @media (orientation: landscape) and (max-height: 520px) {
+    .bacc-viewport.is-fill .bacc-caption {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'chips chips'
+        '. .'
+        'copy logo';
+      grid-template-rows: auto minmax(0, 1fr) auto;
+    }
+    .bacc-caption-logo {
+      justify-self: end;
+      place-items: end;
+    }
+    .bacc-caption-logo :global(img) {
+      object-position: right bottom;
+    }
+    .bacc-viewport.is-fill .bacc-caption .bacc-headline {
+      font-size: clamp(1.2rem, 3vw, 1.6rem);
+      -webkit-line-clamp: 2;
+    }
+    .bacc-viewport.is-fill .bacc-caption .bacc-deck {
+      -webkit-line-clamp: 2;
     }
   }
 
@@ -1481,6 +1595,22 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
         caption.replaceChildren();
         if (!copy) return;
         if (chips) caption.appendChild(chips.cloneNode(true));
+        /* The brand's logo, bottom right at screen size (the panel's own
+           would scale with the camera). */
+        const logo = panel.querySelector<HTMLElement>('.bacc-logo');
+        if (logo) {
+          const box = document.createElement('div');
+          box.className = 'bacc-caption-logo';
+          const scope = Array.from(caption.attributes).find((a) => a.name.startsWith('data-astro-cid-'));
+          if (scope) box.setAttribute(scope.name, '');
+          box.setAttribute('aria-hidden', 'true');
+          logo.childNodes.forEach((n) => box.appendChild(n.cloneNode(true)));
+          box.querySelectorAll('img').forEach((img) => {
+            img.loading = 'eager';
+            img.sizes = '220px';
+          });
+          caption.appendChild(box);
+        }
         const clone = copy.cloneNode(true) as HTMLElement;
         clone.removeAttribute('id');
         clone.removeAttribute('role');

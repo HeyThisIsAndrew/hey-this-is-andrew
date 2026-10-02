@@ -54,6 +54,10 @@ export interface NavItem {
   href: string;
   /** Section id for scrollspy on the home page; null for none. */
   section: string | null;
+  /** Home-page section ids that ARE this destination (e.g. Gear's own
+      section). The scrollspy lights the link only while one of these is
+      current. A preview of a page (Meet The Creator for About) is not one. */
+  spy?: string[];
   subsections: NavSubItem[];
 }
 
