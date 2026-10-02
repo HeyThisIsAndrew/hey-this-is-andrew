@@ -9,10 +9,10 @@ a block looks only by overriding tokens in its own theme file.
 
 | import | what it is | props (short) |
 | --- | --- | --- |
-| `@andrew/ui/BrandAccordion.astro` | the brand accordion: HQ's hero accordion, mechanics and look one to one (sizes in `--acc-u`) | `panels`, `fullscreen?`, `interval?`, `labels?` |
+| `@andrew/ui/BrandAccordion.astro` | the brand accordion: HQ's hero accordion, mechanics and look one to one (sizes in `--acc-u`) | `panels`, `fullscreen?` (the brand view: a tap on any brand dollies into it, phones and desktop; Esc, Close, a tap outside and Back close it), `view?` (`'fill'` default: the art fills the screen, the copy over it; `'fit'`: the panel whole, the copy under it; phones always fill), `interval?`, `labels?` |
 | `@andrew/ui/ChromeMeta.astro` | the viewport tag (HQ's, exactly) and the site's chrome colour: phone header, page edge and status bar / Dynamic Island area, plus matching theme-color; put it in every layout's `<head>` | `color?` (any solid colour, default black), `lightColor?` (light-mode chrome), `interactiveWidget?` |
-| `@andrew/ui/Nav.astro` | sticky header, dropdowns, mobile menu, scrollspy; paints the phone status-bar strip solid (`--chrome`) and clears it | `logo`, `homeHref`, `links`, `search?`; default slot for a search modal |
-| `@andrew/ui/Footer.astro` | brand block, one row of primary links, social icons, legal row | `logo`, `tagline`, `explore`, `socials`, `copyright`, `privacyHref`, `utility?` (small links beside Privacy), `notes?` |
+| `@andrew/ui/Nav.astro` | fixed header (HQ's), dropdowns, mobile menu, scrollspy; paints the phone status-bar strip solid (`--chrome`) and clears it | `logo`, `homeHref`, `links`, `search?` (no visible key hint; `keyShortcuts` goes to `aria-keyshortcuts`); default slot for a search modal |
+| `@andrew/ui/Footer.astro` | brand block, one row of primary links, social icons, legal row | `logo`, `homeHref?` (links the logo home, named `homeLabel`, default "<alt>, home"), `tagline`, `explore`, `socials`, `copyright`, `privacyHref`, `utility?` (small links beside Privacy), `notes?` |
 | `@andrew/ui/PageNav.astro` | BE Unconventional HQ's side panel: the page's sections as ticks on the left edge, words on hover (desktop) or tap (touch); active-section tracking | `items?` (defaults to the page's `h2[id]`s; a heading can set `data-pn-label`), `heading?`, `selector?` |
 | `@andrew/ui/SectionHeader.astro` | the one section heading pattern | `kicker`, `title`, `index?`, `lede?`, `linkLabel?`, `linkHref?`, `id?` |
 | `@andrew/ui/QuoteBand.astro` | standalone quote band | `eyebrow`, `quote`, `attribution`, `label?` |
@@ -20,7 +20,7 @@ a block looks only by overriding tokens in its own theme file.
 | `@andrew/ui/types` | TypeScript types for all of the above | |
 | `@andrew/ui/styles/base.css` | film grain, selection, focus ring, `.container`, `.vh` | |
 | `@andrew/ui/styles/chips.css` | `.chip`, `.chip--brand` | |
-| `@andrew/ui/styles/cta.css` | `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-ghost` | |
+| `@andrew/ui/styles/cta.css` | the button standard: `.btn` (md), `.btn--sm` (sm), `.btn-primary`, `.btn-secondary`, `.btn-ghost` (text), `.ui-hit` (a 44px hit area for any small control) | sizes are tokens, see below |
 | `@andrew/ui/scripts/section-anchors.ts` | click a section's `#` to copy its link | |
 
 Load order in a layout (see `templates/site-starter/src/layouts/BaseLayout.astro`):
@@ -33,6 +33,24 @@ import '@andrew/ui/styles/chips.css';
 import '../styles/global.css';        // 4. this site's globals
 import '@andrew/ui/styles/cta.css';   // 5. buttons last
 ```
+
+## The button standard
+
+Every control that acts as a button takes its size from the Controls tokens
+in `@andrew/tokens`, never from rem (the personal site's root is 75% on
+laptops and 100% on phones, which is how one `.btn` came out 42px on a laptop
+and 55px on a phone). One unit, `--ui-u`, is 1px; a site whose root scales
+on big screens re-points it there (the personal site does above 1920).
+
+| size | used for | height | side padding | label | tracking | radius |
+| --- | --- | --- | --- | --- | --- | --- |
+| md (default) | `.btn`, brand CTAs, Subscribe, nav search and Menu, back to top, Close | 44 | 24 | 12px | 0.18em | `--radius` (0) |
+| sm (dense) | `.btn--sm`, filter tabs, gear chips, small store links, the search Close | 32 box, 44 hit area | 14 | 11px | 0.18em | 0 |
+| text | `.btn-ghost`, View all, section links, "Start a project" | 44 hit area, no box | 0 | 12px | 0.18em | none |
+
+A label too long for one line wraps (it is never cut), so that button is
+taller. Focus is one ring for everything: 2px `--focus-ring`, offset 3px
+(base.css and cta.css).
 
 ## The theming contract
 

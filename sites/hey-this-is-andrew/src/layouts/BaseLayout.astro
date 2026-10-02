@@ -130,6 +130,7 @@ const canonical = new URL(Astro.url.pathname, 'https://heythisisandrew.github.io
     <PageNav />
     <Footer
       logo={{ src: footerLogo.src, width: Number(footerLogo.attributes.width), height: Number(footerLogo.attributes.height), alt: 'HEY_THISISANDREW' }}
+      homeHref={homeUrl}
       tagline="Creator, photographer, coffee drinker."
       explore={FOOTER_EXPLORE}
       socials={SOCIALS}
@@ -214,6 +215,9 @@ const canonical = new URL(Astro.url.pathname, 'https://heythisisandrew.github.io
 
         // Browser back / forward
         window.addEventListener('popstate', () => {
+          // Back out of a full-screen view (the brand view) is the view's
+          // own business: the page stays where it is.
+          if (document.documentElement.dataset.viewPop) return;
           if (window.location.hash) {
             const target = document.querySelector(window.location.hash);
             if (target) scrollToTarget(target, false);

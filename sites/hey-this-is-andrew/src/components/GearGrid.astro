@@ -523,18 +523,31 @@ import { AMAZON_STOREFRONT } from '../data/storefront';
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
+    /* Wrapped rows stay a hit area apart (44 - 32). */
+    row-gap: calc(var(--tap-min) - var(--btn-h-sm) + 2px);
   }
+  /* A filter chip: the button standard's sm size, 44px hit area. */
   .gear-chip {
-    padding: 0.55rem 0.95rem;
+    position: relative;
+    z-index: 1; /* its hit area paints over what follows */
+    min-height: var(--btn-h-sm);
+    padding: calc(6 * var(--ui-u)) var(--btn-px-sm);
     background: transparent;
     border: 1px solid var(--line, rgba(255, 255, 255, 0.15));
+    border-radius: var(--btn-radius);
     color: var(--muted, #888888);
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: var(--btn-fs-sm);
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: var(--btn-ls);
     cursor: pointer;
     transition: var(--transition-smooth);
+  }
+  .gear-chip::before,
+  .btn-amazon-link::before {
+    content: '';
+    position: absolute;
+    inset: min(0px, calc((var(--btn-h-sm) - var(--tap-min)) / 2 - 1px)) -1px /* from the padding box: past the 1px border */;
   }
   .gear-chip:hover {
     border-color: var(--border-active, rgba(255, 255, 255, 0.4));
@@ -895,18 +908,23 @@ import { AMAZON_STOREFRONT } from '../data/storefront';
     flex-shrink: 0;
   }
 
+  /* The button standard's sm size, 44px hit area. */
   .btn-amazon-link {
+    position: relative;
+    z-index: 1;
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    padding: 0.45rem 0.75rem;
+    min-height: var(--btn-h-sm);
+    padding: calc(6 * var(--ui-u)) var(--btn-px-sm);
     background: #1a1a1a;
     border: 1px solid var(--line);
+    border-radius: var(--btn-radius);
     color: var(--ink);
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: var(--btn-fs-sm);
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: var(--btn-ls);
     text-decoration: none;
     transition: all 0.2s ease;
     white-space: nowrap;
@@ -1056,14 +1074,16 @@ import { AMAZON_STOREFRONT } from '../data/storefront';
     align-items: center;
     justify-content: center;
     gap: 0.6rem;
+    /* The button standard's md size. */
+    min-height: var(--btn-h-md);
     background: transparent;
     color: var(--ink);
-    padding: 0.85rem 1.25rem;
+    padding: calc(8 * var(--ui-u)) var(--btn-px-md);
     font-family: var(--font-mono);
-    font-size: 0.82rem;
+    font-size: var(--btn-fs-md);
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.12em;
+    letter-spacing: var(--btn-ls);
     text-decoration: none;
     border: 1px solid #f0f0f0;
     transition: all 0.2s ease;

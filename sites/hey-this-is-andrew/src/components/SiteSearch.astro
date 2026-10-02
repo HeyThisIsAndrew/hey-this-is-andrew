@@ -190,7 +190,7 @@ hubSections.forEach((s) => {
         />
         <button type="button" id="search-clear-btn" class="search-clear-btn" aria-label="Clear search input" hidden>×</button>
       </div>
-      <button type="button" class="search-close-badge font-mono" id="search-modal-close" aria-label="Close search (Esc)">ESC</button>
+      <button type="button" class="search-close-badge font-mono" id="search-modal-close" aria-label="Close search">Close</button>
     </div>
 
     <!-- Category Filter Tabs -->
@@ -221,13 +221,9 @@ hubSections.forEach((s) => {
       <ul id="search-results-list" class="search-results-list" role="listbox" aria-label="Search results"></ul>
     </div>
 
-    <!-- Modal Footer Navigation Tips -->
+    <!-- Result count. The arrow / Enter / Esc keys still work; their visible
+         key hints were removed (Andrew's call, 2026-10-02). -->
     <div class="search-footer">
-      <div class="search-shortcuts">
-        <span class="shortcut-tip"><kbd class="font-mono">↑</kbd><kbd class="font-mono">↓</kbd> Navigate</span>
-        <span class="shortcut-tip"><kbd class="font-mono">↵</kbd> Select</span>
-        <span class="shortcut-tip"><kbd class="font-mono">ESC</kbd> Close</span>
-      </div>
       <div class="search-summary font-mono" id="search-results-count">Ready</div>
     </div>
   </div>
@@ -364,17 +360,28 @@ hubSections.forEach((s) => {
     color: var(--ink, #fff);
   }
 
+  /* The button standard's sm size, 44px hit area. */
   .search-close-badge {
+    position: relative;
+    flex: none;
+    min-height: var(--btn-h-sm);
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid var(--border, rgba(255, 255, 255, 0.18));
+    border-radius: var(--btn-radius);
     color: var(--muted, #888);
-    font-size: 0.65rem;
-    letter-spacing: 0.1em;
-    padding: 0.25rem 0.5rem;
+    font-size: var(--btn-fs-sm);
+    letter-spacing: var(--btn-ls);
+    text-transform: uppercase;
+    padding: 0 var(--btn-px-sm);
     cursor: pointer;
     transition: all 0.2s ease;
   }
 
+  .search-close-badge::before {
+    content: '';
+    position: absolute;
+    inset: min(0px, calc((var(--btn-h-sm) - var(--tap-min)) / 2 - 1px)) -1px /* from the padding box: past the 1px border */;
+  }
   .search-close-badge:hover {
     background: var(--ink, #fff);
     color: var(--bg, #080808);
@@ -595,7 +602,7 @@ hubSections.forEach((s) => {
     letter-spacing: 0.04em;
   }
 
-  /* Footer shortcuts */
+  /* Footer: result count */
   .search-footer {
     display: flex;
     align-items: center;
@@ -611,32 +618,9 @@ hubSections.forEach((s) => {
     background: #f7f7f7;
   }
 
-  .search-shortcuts {
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
-    flex-wrap: wrap;
-  }
 
-  .shortcut-tip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-  }
 
-  .shortcut-tip kbd {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid var(--border, rgba(255, 255, 255, 0.15));
-    color: var(--ink, #fff);
-    font-size: 0.65rem;
-    padding: 0.1rem 0.35rem;
-    line-height: 1;
-  }
 
-  [data-theme="light"] .shortcut-tip kbd {
-    background: #eee;
-    color: #111;
-  }
 
   /* Highlight matches */
   :global(.search-hl) {
@@ -659,9 +643,6 @@ hubSections.forEach((s) => {
     }
     .search-modal-container {
       max-height: 90vh;
-    }
-    .search-shortcuts {
-      display: none;
     }
   }
 </style>

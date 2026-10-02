@@ -17,7 +17,8 @@
  *    by default below 768px and never with prefers-reduced-motion. The open
  *    panel's progress bar shows the clock.
  *  - Keyboard: arrows move between panels (and open them), Home/End jump,
- *    Escape closes the fullscreen brand view.
+ *    Escape closes the fullscreen brand view; so do its Close control, a
+ *    tap outside the copy, and Back.
  *  - Phones: the same markup stacks (no duplicated markup). The open panel
  *    moves to the top; every panel has a fixed height, so the accordion's
  *    total height never changes.
@@ -26,7 +27,11 @@
  *    tokens for that accent (e.g. the personal site's BE panel in BE red).
  *    Nothing brand-specific is written in this file.
  *  - `fullscreen` adds the "brand view": a camera dolly into the open panel
- *    (the personal site's addition to HQ's mechanics). Desktop only.
+ *    (the personal site's addition to HQ's mechanics). A tap on ANY brand
+ *    goes into its view; a closed one expands on the way. Desktop fits the
+ *    panel whole with the copy under it; phones fill the screen with the
+ *    art, under a black band, with the copy over its foot. Html carries
+ *    `bacc-view-open` meanwhile, for anything floating that should hide.
  *  - Geometry: the OPEN panel is a true 16:9 box (desktop and the phone's
  *    media frame), sized from the viewport height and capped by the width;
  *    the collapsed strips share what is left. The brand view fits that same
@@ -42,14 +47,18 @@ import type { AccordionPanel, AccordionLabels } from './types';
 
 interface Props {
   panels: AccordionPanel[];
-  /** Enables the fullscreen brand view (click the open panel). Desktop only. */
+  /** Enables the fullscreen brand view (a tap on any brand), all widths. */
   fullscreen?: boolean;
+  /** Brand view framing on desktop: 'fill' (default; the art fills the
+   *  screen, the copy over it) or 'fit' (the panel whole, the copy under).
+   *  Phones always fill. */
+  view?: 'fill' | 'fit';
   /** Auto-rotation interval in ms (HQ uses 7000; the personal site 8000). */
   interval?: number;
   labels?: Partial<AccordionLabels>;
 }
 
-const { panels, fullscreen = false, interval = 8000, labels: labelProp = {} } = Astro.props;
+const { panels, fullscreen = false, view = 'fill', interval = 8000, labels: labelProp = {} } = Astro.props;
 const labels: AccordionLabels = {
   play: 'Play auto-rotation',
   pause: 'Pause auto-rotation',
@@ -60,7 +69,7 @@ const labels: AccordionLabels = {
 };
 const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
 ---
-<div class="bacc" data-bacc data-avoid-fab data-interval={interval} data-fullscreen={fullscreen ? '' : undefined} style={`--acc-n: ${panels.length}; --acc-rows: ${Math.max(1, panels.length - 1)}`}>
+<div class="bacc" data-bacc data-avoid-fab data-interval={interval} data-fullscreen={fullscreen ? '' : undefined} data-view={view} style={`--acc-n: ${panels.length}; --acc-rows: ${Math.max(1, panels.length - 1)}`}>
     <div class="bacc-viewport" data-bacc-viewport>
       <button type="button" class="bacc-close" data-bacc-close hidden aria-label={labels.closeAria}>
         <span class="bacc-close-key" aria-hidden="true">{labels.closeKey}</span>
@@ -216,14 +225,39 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
        page flow when the brand view fixes the viewport, so the panel sizes
        never change on the way in or out. */
     container-type: inline-size;
+    /* Never a scroll anchor: the brand view fixes the viewport, and an
+       anchor inside it (a short landscape screen is all accordion) made
+       the browser scroll the page 155px as the view opened. */
+    overflow-anchor: none;
   }
   .bacc-viewport {
     position: relative;
     width: 100%;
     overflow: hidden;
-    /* The brand view's backdrop fades with the camera, both ways. */
-    background-color: transparent;
-    transition: background-color 700ms cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  /* The brand view's backdrop fades with the camera, both ways. An opacity
+     layer, not a background-color transition: that repainted a full-screen
+     box on every frame of the camera move. */
+  .bacc-viewport::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: #000;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 700ms cubic-bezier(0.25, 1, 0.5, 1),
+      visibility 0s linear 700ms;
+  }
+  .bacc-viewport.is-zoomed::after {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 700ms cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  .bacc-viewport.is-zoomed.is-closing::after {
+    opacity: 0;
   }
   .bacc-stage {
     position: relative;
@@ -574,14 +608,16 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
     display: inline-flex;
     align-items: center;
     gap: 0.6rem;
-    min-height: var(--tap-min);
+    /* The button standard's md size (cta.css); HQ's face and colours. */
+    min-height: var(--btn-h-md);
     margin-top: calc(17.92 * var(--u));
-    padding: calc(12.8 * var(--u)) calc(38.4 * var(--u));
+    padding: calc(8 * var(--ui-u)) var(--btn-px-md);
     border: 1px solid var(--accordion-cta-border);
+    border-radius: var(--btn-radius);
     background: transparent;
     color: #ffffff;
-    font: 600 calc(10.24 * var(--u)) / 1.2 var(--font-body);
-    letter-spacing: 0.15em;
+    font: 600 var(--btn-fs-md) / 1.2 var(--font-body);
+    letter-spacing: var(--btn-ls);
     text-transform: uppercase;
     text-decoration: none;
     white-space: nowrap;
@@ -606,11 +642,12 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    min-height: var(--tap-min);
+    /* A text CTA (the button standard's text size). */
+    min-height: var(--btn-hit);
     margin-top: 0.4rem;
     font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.2em;
+    font-size: var(--btn-fs-md);
+    letter-spacing: var(--btn-ls);
     text-transform: uppercase;
     color: rgba(245, 245, 245, 0.7);
     text-decoration: none;
@@ -759,8 +796,6 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
       display: none;
     }
     .bacc-panel.is-open .bacc-content {
-      /* Static, so the headline's link can stretch over the whole panel:
-         on a phone a tap on the art does what the card does (HQ). */
       position: static;
       order: 2;
       width: 100%;
@@ -774,12 +809,9 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
       margin: 0.2rem 0 0.9rem;
       font-size: clamp(1.05rem, 4.5vw, 1.35rem);
     }
-    .bacc-headline a::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      z-index: 6;
-    }
+    /* No stretched headline link on a phone any more: a tap on the art
+       goes INTO the brand's view (Andrew, 2026-10-02), where the button to
+       its site is. The headline itself is still the link. */
     .bacc-deck {
       font-size: 0.8rem;
       letter-spacing: 0.14em;
@@ -837,8 +869,8 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
       right: 10px;
     }
   }
-  /* Phone portrait (HQ: "way too busy"): no button under the copy; the
-     panel is the link. */
+  /* Phone portrait (HQ: "way too busy"): no button under the copy. The
+     brand view (a tap on the panel) carries it. */
   @media (max-width: 767px) and (orientation: portrait) {
     .bacc-cta,
     .bacc-inquiry {
@@ -937,8 +969,6 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
     }
     .bacc-cta {
       margin-top: 0.7rem;
-      padding: 0.6rem 1.2rem;
-      font-size: 0.72rem;
     }
     .bacc-panel.is-open .bacc-logo {
       display: none;
@@ -980,17 +1010,62 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
     }
   }
 
-  /* ─── FULLSCREEN BRAND VIEW (desktop) ───────────────────────────────── */
+  /* ─── FULLSCREEN BRAND VIEW ───────────────────────────────────────────
+     One camera move: the stage dollies until the brand's art FILLS the
+     screen under a black band (.is-fill), and the copy is laid over the
+     art's foot at screen size, never scaled with the camera. `view="fit"`
+     keeps the earlier desktop framing (the panel whole, the copy in a band
+     under it); phones always fill. */
   .bacc-viewport.is-zoomed {
     position: fixed;
     inset: 0;
     width: 100vw;
     height: 100dvh;
     z-index: 1000;
-    background-color: #080808;
+    /* The page behind never pans while the view is up (iOS). */
+    touch-action: none;
+    overscroll-behavior: none;
   }
-  .bacc-viewport.is-zoomed.is-closing {
-    background-color: transparent;
+  /* The band: the header's own height and colour, solid from the first
+     frame to the last, so the top of the screen (and the status bar iOS
+     colours from it) stays black throughout. The close control sits in it. */
+  .bacc-viewport.is-fill {
+    --view-band: var(--nav-bar-h, 64px);
+  }
+  .bacc-viewport.is-zoomed.is-fill::before {
+    content: '';
+    position: fixed;
+    inset: 0 0 auto;
+    height: var(--view-band);
+    background: #000;
+    z-index: 4;
+    pointer-events: none;
+  }
+  .bacc-viewport.is-fill .bacc-close {
+    top: calc((var(--view-band) - var(--tap-min, 44px)) / 2);
+    right: max(1rem, env(safe-area-inset-right, 0px));
+  }
+  /* A brand with no art yet (the teaser): filling a phone screen with it
+     blows its glyph up past the edges, so the glyph is held to about 1.6x
+     its in-page size while the card around it fills the screen, and it
+     drifts from the card's 70% mark to the centre (the glyph is 38% of the
+     card, so 20% of the card is 52.6% of the glyph). */
+  @media (max-width: 767px), (orientation: landscape) and (max-height: 520px) {
+    .bacc-viewport.is-zoomed.is-fill:not(.is-closing) .bacc-panel.is-open .bacc-teaser-art {
+      transform: translate(-102.6%, -58%) scale(calc(1.6 / var(--cam-scale, 1)));
+    }
+    .bacc-viewport.is-fill .bacc-teaser-art {
+      transition: transform 700ms cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    /* No keyboard on a phone: no Esc key hint. */
+    .bacc-close-key {
+      display: none;
+    }
+  }
+  .bacc-viewport.is-zoomed:not(.is-closing) .bacc-panel .bacc-chips,
+  .bacc-viewport.is-zoomed.is-fill:not(.is-closing) .bacc-panel .bacc-logo {
+    opacity: 0;
+    transition: opacity 0.2s ease;
   }
   .bacc-stage {
     transition: transform 700ms cubic-bezier(0.25, 1, 0.5, 1);
@@ -1124,6 +1199,68 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
   .bacc-caption .bacc-cta {
     margin-top: 0.9rem;
   }
+  .bacc-caption .bacc-chips {
+    position: static;
+    margin: 0 0 1rem;
+    opacity: 1;
+    /* Every chip, wrapping if it must (the panel clips to one line). */
+    max-height: none;
+  }
+  .bacc-caption .bacc-deck {
+    -webkit-line-clamp: 3;
+  }
+  /* Fill: the copy over the art's foot, on a scrim, at screen size. */
+  .bacc-viewport.is-fill .bacc-caption {
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    width: auto;
+    padding: 7rem clamp(1.5rem, 5vw, 5rem) 2.75rem;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.72) 50%, rgba(0, 0, 0, 0) 100%);
+  }
+  .bacc-viewport.is-fill .bacc-caption .bacc-content {
+    max-width: 72rem;
+  }
+  /* Phones: one column, a larger headline, the scrim reaches higher. */
+  @media (max-width: 767px), (orientation: landscape) and (max-height: 520px) {
+    .bacc-viewport.is-fill .bacc-caption {
+      padding: 5rem max(1.25rem, env(safe-area-inset-right, 0px)) calc(1.75rem + env(safe-area-inset-bottom, 0px)) max(1.25rem, env(safe-area-inset-left, 0px));
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.94) 0%, rgba(0, 0, 0, 0.8) 55%, rgba(0, 0, 0, 0) 100%);
+    }
+    .bacc-viewport.is-fill .bacc-caption .bacc-chips {
+      --chip-fs: 0.68rem;
+      --chip-py: 0.4rem;
+      gap: 0.5rem;
+      margin-bottom: 0.9rem;
+    }
+    .bacc-viewport.is-fill .bacc-caption .bacc-content {
+      display: block;
+      max-width: 40rem;
+    }
+    .bacc-viewport.is-fill .bacc-caption .bacc-headline {
+      max-width: none;
+      margin: 0 0 0.8rem;
+      font-size: clamp(1.45rem, 6.6vw, 2rem);
+      -webkit-line-clamp: 4;
+    }
+    .bacc-viewport.is-fill .bacc-caption .bacc-deck {
+      -webkit-line-clamp: 3;
+      letter-spacing: 0.08em;
+      line-height: 1.6;
+    }
+    .bacc-viewport.is-fill .bacc-caption .bacc-cta {
+      display: inline-flex;
+      margin-top: 1.1rem;
+      /* A long brand name wraps inside the screen, never off it. */
+      max-width: 100%;
+      white-space: normal;
+    }
+    .bacc-viewport.is-fill .bacc-caption .bacc-inquiry {
+      display: inline-flex;
+      margin-top: 0.9rem;
+    }
+  }
 
   /* ─── REDUCED MOTION: no autoplay (script), no zoom effects ─────────── */
   @media (prefers-reduced-motion: reduce) {
@@ -1131,6 +1268,7 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
     .bacc-panel::before,
     .bacc-logo,
     .bacc-viewport,
+    .bacc-viewport::after,
     .bacc-stage,
     .bacc-media > :global(img),
     .bacc-media > .bacc-teaser {
@@ -1146,7 +1284,8 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
     .bacc-panel.is-open .bacc-content,
     .bacc-media::after,
     .bacc-caption,
-    .bacc-caption.is-shown {
+    .bacc-caption.is-shown,
+    .bacc-teaser-art {
       transition: none !important;
     }
   }
@@ -1154,6 +1293,9 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
 
 <script>
   const MOBILE = '(max-width: 767px)';
+  /* Phones in either orientation always get the FILL view (the art fills
+     the screen under a black band, the copy over it), whatever `view` says. */
+  const PHONE_VIEW = '(max-width: 767px), (orientation: landscape) and (max-height: 520px)';
   const REDUCED = '(prefers-reduced-motion: reduce)';
 
   function initBrandAccordion() {
@@ -1175,6 +1317,9 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
 
     const reduced = window.matchMedia(REDUCED);
     const mobile = window.matchMedia(MOBILE);
+    const phoneView = window.matchMedia(PHONE_VIEW);
+    const fillView = () => root.dataset.view !== 'fit' || phoneView.matches;
+    const track = root.querySelector<HTMLElement>('.bacc-track')!;
 
     let current = Math.max(0, panels.findIndex((p) => p.classList.contains('is-open')));
     let elapsed = 0;
@@ -1262,11 +1407,15 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
       t.addEventListener('click', (e) => {
         e.stopPropagation();
         if (i === current) {
-          // Keyboard Enter/Space on the open panel's trigger opens the view.
-          if (fullscreen && !mobile.matches) camera.open(panels[i]);
+          // Enter/Space (or a tap) on the open panel's trigger opens the view.
+          viewBrand(i);
           return;
         }
-        choose(i);
+        /* A tap or click on a closed brand expands it and goes straight
+           through into its view, as one move. The keyboard (detail 0) only
+           opens the panel: arrows move between brands, Enter then views. */
+        if (fullscreen && e.detail > 0) viewBrand(i);
+        else choose(i);
       });
       t.addEventListener('keydown', (e) => {
         let target = -1;
@@ -1315,7 +1464,6 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
     }, { threshold: 0.25 }).observe(root);
     const onMedia = () => {
       if (mobile.matches) userPaused = true;
-      if (mobile.matches && camera.isZoomed) camera.close();
       syncToggle();
     };
     reduced.addEventListener('change', onMedia);
@@ -1331,16 +1479,19 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
     const camera = {
       isZoomed: false,
       isClosing: false,
+      expectPop: false,
       panel: null as HTMLElement | null,
       restX: 0,
       restY: 0,
-      /* Clone the open panel's copy into the caption layer (ids and the
-         region role stay on the original, which is hidden meanwhile). */
+      /* Clone the open panel's chips and copy into the caption layer (ids
+         and the region role stay on the original, hidden meanwhile). */
       fillCaption(panel: HTMLElement) {
         if (!caption) return;
         const copy = panel.querySelector<HTMLElement>('.bacc-content');
+        const chips = panel.querySelector<HTMLElement>('.bacc-chips');
         caption.replaceChildren();
         if (!copy) return;
+        if (chips) caption.appendChild(chips.cloneNode(true));
         const clone = copy.cloneNode(true) as HTMLElement;
         clone.removeAttribute('id');
         clone.removeAttribute('role');
@@ -1355,10 +1506,57 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
         caption.style.setProperty('--cap-w', `${width}px`);
         return caption.getBoundingClientRect().height;
       },
-      /* Untransformed geometry (offsets, not client rects), so a resize
-         while the view is open measures the panel, not the camera. */
-      measure(panel: HTMLElement) {
-        const r = { width: panel.offsetWidth, height: panel.offsetHeight, x: panel.offsetLeft, y: panel.offsetTop };
+      /* The open panel's box in the stage, untransformed (offsets, not
+         client rects), so a resize while the view is open measures the
+         panel, not the camera. `expanding`: the panel was opened in this
+         same click and is still growing, so its FINAL box is worked out
+         from the track (every other panel ends as a strip) and the camera
+         heads there while it grows. */
+      box(panel: HTMLElement, expanding = false) {
+        if (!expanding) return { width: panel.offsetWidth, height: panel.offsetHeight, x: panel.offsetLeft, y: panel.offsetTop };
+        const probe = document.createElement('div');
+        probe.style.cssText = 'position:absolute;visibility:hidden;height:0;width:var(--strip)';
+        track.append(probe);
+        const strip = probe.offsetWidth;
+        probe.remove();
+        const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+        const i = panels.indexOf(panel);
+        return {
+          width: track.clientWidth - (panels.length - 1) * (strip + gap),
+          height: panel.offsetHeight,
+          x: track.offsetLeft + i * (strip + gap),
+          y: panel.offsetTop,
+        };
+      },
+      /* FILL: the art fills the screen under a black band the height of
+         the site header (it stays black behind the status bar the whole
+         time), cover, centred; the copy is laid over its foot at screen
+         size. The camera dollies into the art box itself: the whole panel
+         on desktop (its art is inset 0), the 16:9 frame on a phone. */
+      measureFill(panel: HTMLElement, expanding = false) {
+        const media = panel.querySelector<HTMLElement>('.bacc-media') ?? panel;
+        let mx = 0;
+        let my = 0;
+        let mw = media.offsetWidth;
+        let mh = media.offsetHeight;
+        if (expanding) {
+          // Desktop only (phones swap rows at once): the art is the panel.
+          ({ x: mx, y: my, width: mw, height: mh } = this.box(panel, true));
+        } else {
+          for (let el: HTMLElement | null = media; el && el !== stage; el = el.offsetParent as HTMLElement | null) {
+            mx += el.offsetLeft;
+            my += el.offsetTop;
+          }
+        }
+        const band = parseFloat(getComputedStyle(viewport).getPropertyValue('--view-band')) || 0;
+        const vw = window.innerWidth;
+        const h = window.innerHeight - band;
+        const scale = Math.max(vw / mw, h / mh);
+        return { tx: (vw - mw * scale) / 2 - scale * mx, ty: band + (h - mh * scale) / 2 - scale * my, scale };
+      },
+      measure(panel: HTMLElement, expanding = false) {
+        if (fillView()) return this.measureFill(panel, expanding);
+        const r = this.box(panel, expanding);
         /* A status bar or home indicator inset, where a viewport reports one,
            is not room for the art. */
         const probe = document.createElement('div');
@@ -1397,13 +1595,20 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
         }
         return { tx: x0 - scale * r.x, ty: y0 - scale * r.y, scale };
       },
-      open(panel: HTMLElement) {
+      open(panel: HTMLElement, expanding = false) {
         if (this.isZoomed || this.isClosing) return;
         this.isZoomed = true;
         this.panel = panel;
         holds.zoom = true;
         this.fillCaption(panel);
         if (closeBtn) closeBtn.hidden = false;
+        /* The page stays where it is underneath: no scroll while the view
+           is up (iOS ignores overflow alone, so touches on the full-screen
+           view are not allowed to pan either; see touchmove below). */
+        document.documentElement.classList.add('bacc-view-open');
+        document.documentElement.style.overflow = 'hidden';
+        /* Back closes the view, not the page. */
+        if (!history.state?.baccView) history.pushState({ ...(history.state ?? {}), baccView: true }, '');
         const s = stage.getBoundingClientRect();
         /* Hold the stage at its in-page width: the fixed viewport is wider
            by the scrollbar, which would re-flow the strips (and shift a
@@ -1413,7 +1618,10 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
            fixed, so the page behind does not move up (it shows through as
            the backdrop fades out on the way back). */
         root.style.height = `${root.offsetHeight}px`;
-        const { tx, ty, scale } = this.measure(panel);
+        viewport.classList.toggle('is-fill', fillView());
+        const { tx, ty, scale } = this.measure(panel, expanding);
+        viewport.style.setProperty('--cam-scale', String(scale));
+        this.sharpen(panel, scale);
         this.restX = s.left;
         this.restY = s.top;
         const gutter = window.innerWidth - document.documentElement.clientWidth;
@@ -1434,15 +1642,35 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
         stage.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
         caption?.classList.add('is-shown');
       },
+      /* The art is fetched for its in-page size; at the camera's scale ask
+         for the larger file (browsers only ever upgrade a srcset pick). */
+      sharpen(panel: HTMLElement, scale: number) {
+        const img = panel.querySelector<HTMLImageElement>('.bacc-media img');
+        if (img && scale > 1) img.sizes = `${Math.ceil(img.offsetWidth * scale)}px`;
+      },
       recalc() {
         if (!this.panel || this.isClosing) return;
+        /* A rotation re-lays the page behind: the stage keeps the in-page
+           width and starts from the in-page spot of the moment. */
+        stage.style.width = `${root.offsetWidth}px`;
+        const at = root.getBoundingClientRect();
+        this.restX = at.left;
+        this.restY = at.top;
+        viewport.classList.toggle('is-fill', fillView());
         const { tx, ty, scale } = this.measure(this.panel);
+        viewport.style.setProperty('--cam-scale', String(scale));
         stage.style.transition = 'none';
         stage.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
       },
-      close() {
+      close(fromHistory = false) {
         if (!this.isZoomed || this.isClosing) return;
         this.isClosing = true;
+        /* Take the view's history entry back off, so Back after a close
+           leaves the page as it would have. */
+        if (!fromHistory && history.state?.baccView) {
+          this.expectPop = true;
+          history.back();
+        }
         viewport.classList.add('is-closing');
         caption?.classList.remove('is-shown');
         if (reduced.matches) return this.cleanup();
@@ -1465,8 +1693,10 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
         stage.style.transform = '';
         stage.style.width = '';
         root.style.height = '';
-        viewport.classList.remove('is-zoomed', 'is-closing');
+        viewport.classList.remove('is-zoomed', 'is-closing', 'is-fill');
         document.body.style.overflow = '';
+        document.documentElement.style.overflow = '';
+        document.documentElement.classList.remove('bacc-view-open');
         document.body.style.paddingRight = '';
         if (closeBtn) closeBtn.hidden = true;
         if (caption) {
@@ -1483,23 +1713,52 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
       },
     };
 
+    /* Into a brand's view. A closed brand opens first; on desktop the camera
+       sets off at once for the box the panel is growing into, so the expand
+       and the dolly are one move. Phones swap rows at once, so the box is
+       already final. A brand's art that was never on screen (lazy) is
+       decoded first, briefly, so the camera never flies into a blank. */
+    function viewBrand(i: number) {
+      if (!fullscreen || camera.isZoomed || camera.isClosing) return;
+      const expanding = i !== current;
+      if (expanding) choose(i);
+      const panel = panels[i];
+      const img = panel.querySelector<HTMLImageElement>('.bacc-media img');
+      const go = () => camera.open(panel, expanding && !phoneView.matches);
+      if (!img || img.complete) return go();
+      img.loading = 'eager';
+      Promise.race([img.decode().catch(() => {}), new Promise((r) => setTimeout(r, 350))]).then(go);
+    }
+
     panels.forEach((panel, i) => {
       panel.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
+        if (camera.isZoomed) return; // the viewport's handler closes it
         if (target.closest('a, button')) return; // links and controls act for themselves
-        if (i !== current) {
-          choose(i);
-          return;
-        }
-        if (!fullscreen || mobile.matches) return;
-        if (camera.isZoomed) camera.close();
-        else camera.open(panel);
+        if (fullscreen) {
+          e.stopPropagation(); // the click that opens the view must not reach the viewport's close
+          viewBrand(i);
+        } else if (i !== current) choose(i);
       });
     });
     closeBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       camera.close();
     });
+    /* A tap anywhere in the view that is not a link, a control or the copy
+       closes it: the art, the black around it, the band. */
+    viewport.addEventListener('click', (e) => {
+      if (!camera.isZoomed || camera.isClosing) return;
+      const target = e.target as HTMLElement;
+      if (target.closest('a, button, .bacc-caption .bacc-content')) return;
+      camera.close();
+    });
+    /* No scrolling the page behind (iOS pans through overflow: hidden). */
+    const noScroll = (e: Event) => {
+      if (camera.isZoomed) e.preventDefault();
+    };
+    viewport.addEventListener('touchmove', noScroll, { passive: false });
+    viewport.addEventListener('wheel', noScroll, { passive: false });
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && camera.isZoomed) {
         e.preventDefault();
@@ -1507,7 +1766,19 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
       }
     });
     window.addEventListener('resize', () => camera.isZoomed && camera.recalc());
-    window.addEventListener('popstate', () => camera.isZoomed && camera.close());
+    /* Capture phase: this runs before the page's own popstate handlers, and
+       marks the pop as the view's, so they leave the scroll alone. */
+    window.addEventListener(
+      'popstate',
+      () => {
+        if (!camera.isZoomed && !camera.expectPop) return;
+        camera.expectPop = false;
+        document.documentElement.dataset.viewPop = '1';
+        setTimeout(() => delete document.documentElement.dataset.viewPop, 0);
+        camera.close(true);
+      },
+      { capture: true },
+    );
 
     /* #brand-<id> (a link or the URL hash) opens that brand's panel. */
     const selectById = (id: string) => {

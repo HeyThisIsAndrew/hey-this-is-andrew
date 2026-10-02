@@ -420,22 +420,27 @@ export function initRouteTransitions(selector = "a[data-route-zoom]"): void {
       return;
     }
 
-    // Expand a veil from the clicked element to fullscreen, then go.
+    // Expand a veil from the clicked element to fullscreen, then go. The
+    // veil is a plain black box, so it grows by transform alone (scale from
+    // the link's box to the screen): compositor-only, no clip-path repaint.
     const veil = document.createElement("div");
     veil.setAttribute("aria-hidden", "true");
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
     veil.style.cssText = [
       "position:fixed",
       "inset:0",
       "z-index:9999",
       "background:#0a0a0a",
       "pointer-events:none",
-      `clip-path:${insetOf(rect)}`,
+      "transform-origin:0 0",
+      `transform:translate(${rect.left}px, ${rect.top}px) scale(${Math.max(rect.width, 1) / vw}, ${Math.max(rect.height, 1) / vh})`,
     ].join(";");
     document.body.appendChild(veil);
     void veil.offsetWidth;
     const dur = Math.min(DURATION.standard, 340);
-    veil.style.transition = `clip-path ${dur}ms ${EASING.zoomOut}`;
-    veil.style.clipPath = "inset(0px 0px 0px 0px)";
+    veil.style.transition = `transform ${dur}ms ${EASING.zoomOut}`;
+    veil.style.transform = "none";
     window.setTimeout(() => {
       window.location.href = pending.url;
     }, dur * 0.82);
@@ -463,20 +468,19 @@ export function handleRouteEnter(contentSelector = "main"): void {
   if (!main || prefersReducedMotion()) return;
 
   // The new view settles in from a slight zoom — the tail of the
-  // "zoom into the selected thing" motion from the previous page.
-  main.style.opacity = "0";
+  // "zoom into the selected thing" motion from the previous page. Transform
+  // only: the page is never hidden (it used to start at opacity 0, which
+  // held back the first paint of the arriving page, and its LCP).
   const startScale = 1.035;
   main.style.transform = `scale(${startScale})`;
   main.style.transformOrigin = "50% 18%";
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      main.style.transition = `opacity ${DURATION.standard}ms ${EASING.standard}, transform ${DURATION.standard}ms ${EASING.standard}`;
-      main.style.opacity = "1";
+      main.style.transition = `transform ${DURATION.standard}ms ${EASING.standard}`;
       main.style.transform = "scale(1)";
       const cleanup = () => {
         main.style.transition = "";
         main.style.transform = "";
-        main.style.opacity = "";
         main.style.transformOrigin = "";
       };
       main.addEventListener("transitionend", cleanup, { once: true });

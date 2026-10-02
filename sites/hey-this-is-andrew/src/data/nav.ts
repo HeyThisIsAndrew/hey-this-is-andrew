@@ -94,9 +94,10 @@ export const SOCIALS: SocialLink[] = [
 
 export const SEARCH_TRIGGER = {
   label: 'Search',
-  shortcut: '⌘K',
-  ariaLabel: 'Search site (Press ⌘K or /)',
-  title: 'Search gear, milestones, projects (⌘K)',
+  ariaLabel: 'Search site',
+  title: 'Search gear, milestones, projects',
+  // Cmd/Ctrl+K and / still open search (SiteSearch.astro); no visible hint.
+  keyShortcuts: 'Meta+K Control+K /',
   mobileText: 'Search gear, milestones, projects...',
   mobileAria: 'Open search',
 };

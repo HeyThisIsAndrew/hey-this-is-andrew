@@ -5,22 +5,34 @@
      .btn-secondary : outline. Supporting actions beside a primary.
      .btn-ghost     : text only. Tertiary links that must not shout.
    Usage: <a class="btn btn-primary" href="...">Label</a>
-   Components with deliberate brand treatments (BrandAccordion's per-panel
-   accent tokens) keep their scoped overrides; this file is the default. */
+
+   SIZES (tokens in @andrew/tokens, "Controls"): every size has ONE height,
+   padding, radius and tracking, at every width.
+     .btn              md: 44 tall, 24 side padding, 12px label
+     .btn--sm          sm: 32 tall, 14 side padding, 11px label, 44 hit area
+     .btn-ghost        text: no box; the md height is its hit area
+   Anything else that acts as a button maps onto these with the tokens
+   (filter tabs = sm, brand CTAs = md, nav controls = md height). Components
+   with deliberate brand treatments (BrandAccordion's per-panel accent
+   tokens) keep their colours; sizes come from here. */
 
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.6rem;
-  padding: 1rem 2.75rem;
+  gap: 0.6em;
+  min-height: var(--btn-h-md);
+  /* Block padding only matters when a long label wraps; one line sits in
+     the min-height. */
+  padding: calc(8 * var(--ui-u)) var(--btn-px-md);
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 0.8rem;
-  letter-spacing: 0.18em;
+  font-size: var(--btn-fs-md);
+  line-height: 1.2;
+  letter-spacing: var(--btn-ls);
   text-transform: uppercase;
   text-decoration: none;
-  border-radius: var(--radius);
+  border-radius: var(--btn-radius);
   border: 1px solid transparent;
   cursor: pointer;
   transition:
@@ -31,8 +43,11 @@
     transform 0.25s ease;
 }
 
-.btn:focus-visible {
-  outline: 2px solid var(--ink);
+/* THE focus ring: every control, one style (base.css carries the same
+   rule for anything not using these classes). */
+.btn:focus-visible,
+.ui-hit:focus-visible {
+  outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -95,10 +110,24 @@
   color: var(--ink);
 }
 
-/* Compact variant for tight clusters (hero slides, cards). */
+/* Dense (sm): a 32px box for tight clusters (filters, chips, cards). */
 .btn--sm {
-  padding: 0.75rem 1.5rem;
-  font-size: 0.72rem;
+  min-height: var(--btn-h-sm);
+  padding: calc(6 * var(--ui-u)) var(--btn-px-sm);
+  font-size: var(--btn-fs-sm);
+}
+/* The 44px hit area of a box smaller than 44: an invisible pseudo above
+   and below. `.ui-hit` gives it to a control that is not a .btn. */
+.btn--sm,
+.ui-hit {
+  position: relative;
+  z-index: 1; /* the hit area paints over what follows it */
+}
+.btn--sm::before,
+.ui-hit::before {
+  content: '';
+  position: absolute;
+  inset: min(0px, calc((var(--btn-h-sm) - var(--tap-min)) / 2 - 1px)) -1px /* from the padding box: past the 1px border */;
 }
 
 /* Full-width variant for stacked mobile layouts. */
@@ -117,12 +146,10 @@
   }
 }
 
-/* 44x44 touch targets on touch viewports. */
-@media (pointer: coarse), (max-width: 1023px) {
-  .btn,
-  .btn-secondary {
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
+/* Touch: a control's own box is never under 44 tall, whatever the root
+   scale (md is 44 already; this holds when --ui-u would shrink it). */
+@media (pointer: coarse) {
+  .btn:not(.btn--sm) {
+    min-height: max(var(--btn-h-md), var(--tap-min));
   }
 }

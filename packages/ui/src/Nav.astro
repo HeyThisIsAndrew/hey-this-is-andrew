@@ -16,8 +16,11 @@ interface Props {
   links: NavItem[];
   /** Accessible name for the logo link. */
   homeLabel?: string;
-  /** Renders the search trigger buttons (desktop bar and mobile menu). */
-  search?: { label: string; shortcut: string; ariaLabel: string; title: string; mobileText: string; mobileAria: string };
+  /** Renders the search trigger buttons (desktop bar and mobile menu). No
+   *  visible key hint (Andrew's call, 2026-10-02): the shortcut still works
+   *  and is announced to assistive tech through `keyShortcuts`
+   *  (aria-keyshortcuts, e.g. "Meta+K Control+K /"). */
+  search?: { label: string; ariaLabel: string; title: string; mobileText: string; mobileAria: string; keyShortcuts?: string };
   labels?: { menu?: string; close?: string; sections?: string; sectionsMenu?: string };
 }
 
@@ -84,13 +87,12 @@ const isHome = currentPath === homePath;
     </nav>
     <div class="nav-right-actions">
       {search && (
-      <button type="button" class="nav-search-btn" id="nav-search-trigger" aria-label={search.ariaLabel} title={search.title}>
+      <button type="button" class="nav-search-btn" id="nav-search-trigger" aria-label={search.ariaLabel} title={search.title} aria-keyshortcuts={search.keyShortcuts}>
         <svg class="search-trigger-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
         <span class="nav-search-label font-mono">{search.label}</span>
-        <span class="nav-search-key font-mono" aria-hidden="true">{search.shortcut}</span>
       </button>
       )}
       {/* Theme toggle hidden: the site is dark-mode only for now (decision 6).
@@ -126,7 +128,6 @@ const isHome = currentPath === homePath;
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
         <span class="mobile-search-text">{search.mobileText}</span>
-        <span class="mobile-search-key font-mono">{search.shortcut}</span>
       </button>
     </div>
     )}
@@ -772,10 +773,12 @@ const isHome = currentPath === homePath;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    height: 44px;
-    padding: 0 0.85rem;
+    /* The button standard's md height (cta.css), sm padding: a nav control. */
+    height: var(--btn-h-md);
+    padding: 0 var(--btn-px-sm);
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--btn-radius);
     color: var(--ink);
     cursor: pointer;
     transition: var(--transition-smooth, all 0.35s cubic-bezier(0.16, 1, 0.3, 1));
@@ -791,26 +794,20 @@ const isHome = currentPath === homePath;
     transform: translateY(0);
   }
   .nav-search-label {
-    font-size: 0.72rem;
+    font-size: var(--btn-fs-sm);
     font-weight: 700;
-    letter-spacing: 0.14em;
+    letter-spacing: var(--btn-ls);
     text-transform: uppercase;
-  }
-  .nav-search-key {
-    font-size: 0.65rem;
-    padding: 0.1rem 0.35rem;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    /* #888 on this chip was 4.4:1 (AA needs 4.5 at this size). */
-    color: var(--text-muted, #9a9a9a);
-    letter-spacing: 0.05em;
   }
   @media (max-width: 900px) {
     .nav-search-label {
       display: none;
     }
+    /* Icon only: a square md control (it was held wide by the key hint). */
     .nav-search-btn {
-      padding: 0 0.6rem;
+      justify-content: center;
+      width: var(--btn-h-md);
+      padding: 0;
     }
   }
   [data-theme="light"] .nav-search-btn {
@@ -822,11 +819,6 @@ const isHome = currentPath === homePath;
     border-color: rgba(0, 0, 0, 0.6);
     color: #000;
     background: rgba(0, 0, 0, 0.04);
-  }
-  [data-theme="light"] .nav-search-key {
-    background: rgba(0, 0, 0, 0.06);
-    border-color: rgba(0, 0, 0, 0.15);
-    color: #555;
   }
 
   .theme-toggle-btn {
@@ -881,16 +873,18 @@ const isHome = currentPath === homePath;
     display: none;
     align-items: center;
     justify-content: center;
-    min-height: 44px;
-    min-width: 44px;
-    padding: 0 1rem;
+    /* The button standard's md height, sm padding (cta.css). */
+    min-height: var(--btn-h-md);
+    min-width: var(--btn-h-md);
+    padding: 0 var(--btn-px-sm);
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: var(--btn-radius);
     color: rgba(245, 245, 245, 0.9);
     font-family: var(--font-display);
-    font-size: 0.7rem;
+    font-size: var(--btn-fs-sm);
     font-weight: 700;
-    letter-spacing: 0.2em;
+    letter-spacing: var(--btn-ls);
     text-transform: uppercase;
     cursor: pointer;
     transition: color 0.25s ease, border-color 0.25s ease, transform 0.18s cubic-bezier(0.2, 0.9, 0.25, 1);
@@ -936,9 +930,10 @@ const isHome = currentPath === homePath;
     width: 100%;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 0.75rem;
-    padding: 0.75rem 1rem;
+    min-height: var(--btn-h-md);
+    padding: 0.5rem 1rem;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.18);
     color: var(--muted, #aaa);
@@ -954,22 +949,10 @@ const isHome = currentPath === homePath;
     border-color: var(--ink, #fff);
     color: var(--ink, #fff);
   }
-  .mobile-search-key {
-    font-size: 0.65rem;
-    padding: 0.1rem 0.35rem;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    color: var(--ink, #fff);
-  }
   [data-theme="light"] .mobile-search-trigger-btn {
     background: rgba(0, 0, 0, 0.04);
     border-color: rgba(0, 0, 0, 0.15);
     color: #444;
-  }
-  [data-theme="light"] .mobile-search-key {
-    background: rgba(0, 0, 0, 0.08);
-    border-color: rgba(0, 0, 0, 0.2);
-    color: #111;
   }
   .mobile-nav-list {
     list-style: none;
