@@ -55,6 +55,27 @@ the top edge, at the top, middle and bottom of the page):
   code it fails with ".site-nav must be position: fixed (HQ #navbar), never
   sticky".
 
+## Round 2 (2026-10-02): still see-through on iOS 27, the real cause
+
+The fixed header alone did not fix it on Andrew's iPhone (iOS 27). The first
+audit only listed elements, not pseudo-elements, and skipped anything under
+4px, so it missed the two layers that sat ABOVE the header at the top edge:
+
+| Layer at the top edge, phone | HQ | personal (before) |
+| --- | --- | --- |
+| film grain `body::before`: fixed, full screen, transparent, z 150 (over the header) | **off on phones and touch screens** (responsive-mobile.css) | on |
+| scroll progress bar: fixed, 2px, white, z 9999, top 0 | none | yes |
+| header: fixed, black | yes | yes |
+
+iOS Safari colours the status bar from the topmost fixed layer at the top of
+the screen: on HQ that is the black header; here it was the transparent grain
+(or the white bar). Fix: HQ's rule exactly, grain off and header blur off on
+`(max-width: 768px), (orientation: landscape) and (max-height: 500px),
+(pointer: coarse)`; the progress bar now runs under the header; the blackout
+strip back to HQ's z-index 110. After it, every page's top-edge stack at 390
+is the same as HQ's: a 0px black strip and the fixed black header. The guard
+test now fails if the grain comes back on phones or the bar returns to the top.
+
 ## Found on the way (fixed)
 
 - The phone side panel's closed tab took taps over a 118 x 268px area (its

@@ -488,7 +488,9 @@ const isHome = currentPath === homePath;
     right: 0;
     height: env(safe-area-inset-top, 0px);
     background: var(--chrome, #000);
-    z-index: 100000;
+    /* HQ's 110: above the header, below the open menu. 0px tall under HQ's
+       viewport, so it never covers anything. */
+    z-index: 110;
     pointer-events: none;
   }
   /* FIXED, at every width: HQ's #navbar (navbar.css). This is what makes the
@@ -1043,14 +1045,22 @@ const isHome = currentPath === homePath;
      header is the status bar's colour, solid, with no blur, so the top of
      the screen is one black band from the Dynamic Island down to the nav's
      bottom rule. Same rule as HQ's responsive-mobile.css #navbar. */
-  @media (max-width: 860px), (orientation: landscape) and (max-height: 500px) {
+  /* (pointer: coarse) as on HQ, so an iPad, wider than 860, gets the solid,
+     unblurred bar too. HQ keeps the prefixed and unprefixed backdrop-filter
+     in separate rules (its responsive-mobile.css: the minifier folds a pair
+     into the prefixed one only, which iOS 15.4+ ignores); `none` below is
+     written once per property for the same reason. */
+  @media (max-width: 860px), (orientation: landscape) and (max-height: 500px), (pointer: coarse) {
     .site-nav,
     .site-nav:hover,
     .site-nav:not(.at-top):hover,
     .site-nav--home.at-top:hover {
       background: var(--chrome, #000);
-      backdrop-filter: none;
       -webkit-backdrop-filter: none;
+    }
+    /* Its own rule (HQ): kept apart so the minifier cannot fold it away. */
+    .site-nav {
+      backdrop-filter: none !important;
     }
   }
 
