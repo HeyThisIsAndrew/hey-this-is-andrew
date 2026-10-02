@@ -182,23 +182,22 @@ its BE red on one brand panel and its big-screen scaling there). BE
 Unconventional HQ is a separate repository and is not part of the
 workspace, so nothing here can change it.
 
-## Decisions for Andrew
+## Andrew's decisions (2026-10-02)
 
-1. **Desktop brand view framing.** It now fills the screen (art behind, copy
-   over it), like the phone. The earlier framing (art whole, copy under it)
-   is one prop away: `view="fit"`. Pick one.
-2. **Button height.** md is 44, the same as HQ's CTA, the nav controls and
-   the touch minimum. On a phone the main buttons got smaller (55 to 44).
-   48 is a one-line token change if they should stay bigger.
-3. **The brand view's Close on desktop** still shows a small ESC key badge
-   (hidden on phones). Item 1 removed key hints from search only; say if
-   this one should go too.
-4. **The video player's opening zoom** animates `clip-path`, the one zoom not
-   on transform. Rewrite it, or leave it as the exception?
-5. **A slow push-in on the /brands/* hero stills.** Rejected for now (it is
-   their LCP image); yes or no.
-6. **Desktop frame rate** of the brand view to confirm on a real Mac (this
-   machine has no GPU).
-7. Still open from before: favicon files, the cafe product links, press kit
-   numbers, the LinkedIn handle, /goals vs /build, the Now line size, a full
-   light theme.
+1. Desktop brand view: keep the full-screen fill. `view="fit"` stays only as
+   an unused option.
+2. Buttons: md stays 44. The 11px shift of the hero copy on a phone is
+   accepted.
+3. The ESC key badge on the brand view's Close is removed (Esc still closes
+   it), like search. Guarded in `controls.test.mjs`.
+4. **Later cleanup, not this round:** the video player's opening zoom
+   animates `clip-path`, the one zoom not on transform.
+5. No push-in on the /brands/* hero stills: rejected for performance.
+6. Parked, not in this work: favicon files, the cafe product links, press
+   kit numbers, the LinkedIn handle, /goals vs /build, the Now line size, a
+   full light theme.
+
+To check on a real Mac and iPhone: the desktop brand view's smoothness (this
+machine has no GPU), the status bar staying black during the brand view,
+the footer logo's link and size, no visible shortcut hints, and opening and
+closing the brand view in landscape.

@@ -39,7 +39,7 @@ export interface AccordionLabels {
   play: string;
   pause: string;
   close: string;
-  closeKey: string;
+  /** No visible key hint on Close (Andrew, 2026-10-02): Esc still closes. */
   closeAria: string;
 }
 

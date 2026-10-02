@@ -40,6 +40,8 @@ assert.match(bacc, /history\.pushState\(\{ \.\.\.\(history\.state \?\? \{\}\), b
 assert.match(bacc, /addEventListener\('touchmove', noScroll, \{ passive: false \}\)/, 'the page cannot pan behind the view (iOS)');
 assert.match(bacc, /\.bacc-viewport\.is-zoomed\.is-fill::before \{[^}]*background: #000;/, 'the band behind the status bar is solid black');
 assert.match(bacc, /overflow-anchor: none;/, 'the accordion is never a scroll anchor (the page jumped as the view opened)');
+assert.doesNotMatch(bacc, /bacc-close-key|closeKey|\(Esc\)/, 'no Esc key hint on the brand view Close (Esc still closes)');
+assert.match(bacc, /e\.key === 'Escape' && camera\.isZoomed/, 'Esc still closes the brand view');
 assert.match(layout, /dataset\.viewPop\) return;/, "the layout's popstate leaves the scroll alone for the view's Back");
 
 // 4. Button standard: one set of tokens, one focus ring.
