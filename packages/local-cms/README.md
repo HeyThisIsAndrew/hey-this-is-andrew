@@ -38,10 +38,49 @@ export default {
 };
 ```
 
-Field types: `text`, `textarea`, `url`, `email`, `boolean`, `select`
-(`options: [{ value, label }]`), `asset` (a path under `assetsDir`, picked or
-uploaded) and `group` (an object of `fields`). `required` fields must be
-filled in every item before a save is accepted.
+Field types:
+
+| type | value | notes |
+| --- | --- | --- |
+| `text`, `textarea`, `url`, `email` | string | |
+| `markdown` | string | a monospace editor; the site decides how (and whether) to render it |
+| `number` | number | |
+| `date` | `YYYY-MM-DD` string | never a `Date` (time zones shift it a day) |
+| `boolean` | true / false | |
+| `select` | one of `options: [{ value, label }]` | |
+| `list` | array of strings | one per line in the form |
+| `asset` | an image | a path under `assetsDir`, or a Sanity asset id when `imageHost` is Sanity |
+| `group` | object of `fields` | |
+| `array` | array of objects of `fields` | rows can be added, removed and reordered |
+
+`required` fields must be filled in every item (and every array row) before a
+save is accepted. `idField: 'id'` on a collection makes that field a unique
+lowercase slug, which is what Astro's `file()` loader needs as the entry id.
+
+### Images: in the repo or on Sanity
+
+`imageHost: { type: 'repo' }` (the default) saves uploads into `uploadDir`,
+committed, optimised by Astro at build. `imageHost: { type: 'sanity',
+projectId, dataset }` is BE Unconventional HQ's system: uploads go to
+Sanity's asset store (free tier) with the write token from
+`SANITY_WRITE_TOKEN` (or `tokenEnv`), only the asset id
+(`image-<hash>-WxH-ext`) is stored in the JSON, and pages load it from
+Sanity's CDN. The token is read from the environment at upload time and is
+never in the config, the JSON or the build. Both kinds of value can sit in
+one store, so switching hosts needs no migration.
+
+A site resolves any image value with `resolveImage()`:
+
+```ts
+import { resolveImage } from '@andrew/local-cms/images';
+const IMAGES = import.meta.glob('../assets/**/*.{png,jpg,jpeg,webp}', { eager: true, import: 'default' });
+resolveImage(value, { images: IMAGES, prefix: '../assets/', sanity, where: 'brands.json be.logo' });
+// -> ImageMetadata (a repo file) or { src, width, height, remote: true } (Sanity)
+```
+
+Add `image: { domains: ['cdn.sanity.io'] }` to the Astro config so `<Image>`
+can optimise the Sanity ones. A missing file or a Sanity id without a
+project fails the build, naming the field.
 
 The site then imports the JSON from its own code (e.g. `src/data/now.ts`
 imports `now.json` and keeps exporting what components already used).
@@ -58,4 +97,4 @@ imports `now.json` and keeps exporting what components already used).
   site. Uploads take png, jpg, jpeg and webp only, under a sanitised name,
   and never overwrite a file.
 
-`pnpm test` here runs the guard, config and API tests.
+`pnpm test` here runs the guard, config, API and image tests.

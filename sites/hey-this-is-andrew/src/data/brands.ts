@@ -1,11 +1,11 @@
-import type { ImageMetadata } from 'astro';
 import type { AccordionPanel } from '@andrew/ui/types';
 import rows from './brands.json';
+import { image } from './images';
 
 // The brands accordion (#directory): the worlds Andrew has built. The panels
 // live in brands.json, edited by hand or in the local CMS (`pnpm dev`, then
-// /local-cms). Images are paths under src/assets, resolved here to imports so
-// Astro still optimizes them at build time (WebP, responsive widths).
+// /local-cms). Images are paths under src/assets (or Sanity asset ids),
+// resolved by ./images so Astro still optimizes them at build time.
 //
 // Sip the Magic: no CTA link and no art until Andrew supplies them. Set
 // `url` and `cta`, and `media` to the image (upload it in the CMS), and drop
@@ -49,20 +49,6 @@ const TEASER_ART: Record<string, string> = {
     '</svg>',
 };
 
-/* The folders a brand image may come from (logos, hero stills, CMS uploads).
-   A glob, so a path in the JSON becomes a real import. */
-const IMAGES = import.meta.glob<ImageMetadata>('../assets/{brand-logos,hero-media,uploads}/**/*.{png,jpg,jpeg,webp}', {
-  eager: true,
-  import: 'default',
-});
-
-function image(path: string | undefined, brand: string, field: string): ImageMetadata | undefined {
-  if (!path) return undefined;
-  const img = IMAGES[`../${path.replace(/^src\//, '')}`];
-  if (!img) throw new Error(`brands.json: ${brand}.${field} is "${path}", which is not an image under src/assets/brand-logos, hero-media or uploads`);
-  return img;
-}
-
 export const childBrands: ChildBrand[] = (rows as BrandRow[]).map((b) => ({
   id: b.id,
   name: b.name,
@@ -71,9 +57,9 @@ export const childBrands: ChildBrand[] = (rows as BrandRow[]).map((b) => ({
   deck: b.deck,
   cta: b.cta ?? '',
   url: b.url ?? '',
-  logoSrc: image(b.logo, b.id, 'logo'),
+  logoSrc: image(b.logo, `brands.json ${b.id}.logo`),
   wordmark: b.wordmark,
-  mediaSrc: image(b.media, b.id, 'media') ?? null,
+  mediaSrc: image(b.media, `brands.json ${b.id}.media`) ?? null,
   teaserSvg: b.teaserArt ? TEASER_ART[b.teaserArt] : undefined,
   accent: b.accent || undefined,
   ctaFillOnPanelHover: b.ctaFillOnPanelHover || undefined,

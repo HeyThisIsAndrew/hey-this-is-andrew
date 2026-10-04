@@ -20,9 +20,10 @@ pnpm --filter hey-this-is-andrew build:marks         # regenerate the wordmark +
 ## Where things live
 
 ```
-src/content/        projects, goals, gear (Markdown; edit, commit, deploy)
-src/data/           brands (accordion), nav (header + footer), services (DRAFT),
-                    storefront, workflow, now, instagram-feed.json
+src/data/*.json     projects, goals, gear, now, brands: edited at /local-cms
+                    under `pnpm dev` (local-cms.config.mjs), then commit
+src/data/           nav (header + footer), services (DRAFT), storefront,
+                    workflow, images.ts (CMS image resolver), instagram-feed.json
 src/components/     this site's sections (shared blocks come from @andrew/ui)
 src/layouts/        BaseLayout.astro: the one layout every page uses
 src/styles/         theme.css (overrides on @andrew/tokens), global.css

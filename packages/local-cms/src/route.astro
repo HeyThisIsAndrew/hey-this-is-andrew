@@ -143,20 +143,24 @@
   .cms-asset { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; align-items: center; }
   .cms-asset img { grid-column: 1 / -1; max-width: 14rem; max-height: 8rem; object-fit: contain; background: #000; border: 1px solid var(--line); }
   .cms-file-input { font-size: 0.8rem; }
+  .cms-md { min-height: 14rem; font: 0.85rem/1.6 ui-monospace, monospace; }
+  .cms-array { display: grid; gap: 0.6rem; margin-top: 0.5rem; }
+  .cms-row { border: 1px solid var(--line); padding: 0.6rem 0.8rem; background: var(--bg); }
+  .cms-row-title { margin: 0; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 </style>
 
 <script>
   type Field = {
     key: string;
     label?: string;
-    type: 'text' | 'textarea' | 'url' | 'email' | 'boolean' | 'select' | 'asset' | 'group';
+    type: 'text' | 'textarea' | 'markdown' | 'url' | 'email' | 'number' | 'date' | 'boolean' | 'select' | 'list' | 'asset' | 'group' | 'array';
     required?: boolean;
     help?: string;
     options?: { value: string; label?: string }[];
     fields?: Field[];
   };
   type Collection = { name: string; label: string; file: string; itemLabel?: string; help?: string; fields: Field[] };
-  type Config = { title: string; assetsDir: string; uploadDir: string; collections: Collection[] };
+  type Config = { title: string; assetsDir: string; uploadDir: string; imageHost: { type: 'repo' | 'sanity'; projectId?: string; dataset?: string }; collections: Collection[] };
   type Item = Record<string, any>;
 
   const API = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/api/local-cms`;
@@ -222,6 +226,76 @@
       };
       return el('fieldset', { class: 'cms-group' }, el('legend', { class: 'cms-legend', text: f.label ?? f.key }), help, ...(f.fields ?? []).map((sub) => renderField(sub, group, onChange, { prune })));
     }
+    if (f.type === 'array') {
+      /* A repeatable list of objects (goal items, gear items): sub-cards
+         with the same add / reorder / remove as top-level items. */
+      const box = el('div', { class: 'cms-array' });
+      const rows = (): Item[] => (Array.isArray(obj[f.key]) ? obj[f.key] : []);
+      const draw = () => {
+        const list = rows();
+        const cards = list.map((row, j) => {
+          const swap = (d: number) => {
+            const k = j + d;
+            if (k < 0 || k >= list.length) return;
+            [list[j], list[k]] = [list[k], list[j]];
+            draw();
+            onChange();
+          };
+          return el('div', { class: 'cms-row' },
+            el('div', { class: 'cms-item-head' },
+              el('p', { class: 'cms-row-title', text: `${f.label ?? f.key} ${j + 1}` }),
+              el('div', { class: 'cms-item-tools' },
+                el('button', { type: 'button', class: 'cms-btn cms-btn--small', text: 'Up', disabled: j === 0, onclick: () => swap(-1) }),
+                el('button', { type: 'button', class: 'cms-btn cms-btn--small', text: 'Down', disabled: j === list.length - 1, onclick: () => swap(1) }),
+                el('button', { type: 'button', class: 'cms-btn cms-btn--small', text: 'Remove', onclick: () => {
+                  list.splice(j, 1);
+                  if (!list.length && !f.required) delete obj[f.key];
+                  draw();
+                  onChange();
+                } }),
+              ),
+            ),
+            ...(f.fields ?? []).map((sub) => renderField(sub, row, onChange)),
+          );
+        });
+        box.replaceChildren(...cards, el('button', { type: 'button', class: 'cms-btn cms-btn--small', text: `Add ${(f.label ?? f.key).replace(/s$/, '').toLowerCase()}`, onclick: () => {
+          const row: Item = {};
+          for (const sub of f.fields ?? []) if (sub.required && sub.type !== 'group' && sub.type !== 'array') row[sub.key] = '';
+          obj[f.key] = [...rows(), row];
+          draw();
+          onChange();
+        } }));
+      };
+      draw();
+      return el('fieldset', { class: 'cms-group' }, el('legend', { class: 'cms-legend', text: f.label ?? f.key }), help, box);
+    }
+    if (f.type === 'list') {
+      /* A list of text, one per line. */
+      const ta = el('textarea', { class: 'cms-input', id, rows: 4 });
+      ta.value = Array.isArray(obj[f.key]) ? obj[f.key].join('\n') : '';
+      const setList = (v: string[]) => {
+        if (!v.length && !f.required) delete obj[f.key];
+        else obj[f.key] = v;
+        onChange();
+      };
+      ta.oninput = (e: Event) => setList((e.target as HTMLTextAreaElement).value.split('\n').map((s) => s.trim()).filter(Boolean));
+      return el('div', { class: 'cms-field' }, label, ta, el('p', { class: 'cms-help', text: 'One per line.' }), help);
+    }
+    if (f.type === 'number') {
+      const input = el('input', { class: 'cms-input', id, type: 'number', step: 'any' }) as HTMLInputElement;
+      input.value = obj[f.key] ?? '';
+      input.oninput = () => {
+        if (input.value === '') { if (!f.required) delete obj[f.key]; else obj[f.key] = ''; }
+        else obj[f.key] = Number(input.value);
+        onChange();
+      };
+      return el('div', { class: 'cms-field' }, label, input, help);
+    }
+    if (f.type === 'date') {
+      const input = el('input', { class: 'cms-input', id, type: 'date', oninput: (e: Event) => set((e.target as HTMLInputElement).value) }) as HTMLInputElement;
+      input.value = obj[f.key] ?? '';
+      return el('div', { class: 'cms-field' }, label, input, help);
+    }
     if (f.type === 'boolean') {
       return el('div', { class: 'cms-field' }, el('label', { class: 'cms-check' }, el('input', { type: 'checkbox', id, checked: Boolean(obj[f.key]), onchange: (e: Event) => set((e.target as HTMLInputElement).checked) }), f.label ?? f.key), help);
     }
@@ -230,8 +304,8 @@
       select.value = obj[f.key] ?? '';
       return el('div', { class: 'cms-field' }, label, select, help);
     }
-    if (f.type === 'textarea') {
-      const ta = el('textarea', { class: 'cms-input', id, oninput: (e: Event) => set((e.target as HTMLTextAreaElement).value) });
+    if (f.type === 'textarea' || f.type === 'markdown') {
+      const ta = el('textarea', { class: `cms-input${f.type === 'markdown' ? ' cms-md' : ''}`, id, oninput: (e: Event) => set((e.target as HTMLTextAreaElement).value) });
       ta.value = obj[f.key] ?? '';
       return el('div', { class: 'cms-field' }, label, ta, help);
     }
@@ -239,7 +313,11 @@
       const preview = el('img', { alt: '', hidden: !obj[f.key] });
       const show = (p: string) => {
         preview.hidden = !p;
-        if (p) preview.setAttribute('src', `${API}/asset?path=${encodeURIComponent(p)}`);
+        if (!p) return;
+        // A Sanity asset id previews from Sanity's CDN; a path from the repo.
+        const m = /^image-([a-f0-9]+)-(\d+x\d+)-([a-z0-9]+)$/i.exec(p);
+        const h = config.imageHost;
+        preview.setAttribute('src', m && h.type === 'sanity' ? `https://cdn.sanity.io/images/${h.projectId}/${h.dataset}/${m[1]}-${m[2]}.${m[3]}?w=480` : `${API}/asset?path=${encodeURIComponent(p)}`);
       };
       const input = el('input', { class: 'cms-input', id, list: 'cms-assets', placeholder: `${config.assetsDir}/...`, oninput: (e: Event) => { const v = (e.target as HTMLInputElement).value; set(v); show(v); } }) as HTMLInputElement;
       input.value = obj[f.key] ?? '';

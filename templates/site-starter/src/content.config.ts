@@ -1,14 +1,16 @@
 import { defineCollection, z } from 'astro:content';
-import { glob } from 'astro/loaders';
+import { file } from 'astro/loaders';
 
-// One content collection: posts. Add a Markdown file to src/content/posts/
-// and it appears on the home page. No code changes.
+// One content collection: posts, in src/data/posts.json. Add one in the
+// local CMS (`pnpm dev`, then /local-cms) and it appears on the home page.
+// The schema checks every entry at build.
 const posts = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/posts' }),
+  loader: file('src/data/posts.json'),
   schema: z.object({
     title: z.string(),
     date: z.coerce.date(),
     summary: z.string(),
+    body: z.string().optional(),
   }),
 });
 

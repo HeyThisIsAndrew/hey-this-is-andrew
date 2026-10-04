@@ -57,5 +57,33 @@ test('the store is written pretty-printed with a trailing newline', () => {
   assert.equal(serializeStore([{ a: 1 }]), '[\n  {\n    "a": 1\n  }\n]\n');
 });
 
+const typed = [
+  { key: 'id', type: 'text', required: true },
+  { key: 'order', type: 'number' },
+  { key: 'date', type: 'date' },
+  { key: 'tools', type: 'list' },
+  { key: 'status', type: 'select', options: [{ value: 'done' }, { value: 'next' }] },
+  { key: 'items', type: 'array', fields: [{ key: 'label', type: 'text', required: true }, { key: 'status', type: 'select', options: [{ value: 'done' }] }] },
+];
+const check = (docs) => findMissingRequired(docs, typed, () => '', 'id');
+test('typed fields: a valid item passes', () => {
+  assert.deepEqual(check([{ id: 'a-1', order: 2, date: '2026-09-10', tools: ['x'], status: 'done', items: [{ label: 'L', status: 'done' }] }]), []);
+});
+test('typed fields: wrong types are refused', () => {
+  const p = check([{ id: 'a', order: '2', date: '10/09/2026', tools: 'x', status: 'maybe' }]);
+  assert.equal(p.length, 4, p.join(' | '));
+});
+test('array rows: required subfields and options are checked', () => {
+  const p = check([{ id: 'a', items: [{ label: '' }, { label: 'ok', status: 'nope' }] }]);
+  assert.equal(p.length, 2, p.join(' | '));
+});
+test('ids: must be slugs and unique', () => {
+  assert.equal(check([{ id: 'Big Goals' }]).length, 1);
+  assert.equal(check([{ id: 'a' }, { id: 'a' }]).length, 1);
+});
+test('an empty optional list or array is fine', () => {
+  assert.deepEqual(check([{ id: 'a', tools: [], items: [] }]), []);
+});
+
 if (failed) { console.log(`${failed} failed`); process.exit(1); }
 console.log('local-cms store: ok');

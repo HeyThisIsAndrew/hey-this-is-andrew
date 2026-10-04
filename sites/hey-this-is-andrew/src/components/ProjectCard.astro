@@ -1,6 +1,7 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 import { NETWORK_BRANDS } from '../lib/network';
+import { image as resolveImage } from '../data/images';
 
 interface Props {
   project: CollectionEntry<'projects'>;
@@ -9,6 +10,8 @@ interface Props {
 const { project, large = false } = Astro.props;
 const { title, description, tools, image, link, role, brand } = project.data;
 const date = project.data.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+// The CMS image field: a path under src/assets or a Sanity asset id.
+const thumb = image ? resolveImage(image, `projects.json ${project.id}.image`) : undefined;
 const credit = [role, brand ? NETWORK_BRANDS[brand] : null].filter(Boolean).join(' \u00b7 ');
 ---
 <article class:list={['project-card', 'reveal', { large }, { 'no-image': !image }]}>
@@ -17,7 +20,7 @@ const credit = [role, brand ? NETWORK_BRANDS[brand] : null].filter(Boolean).join
   )}
   {image ? (
     <div class="thumb">
-      <img src={image} alt="" loading="lazy" />
+      <img src={thumb?.src} alt="" loading="lazy" />
     </div>
   ) : (
     <div class="thumb thumb-empty" aria-hidden="true">

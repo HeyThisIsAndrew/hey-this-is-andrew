@@ -32,6 +32,8 @@ export default defineConfig({
       allowedHosts: true,
     },
   },
+  // Images hosted on Sanity (imageHost in local-cms.config.mjs) are optimised too.
+  image: { domains: ['cdn.sanity.io'] },
   integrations: [
     // Dev only: /local-cms and its API exist while `astro dev` runs, never
     // in a build (docs/local-cms-plan.md).

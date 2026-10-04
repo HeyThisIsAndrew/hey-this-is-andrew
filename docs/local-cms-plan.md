@@ -1,8 +1,9 @@
 # Local CMS for the monorepo: audit and plan
 
-Status: phase 1 built (`packages/local-cms`, wired into
-`sites/hey-this-is-andrew` for Now and Brands). Phase 2 waits on the decisions
-at the end of this file.
+Status: built. `packages/local-cms` edits every content store of
+`sites/hey-this-is-andrew` (Now, Brands, Projects, Goals, Gear) and ships in
+`templates/site-starter` (Panels, Posts), so every new site starts with it.
+Andrew's decisions (2026-10-04) are in section 6.
 
 ## 1. How BE Unconventional HQ's local CMS works, end to end
 
@@ -45,15 +46,16 @@ the JSON, push, deploy.
   `excludeCoverage`, `pinnedCoverage` and the rest.
 - The three field classes (factual / derived / editorial) and the YouTube
   sync's Sync Lock: rules about HQ's data, not about editing.
-- Uploading to Sanity and `urlFor()`.
+- Sanity Studio and the Sanity document schemas (the package borrows only
+  the asset store, section 3).
 - HQ's filters, its media-kit preview link, its Tailwind look.
 
 **What the package does instead:** collections are CONFIG. A site passes
 `{ name, label, file, itemLabel, fields: [{ key, label, type, ... }] }` and
-the editor renders forms from it. Field types: `text`, `textarea`, `url`,
-`email`, `boolean`, `select`, `asset` (a path under the site's assets
-folder, chosen from a list or uploaded) and `group` (an object of the same
-fields). Nothing about any one site is written in the package.
+the editor renders forms from it. Field types: `text`, `textarea`,
+`markdown`, `url`, `email`, `number`, `date`, `boolean`, `select`, `list`,
+`asset` (an image, see section 3), `group` (an object of fields) and `array`
+(rows of fields). Nothing about any one site is written in the package.
 
 Two deliberate differences from HQ's code:
 
@@ -62,74 +64,74 @@ Two deliberate differences from HQ's code:
    React and `@astrojs/react` to every site for a dev-only tool was not worth
    it. If a form ever needs something rich, the shell can mount a framework
    component per field later.
-2. **Uploads land in the repo** (`src/assets/uploads/` by default), not in
-   Sanity: the personal site has no Sanity project, and Astro optimises any
-   image under `src/assets` at build time. Only image types (png, jpg, jpeg,
-   webp) are accepted, the name is sanitised, an existing file is never
-   overwritten.
+2. **The image host is a config choice** (`imageHost`), not hardcoded to
+   Sanity: `repo` (uploads land in `src/assets/uploads/`, optimised by Astro
+   at build) or `sanity` (HQ's system, section 3). Only image types (png,
+   jpg, jpeg, webp) are accepted, the name is sanitised, an existing repo
+   file is never overwritten.
 
 The guard also gained one generic rule HQ does not have: a collection's
 `required` fields must be present and non-empty in every item, or the write
 is refused (a half-filled brand would otherwise ship).
 
-## 3. Recommendation on Sanity
+## 3. Sanity: the image host, exactly as HQ uses it
 
-**Keep local files only, for now.** Reasons:
+HQ's runtime data is local JSON; Sanity is its image host (and Studio).
+These sites take the same shape and stop there:
 
-- The sites are static (GitHub Pages; Cloudflare Pages next). Content in the
-  repo means every change is a commit: reviewable, revertable, and deployed
-  by the same push as code. Nothing to keep in sync, no tokens in CI.
-- One editor (Andrew), editing at a desk with the repo checked out. Sanity's
-  strengths (many editors, editing from a phone, scheduled publishing, a
-  hosted media library) are not needs yet.
-- HQ itself only uses Sanity as an image host and Studio; its runtime data
-  is already local JSON. Mirroring HQ's Sanity setup would add a project, a
-  dataset, a write token and a second schema to keep in step, for no
-  runtime gain.
-- The package's shape does not block Sanity later: an `asset` field could
-  upload to Sanity instead of the repo by swapping the upload target, and a
-  collection could be pushed to a Sanity dataset by a script.
+- **Content stays in the repo as JSON.** Every change is a commit:
+  reviewable, revertable, deployed by the same push as code, no tokens in CI,
+  no second schema to keep in step. No Studio: the local CMS is the editor.
+- **Images can live on Sanity's free tier**, which is what keeps storage off
+  any bill and binaries out of git. With `imageHost: { type: 'sanity',
+  projectId, dataset }` the CMS uploads to Sanity's asset store
+  (`SANITY_WRITE_TOKEN`, from `.env`, read only at upload time) and stores
+  the bare asset id, `image-<hash>-WxH-ext`, exactly as HQ's store does. The
+  id carries the size, so `resolveImage()` builds the CDN URL and the width
+  and height with no API call, and the build stays offline.
+- **Until a Sanity project id is set, `imageHost` is `repo`.** Both kinds of
+  value resolve side by side, so switching is one config line and no
+  migration: old repo paths keep working, new uploads go to Sanity.
 
-**Revisit when:** someone other than Andrew edits content, Andrew wants to
-edit from his phone, or image volume makes the repo heavy (then: Sanity or
-Cloudflare R2 as the image host, content still in JSON).
+To switch a site: create (or reuse) a Sanity project, add an API token with
+Editor rights, put it in `.env` as `SANITY_WRITE_TOKEN`, set `imageHost` in
+`local-cms.config.mjs`. `image.domains` already allows `cdn.sanity.io`.
 
-## 4. Phase 1 (built)
+## 4. What is built
 
 - `packages/local-cms`: the integration (`localCms(config)`), the middleware
-  factory, the store guard and its tests, the upload endpoint, the editor
-  shell. `pnpm test` runs the package's tests.
-- `sites/hey-this-is-andrew/local-cms.config.mjs`: two collections.
-  - **Now** (`src/data/now.json`): the five items. `src/data/now.ts` keeps
-    its exports (`NOW_MONTH` is computed at build time, `NOW_ITEMS` reads the
-    JSON), so no component changed.
-  - **Brands** (`src/data/brands.json`): every panel field; images are paths
-    under `src/assets` resolved by `import.meta.glob` in `src/data/brands.ts`,
-    which keeps exporting `childBrands` in the same shape. The Sip the Magic
-    teaser art stays in code (picked by a `teaserArt` name): raw SVG markup is
-    not something to edit in a form, and it is rendered as HTML.
+  factory, the store guard, the upload endpoint (repo or Sanity), the
+  editor shell, `resolveImage()` and the Sanity helpers, with tests for each
+  (`pnpm test` in the package; the site's `pnpm test` runs them too).
+- `sites/hey-this-is-andrew/local-cms.config.mjs`, five collections:
+  - **Now** (`src/data/now.json`). `NOW_MONTH` is the build month.
+  - **Brands** (`src/data/brands.json`), read through `src/data/brands.ts`.
+    The Sip the Magic teaser art stays in code (picked by a `teaserArt`
+    name): raw SVG markup is not something to edit in a form.
+  - **Projects, Goals, Gear** (`src/data/*.json`): moved from Markdown/YAML
+    in `src/content` to JSON stores, loaded by Astro's `file()` loader so
+    the zod schemas still validate them at build. A project's Markdown body
+    is kept as a `markdown` field. The move changed no rendered text or id
+    (every built page compared before and after).
+- Images in every store resolve through `src/data/images.ts`.
+- `templates/site-starter`: the same CMS with Panels and Posts, so a site
+  made with `pnpm new-site` is editable from day one.
 - Dev only: `pnpm dev`, open `/local-cms`, edit, Save (writes the JSON in
   the repo), commit, push, Pages deploys. A build contains no `/local-cms`
-  page and no `/api/local-cms` code (checked in the built output).
+  page and no `/api/local-cms` code (`audit-dist.mjs` fails if it does).
 
-## 5. Phase 2 (proposed, not built)
+## 5. Later, not planned
 
-- **Goals, Gear, Projects** are Astro content collections today (Markdown /
-  YAML under `src/content`). Two options: (a) move each to a JSON store the
-  CMS edits, keeping the collection's schema as the field config; or (b)
-  teach the package a Markdown-collection adapter (front matter as fields,
-  body as a textarea). (b) keeps the files hand-editable and is the cleaner
-  long-term shape; (a) is faster.
-- The template (`templates/site-starter`) gets a sample `local-cms.config.mjs`
-  so every new site starts with it.
-- Optional: HQ adopts the package later (its forms become a config plus a
-  few custom field types). Not proposed until the package has run here for a
-  while.
+- HQ adopting the package (its forms become a config plus a few custom field
+  types). Not proposed until the package has run here for a while; HQ is
+  not touched from this repo.
 
-## Decisions for Andrew before phase 2
+## 6. Andrew's decisions (2026-10-04)
 
-1. Sanity: agree to stay on local JSON only (section 3)?
-2. Goals, Gear, Projects: JSON stores (a) or a Markdown adapter (b)?
-3. Uploads: commit uploaded images into `src/assets/uploads/` (default), or
-   host them elsewhere (Cloudflare R2 once the site moves)?
-4. Add the CMS to the site starter template?
+1. Sanity: content stays local JSON; use Sanity the way HQ does (image host)
+   rather than iterating towards it. Built as `imageHost`, section 3.
+2. Goals, Gear, Projects: whatever is better long term, edited in a CMS.
+   Built as JSON stores (one editor, one file shape, schema-checked).
+3. Uploads: repo for now; the end state is HQ's Sanity system, avoiding
+   paid storage. Both are built; switching is one line.
+4. The starter template ships the CMS. Built.

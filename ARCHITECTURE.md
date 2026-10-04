@@ -90,21 +90,28 @@ fails the build check if any page differs in chrome.
 
 ## 3. Content collections (personal site)
 
-Defined in `sites/hey-this-is-andrew/src/content.config.ts`. Updating content
-never touches a component: edit a Markdown file, commit, deploy.
+Defined in `sites/hey-this-is-andrew/src/content.config.ts`. Every editable
+collection is a JSON file under `src/data/`, edited in the local CMS
+(`packages/local-cms`, `/local-cms` under `pnpm dev`) and loaded with Astro's
+`file()` loader, so the zod schemas still validate every entry at build.
+Updating content never touches a component: edit, Save, commit, deploy.
 
-| collection | folder | fields |
+| collection | file | fields |
 | --- | --- | --- |
-| `projects` | `src/content/projects/` | `title`, `date`, `description`, `role?`, `brand` (`htia`/`be`/`ccc`), `tools[]`, `featured`, `image?`, `link?` |
-| `goals` | `src/content/goals/` | `title`, `order` (lower first), `items[]` of `{ label, status: done / in-progress / next, note? }` |
-| `gear` | `src/content/gear/` | `category`, `order`, `brand?`, `subtitle?`, `items[]` of `{ name, spec, brand?, affiliateUrl?, tag? }` |
+| `projects` | `src/data/projects.json` | `id`, `title`, `date`, `description`, `role?`, `brand` (`htia`/`be`/`ccc`), `tools[]`, `featured`, `image?`, `link?`, `body?` (Markdown) |
+| `goals` | `src/data/goals.json` | `id`, `title`, `order` (lower first), `items[]` of `{ label, status: done / in-progress / next, note? }` |
+| `gear` | `src/data/gear.json` | `id`, `category`, `order`, `brand?`, `subtitle?`, `items[]` of `{ name, spec, brand?, affiliateUrl?, tag? }` |
 
-The starter has one collection, `posts` (`title`, `date`, `summary`).
+The CMS also edits two plain data stores: `now.json` (the Now items) and
+`brands.json` (the accordion panels, read through `brands.ts`). Image fields
+in any of them resolve through `src/data/images.ts`: a path under
+`src/assets` (optimised at build) or, once `imageHost` is Sanity, a Sanity
+asset id served from Sanity's CDN. The starter ships the same CMS with two
+collections, `panels` and `posts` (`id`, `title`, `date`, `summary`, `body?`).
 
-Non-collection data files (one source each): `brands.ts` (accordion
-panels), `nav.ts` (header + footer), `services.ts`, `storefront.ts`,
-`workflow.ts`, `now.ts`, `instagram-feed.json` (written by
-`scripts/sync-instagram.mjs`).
+Other data files (code, not CMS): `nav.ts` (header + footer),
+`services.ts`, `storefront.ts`, `workflow.ts`, `instagram-feed.json`
+(written by `scripts/sync-instagram.mjs`).
 
 ## 4. Theming contract (summary)
 
@@ -174,7 +181,9 @@ accordion last, as in point 3; (f) archive the old repository.
    needs a colour the blocks do not expose as a token yet, add the token to
    `packages/tokens/tokens.css` with a neutral default and read it in the
    component, never hardcode it.
-3. Content in `src/content/`, brand data in `src/data/`.
+3. Content and brand data in `src/data/*.json`, edited at `/local-cms`
+   under `pnpm dev` (add a collection to `local-cms.config.mjs` for a new
+   file).
 4. Deploy from `sites/client-name` (see its `deploy/github-pages.yml`).
 5. A client who must own their code: copy `packages/` and the site folder
    into their own repository with the same workspace files; nothing in a

@@ -99,4 +99,18 @@ const brandsJson = JSON.parse(read(new URL('../src/data/brands.json', import.met
 assert.ok(Array.isArray(brandsJson) && brandsJson.length >= 1 && brandsJson.every((b) => b.id && b.name && b.headline), 'brands.json holds the brand panels');
 assert.ok(brandsJson.filter((b) => b.accent === 'be-red').every((b) => b.id === 'be'), 'red only on the BE Unconventional HQ panel');
 
+// 8. The local CMS (final): every content store is JSON the CMS edits, and
+// images resolve through one function whichever host holds them.
+const contentCfg = read(new URL('../src/content.config.ts', import.meta.url));
+for (const c of ['projects', 'goals', 'gear']) {
+  assert.match(contentCfg, new RegExp(`file\\('src/data/${c}\\.json'\\)`), `${c} loads from src/data/${c}.json`);
+  const docs = JSON.parse(read(new URL(`../src/data/${c}.json`, import.meta.url)));
+  assert.ok(Array.isArray(docs) && docs.length >= 1 && docs.every((d) => /^[a-z0-9-]+$/.test(d.id)), `${c}.json holds entries with slug ids`);
+  assert.match(read(new URL('../local-cms.config.mjs', import.meta.url)), new RegExp(`file: 'src/data/${c}\\.json'`), `the CMS edits ${c}.json`);
+}
+assert.ok(!fs.existsSync(new URL('../src/content', import.meta.url)), 'no Markdown content folder left beside the JSON stores');
+const imagesTs = read(new URL('../src/data/images.ts', import.meta.url));
+assert.match(imagesTs, /resolveImage\(/, 'images resolve through @andrew/local-cms resolveImage');
+assert.match(astroCfg, /domains: \['cdn\.sanity\.io'\]/, 'Astro may optimise Sanity-hosted images');
+
 console.log('controls: ok');

@@ -18,9 +18,16 @@ bad({ collections: [{ name: 'a', file: 'a.json', fields: [{ key: 'a', type: 'tex
 bad({ uploadDir: '../out', collections: ok.collections }, /uploadDir/);
 assert.equal(JSON.stringify(publicConfig(ok)).includes(process.cwd()), false, 'no absolute paths to the browser');
 
+bad({ imageHost: { type: 'sanity' }, collections: ok.collections }, /projectId and dataset/);
+bad({ imageHost: { type: 's3' }, collections: ok.collections }, /repo" or "sanity/);
+bad({ collections: [{ name: 'a', file: 'a.json', idField: 'slug', fields: [{ key: 'id', type: 'text' }] }] }, /idField/);
+bad({ collections: [{ name: 'a', file: 'a.json', fields: [{ key: 'rows', type: 'array' }] }] }, /fields must be a non-empty array/);
+assert.doesNotThrow(() => validateConfig({ imageHost: { type: 'sanity', projectId: 'abc123', dataset: 'production' }, collections: ok.collections }));
+assert.equal(JSON.stringify(publicConfig({ imageHost: { type: 'sanity', projectId: 'p', dataset: 'd', tokenEnv: 'SECRET_NAME' }, collections: ok.collections })).includes('SECRET_NAME'), false, 'the token setting never reaches the browser');
+
 // Site-agnostic: none of HQ's document fields, and no site's data paths.
 const src = fs.readdirSync(new URL('../src/', import.meta.url)).map((f) => fs.readFileSync(new URL(`../src/${f}`, import.meta.url), 'utf8')).join('\n');
-for (const hq of ['franchises', 'coverageType', 'youtubeSyncKeywords', 'featuredBrand', 'hubCategory', 'sanity', 'videos.json', 'now.json', 'brands.json']) {
+for (const hq of ['franchises', 'coverageType', 'youtubeSyncKeywords', 'featuredBrand', 'hubCategory', 'videos.json', 'now.json', 'brands.json']) {
   assert.equal(src.toLowerCase().includes(hq.toLowerCase()), false, `"${hq}" is site-specific and must not be in the package`);
 }
 console.log('local-cms config: ok');

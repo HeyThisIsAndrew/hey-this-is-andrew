@@ -47,7 +47,7 @@ console.log(`
 Next:
   1. sites/${name}/src/styles/theme.css   set your colours
   2. sites/${name}/src/data/site.ts       name, links, socials
-  3. sites/${name}/src/data/panels.ts     the brand panels
-  4. sites/${name}/src/content/posts/     your posts
-  5. corepack pnpm --filter ${name} dev   then open http://localhost:4321
+  3. corepack pnpm --filter ${name} dev   then open http://localhost:4321
+  4. http://localhost:4321/local-cms      the brand panels and your posts
+     (saves src/data/*.json; commit and push)
 `);

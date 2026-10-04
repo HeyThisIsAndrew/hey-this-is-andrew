@@ -89,14 +89,16 @@ spacing, the dark background) comes from the shared tokens; change a value
 here only if this site needs it different. Replace
 `src/assets/logo.svg` and `public/favicon.svg` with the site's own.
 
-**3. Add the content.** Posts are Markdown files in
-`sites/my-new-site/src/content/posts/`. Copy `hello-world.md`, change the
-title, date, summary and text, and it appears on the home page. No code.
+**3. Add the content.** Run `corepack pnpm --filter my-new-site dev` and
+open `http://localhost:4321/local-cms`. The local CMS edits the posts and the
+accordion's brand panels (headline, one-line description, button text and
+link, image). Save writes `src/data/posts.json` or `src/data/panels.json`;
+commit and push. No code. The CMS exists only under `dev`: a build never
+contains it.
 
-**4. Add the brand data.** Open `sites/my-new-site/src/data/site.ts` (name,
-tagline, menu links, social links) and `src/data/panels.ts` (the accordion's
-brand panels: headline, one-line description, button text and link, image).
-The menu and the footer both read `site.ts`, so they always match.
+**4. Add the site data.** Open `sites/my-new-site/src/data/site.ts` (name,
+tagline, menu links, social links). The menu and the footer both read it, so
+they always match.
 
 **5. Deploy.** `sites/my-new-site/deploy/github-pages.yml` explains the two
 options: make it this repository's GitHub Pages site, or point a host such

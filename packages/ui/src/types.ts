@@ -1,5 +1,14 @@
 import type { ImageMetadata } from 'astro';
 
+/** An image hosted elsewhere (e.g. Sanity's CDN, @andrew/local-cms/images):
+ *  its URL and natural size. Astro's <Image> renders it like a local one. */
+export interface RemoteImage {
+  src: string;
+  width: number;
+  height: number;
+  remote: true;
+}
+
 /** One panel of the BrandAccordion. Site data files export arrays of these. */
 export interface AccordionPanel {
   /** Slug. The panel's element id is `brand-<id>`, so `#brand-<id>` opens it. */
@@ -13,11 +22,11 @@ export interface AccordionPanel {
   /** CTA label. Omitted or empty (or `comingSoon`) renders no CTA. */
   cta?: string;
   url?: string;
-  logoSrc?: ImageMetadata;
+  logoSrc?: ImageMetadata | RemoteImage;
   /** Shown in the logo box when there is no logo. */
   wordmark: string;
   /** Preview art. Null/undefined renders the teaser card (never a black box). */
-  mediaSrc?: ImageMetadata | null;
+  mediaSrc?: ImageMetadata | RemoteImage | null;
   /** Inline SVG markup for the teaser card (authored in the site's data file,
       never user input). Omit for a plain monochrome card. */
   teaserSvg?: string;

@@ -4,7 +4,7 @@
 */
 
 /**
- * @typedef {'text' | 'textarea' | 'url' | 'email' | 'boolean' | 'select' | 'asset' | 'group'} FieldType
+ * @typedef {'text' | 'textarea' | 'markdown' | 'url' | 'email' | 'number' | 'date' | 'boolean' | 'select' | 'list' | 'asset' | 'group' | 'array'} FieldType
  * @typedef {{
  *   key: string,
  *   label?: string,
@@ -19,6 +19,7 @@
  *   label?: string,
  *   file: string,
  *   itemLabel?: string,
+ *   idField?: string,
  *   help?: string,
  *   fields: Field[],
  * }} Collection
@@ -26,11 +27,16 @@
  *   title?: string,
  *   assetsDir?: string,
  *   uploadDir?: string,
+ *   imageHost?: { type: 'repo' } | { type: 'sanity', projectId: string, dataset: string, tokenEnv?: string, apiVersion?: string },
  *   collections: Collection[],
  * }} LocalCmsConfig
  */
 
-export const FIELD_TYPES = ['text', 'textarea', 'url', 'email', 'boolean', 'select', 'asset', 'group'];
+/* text, textarea and markdown are strings (markdown is a hint to the editor
+   and to the site, which renders it); number and date are typed; list is an
+   array of strings; group is one object of `fields`, array is a repeatable
+   list of them. */
+export const FIELD_TYPES = ['text', 'textarea', 'markdown', 'url', 'email', 'number', 'date', 'boolean', 'select', 'list', 'asset', 'group', 'array'];
 
 /** A path inside the site, relative, with no way out of it. */
 function safeRelative(p) {
@@ -63,7 +69,7 @@ export function validateConfig(config) {
       keys.add(f.key);
       if (!FIELD_TYPES.includes(f.type)) problems.push(`${where}.${f.key}: unknown type "${f.type}"`);
       if (f.type === 'select' && (!Array.isArray(f.options) || f.options.length === 0)) problems.push(`${where}.${f.key}: a select needs options`);
-      if (f.type === 'group') checkFields(f.fields, `${where}.${f.key}`);
+      if (f.type === 'group' || f.type === 'array') checkFields(f.fields, `${where}.${f.key}`);
     }
   };
   for (const c of config.collections) {
@@ -72,7 +78,11 @@ export function validateConfig(config) {
     names.add(c.name);
     if (!safeRelative(c.file) || !c.file.endsWith('.json')) problems.push(`${c.name}: file must be a relative .json path inside the site`);
     checkFields(c.fields, c.name);
+    if (c.idField && !c.fields?.some((f) => f.key === c.idField)) problems.push(`${c.name}: idField "${c.idField}" is not one of its fields`);
   }
+  const host = config.imageHost;
+  if (host && !['repo', 'sanity'].includes(host.type)) problems.push(`imageHost.type must be "repo" or "sanity"`);
+  if (host?.type === 'sanity' && (!host.projectId || !host.dataset)) problems.push('imageHost (sanity) needs projectId and dataset');
   if (problems.length) throw new Error(`local-cms config:\n  - ${problems.join('\n  - ')}`);
   return config;
 }
@@ -83,6 +93,9 @@ export function publicConfig(config) {
     title: config.title ?? 'Local CMS',
     uploadDir: config.uploadDir ?? 'src/assets/uploads',
     assetsDir: config.assetsDir ?? 'src/assets',
-    collections: config.collections.map(({ name, label, file, itemLabel, help, fields }) => ({ name, label: label ?? name, file, itemLabel, help, fields })),
+    imageHost: config.imageHost?.type === 'sanity'
+      ? { type: 'sanity', projectId: config.imageHost.projectId, dataset: config.imageHost.dataset }
+      : { type: 'repo' },
+    collections: config.collections.map(({ name, label, file, itemLabel, idField, help, fields }) => ({ name, label: label ?? name, file, itemLabel, idField, help, fields })),
   };
 }

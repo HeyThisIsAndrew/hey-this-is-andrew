@@ -10,7 +10,9 @@
     GET  assets              image files under assetsDir, as site-relative paths
     GET  asset?path=...      one of those files (for previews)
     POST upload              { filename, data: <data URL> } -> an image saved
-                             under uploadDir, never overwriting a file
+                             under uploadDir, never overwriting a file; or,
+                             with imageHost: sanity, uploaded to Sanity and
+                             answered with its asset id
 
   Only the files named in the config can be written, and paths never leave
   the site's root.
@@ -19,6 +21,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { validateConfig, publicConfig } from './config.mjs';
 import { validateStorePayload, serializeStore } from './store.mjs';
+import { uploadToSanity } from './sanity.mjs';
 
 const MAX_STORE_BYTES = 5 * 1024 * 1024;
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
@@ -82,7 +85,7 @@ function safeName(name) {
  * @param {{ root: string, config: import('./config.mjs').LocalCmsConfig }} opts
  * @returns {(req: import('http').IncomingMessage, res: import('http').ServerResponse, next: () => void) => void}
  */
-export function createLocalCmsHandler({ root, config }) {
+export function createLocalCmsHandler({ root, config, fetchImpl = globalThis.fetch }) {
   validateConfig(config);
   const siteRoot = path.resolve(root);
   const assetsDir = config.assetsDir ?? 'src/assets';
@@ -141,6 +144,13 @@ export function createLocalCmsHandler({ root, config }) {
         if (!m) return send(res, 400, { error: 'Expected a base64 data URL' });
         const buffer = Buffer.from(m[1], 'base64');
         if (buffer.length > MAX_UPLOAD_BYTES) return send(res, 413, { error: 'Image too large' });
+        const host = config.imageHost;
+        if (host?.type === 'sanity') {
+          // HQ's system: the image goes to Sanity's asset store, the field
+          // keeps its asset id. The token never leaves the dev server.
+          const ref = await uploadToSanity(buffer, `${stem}${ext}`, { ...host, token: process.env[host.tokenEnv ?? 'SANITY_WRITE_TOKEN'] ?? '' }, fetchImpl);
+          return send(res, 200, { path: ref });
+        }
         const dir = inside(siteRoot, uploadDir);
         if (!dir) return send(res, 400, { error: 'Bad upload dir' });
         fs.mkdirSync(dir, { recursive: true });

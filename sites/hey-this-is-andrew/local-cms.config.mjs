@@ -1,13 +1,17 @@
 // The local CMS for this site (@andrew/local-cms): which JSON files it edits
 // and their fields. Dev only: `pnpm dev`, open /local-cms, edit, Save, then
 // commit and push; Pages deploys. A build never contains the CMS.
-// Phase 2 (Goals, Gear, Projects): see docs/local-cms-plan.md.
+// Images: in the repo (src/assets/uploads) for now. To host them on Sanity
+// (BE Unconventional HQ's system), set imageHost below and put the write
+// token in SANITY_WRITE_TOKEN (.env, never committed). docs/local-cms-plan.md.
 
 /** @type {import('@andrew/local-cms/config').LocalCmsConfig} */
 export default {
   title: 'HEY_THISISANDREW · Local CMS',
   assetsDir: 'src/assets',
   uploadDir: 'src/assets/uploads',
+  imageHost: { type: 'repo' },
+  // imageHost: { type: 'sanity', projectId: '<id>', dataset: 'production' },
   collections: [
     {
       name: 'now',
@@ -25,6 +29,7 @@ export default {
       label: 'Brands',
       file: 'src/data/brands.json',
       itemLabel: 'name',
+      idField: 'id',
       help: 'The brand panels on the homepage, in order. Images: pick a file under src/assets/brand-logos, hero-media or uploads, or upload one.',
       fields: [
         { key: 'id', label: 'ID (slug)', type: 'text', required: true, help: 'Lowercase, used in #brand-<id> links. Change with care.' },
@@ -52,6 +57,79 @@ export default {
         },
         { key: 'comingSoon', label: 'Coming soon (no CTA, teaser tag instead)', type: 'boolean' },
         { key: 'teaserTag', label: 'Teaser tag', type: 'text' },
+      ],
+    },
+      {
+      name: 'projects',
+      label: 'Projects',
+      file: 'src/data/projects.json',
+      itemLabel: 'title',
+      idField: 'id',
+      help: 'Selected work (homepage) and /work. The two newest featured projects lead the homepage.',
+      fields: [
+        { key: 'id', label: 'ID (slug)', type: 'text', required: true },
+        { key: 'title', label: 'Title', type: 'text', required: true },
+        { key: 'date', label: 'Date', type: 'date', required: true },
+        { key: 'description', label: 'Description', type: 'textarea', required: true },
+        { key: 'role', label: 'Role', type: 'text' },
+        { key: 'brand', label: 'Brand', type: 'select', options: [{ value: 'htia', label: 'Hey This Is Andrew' }, { value: 'be', label: 'BE Unconventional HQ' }, { value: 'ccc', label: 'Capture Create Caffeinate' }] },
+        { key: 'tools', label: 'Tools', type: 'list' },
+        { key: 'featured', label: 'Featured', type: 'boolean' },
+        { key: 'image', label: 'Image', type: 'asset' },
+        { key: 'link', label: 'Link', type: 'url' },
+        { key: 'body', label: 'Write-up (Markdown)', type: 'markdown' },
+      ],
+    },
+    {
+      name: 'goals',
+      label: 'Goals',
+      file: 'src/data/goals.json',
+      itemLabel: 'title',
+      idField: 'id',
+      help: 'The goal groups (homepage snapshot, /goals, /about). Lower order first.',
+      fields: [
+        { key: 'id', label: 'ID (slug)', type: 'text', required: true, help: 'Used in #goals-<id> links.' },
+        { key: 'title', label: 'Title', type: 'text', required: true },
+        { key: 'order', label: 'Order', type: 'number' },
+        {
+          key: 'items',
+          label: 'Goals',
+          type: 'array',
+          required: true,
+          fields: [
+            { key: 'label', label: 'Goal', type: 'text', required: true },
+            { key: 'status', label: 'Status', type: 'select', required: true, options: [{ value: 'done', label: 'Done' }, { value: 'in-progress', label: 'In progress' }, { value: 'next', label: 'Next' }] },
+            { key: 'note', label: 'Note', type: 'text' },
+          ],
+        },
+      ],
+    },
+    {
+      name: 'gear',
+      label: 'Gear',
+      file: 'src/data/gear.json',
+      itemLabel: 'category',
+      idField: 'id',
+      help: 'The kit, by category (/gear and the homepage Gear preview). Lower order first.',
+      fields: [
+        { key: 'id', label: 'ID (slug)', type: 'text', required: true },
+        { key: 'category', label: 'Category', type: 'text', required: true },
+        { key: 'order', label: 'Order', type: 'number' },
+        { key: 'brand', label: 'Brands', type: 'text' },
+        { key: 'subtitle', label: 'Subtitle', type: 'text' },
+        {
+          key: 'items',
+          label: 'Items',
+          type: 'array',
+          required: true,
+          fields: [
+            { key: 'name', label: 'Name', type: 'text', required: true },
+            { key: 'spec', label: 'Spec', type: 'textarea', required: true },
+            { key: 'brand', label: 'Brand', type: 'text' },
+            { key: 'affiliateUrl', label: 'Store link', type: 'url' },
+            { key: 'tag', label: 'Tag', type: 'text' },
+          ],
+        },
       ],
     },
   ],
