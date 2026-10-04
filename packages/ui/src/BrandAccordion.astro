@@ -28,8 +28,9 @@
  *    tokens for that accent (e.g. the personal site's BE panel in BE red).
  *    Nothing brand-specific is written in this file.
  *  - `fullscreen` adds the "brand view": a camera dolly into the open panel
- *    (the personal site's addition to HQ's mechanics). A tap on ANY brand
- *    goes into its view; a closed one expands on the way. Desktop fits the
+ *    (the personal site's addition to HQ's mechanics). Two steps: a tap on a
+ *    closed brand opens it; a tap on the open panel's art or CTA goes into
+ *    its view. Desktop fits the
  *    panel whole with the copy under it; phones fill the screen with the
  *    art, under a black band, with the copy over its foot. Html carries
  *    `bacc-view-open` meanwhile, for anything floating that should hide.
@@ -1514,11 +1515,12 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
           viewBrand(i);
           return;
         }
-        /* A tap or click on a closed brand expands it and goes straight
-           through into its view, as one move. The keyboard (detail 0) only
-           opens the panel: arrows move between brands, Enter then views. */
-        if (fullscreen && e.detail > 0) viewBrand(i);
-        else choose(i);
+        /* TWO STEPS, at every width (Andrew, 2026-10-04): a tap or click on
+           a closed brand only opens it (on a phone it moves to the top); a
+           second one on the open panel (its art, or its CTA) goes into the
+           view. Going straight through in one move left no moment to read
+           the panel. The keyboard is unchanged: arrows move, Enter views. */
+        choose(i);
       });
       t.addEventListener('keydown', (e) => {
         let target = -1;
@@ -1832,7 +1834,9 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
       },
     };
 
-    /* Into a brand's view. A closed brand opens first; on desktop the camera
+    /* Into a brand's view. Reached on the second step (the brand is already
+       open); the expanding path below stays for a call on a closed one
+       (#brand-<id> style entry points). A closed brand opens first; on desktop the camera
        sets off at once for the box the panel is growing into, so the expand
        and the dolly are one move. Phones swap rows at once, so the box is
        already final. A brand's art that was never on screen (lazy) is
@@ -1853,11 +1857,27 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
       panel.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
         if (camera.isZoomed) return; // the viewport's handler closes it
+        /* The open panel's primary CTA is the second step too: it goes into
+           the view, whose own CTA goes to the brand's site. A modified click
+           (new tab, middle button) and the keyboard (detail 0) still follow
+           the link, as before. */
+        const cta = target.closest('.bacc-cta');
+        const me = e as MouseEvent;
+        if (cta && fullscreen && i === current && me.detail > 0 && !me.metaKey && !me.ctrlKey && !me.shiftKey && me.button === 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          viewBrand(i);
+          return;
+        }
         if (target.closest('a, button')) return; // links and controls act for themselves
+        if (i !== current) {
+          choose(i); // step one: open it
+          return;
+        }
         if (fullscreen) {
           e.stopPropagation(); // the click that opens the view must not reach the viewport's close
-          viewBrand(i);
-        } else if (i !== current) choose(i);
+          viewBrand(i); // step two: into its view
+        }
       });
     });
     closeBtn?.addEventListener('click', (e) => {

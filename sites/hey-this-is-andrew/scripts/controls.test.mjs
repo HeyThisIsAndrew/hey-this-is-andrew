@@ -77,4 +77,17 @@ const elevator = read(new URL('../src/components/PhotographyPortfolio.astro', im
 assert.match(elevator, /data-video-url=\{p\.video \? p\.permalink : undefined\}/, 'elevator reels carry their Instagram link');
 assert.match(elevator, /Watch video on Instagram/, 'a zoomed reel has a play path');
 
+// 6. Mobile portrait round (Andrew, 2026-10-04).
+assert.doesNotMatch(bacc, /if \(fullscreen && e\.detail > 0\) viewBrand\(i\)/, 'a closed brand only opens on the first tap (two steps)');
+assert.match(bacc, /choose\(i\); \/\/ step one: open it/, 'step one opens the brand');
+assert.match(bacc, /viewBrand\(i\); \/\/ step two: into its view/, 'step two goes into the view');
+const about = read(new URL('../src/components/AboutSection.astro', import.meta.url));
+assert.doesNotMatch(about, /about-bar-link/, 'no About Andrew link in the Meet The Creator bar');
+assert.match(about, /<p class="about-punchline">BUILDING IN PUBLIC\.<\/p>/, 'the punchline is one line');
+assert.doesNotMatch(about.split('<style>')[0], /—/, 'no em dashes in the About copy');
+const now = read(new URL('../src/data/now.ts', import.meta.url));
+assert.match(now, /NOW_MONTH = new Date\(\)\.toLocaleDateString\('en-US'/, 'the Now month is the build month, never typed by hand');
+const nowItems = JSON.parse(read(new URL('../src/data/now.json', import.meta.url)));
+assert.ok(Array.isArray(nowItems) && nowItems.length === 5 && nowItems.every((n) => n.label && n.value), 'now.json holds the five Now items');
+
 console.log('controls: ok');
