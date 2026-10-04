@@ -1,0 +1,366 @@
+---
+/**
+ * /local-cms (@andrew/local-cms): the editor shell. Injected ONLY by
+ * `astro dev` (see integration.mjs); a build never contains it.
+ *
+ * It renders a form per item from the site's collections config (fetched
+ * from /api/local-cms/config), so nothing about any one site is written
+ * here. Saving POSTs the whole collection; the server validates it, refuses
+ * an empty or half-filled store, pretty-prints it and writes the JSON file
+ * in the repo. Then: commit, push, deploy.
+ *
+ * Its own page and styles (not a site's layout), monochrome, no framework.
+ */
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Local CMS</title>
+  </head>
+  <body>
+    <header class="cms-top">
+      <div>
+        <p class="cms-eyebrow">Dev only · writes files in this repo</p>
+        <h1 class="cms-title" data-cms-title>Local CMS</h1>
+      </div>
+      <div class="cms-actions">
+        <span class="cms-status" data-cms-status role="status" aria-live="polite"></span>
+        <button type="button" class="cms-btn" data-cms-reload>Discard changes</button>
+        <button type="button" class="cms-btn cms-btn--primary" data-cms-save>Save</button>
+      </div>
+    </header>
+    <div class="cms-body">
+      <nav class="cms-nav" aria-label="Collections" data-cms-nav></nav>
+      <main class="cms-main" data-cms-main>
+        <p class="cms-muted">Loading…</p>
+      </main>
+    </div>
+    <datalist id="cms-assets"></datalist>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    color-scheme: dark;
+    --bg: #080808;
+    --panel: #111;
+    --line: rgba(255, 255, 255, 0.14);
+    --ink: #f0f0f0;
+    --muted: #9a9a9a;
+    --bad: #ff8a8a;
+    --good: #a8e6a8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .cms-top {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .cms-eyebrow {
+    margin: 0;
+    font: 600 0.7rem/1.4 ui-monospace, monospace;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .cms-title { margin: 0.2rem 0 0; font-size: 1.25rem; letter-spacing: 0.04em; }
+  .cms-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+  .cms-status { font-size: 0.85rem; color: var(--muted); max-width: 40rem; }
+  .cms-status.is-bad { color: var(--bad); }
+  .cms-status.is-good { color: var(--good); }
+  .cms-btn {
+    min-height: 44px;
+    padding: 0 1rem;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    cursor: pointer;
+    letter-spacing: 0.06em;
+  }
+  .cms-btn:hover { border-color: var(--ink); }
+  .cms-btn--primary { background: var(--ink); color: var(--bg); border-color: var(--ink); font-weight: 600; }
+  .cms-btn--small { min-height: 36px; padding: 0 0.7rem; font-size: 0.8rem; }
+  .cms-btn:disabled { opacity: 0.4; cursor: default; }
+  .cms-body { display: grid; grid-template-columns: 14rem minmax(0, 1fr); min-height: calc(100vh - 5rem); }
+  @media (max-width: 760px) { .cms-body { grid-template-columns: 1fr; } }
+  .cms-nav { border-right: 1px solid var(--line); padding: 1rem 0.75rem; display: flex; flex-direction: column; gap: 0.35rem; }
+  @media (max-width: 760px) { .cms-nav { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--line); } }
+  .cms-tab {
+    min-height: 44px;
+    text-align: left;
+    padding: 0 0.85rem;
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+  .cms-tab[aria-current='true'] { border-color: var(--line); background: var(--panel); }
+  .cms-main { padding: 1.25rem; max-width: 60rem; }
+  .cms-muted { color: var(--muted); }
+  .cms-file { font: 0.8rem ui-monospace, monospace; color: var(--muted); }
+  .cms-item {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: var(--panel);
+    border: 1px solid var(--line);
+  }
+  .cms-item-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .cms-item-title { margin: 0; font-size: 1rem; }
+  .cms-item-tools { display: flex; gap: 0.4rem; }
+  .cms-field { display: grid; gap: 0.3rem; margin: 0.75rem 0; }
+  .cms-field > label, .cms-legend { font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .cms-req { color: var(--ink); }
+  .cms-help { font-size: 0.8rem; color: var(--muted); margin: 0; }
+  .cms-input {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.55rem 0.7rem;
+    background: var(--bg);
+    border: 1px solid var(--line);
+  }
+  textarea.cms-input { min-height: 6rem; resize: vertical; }
+  .cms-check { display: flex; align-items: center; gap: 0.6rem; min-height: 44px; }
+  .cms-check input { width: 1.2rem; height: 1.2rem; }
+  .cms-group { border: 1px solid var(--line); padding: 0.25rem 0.85rem 0.5rem; margin: 0.75rem 0; }
+  .cms-asset { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; align-items: center; }
+  .cms-asset img { grid-column: 1 / -1; max-width: 14rem; max-height: 8rem; object-fit: contain; background: #000; border: 1px solid var(--line); }
+  .cms-file-input { font-size: 0.8rem; }
+</style>
+
+<script>
+  type Field = {
+    key: string;
+    label?: string;
+    type: 'text' | 'textarea' | 'url' | 'email' | 'boolean' | 'select' | 'asset' | 'group';
+    required?: boolean;
+    help?: string;
+    options?: { value: string; label?: string }[];
+    fields?: Field[];
+  };
+  type Collection = { name: string; label: string; file: string; itemLabel?: string; help?: string; fields: Field[] };
+  type Config = { title: string; assetsDir: string; uploadDir: string; collections: Collection[] };
+  type Item = Record<string, any>;
+
+  const API = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/api/local-cms`;
+  const $ = <T extends Element>(sel: string) => document.querySelector<T>(sel)!;
+  const nav = $<HTMLElement>('[data-cms-nav]');
+  const main = $<HTMLElement>('[data-cms-main]');
+  const status = $<HTMLElement>('[data-cms-status]');
+  const saveBtn = $<HTMLButtonElement>('[data-cms-save]');
+  const reloadBtn = $<HTMLButtonElement>('[data-cms-reload]');
+  const assetList = $<HTMLDataListElement>('#cms-assets');
+
+  let config: Config;
+  let current: Collection | null = null;
+  let items: Item[] = [];
+  let saved = '';
+  let uid = 0;
+
+  const dirty = () => JSON.stringify(items) !== saved;
+  const say = (text: string, kind: '' | 'good' | 'bad' = '') => {
+    status.textContent = text;
+    status.className = `cms-status${kind ? ` is-${kind}` : ''}`;
+  };
+  const refreshDirty = () => {
+    saveBtn.disabled = !dirty();
+    reloadBtn.disabled = !dirty();
+    if (dirty()) say('Unsaved changes');
+  };
+  const el = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, any> = {}, ...kids: (Node | string)[]) => {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (k === 'class') node.className = v;
+      else if (k === 'text') node.textContent = v;
+      else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
+      else if (v !== undefined && v !== false) node.setAttribute(k, v === true ? '' : String(v));
+    }
+    node.append(...kids);
+    return node;
+  };
+  const isEmpty = (v: any) => v === undefined || v === null || v === '';
+
+  async function loadAssets() {
+    const res = await fetch(`${API}/assets`);
+    const { files } = await res.json();
+    assetList.replaceChildren(...files.map((f: string) => el('option', { value: f })));
+  }
+
+  /** One field's control. `obj` is the item (or a group object). */
+  function renderField(f: Field, obj: Item, onChange: () => void, owner: { prune?: () => void } = {}): HTMLElement {
+    const id = `f${uid++}`;
+    const label = el('label', { for: id }, f.label ?? f.key, f.required ? el('span', { class: 'cms-req', text: ' *' }) : '');
+    const help = f.help ? el('p', { class: 'cms-help', text: f.help }) : '';
+    const set = (v: any) => {
+      if ((v === '' || v === false) && !f.required) delete obj[f.key];
+      else obj[f.key] = v;
+      owner.prune?.();
+      onChange();
+    };
+    if (f.type === 'group') {
+      const group: Item = obj[f.key] && typeof obj[f.key] === 'object' ? obj[f.key] : {};
+      const prune = () => {
+        if (Object.values(group).every(isEmpty)) delete obj[f.key];
+        else obj[f.key] = group;
+      };
+      return el('fieldset', { class: 'cms-group' }, el('legend', { class: 'cms-legend', text: f.label ?? f.key }), help, ...(f.fields ?? []).map((sub) => renderField(sub, group, onChange, { prune })));
+    }
+    if (f.type === 'boolean') {
+      return el('div', { class: 'cms-field' }, el('label', { class: 'cms-check' }, el('input', { type: 'checkbox', id, checked: Boolean(obj[f.key]), onchange: (e: Event) => set((e.target as HTMLInputElement).checked) }), f.label ?? f.key), help);
+    }
+    if (f.type === 'select') {
+      const select = el('select', { class: 'cms-input', id, onchange: (e: Event) => set((e.target as HTMLSelectElement).value) }, ...(f.options ?? []).map((o) => el('option', { value: o.value, text: o.label ?? (o.value || '(none)') })));
+      select.value = obj[f.key] ?? '';
+      return el('div', { class: 'cms-field' }, label, select, help);
+    }
+    if (f.type === 'textarea') {
+      const ta = el('textarea', { class: 'cms-input', id, oninput: (e: Event) => set((e.target as HTMLTextAreaElement).value) });
+      ta.value = obj[f.key] ?? '';
+      return el('div', { class: 'cms-field' }, label, ta, help);
+    }
+    if (f.type === 'asset') {
+      const preview = el('img', { alt: '', hidden: !obj[f.key] });
+      const show = (p: string) => {
+        preview.hidden = !p;
+        if (p) preview.setAttribute('src', `${API}/asset?path=${encodeURIComponent(p)}`);
+      };
+      const input = el('input', { class: 'cms-input', id, list: 'cms-assets', placeholder: `${config.assetsDir}/...`, oninput: (e: Event) => { const v = (e.target as HTMLInputElement).value; set(v); show(v); } }) as HTMLInputElement;
+      input.value = obj[f.key] ?? '';
+      const upload = el('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', class: 'cms-file-input', 'aria-label': `Upload an image for ${f.label ?? f.key}` }) as HTMLInputElement;
+      upload.addEventListener('change', async () => {
+        const file = upload.files?.[0];
+        if (!file) return;
+        say(`Uploading ${file.name}…`);
+        const data = await new Promise<string>((ok, bad) => {
+          const r = new FileReader();
+          r.onload = () => ok(String(r.result));
+          r.onerror = () => bad(r.error);
+          r.readAsDataURL(file);
+        });
+        const res = await fetch(`${API}/upload`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: file.name, data }) });
+        const body = await res.json();
+        if (!res.ok) return say(`Upload refused: ${body.error}`, 'bad');
+        input.value = body.path;
+        set(body.path);
+        show(body.path);
+        await loadAssets();
+        say(`Uploaded to ${body.path}. Save to use it.`, 'good');
+      });
+      if (obj[f.key]) show(obj[f.key]);
+      return el('div', { class: 'cms-field' }, label, el('div', { class: 'cms-asset' }, input, upload, preview), help);
+    }
+    const input = el('input', { class: 'cms-input', id, type: f.type === 'url' ? 'url' : f.type === 'email' ? 'email' : 'text', oninput: (e: Event) => set((e.target as HTMLInputElement).value) }) as HTMLInputElement;
+    input.value = obj[f.key] ?? '';
+    return el('div', { class: 'cms-field' }, label, input, help);
+  }
+
+  function render() {
+    if (!current) return;
+    const c = current;
+    const titleOf = (item: Item, i: number) => (c.itemLabel && item[c.itemLabel]) || `Item ${i + 1}`;
+    const cards = items.map((item, i) => {
+      const title = el('h3', { class: 'cms-item-title', text: titleOf(item, i) });
+      const move = (d: number) => {
+        const j = i + d;
+        if (j < 0 || j >= items.length) return;
+        [items[i], items[j]] = [items[j], items[i]];
+        render();
+        refreshDirty();
+      };
+      const tools = el('div', { class: 'cms-item-tools' },
+        el('button', { type: 'button', class: 'cms-btn cms-btn--small', text: 'Up', disabled: i === 0, onclick: () => move(-1), 'aria-label': `Move ${titleOf(item, i)} up` }),
+        el('button', { type: 'button', class: 'cms-btn cms-btn--small', text: 'Down', disabled: i === items.length - 1, onclick: () => move(1), 'aria-label': `Move ${titleOf(item, i)} down` }),
+        el('button', { type: 'button', class: 'cms-btn cms-btn--small', text: 'Remove', onclick: () => {
+          if (!confirm(`Remove "${titleOf(item, i)}"? (Nothing is written until you Save.)`)) return;
+          items.splice(i, 1);
+          render();
+          refreshDirty();
+        } }),
+      );
+      const onChange = () => {
+        title.textContent = titleOf(item, i);
+        refreshDirty();
+      };
+      return el('section', { class: 'cms-item', 'aria-label': titleOf(item, i) }, el('div', { class: 'cms-item-head' }, title, tools), ...c.fields.map((f) => renderField(f, item, onChange)));
+    });
+    main.replaceChildren(
+      el('h2', { text: c.label }),
+      el('p', { class: 'cms-file', text: c.file }),
+      c.help ? el('p', { class: 'cms-help', text: c.help }) : '',
+      ...cards,
+      el('button', { type: 'button', class: 'cms-btn', text: `Add ${c.label.replace(/s$/, '').toLowerCase()} item`, onclick: () => {
+        const blank: Item = {};
+        for (const f of c.fields) if (f.required && f.type !== 'group') blank[f.key] = '';
+        items.push(blank);
+        render();
+        refreshDirty();
+      } }),
+    );
+    nav.querySelectorAll('button').forEach((b) => b.setAttribute('aria-current', String(b.dataset.name === c.name)));
+  }
+
+  async function open(c: Collection) {
+    if (current && dirty() && !confirm('Discard unsaved changes?')) return;
+    current = c;
+    const res = await fetch(`${API}/data/${c.name}`);
+    items = await res.json();
+    saved = JSON.stringify(items);
+    render();
+    refreshDirty();
+    say(`${items.length} items in ${c.file}`);
+  }
+
+  saveBtn.addEventListener('click', async () => {
+    if (!current) return;
+    saveBtn.disabled = true;
+    say('Saving…');
+    const res = await fetch(`${API}/data/${current.name}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(items) });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || !body.success) {
+      say(`Not saved: ${body.error ?? res.statusText}`, 'bad');
+      saveBtn.disabled = false;
+      return;
+    }
+    saved = JSON.stringify(items);
+    refreshDirty();
+    say(`Saved ${current.file}. Commit and push to publish.`, 'good');
+  });
+  reloadBtn.addEventListener('click', () => {
+    if (!current) return;
+    saved = JSON.stringify(items); // let open() through without a second prompt
+    open(current);
+  });
+  window.addEventListener('beforeunload', (e) => {
+    if (dirty()) e.preventDefault();
+  });
+
+  (async () => {
+    try {
+      config = await (await fetch(`${API}/config`)).json();
+      $<HTMLElement>('[data-cms-title]').textContent = config.title;
+      document.title = config.title;
+      nav.replaceChildren(...config.collections.map((c) => el('button', { type: 'button', class: 'cms-tab', 'data-name': c.name, text: c.label, onclick: () => open(c) })));
+      await loadAssets();
+      await open(config.collections[0]);
+    } catch (err) {
+      say(`Could not load the CMS: ${err}`, 'bad');
+    }
+  })();
+</script>

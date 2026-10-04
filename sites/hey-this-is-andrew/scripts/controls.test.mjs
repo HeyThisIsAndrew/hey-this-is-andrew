@@ -90,4 +90,13 @@ assert.match(now, /NOW_MONTH = new Date\(\)\.toLocaleDateString\('en-US'/, 'the 
 const nowItems = JSON.parse(read(new URL('../src/data/now.json', import.meta.url)));
 assert.ok(Array.isArray(nowItems) && nowItems.length === 5 && nowItems.every((n) => n.label && n.value), 'now.json holds the five Now items');
 
+// 7. The local CMS (phase 1): dev only, Now and Brands as JSON stores.
+const astroCfg = read(new URL('../astro.config.mjs', import.meta.url));
+assert.match(astroCfg, /localCms\(localCmsConfig\)/, 'the site wires the local CMS integration');
+const integ = read(new URL('../../../packages/local-cms/src/integration.mjs', import.meta.url));
+assert.match(integ, /if \(command !== 'dev'\) return;/, 'the CMS integration does nothing outside astro dev');
+const brandsJson = JSON.parse(read(new URL('../src/data/brands.json', import.meta.url)));
+assert.ok(Array.isArray(brandsJson) && brandsJson.length >= 1 && brandsJson.every((b) => b.id && b.name && b.headline), 'brands.json holds the brand panels');
+assert.ok(brandsJson.filter((b) => b.accent === 'be-red').every((b) => b.id === 'be'), 'red only on the BE Unconventional HQ panel');
+
 console.log('controls: ok');

@@ -112,6 +112,14 @@ for (const page of pages) {
   }
 }
 
+// The local CMS is dev only (@andrew/local-cms): no page, no API code, no
+// trace of it may reach the built site.
+const walkAll = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walkAll(path.join(d, e.name)) : [path.join(d, e.name)]));
+for (const file of walkAll(dist)) {
+  if (/local-cms/i.test(path.relative(dist, file))) fail(file, 'local CMS file in the build');
+  else if (/\.(html|js|mjs|json|xml)$/.test(file) && /local-cms|andrew\/local-cms/.test(fs.readFileSync(file, 'utf8'))) fail(file, 'local CMS code in the build');
+}
+
 console.log(`audit-dist: ${pages.length} pages checked.`);
 if (failures.length) {
   console.error(failures.map((f) => `  FAIL ${f}`).join('\n'));
