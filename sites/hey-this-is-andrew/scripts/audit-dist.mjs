@@ -135,6 +135,24 @@ for (const page of pages) {
     }
   }
 
+
+  for (const m of html.matchAll(/<img\b[^>]*>/g)) {
+    const img = m[0];
+    if (!/\balt\b/.test(img)) {
+      fail(page, 'img missing alt attribute');
+    } else {
+      const altMatch = img.match(/\balt="([^"]*)"/);
+      if (altMatch) {
+        const alt = altMatch[1];
+        if (alt !== "" && alt !== "HEY_THISISANDREW") {
+          fail(page, `img alt must be empty or HEY_THISISANDREW, got: "${alt}"`);
+        }
+      } else {
+        // boolean alt attribute without equals, perfectly fine and means empty string
+      }
+    }
+  }
+
   for (const m of html.matchAll(/\ssrcset="([^"]+)"/g)) {
     for (const part of m[1].split(',')) {
       const url = part.trim().split(/\s+/)[0];
