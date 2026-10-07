@@ -1,5 +1,6 @@
 ---
 import { Image } from 'astro:assets';
+import ExpandSection from '@andrew/ui/ExpandSection.astro';
 import portraitImg from '../assets/hero-media/portrait.jpg';
 import { SUBSTACK_URL } from '../lib/latest-content';
 import { NOW_MONTH, NOW_ITEMS } from '../data/now';
@@ -59,14 +60,21 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
         <p class="about-punchline">BUILDING IN PUBLIC.</p>
         {!full && (
           /* The Now band, folded in as one line (full list at /now). */
-          <p class="about-now">
-            <a class="about-now-label font-mono" href={`${base}/now/`}>Now <span class="about-now-month">{NOW_MONTH}</span> <span aria-hidden="true">&rarr;</span></a>
+          <div class="about-now">
+            <h3 class="about-now-label font-mono">Now <span class="about-now-month">{NOW_MONTH}</span></h3>
             <span class="about-now-items">
-              {NOW_ITEMS.map((n, i) => (
-                <span class="about-now-item"><span class="about-now-key">{n.label}:</span> <span class="about-now-val">{n.value.replace(/\.$/, '')}</span>{i < NOW_ITEMS.length - 1 && <span class="about-now-sep" aria-hidden="true"> / </span>}</span>
+              {NOW_ITEMS.slice(0, 2).map((n, i) => (
+                <span class="about-now-item"><span class="about-now-key">{n.label}:</span> <span class="about-now-val">{n.value.replace(/\.$/, '')}</span> <span class="about-now-sep" aria-hidden="true"> / </span></span>
               ))}
             </span>
-          </p>
+            <ExpandSection id="now" expandLabel="Show more" collapseLabel="Show less">
+              <span class="about-now-items">
+                {NOW_ITEMS.slice(2).map((n, i) => (
+                  <span class="about-now-item"><span class="about-now-key">{n.label}:</span> <span class="about-now-val">{n.value.replace(/\.$/, '')}</span>{i < NOW_ITEMS.length - 3 && <span class="about-now-sep" aria-hidden="true"> / </span>}</span>
+                ))}
+              </span>
+            </ExpandSection>
+          </div>
         )}
 
         <div class="about-ctas">
@@ -82,7 +90,7 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
             </>
           ) : (
             <>
-              <a class="btn btn-primary" href={`${base}/about`} data-route-zoom>More about me</a>
+              
               {/* One primary next step (More about me); the Substack is the
                   quieter, external one. */}
               <a class="btn btn-ghost" href={SUBSTACK_URL} target="_blank" rel="noopener">

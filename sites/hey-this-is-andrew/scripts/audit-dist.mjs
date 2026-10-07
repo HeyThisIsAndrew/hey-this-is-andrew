@@ -136,6 +136,42 @@ for (const page of pages) {
   }
 
 
+  
+  for (const m of html.matchAll(/<iframe\b[^>]*>/g)) {
+    const iframe = m[0];
+    const srcMatch = iframe.match(/\bsrc="([^"]*)"/);
+    if (srcMatch && srcMatch[1] === "") {
+      fail(page, 'iframe has empty src');
+    }
+  }
+
+  const isHomepage = page.endsWith('index.html') && path.dirname(page) === dist;
+  if (isHomepage) {
+    const mainHtml = (html.match(/<main[^>]*>([\s\S]*?)<\/main>/i) || [])[1];
+    if (mainHtml) {
+      const mainLinks = [...mainHtml.matchAll(/href="([^"]+)"/g)].map(m => m[1]);
+      for (const link of mainLinks) {
+        if (!link.startsWith('http') && !link.startsWith('#') && !link.startsWith(base + '#')) {
+          const allowed = [base + 'about/#press', base + 'gear/', base + 'rss.xml'];
+          if (!allowed.includes(link) && !link.startsWith('mailto:')) {
+            fail(page, 'homepage main link to another internal page not allowed: ' + link);
+          }
+        }
+      }
+    }
+  }
+
+  
+  for (const m of html.matchAll(/<[^>]+aria-hidden="true"[^>]*>([\s\S]*?)<\/\w+>/g)) {
+    const hiddenContent = m[1];
+    const focusableRegex = /<(a|button|input|select|textarea|summary)\b[^>]*>/gi;
+    for (const fm of hiddenContent.matchAll(focusableRegex)) {
+      if (!/\btabindex="-1"/.test(fm[0]) && !/\binert\b/.test(fm[0]) && !/\bdisabled\b/.test(fm[0])) {
+        fail(page, 'focusable element inside aria-hidden missing tabindex="-1" or inert: ' + fm[0]);
+      }
+    }
+  }
+
   for (const m of html.matchAll(/<img\b[^>]*>/g)) {
     const img = m[0];
     if (!/\balt\b/.test(img)) {
@@ -166,6 +202,7 @@ for (const page of pages) {
 const walkAll = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walkAll(path.join(d, e.name)) : [path.join(d, e.name)]));
 for (const file of walkAll(dist)) {
   if (/local-cms/i.test(path.relative(dist, file))) fail(file, 'local CMS file in the build');
+  else if (/preview\//i.test(path.relative(dist, file))) fail(file, 'preview directory in the build');
   else if (/\.(html|js|mjs|json|xml)$/.test(file) && /local-cms|andrew\/local-cms/.test(fs.readFileSync(file, 'utf8'))) fail(file, 'local CMS code in the build');
 }
 

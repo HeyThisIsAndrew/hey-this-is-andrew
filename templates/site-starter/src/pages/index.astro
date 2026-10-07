@@ -3,11 +3,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import BrandAccordion from '@andrew/ui/BrandAccordion.astro';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
 import QuoteBand from '@andrew/ui/QuoteBand.astro';
+import ExpandSection from '@andrew/ui/ExpandSection.astro';
 import { getCollection } from 'astro:content';
 import { PANELS } from '../data/panels';
 import { SITE } from '../data/site';
 
 const posts = (await getCollection('posts')).sort((a, b) => +b.data.date - +a.data.date);
+const previewPosts = posts.slice(0, 2);
+const restPosts = posts.slice(2);
 ---
 <BaseLayout title={`${SITE.name} · Home`}>
   <h1 class="vh">{SITE.name}</h1>
@@ -23,7 +26,7 @@ const posts = (await getCollection('posts')).sort((a, b) => +b.data.date - +a.da
     <div class="container">
       <SectionHeader id="posts-heading" index="02" kicker="Writing" title="Posts" lede="Edit them in the local CMS." />
       <ul class="posts">
-        {posts.map((p) => (
+        {previewPosts.map((p) => (
           <li>
             <h3>{p.data.title}</h3>
             <p>{p.data.summary}</p>
@@ -31,6 +34,19 @@ const posts = (await getCollection('posts')).sort((a, b) => +b.data.date - +a.da
           </li>
         ))}
       </ul>
+      {restPosts.length > 0 && (
+        <ExpandSection id="posts-expander" expandLabel="Show all posts" collapseLabel="Show fewer posts">
+          <ul class="posts" style="margin-top: 1rem;">
+            {restPosts.map((p) => (
+              <li>
+                <h3>{p.data.title}</h3>
+                <p>{p.data.summary}</p>
+                <time datetime={p.data.date.toISOString()}>{p.data.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</time>
+              </li>
+            ))}
+          </ul>
+        </ExpandSection>
+      )}
     </div>
   </section>
 

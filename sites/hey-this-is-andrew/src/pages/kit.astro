@@ -9,19 +9,19 @@ import SectionHeader from '@andrew/ui/SectionHeader.astro';
 import ViewAllLink from '@andrew/ui/ViewAllLink.astro';
 import PhotoElevator from '@andrew/ui/PhotoElevator.astro';
 import { homeUrl } from '../data/nav';
-import portrait from '../assets/hero-media/portrait.jpg';
-import beStill from '../assets/hero-media/be-hq-still.jpg';
-import cccPour from '../assets/hero-media/ccc-pour.jpg';
 
-const dummyPhotos = [
-  { id: '1', image: portrait, caption: 'Portrait', category: 'Portrait', location: 'Studio', video: false },
-  { id: '2', image: beStill, caption: 'BE HQ', category: 'HQ', location: 'Office', video: false },
-  { id: '3', image: cccPour, caption: 'Pour', category: 'coffee', location: 'Cafe', video: false },
-  { id: '4', image: portrait, caption: 'Portrait 2', category: 'Portrait', location: 'Studio', video: false },
-];
+import brandsData from '../data/brands.json';
+import { getInstagramPhotos } from '../lib/instagram';
+const instagramPhotos = await getInstagramPhotos(8);
+const categoryLabels = { cocktails: 'Cocktails', bar: 'Bars', product: 'Product' };
+const elevatorPhotos = instagramPhotos.map((p) => ({
+  id: p.id, image: p.image, caption: p.caption, category: p.category,
+  location: p.location || (p.category === 'bar' ? 'Bar & Venue' : categoryLabels[p.category]),
+  venue: p.venue, event: p.event, permalink: p.permalink,
+  video: p.mediaType === 'VIDEO' && Boolean(p.permalink)
+}));
 
-
-// We won't render Nav/Footer or PageNav as they disrupt the page flow, or require global context.
+// We don't render Nav/Footer or PageNav as they disrupt the page flow.
 ---
 <BaseLayout title="UI Kit · HEY_THISISANDREW" description="Showroom for UI kit components" noindex={true}>
   <h1 class="vh">UI Kit</h1>
@@ -30,13 +30,15 @@ const dummyPhotos = [
 
     <section class="kit-section">
       <h3>BrandAccordion</h3>
+      <p class="kit-caption">Clients change the JSON store to feature their own sub-brands or collections.</p>
       <div style="padding:2rem; background:var(--surface);">
-        <BrandAccordion panels={[{ id: 'demo1', name: 'Brand One', kicker: 'Kicker', headline: 'Brand One Headline', deck: 'Deck', wordmark: 'BRAND 1', comingSoon: false }]} />
+        <BrandAccordion panels={brandsData} />
       </div>
     </section>
 
     <section class="kit-section">
       <h3>ExpandSection</h3>
+      <p class="kit-caption">Clients use this to hide long lists of projects or posts behind a toggle.</p>
       <ExpandSection id="kit-expand" expandLabel="Click to Expand" collapseLabel="Click to Collapse">
         <p style="padding: 1rem; border: 1px dashed var(--line);">This is the expanded content inside ExpandSection.</p>
       </ExpandSection>
@@ -44,60 +46,53 @@ const dummyPhotos = [
 
     <section class="kit-section">
       <h3>FilterTabs</h3>
+      <p class="kit-caption">Clients change the categories to filter their portfolio (e.g. Weddings, Portraits).</p>
       <div id="filter-target">
         <FilterTabs target="filter-target" label="Filter items" tabs={[{key: 'all', label: 'All'}, {key: 'film', label: 'Film'}, {key: 'photo', label: 'Photo'}]} />
-        <div style="margin-top: 1rem;">
-          <div data-kind="film" style="padding:1rem; border:1px solid var(--line); margin-bottom:0.5rem;">Film Content</div>
-          <div data-kind="photo" style="padding:1rem; border:1px solid var(--line); margin-bottom:0.5rem;">Photo Content</div>
-          <div data-kind="code" style="padding:1rem; border:1px solid var(--line); margin-bottom:0.5rem;">Code Content</div>
+        <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+          <div data-kind="film" style="padding:1rem; border:1px solid var(--line);">Film Content</div>
+          <div data-kind="photo" style="padding:1rem; border:1px solid var(--line);">Photo Content</div>
         </div>
       </div>
     </section>
 
     <section class="kit-section">
       <h3>NewTag</h3>
+      <p class="kit-caption">Clients use this tag to highlight recent additions; it vanishes automatically after 24 hours.</p>
       <div style="display:flex; gap:1rem;">
         <NewTag published={new Date().toISOString()} label="NEW" />
-        <NewTag published={new Date().toISOString()} label="UPDATED" />
       </div>
     </section>
 
     <section class="kit-section">
       <h3>QuoteBand</h3>
-      <QuoteBand eyebrow="Testimonial" quote="This is a very good quote." attribution="- Test User" />
+      <p class="kit-caption">Clients edit the quote and attribution to display a featured testimonial.</p>
+      <QuoteBand eyebrow="Testimonial" quote="The most impactful creative partner we've had." attribution="A Real Client" />
     </section>
 
     <section class="kit-section">
       <h3>SectionHeader</h3>
+      <p class="kit-caption">Clients change the index, kicker, title, and lede for every major page section.</p>
       <SectionHeader index="02" kicker="Component" title="SectionHeader Title" lede="This is a sample lede for the SectionHeader component." />
     </section>
 
     <section class="kit-section">
       <h3>ViewAllLink</h3>
+      <p class="kit-caption">Clients change the URL and label to link users to full archive pages.</p>
       <ViewAllLink href={homeUrl} label="View all items" />
     </section>
 
     <section class="kit-section">
       <h3>PhotoElevator</h3>
-      <PhotoElevator photos={dummyPhotos} />
+      <p class="kit-caption">Clients sync their own Instagram or CMS gallery to populate the infinite scrolling reels.</p>
+      <PhotoElevator photos={elevatorPhotos} />
     </section>
   </div>
 </BaseLayout>
 
 <style>
-  .kit-page {
-    padding-top: 4rem;
-    padding-bottom: 8rem;
-  }
-  .kit-section {
-    margin: 4rem 0;
-    border-top: 1px solid var(--line);
-    padding-top: 2rem;
-  }
-  .kit-section h3 {
-    font-family: var(--font-mono);
-    font-size: 1rem;
-    margin-bottom: 1.5rem;
-    color: var(--muted);
-  }
+  .kit-page { padding-top: 4rem; padding-bottom: 8rem; }
+  .kit-section { margin: 4rem 0; border-top: 1px solid var(--line); padding-top: 2rem; }
+  .kit-section h3 { font-family: var(--font-mono); font-size: 1rem; margin-bottom: 0.5rem; color: var(--muted); }
+  .kit-caption { font-size: 0.9rem; color: var(--muted); margin-bottom: 1.5rem; max-width: 60ch; }
 </style>
