@@ -353,10 +353,9 @@ export function flipRect(
     { duration, easing, fill: "both" }
   );
   // Safety: WAAPI `finished` can hang if the tab is backgrounded.
-  return Promise.race([
-    anim.finished.catch(() => {}),
-    new Promise<void>((resolve) => window.setTimeout(resolve, duration + 200)),
-  ]);
+  const p1 = anim.finished.catch(() => {});
+  const p2 = new Promise<void>((resolve) => window.setTimeout(resolve, duration + 200));
+  return Promise.race([p1, p2]).then(() => {});
 }
 
 /**

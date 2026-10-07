@@ -670,7 +670,7 @@ const SETS = [0, 1];
           const dy = (e.deltaY || 0) * WHEEL_NUDGE;
           const dt = (dy / reel.setH) * reel.baseDuration * 1000;
           const cur = reel.anim.currentTime ?? 0;
-          reel.anim.currentTime = cur + (reel.direction === 1 ? dt : -dt);
+          reel.anim.currentTime = (cur as number) + (reel.direction === 1 ? dt : -dt);
           pauseIdle();
         },
         { passive: true }
@@ -726,14 +726,15 @@ const SETS = [0, 1];
     };
 
     function apply(ms: number) {
-      stage.style.transition = ms ? `transform ${ms}ms ${EASE}` : 'none';
-      stage.style.transform = `translate(${X}px, ${Y}px) scale(${s})`;
+      if(stage) stage.style.transition = ms ? `transform ${ms}ms ${EASE}` : 'none';
+      if(stage) stage.style.transform = `translate(${X}px, ${Y}px) scale(${s})`;
     }
 
     /* Just far enough in to show the WHOLE photo: it may take at most 72%
        of the width and 82% of the height under the header, so the
        neighbouring reels and the photos above and below stay in view. */
     function focusOn(target: HTMLElement, ms: number) {
+      if(!stage) return;
       const sr = stage.getBoundingClientRect();
       const tr = target.getBoundingClientRect();
       const ux = (tr.left - sr.left) / s;
@@ -804,7 +805,7 @@ const SETS = [0, 1];
       isZoomed = true;
       activeTarget = target;
       target.classList.add('is-active');
-      stage.classList.add('is-zoomed');
+      if(stage) stage.classList.add('is-zoomed');
       stageWrap?.classList.add('is-zoomed');
       photoSection?.classList.add('is-zoomed', 'is-camera');
       setWatch(target);
@@ -848,9 +849,9 @@ const SETS = [0, 1];
       const finish = () => {
         window.clearTimeout(closeTimer);
         if (isZoomed) return; // reopened meanwhile
-        stage.style.transition = '';
-        stage.style.transform = '';
-        stage.classList.remove('is-zoomed');
+        if(stage) stage.style.transition = '';
+        if(stage) stage.style.transform = '';
+        if(stage) stage.classList.remove('is-zoomed');
         stageWrap?.classList.remove('is-zoomed');
         photoSection?.classList.remove('is-camera');
         document.body.style.overflow = '';

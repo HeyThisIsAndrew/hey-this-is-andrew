@@ -31,12 +31,12 @@ at a time, and never paste lines that start with `#`.
 
 | command | what it does |
 | --- | --- |
-| `./site review` | the one to remember: gets the latest from GitHub, installs, downloads the photos and starts the site |
-| `./site review <branch>` | same, for a branch someone pushed for you to look at (e.g. `./site review claude/personal-site-visual-fixes`) |
-| `./site dev` | just starts the site (when everything is already installed) |
-| `./site photos` | downloads the "Shot on the job" photos for your local copy |
-| `./site clean` | removes the downloaded photos again (see "Before you commit") |
-| `./site check` | runs the same checks GitHub runs before it publishes |
+| `./site [site-name] review` | the one to remember: gets the latest from GitHub, installs, downloads the photos and starts the site |
+| `./site [site-name] review <branch>` | same, for a branch someone pushed for you to look at (e.g. `./site review claude/personal-site-visual-fixes`) |
+| `./site [site-name] dev` | just starts the site (when everything is already installed) |
+| `./site [site-name] photos` | downloads the "Shot on the job" photos for your local copy |
+| `./site [site-name] clean` | removes the downloaded photos again (see "Before you commit") |
+| `./site [site-name] check` | runs the same checks GitHub runs before it publishes |
 
 While the site is running:
 
@@ -48,9 +48,9 @@ While the site is running:
 
 ### Before you commit or switch branches
 
-Run `./site clean`. The photo download changes a few files that should
+Run `./site [site-name] clean`. The photo download changes a few files that should
 never be committed (the photos themselves, `instagram-feed.json`,
-`instagram-media-todo.md`). `./site review` cleans up by itself first.
+`instagram-media-todo.md`). `./site [site-name] review` cleans up by itself first.
 A `package-lock.json` only appears if someone ran `npm install` by
 mistake; it is ignored by git, delete it whenever you see it.
 
@@ -59,7 +59,7 @@ mistake; it is ignored by git, delete it whenever you see it.
 The live site is <https://heythisisandrew.github.io/hey-this-is-andrew/>.
 Anything that lands on `main` publishes itself in about two minutes; the
 **Actions** tab on GitHub shows the progress (green tick = live). Branches
-never publish, which is why `./site review <branch>` exists.
+never publish, which is why `./site [site-name] review <branch>` exists.
 
 ### If something goes wrong
 
@@ -69,7 +69,7 @@ never publish, which is why `./site review <branch>` exists.
 | `command not found: pnpm` | use the `./site` commands, or put `corepack ` in front (`corepack pnpm install`). To make plain `pnpm` work everywhere, run `sudo corepack enable` once (it asks for your Mac password) |
 | `corepack: command not found` | newer Node versions no longer include it: `npm install -g corepack`, then try again |
 | `Stopped: git checkout ... did not finish` | you have unsaved edits; commit them, or run `git stash`, then try again |
-| photos show "could not be loaded" | the photo links expire (the current set on 2026-10-05). Set the token first: `export CCC_INSTAGRAM_ACCESS_TOKEN=...` (your Capture Create Caffeinate token from Meta for Developers; GitHub never shows a saved secret again), then `./site photos`. Without it the live site is unaffected: GitHub has its own copy |
+| photos show "could not be loaded" | the photo links expire (the current set on 2026-10-05). Set the token first: `export CCC_INSTAGRAM_ACCESS_TOKEN=...` (your Capture Create Caffeinate token from Meta for Developers; GitHub never shows a saved secret again), then `./site [site-name] photos`. Without it the live site is unaffected: GitHub has its own copy |
 | anything else | copy the whole Terminal output and send it to Claude |
 
 ## Add a new site in five steps

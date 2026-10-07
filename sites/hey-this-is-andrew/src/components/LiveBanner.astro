@@ -31,24 +31,24 @@
 
 <script>
   (function () {
-    var CHANNEL_ID = 'UCNn5badDO7pbspeS6noInCw';
-    var LIVE_URL = 'https://www.youtube.com/channel/' + CHANNEL_ID + '/live';
-    var PROXY = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(LIVE_URL);
-    var CACHE_KEY = 'hia-live-check';
-    var DISMISS_KEY = 'hia-live-dismissed';
-    var CACHE_TTL = 5 * 60 * 1000;
-    var TIMEOUT_MS = 8000;
+    const CHANNEL_ID = 'UCNn5badDO7pbspeS6noInCw';
+    const LIVE_URL = 'https://www.youtube.com/channel/' + CHANNEL_ID + '/live';
+    const PROXY = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(LIVE_URL);
+    const CACHE_KEY = 'hia-live-check';
+    const DISMISS_KEY = 'hia-live-dismissed';
+    const CACHE_TTL = 5 * 60 * 1000;
+    const TIMEOUT_MS = 8000;
 
-    var banner = document.getElementById('live-banner');
-    var cta = document.getElementById('live-cta');
-    var dismiss = document.getElementById('live-dismiss');
+    const banner = document.getElementById('live-banner');
+    const cta = document.getElementById('live-cta');
+    const dismiss = document.getElementById('live-dismiss');
     if (!banner || !cta || !dismiss) return;
 
     function readCache() {
       try {
-        var raw = sessionStorage.getItem(CACHE_KEY);
+        const raw = sessionStorage.getItem(CACHE_KEY);
         if (!raw) return null;
-        var data = JSON.parse(raw);
+        const data = JSON.parse(raw);
         if (!data || typeof data.at !== 'number') return null;
         if (Date.now() - data.at > CACHE_TTL) return null;
         return data;
@@ -57,7 +57,7 @@
       }
     }
 
-    function writeCache(data) {
+    function writeCache(data: any) {
       try {
         sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
       } catch (e) {
@@ -73,15 +73,15 @@
       }
     }
 
-    function show(videoId) {
+    function show(videoId: string) {
       if (isDismissed()) return;
-      cta.href = 'https://www.youtube.com/watch?v=' + videoId;
-      banner.hidden = false;
+      if(cta) (cta as HTMLAnchorElement).href = 'https://www.youtube.com/watch?v=' + videoId;
+      if(banner) banner.hidden = false;
       document.documentElement.classList.add('live-on');
     }
 
     function hide() {
-      banner.hidden = true;
+      if(banner) banner.hidden = true;
       document.documentElement.classList.remove('live-on');
     }
 
@@ -95,26 +95,26 @@
     });
 
     function check() {
-      var cached = readCache();
+      const cached = readCache();
       if (cached) {
         if (cached.live && cached.videoId) show(cached.videoId);
         return;
       }
-      var ctrl = 'AbortController' in window ? new AbortController() : null;
-      var timer = setTimeout(function () {
-        if (ctrl) ctrl.abort();
-      }, TIMEOUT_MS);
-      var opts = ctrl ? { signal: ctrl.signal } : {};
+      const ctrl = 'AbortController' in window ? new AbortController() : null;
+      const timer = setTimeout(function () {
+      if (ctrl) ctrl.abort();
+    }, TIMEOUT_MS);
+      const opts = ctrl ? { signal: ctrl.signal } : {};
       fetch(PROXY, opts)
         .then(function (res) {
           if (!res.ok) throw new Error('proxy ' + res.status);
           return res.text();
         })
         .then(function (html) {
-          var m = html.match(/<link rel="canonical" href="([^"]+)"/);
-          var canonical = m && m[1];
+          const m = html.match(/<link rel="canonical" href="([^"]+)"/);
+          const canonical = m && m[1];
           if (canonical && canonical.indexOf('watch?v=') !== -1) {
-            var vid = null;
+            let vid = null;
             try {
               vid = new URL(canonical).searchParams.get('v');
             } catch (e) {

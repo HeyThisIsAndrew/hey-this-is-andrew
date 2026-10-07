@@ -44,9 +44,9 @@
     const title = player.querySelector('.vp-title');
     const ytLink = player.querySelector('.vp-youtube');
 
-    let closeZoom = null;
-    let unlock = null;
-    let untrap = null;
+    let closeZoom: (() => void) | null = null;
+    let unlock: (() => void) | null = null;
+    let untrap: (() => void) | null = null;
     let opener: HTMLElement | null = null;
     let isPaused = false;
     let isMuted = false;
@@ -77,6 +77,7 @@
       }
       if (title) title.textContent = label || 'Video';
       if (ytLink) (ytLink as HTMLAnchorElement).href = url;
+      if (!player) return;
       player.hidden = false;
 
       unlock = lockBody();
@@ -92,7 +93,7 @@
     }
 
     function close() {
-      if (player.hidden) return;
+      if (!player || player.hidden) return;
       if (closeZoom) closeZoom();
       else {
         player.hidden = true;
@@ -113,22 +114,23 @@
     // element via data-video-source (e.g. the hero CTA button names the
     // slide visual), so the zoom originates from what the user is entering,
     // not from the small control they tapped.
-    function resolveSource(trigger) {
+    function resolveSource(trigger: HTMLElement) {
       const sel = trigger.getAttribute('data-video-source');
       if (!sel) return trigger;
       const scope = trigger.closest('.carousel-slide') || document;
       return scope.querySelector(sel) || trigger;
     }
 
-    function triggerVideo(el) {
+    function triggerVideo(el: HTMLElement) {
       const url = el.getAttribute('data-video-url');
       if (!url) return;
       const label = el.getAttribute('data-video-title') || el.getAttribute('aria-label') || 'Video';
-      openFrom(resolveSource(el), url, label);
+      openFrom(resolveSource(el as HTMLElement) as HTMLElement, url, label);
     }
 
     // Global delegation: any [data-video-player] with data-video-url opens.
     document.addEventListener('click', (e) => {
+      if (!(e.target instanceof Element)) return;
       const el = e.target.closest('[data-video-player]');
       if (!el || !player.hidden) return;
       // Ignore triggers inside hidden (inactive) slides.
@@ -136,22 +138,23 @@
       const url = el.getAttribute('data-video-url');
       if (!url) return;
       e.preventDefault();
-      triggerVideo(el);
+      triggerVideo(el as HTMLElement);
     });
 
     // Keyboard: non-native triggers (role="button" visuals) open on Enter/Space.
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
+      if (!(e.target instanceof Element)) return;
       const el = e.target.closest?.('[data-video-player][role="button"]');
       if (!el || !player.hidden) return;
       if (el.tagName === 'BUTTON' || el.tagName === 'A') return; // native behavior covers these
       if (el.closest('[aria-hidden="true"]')) return;
       e.preventDefault();
-      triggerVideo(el);
+      triggerVideo(el as HTMLElement);
     });
 
     player.addEventListener('click', (e) => {
-      if (e.target.closest('[data-vp-close]')) close();
+      if (e.target instanceof Element && e.target.closest('[data-vp-close]')) close();
     });
 
     document.addEventListener('keydown', (e) => {

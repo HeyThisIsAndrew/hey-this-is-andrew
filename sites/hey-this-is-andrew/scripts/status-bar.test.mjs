@@ -33,7 +33,7 @@ assert.match(nav, /class="site-nav-spacer"/, 'the fixed header needs its spacer'
 assert.match(nav, /<script is:inline>[\s\S]*--nav-bar-h/, 'the bar height must be published inline, right after the header');
 
 // 3. On phones the header is solid black with no blur.
-const phone = nav.match(/@media \(max-width: 860px\), \(orientation: landscape\) and \(max-height: 500px\), \(pointer: coarse\) \{([\s\S]*?)\n  \}\n/);
+const phone = nav.match(/@media \(max-width: 860px\), \(orientation: landscape\) and \(max-height: 500px\), \(pointer: coarse\) \{([\s\S]*?)\n {2}\}\n/);
 assert.ok(phone, 'the phone / touch header rule must exist (with pointer: coarse, as HQ)');
 assert.match(phone[1], /background:\s*var\(--chrome, #000\)/, 'phone header background is the chrome colour');
 assert.match(phone[1], /\.site-nav \{\s*backdrop-filter: none !important;/, 'no blur on the phone header, in its own rule so the minifier keeps it (HQ)');

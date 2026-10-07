@@ -148,7 +148,7 @@ export async function getBEArticles(limit = 3): Promise<NetworkItem[]> {
         } satisfies NetworkItem;
       })
     );
-    const live = items.filter((i): i is NetworkItem => i !== null);
+    const live = items.filter((i) => i !== null) as NetworkItem[];
     return live.length > 0 ? live : BE_FALLBACKS.slice(0, limit);
   } catch {
     return BE_FALLBACKS.slice(0, limit);

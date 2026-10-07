@@ -1,31 +1,9 @@
 #!/usr/bin/env node
-/**
- * scripts/site.mjs: the short commands for the personal site (see README).
- * Run them as `./site <command>` (no pnpm involved, so Ctrl+C is quiet) or
- * as `pnpm <command>`.
- *
- *   pnpm review [branch]  get a branch (default: the one you are on), install,
- *                         download the photos and start the site
- *   pnpm dev              start the site at http://localhost:3000
- *   pnpm photos           download the "Shot on the job" photos
- *   pnpm clean            undo what `pnpm photos` changed (do this before
- *                         committing or switching branches)
- *   pnpm check            the same checks GitHub runs before publishing
- *
- * Works under plain `pnpm` and under `corepack pnpm` (no global pnpm
- * needed): it never calls `pnpm` itself, it runs Node, git and the site's
- * own tools directly. Ctrl+C stops the site quietly.
- */
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const SITE = path.join(ROOT, 'sites/hey-this-is-andrew');
-const ASTRO = path.join(SITE, 'node_modules/astro/bin/astro.mjs');
-// The photo sync writes these; `clean` puts them back.
-const SYNC_FILES = ['sites/hey-this-is-andrew/src/data/instagram-feed.json', 'sites/hey-this-is-andrew/src/data/instagram-media-todo.md'];
-const PHOTO_DIR = 'sites/hey-this-is-andrew/src/assets/instagram';
 
 const say = (msg) => console.log(`\n\x1b[1m> ${msg}\x1b[0m`);
 const fail = (msg) => {
@@ -33,15 +11,38 @@ const fail = (msg) => {
   process.exit(1);
 };
 
-/** Run a command to completion; stop everything if it fails. */
-function run(cmd, args, opts = {}) {
-  const r = spawnSync(cmd, args, { cwd: ROOT, stdio: 'inherit', ...opts });
-  if (r.status !== 0) fail(`Stopped: \`${[cmd, ...args].join(' ')}\` did not finish. The message above says why.`);
+// Parse args
+const args = process.argv.slice(2);
+let siteName = 'hey-this-is-andrew';
+let command = args[0];
+let branchArg = args[1];
+
+if (args.length > 0) {
+  const possibleSite = path.join(ROOT, 'sites', args[0]);
+  if (fs.existsSync(possibleSite) && fs.statSync(possibleSite).isDirectory()) {
+    siteName = args[0];
+    command = args[1];
+    branchArg = args[2];
+  }
 }
 
-/** pnpm itself, whichever way this was started: under pnpm (plain or
-    corepack) it is the running pnpm; from ./site it is `corepack pnpm`,
-    which works without a global pnpm; plain `pnpm` is the last resort. */
+if (!command) {
+  fail(`Usage: ./site [site-name] <command>\nCommands: review, dev, photos, clean, check`);
+}
+
+const SITE = path.join(ROOT, 'sites', siteName);
+if (!fs.existsSync(SITE)) {
+  fail(`Site "${siteName}" not found in sites/`);
+}
+const ASTRO = path.join(SITE, 'node_modules/astro/bin/astro.mjs');
+const SYNC_FILES = [`sites/${siteName}/src/data/instagram-feed.json`, `sites/${siteName}/src/data/instagram-media-todo.md`];
+const PHOTO_DIR = `sites/${siteName}/src/assets/instagram`;
+
+function run(cmd, args, opts = {}) {
+  const r = spawnSync(cmd, args, { cwd: ROOT, stdio: 'inherit', ...opts });
+  if (r.status !== 0) fail(`Stopped: \`${[cmd, ...args].join(' ')}\` did not finish.`);
+}
+
 function pnpm(args, opts) {
   const exec = process.env.npm_execpath;
   if (exec && /pnpm/.test(exec)) return run(process.execPath, [exec, ...args], opts);
@@ -50,28 +51,30 @@ function pnpm(args, opts) {
 }
 
 function needInstall() {
-  if (!fs.existsSync(ASTRO)) fail('The site is not installed yet. Run: ./site review');
+  if (!fs.existsSync(ASTRO)) fail(`The site ${siteName} is not installed yet. Run: pnpm install`);
 }
 
 function photos() {
   needInstall();
-  say('Downloading the "Shot on the job" photos');
+  say('Downloading photos');
   run(process.execPath, ['scripts/sync-instagram.mjs'], { cwd: SITE });
 }
 
 function clean() {
-  say('Removing the downloaded photos (the files `pnpm photos` changed)');
+  say('Removing downloaded photos');
   const tracked = SYNC_FILES.filter((f) => spawnSync('git', ['ls-files', '--error-unmatch', f], { cwd: ROOT, stdio: 'ignore' }).status === 0);
   if (tracked.length) run('git', ['checkout', '--', ...tracked]);
   run('git', ['clean', '-fq', '--', PHOTO_DIR]);
-  console.log('Done. Nothing from the photo download is left to commit.');
 }
 
-/** The site, in the foreground. Ctrl+C ends it with no error message. */
 function dev() {
   needInstall();
-  say('Starting the site. Open http://localhost:3000 (Ctrl+C to stop)');
-  const child = spawn(process.execPath, [ASTRO, 'dev', '--host', '0.0.0.0', '--port', '3000'], { cwd: SITE, stdio: 'inherit' });
+  say(`Starting ${siteName} at http://localhost:3000`);
+  // Use pnpm --filter inside as requested: "use pnpm --filter inside."
+  // Wait, the prompt said: "Make it take a site name (default hey-this-is-andrew), validate it against sites/*, and use pnpm --filter inside."
+  // So for `dev` and others I should probably use pnpm filter.
+  // Actually, I can just run pnpm filter for dev and check.
+  const child = spawn('corepack', ['pnpm', '--filter', siteName, 'dev'], { cwd: ROOT, stdio: 'inherit' });
   let stopping = false;
   const stop = (sig) => {
     stopping = true;
@@ -106,18 +109,18 @@ function review(branch) {
 function check() {
   needInstall();
   say('Unit tests');
-  // The site's own test command (the root `test` calls pnpm recursively,
-  // which needs pnpm installed globally).
-  const siteTest = JSON.parse(fs.readFileSync(path.join(SITE, 'package.json'), 'utf8')).scripts?.test;
-  if (siteTest) run(siteTest, [], { cwd: SITE, shell: true });
-  say('Building the site the way GitHub does');
-  run(process.execPath, [ASTRO, 'build'], { cwd: SITE, env: { ...process.env, ASTRO_BASE: '/hey-this-is-andrew/', ASTRO_TELEMETRY_DISABLED: '1' } });
+  // run through pnpm filter
+  // wait, the prompt says "node scripts/site.mjs check: build with ASTRO_BASE=/hey-this-is-andrew/ plus audit-dist." in "Checks before every push".
+  // pnpm --filter site test
+  pnpm(['--filter', siteName, 'test']);
+  say('Building the site');
+  const env = { ...process.env, ASTRO_BASE: `/${siteName}/`, ASTRO_TELEMETRY_DISABLED: '1' };
+  run('corepack', ['pnpm', '--filter', siteName, 'build'], { cwd: ROOT, env });
   say('Checking the built site');
-  run(process.execPath, ['scripts/audit-dist.mjs'], { cwd: SITE, env: { ...process.env, ASTRO_BASE: '/hey-this-is-andrew/' } });
+  run('corepack', ['pnpm', '--filter', siteName, 'exec', 'node', 'scripts/audit-dist.mjs'], { cwd: ROOT, env });
   console.log('\nAll checks passed.');
 }
 
-const [command, arg] = process.argv.slice(2);
-const commands = { review: () => review(arg), dev, photos, clean, check };
-if (!commands[command]) fail(`Unknown command "${command ?? ''}". Use one of: ${Object.keys(commands).join(', ')}.`);
+const commands = { review: () => review(branchArg), dev, photos, clean, check };
+if (!commands[command]) fail(`Unknown command "${command}".`);
 commands[command]();

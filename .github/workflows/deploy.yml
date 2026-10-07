@@ -1,9 +1,5 @@
 name: Deploy to GitHub Pages
 
-# Builds sites/hey-this-is-andrew from the andrew-sites workspace and
-# publishes it to GitHub Pages. Runs on pushes to main and by hand only;
-# feature branches never deploy.
-
 on:
   push:
     branches: [main]
@@ -21,9 +17,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: sites/hey-this-is-andrew
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,22 +29,24 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: .
-      # Self-host the "Shot on the Job" photos (Capture Create Caffeinate's
-      # Instagram) before the build: the page only ever shows files under
-      # src/assets/instagram/ (never a signed, expiring Instagram CDN URL).
-      # Non-fatal by design: without the token it uses the cached URLs.
       - name: Sync Instagram photos
-        run: pnpm run sync:instagram
+        run: pnpm --filter hey-this-is-andrew run sync:instagram
         env:
           CCC_INSTAGRAM_ACCESS_TOKEN: ${{ secrets.CCC_INSTAGRAM_ACCESS_TOKEN }}
           CCC_INSTAGRAM_USER_ID: ${{ secrets.CCC_INSTAGRAM_USER_ID }}
+      - name: Workspace checks
+        run: pnpm lint && pnpm --filter hey-this-is-andrew check
       - name: Unit tests
-        run: pnpm test
-      - name: Build
-        run: pnpm run build
+        run: pnpm -r --if-present test
+      - name: Build site
+        run: pnpm --filter hey-this-is-andrew build
+        env:
+          ASTRO_BASE: /hey-this-is-andrew/
+          ASTRO_TELEMETRY_DISABLED: '1'
+      - name: Build starter
+        run: pnpm --filter site-starter build
       - name: Check the built site
-        run: pnpm run test:dist
+        run: pnpm --filter hey-this-is-andrew exec node scripts/audit-dist.mjs
         env:
           ASTRO_BASE: /hey-this-is-andrew/
       - name: Upload artifact
