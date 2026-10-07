@@ -11,7 +11,11 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'export ASTRO_BASE=/hey-this-is-andrew/ && pnpm --filter hey-this-is-andrew preview',
+    // --ignore-lock keeps `astro preview` in the foreground. Without it,
+    // Astro 7 can hand the server to a background process and exit, which
+    // Playwright reports as "Process from config.webServer exited early".
+    command: 'pnpm --filter hey-this-is-andrew exec astro preview --host 0.0.0.0 --port 3000 --ignore-lock',
+    env: { ASTRO_BASE: '/hey-this-is-andrew/' },
     url: 'http://localhost:3000/hey-this-is-andrew/',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
