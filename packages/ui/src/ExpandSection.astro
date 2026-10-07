@@ -1,0 +1,115 @@
+---
+/**
+ * ExpandSection (@andrew/ui): an in-place accordion.
+ * Replaces 'View all' page jumps by revealing content inline.
+ * Animates open using CSS grid layout transitions.
+ * Accessible, and automatically opens if the URL hash targets an element inside.
+ */
+interface Props {
+  /** The unique ID of the expandable content area (for ARIA controls). */
+  id: string;
+  /** Label for the button when closed. Defaults to "Show all". */
+  expandLabel?: string;
+  /** Label for the button when open. Defaults to "Show less". */
+  collapseLabel?: string;
+  /**
+   * If true, the button is placed below the content.
+   * If false, it's typically placed above or integrated by the parent.
+   */
+  buttonBottom?: boolean;
+}
+
+const { id, expandLabel = 'Show all', collapseLabel = 'Show less', buttonBottom = true } = Astro.props;
+---
+
+<expand-section data-id={id}>
+  <div class="expand-wrapper" id={id} data-state="closed">
+    <div class="expand-inner">
+      <slot />
+    </div>
+  </div>
+  
+  {buttonBottom && (
+    <div class="expand-actions">
+      <button 
+        type="button" 
+        class="btn btn--sm expand-trigger" 
+        aria-expanded="false" 
+        aria-controls={id}
+        data-expand-label={expandLabel}
+        data-collapse-label={collapseLabel}
+      >
+        {expandLabel}
+      </button>
+    </div>
+  )}
+</expand-section>
+
+<script>
+  class ExpandSection extends HTMLElement {
+    connectedCallback() {
+      const id = this.dataset.id;
+      const wrapper = this.querySelector('.expand-wrapper');
+      const trigger = this.querySelector('.expand-trigger');
+      
+      if (!wrapper || !trigger) return;
+      
+      const expandLabel = trigger.getAttribute('data-expand-label') || 'Show all';
+      const collapseLabel = trigger.getAttribute('data-collapse-label') || 'Show less';
+      
+      const toggle = (forceOpen = false) => {
+        const isClosed = wrapper.getAttribute('data-state') === 'closed';
+        const willOpen = forceOpen ? true : isClosed;
+        
+        wrapper.setAttribute('data-state', willOpen ? 'open' : 'closed');
+        trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        trigger.textContent = willOpen ? collapseLabel : expandLabel;
+      };
+      
+      trigger.addEventListener('click', () => toggle());
+      
+      // Auto-open if a hash inside this section is targeted
+      const checkHash = () => {
+        if (!window.location.hash) return;
+        try {
+          const target = document.querySelector(window.location.hash);
+          if (target && wrapper.contains(target)) {
+            toggle(true);
+          }
+        } catch (e) {
+          // Invalid selector from hash, ignore
+        }
+      };
+      
+      window.addEventListener('hashchange', checkHash);
+      // Check on initial load (timeout helps ensure DOM and other scripts are ready)
+      setTimeout(checkHash, 50);
+    }
+  }
+  
+  if (!customElements.get('expand-section')) {
+    customElements.define('expand-section', ExpandSection);
+  }
+</script>
+
+<style>
+  .expand-wrapper {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  .expand-wrapper[data-state="open"] {
+    grid-template-rows: 1fr;
+  }
+  
+  .expand-inner {
+    overflow: hidden;
+  }
+  
+  .expand-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.5rem;
+  }
+</style>
