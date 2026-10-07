@@ -20,6 +20,8 @@ export default defineConfig({
     '/goals': withBase('/build/#goals'),
     '/services': withBase('/#services'),
     '/gear': withBase('/#gear'),
+    '/now': withBase('/#about'),
+    '/now/': withBase('/#about'),
     
   },
   server: {
