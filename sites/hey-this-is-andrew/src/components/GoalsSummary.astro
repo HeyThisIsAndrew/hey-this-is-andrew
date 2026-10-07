@@ -1,13 +1,14 @@
 ---
 /**
- * Goals (homepage, condensed): The Big Goals stay public in full (building
- * in public); every other group is one line with its progress. The full
- * checklist lives at /goals.
+ * Goals (homepage): The Big Goals stay public in full (building
+ * in public); every other group is one line with its progress, 
+ * expanding in-place to the full checklist from the former /goals/ page.
  */
 import type { CollectionEntry } from 'astro:content';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
-import ViewAllLink from '@andrew/ui/ViewAllLink.astro';
+import ExpandSection from '@andrew/ui/ExpandSection.astro';
 import GoalsChecklist from './GoalsChecklist.astro';
+import ViewAllLink from '@andrew/ui/ViewAllLink.astro';
 
 interface Props { groups: CollectionEntry<'goals'>[] }
 const { groups } = Astro.props;
@@ -23,7 +24,9 @@ const count = (g: CollectionEntry<'goals'>) => {
 <section id="goals" aria-labelledby="goals-heading">
   <div class="container">
     <SectionHeader id="goals-heading" index="04" kicker="Building in public" title="Goals" lede="Building in public." />
+    
     {lead && <GoalsChecklist groups={[lead]} />}
+    
     {rest.length > 0 && (
       <ul class="goal-lines">
         {rest.map((g) => {
@@ -38,7 +41,16 @@ const count = (g: CollectionEntry<'goals'>) => {
         })}
       </ul>
     )}
-    <ViewAllLink href={`${base}/goals/`} what="goals" />
+    
+    <ExpandSection id="goals-expander" expandLabel="Show all goals" collapseLabel="Show less">
+      <div class="goals-full-list">
+        <GoalsChecklist groups={rest} />
+        
+        <div class="goals-links">
+          <ViewAllLink href={`${base}/build/`} label="The full build roadmap" />
+        </div>
+      </div>
+    </ExpandSection>
   </div>
 </section>
 
@@ -74,5 +86,11 @@ const count = (g: CollectionEntry<'goals'>) => {
     font-family: var(--font-mono);
     font-size: 0.85rem;
     color: var(--muted);
+  }
+  .goals-full-list {
+    margin-top: 2rem;
+  }
+  .goals-links {
+    margin-top: 2rem;
   }
 </style>
