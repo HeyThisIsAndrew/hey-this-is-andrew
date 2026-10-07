@@ -1,59 +1,71 @@
 ---
 /**
  * WorkWithAndrew: "What I do". The service lines live in
- * src/data/services.ts (currently a DRAFT for Andrew's approval), then the
- * inquiry path. The newsletter signup lives once, in the Writing section
- * (defect 35: the homepage carried two).
+ * src/data/services.ts, expanding in-place to the full offering
+ * from the former /services/ page.
  */
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
-import ViewAllLink from '@andrew/ui/ViewAllLink.astro';
+import ExpandSection from '@andrew/ui/ExpandSection.astro';
 import { SERVICES, SERVICES_LEDE } from '../data/services';
 
 interface Props {
-  /** 'home': condensed (titles only) with View all -> /services.
-      'page': the full offering, under the archive page's own header. */
-  variant?: 'home' | 'page';
-  /** Section number on the page that uses it (pages count their own). */
   index?: string;
 }
-const { variant = 'home', index = '05' } = Astro.props;
-const home = variant === 'home';
+const { index = '05' } = Astro.props;
 
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
----
 
-<section id="services" aria-labelledby={home ? 'services-heading' : undefined} aria-label={home ? undefined : 'Services'} class:list={['work-section', { 'work-section--page': !home }]}>
+const previewItems = SERVICES.slice(0, 3);
+const restItems = SERVICES.slice(3);
+---
+<section id="services" aria-labelledby="services-heading" class="work-section">
   <div class="container">
-    {home && (
-      <SectionHeader
-        id="services-heading"
-        index={index}
-        kicker="Work with Andrew"
-        title="What I do"
-        lede={SERVICES_LEDE}
-      />
-    )}
-    <ul class:list={['work-list', { 'work-list--compact': home }]}>
-      {SERVICES.map((s, i) => (
+    <SectionHeader
+      id="services-heading"
+      index={index}
+      kicker="Work with Andrew"
+      title="What I do"
+      lede={SERVICES_LEDE}
+    />
+    
+    <ul class="work-list">
+      {previewItems.map((s, i) => (
         <li class="work-item reveal" style={`--rd: ${i * 70}ms`}>
           <h3 class="work-title">{s.title}</h3>
-          {!home && <p class="work-desc">{s.desc}</p>}
+          <p class="work-desc">{s.desc}</p>
         </li>
       ))}
     </ul>
-    <div class="reveal" style="--rd: 210ms">
-      <p class="press-link">
-        Press, media, or project inquiry? <a href={`${base}/press/`}>Visit the press kit</a>.
-      </p>
-    </div>
-    {home && <ViewAllLink href={`${base}/services/`} what="services" />}
+    
+    {restItems.length > 0 ? (
+      <ExpandSection id="services-expander" expandLabel="Show all services" collapseLabel="Show less">
+        <ul class="work-list work-list-extra">
+          {restItems.map((s, i) => (
+            <li class="work-item reveal">
+              <h3 class="work-title">{s.title}</h3>
+              <p class="work-desc">{s.desc}</p>
+            </li>
+          ))}
+        </ul>
+        <div class="reveal">
+          <p class="press-link">
+            Press, media, or project inquiry? <a href={`${base}/about/#press`}>Visit the press kit</a>.
+          </p>
+        </div>
+      </ExpandSection>
+    ) : (
+      <div class="reveal">
+        <p class="press-link">
+          Press, media, or project inquiry? <a href={`${base}/about/#press`}>Visit the press kit</a>.
+        </p>
+      </div>
+    )}
   </div>
 </section>
 
 <style>
   .work-section {
-    /* The site's one section rhythm. */
     padding: var(--space-section) 0;
     border-top: 1px solid var(--line);
   }
@@ -64,23 +76,11 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
     display: grid;
     gap: 1.5rem;
   }
+  .work-list-extra {
+    margin-top: 1.5rem;
+  }
   @media (min-width: 760px) {
     .work-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  }
-  .work-section--page {
-    border-top: 0;
-    padding-top: 0;
-  }
-  /* Homepage: titles only, a tight list. */
-  .work-list--compact {
-    gap: 0.75rem;
-  }
-  .work-list--compact .work-item {
-    padding: 1rem 1.25rem;
-  }
-  .work-list--compact .work-title {
-    margin: 0;
-    font-size: 1rem;
   }
   .work-item {
     border: 1px solid var(--line);

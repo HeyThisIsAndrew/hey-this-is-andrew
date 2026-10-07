@@ -18,7 +18,7 @@ export default defineConfig({
     '/work': withBase('/#work'),
     '/latest': withBase('/#latest'),
     '/goals': withBase('/build/#goals'),
-    '/goals/': withBase('/build/#goals'),
+    '/services': withBase('/#services'),
     
   },
   server: {
@@ -46,7 +46,7 @@ export default defineConfig({
     sitemap({
       // Hero concept previews and the 404 are not pages to index.
       // /events/ is hidden until there is a real event (the page is kept).
-      filter: (page) => !page.includes('/preview/') && !page.includes('/404') && !page.includes('/events/') && !page.includes('/work/') && !page.includes('/latest/') && !page.includes('/goals/'),
+      filter: (page) => !page.includes('/preview/') && !page.includes('/404') && !page.includes('/events/') && !page.includes('/work/') && !page.includes('/latest/') && !page.includes('/goals/') && !page.includes('/services/'),
     }),
   ],
 });
