@@ -1,35 +1,50 @@
 ---
 /**
- * Latest (homepage, condensed): merges "Notes from the build" and "Activity
- * across the brands" into one feed with All / Video / Writing filters, then
- * View all -> /latest. Keeps #writing and #network as landing anchors.
+ * Latest (homepage): merges "Notes from the build" and "Activity
+ * across the brands" into one feed with All / Video / Writing filters,
+ * expanding in-place to show the full archive from the former /latest/ page.
  */
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
-import ViewAllLink from '@andrew/ui/ViewAllLink.astro';
+import ExpandSection from '@andrew/ui/ExpandSection.astro';
 import FilterTabs from '@andrew/ui/FilterTabs.astro';
 import LatestFeed from './LatestFeed.astro';
 import { getNetworkFeed } from '../lib/network';
 import { getHomeFeaturedTitles } from '../lib/home-featured';
+import { SUBSTACK_URL } from '../lib/latest-content';
 
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
-// A preview: four items, leaving out what Selected work (right above)
-// already features, so nothing shows twice. The rest is on /latest.
+
 const featured = await getHomeFeaturedTitles();
-const items = (await getNetworkFeed(12)).filter((i) => !featured.has(i.title.trim().toLowerCase())).slice(0, 4);
+// Full items without the ones featured in SelectedWork
+const allItems = (await getNetworkFeed(60)).filter((i) => !featured.has(i.title.trim().toLowerCase()));
+
+const previewItems = allItems.slice(0, 3);
+const restItems = allItems.slice(3);
 ---
 <section id="latest" aria-labelledby="latest-heading" class="latest-section">
   <span id="writing" class="anchor-alias" aria-hidden="true"></span>
   <span id="network" class="anchor-alias" aria-hidden="true"></span>
   <div class="container">
     <SectionHeader id="latest-heading" index="03" kicker="The network" title="Latest" lede="Recent videos, articles, and dispatches across BE, CCC, and the build." />
+    
     <FilterTabs
       target="latest-home-list"
       label="Filter the latest"
       tabs={[{ key: 'all', label: 'All' }, { key: 'video', label: 'Video' }, { key: 'writing', label: 'Writing' }]}
     />
-    <LatestFeed items={items} id="latest-home-list" />
-    <ViewAllLink href={`${base}/latest/`} what="of the latest" />
+    
+    <div id="latest-home-list">
+      <LatestFeed items={previewItems} id="latest-preview" />
+      
+      <ExpandSection id="latest-expander" expandLabel={`Show all (${restItems.length})`} collapseLabel="Show less">
+        <LatestFeed items={restItems} id="latest-rest" />
+        <p class="latest-links">
+          <a href={SUBSTACK_URL} target="_blank" rel="noopener">Read everything on Substack</a>
+          <a href={`${base}/rss.xml`}>RSS feed for the writing</a>
+        </p>
+      </ExpandSection>
+    </div>
   </div>
 </section>
 
@@ -41,5 +56,24 @@ const items = (await getNetworkFeed(12)).filter((i) => !featured.has(i.title.tri
   .anchor-alias {
     position: absolute;
     top: 0;
+  }
+  .latest-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 2rem;
+    margin: 2rem 0 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .latest-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap-min);
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: var(--hairline-strong);
   }
 </style>
