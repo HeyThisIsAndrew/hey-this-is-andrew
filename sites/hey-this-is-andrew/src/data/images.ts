@@ -15,7 +15,7 @@ const IMAGES = import.meta.glob<ImageMetadata>('../assets/{brand-logos,hero-medi
 });
 
 const host = cmsConfig.imageHost;
-const sanity = host?.type === 'sanity' ? { projectId: host.projectId, dataset: host.dataset } : undefined;
+const sanity = host?.type === 'sanity' ? { projectId: (host as any).projectId, dataset: (host as any).dataset } : undefined;
 
 /** An image field's value as something <Image> renders (undefined if empty). */
 export function image(value: string | undefined | null, where: string): ImageMetadata | RemoteImage | undefined {

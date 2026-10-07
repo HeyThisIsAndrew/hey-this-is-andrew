@@ -324,7 +324,7 @@ export function flipZoomOpen(opts: {
  * camera appears to move INTO the photo rather than opening a modal.
  * No animation library; WAAPI with a timeout safety net.
  */
-export function flipRect(
+export async function flipRect(
   el: HTMLElement,
   from: Rect,
   to: Rect,

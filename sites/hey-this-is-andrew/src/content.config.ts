@@ -1,4 +1,5 @@
-import { defineCollection, z } from 'astro:content';
+import { defineCollection } from 'astro:content';
+import { z } from 'astro/zod';
 import { file } from 'astro/loaders';
 
 // Astro 7 content layer. Each collection is a JSON file in src/data (an
@@ -20,7 +21,7 @@ const projects = defineCollection({
     featured: z.boolean().default(false),
     /** An image field (a path under src/assets, or a Sanity asset id). */
     image: z.string().optional(),
-    link: z.string().url().optional(),
+    link: z.string().optional(),
     /** The write-up (Markdown): Process, What I learned. */
     body: z.string().optional(),
   }),

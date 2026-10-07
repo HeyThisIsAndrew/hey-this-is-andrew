@@ -20,7 +20,7 @@ export interface LatestItem {
   dateEstimated?: boolean;
 }
 
-const YT_CHANNEL_ID = 'UCNn5badDO7pbspeS6noInCw'; // @HeyThisIsAndrew
+
 const SUBSTACK = 'https://thisiscoffeetalk.substack.com';
 
 async function fetchText(url: string, timeoutMs = 10000): Promise<string> {
@@ -38,10 +38,6 @@ async function fetchText(url: string, timeoutMs = 10000): Promise<string> {
   }
 }
 
-function tag(xml: string, name: string): string | null {
-  const m = xml.match(new RegExp(`<${name}>([\\s\\S]*?)</${name}>`));
-  return m ? m[1].trim() : null;
-}
 
 
 // Substack wraps covers in a /image/fetch/ proxy URL with the original
@@ -149,7 +145,7 @@ export async function getLatestArticles(limit = 3): Promise<ArticleItem[]> {
 
 export { fmtDate };
 
-const CHANNEL_URL = 'https://www.youtube.com/@HeyThisIsAndrew';
+
 
 // Real verified long-form videos published by Andrew on YouTube (@HeyThisIsAndrew).
 // Used as guaranteed high-fidelity data with real titles, video IDs, dates, and thumbnails.
@@ -196,7 +192,7 @@ export const REAL_YOUTUBE_VIDEOS: LatestItem[] = [
   },
 ];
 
-const FALLBACK_VIDEOS: LatestItem[] = REAL_YOUTUBE_VIDEOS;
+
 
 const YT_THUMB_VARIANTS = [
   { name: 'maxresdefault', w: 1280 },
