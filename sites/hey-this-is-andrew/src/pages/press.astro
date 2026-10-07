@@ -8,26 +8,16 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
 
-const CONTACT_EMAIL = 'heythisisandrewb@gmail.com';
+import pressData from '../data/press.json';
+
+const CONTACT_EMAIL = pressData.email;
 
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 
-// TODO (Andrew): fill in each confirmed number as a string, e.g. '1,240'.
-const STATS: { label: string; value: string | null; note: string }[] = [
-  { label: 'YouTube subscribers', value: null, note: 'Hey This Is Andrew' },
-  { label: 'Instagram followers', value: null, note: '@hey_thisisandrew' },
-  { label: 'TikTok followers', value: null, note: '@hey_thisisandrew' },
-];
+const STATS = pressData.stats;
 
-const ASSETS = [
-  {
-    name: 'Wordmark lockup',
-    desc: 'HEY_THISISANDREW knocked out to solid white on pure black. 1200 x 630.',
-    href: `${base}/og-image.png`,
-    filename: 'hey-thisisandrew-wordmark.png',
-  },
-];
+const ASSETS = pressData.assets.map(a => ({...a, href: `${base}${a.href}`}));
 ---
 <BaseLayout
   title="Press Kit · HEY_THISISANDREW"
@@ -49,21 +39,9 @@ const ASSETS = [
       <div class="press-grid">
         <div class="press-bio reveal">
           <h2 class="press-subhead">Bio</h2>
-          <p>
-            HEY_THISISANDREW is the work of Andrew Baxter, creator, photographer, and coffee drinker
-            building brands in public and figuring it out as I go.
-          </p>
-          <p>
-            Right now I'm building three brands and documenting the whole
-            journey. <strong>BE Unconventional HQ</strong> covers movies, TV,
-            games, and events. <strong>Capture Create Caffeinate</strong> is
-            beverage photography for bars and restaurants. Everything runs
-            through this site as the hub.
-          </p>
-          <p>
-            The through line is simple: be yourself, put the work out there,
-            and show the process, not just the result.
-          </p>
+          {pressData.bio.map(pText => (
+            <p set:html={pText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')} />
+          ))}
         </div>
 
         <div class="press-stats reveal" style="--rd: 80ms">
