@@ -1,21 +1,42 @@
 ---
 /**
- * The kit (homepage, #gear): the storefront CTA (revenue) with a door to the
- * full gear inventory at /gear. The storefront lives with gear and goals.
+ * The kit (homepage, #gear): the storefront CTA (revenue) expanding
+ * to the full gear inventory from the former /gear/ page.
  */
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
-import ViewAllLink from '@andrew/ui/ViewAllLink.astro';
+import ExpandSection from '@andrew/ui/ExpandSection.astro';
 import StorefrontCTA from './StorefrontCTA.astro';
+import GearGrid from './GearGrid.astro';
+import { getCollection } from 'astro:content';
 
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
+
+const gear = (await getCollection('gear')).sort((a, b) => a.data.order - b.data.order);
 ---
-<section id="gear" aria-labelledby="gear-heading">
+<section id="gear" aria-labelledby="gear-heading" class="kit-section">
   <div class="container">
     <SectionHeader id="gear-heading" index="06" kicker="The kit" title="Gear" lede="Behind the work. Updated as it evolves." />
+    
     <div id="gear-storefront">
       <StorefrontCTA />
     </div>
-    <ViewAllLink href={`${base}/gear/`} what="gear" />
+    
+    <ExpandSection id="gear-expander" expandLabel="Show all gear" collapseLabel="Show less">
+      <div class="gear-full-inventory">
+        <h2 class="vh">The kit</h2>
+        <GearGrid categories={gear} />
+      </div>
+    </ExpandSection>
   </div>
 </section>
+
+<style>
+  .kit-section {
+    padding: var(--space-section) 0;
+    border-top: 1px solid var(--line);
+  }
+  .gear-full-inventory {
+    margin-top: 2rem;
+  }
+</style>
