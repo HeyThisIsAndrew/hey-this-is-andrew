@@ -22,6 +22,14 @@ export default defineConfig({
     '/gear': withBase('/#gear'),
     '/now': withBase('/#about'),
     '/now/': withBase('/#about'),
+    '/cafe': withBase('/#brew'),
+    '/cafe/': withBase('/#brew'),
+    '/brands/hey-this-is-andrew': withBase('/#about'),
+    '/brands/hey-this-is-andrew/': withBase('/#about'),
+    '/brands/be-unconventional-hq': withBase('/#about'),
+    '/brands/be-unconventional-hq/': withBase('/#about'),
+    '/brands/capture-create-caffeinate': withBase('/#about'),
+    '/brands/capture-create-caffeinate/': withBase('/#about'),
     
   },
   server: {
