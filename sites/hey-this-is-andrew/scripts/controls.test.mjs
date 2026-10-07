@@ -58,6 +58,11 @@ assert.doesNotMatch(filterTabs, /padding: 0 1\.1rem/, 'filter tabs have the stan
 const global = read(new URL('../src/styles/global.css', import.meta.url));
 assert.match(global, /\.back-to-top \{[^}]*width: var\(--btn-h-md\);[^}]*padding: 0;/, 'back-to-top is a square md control with no UA padding');
 
+// 4.1 White bar z-index below dropdown
+assert.match(global, /\.scroll-progress-bar \{[^}]*z-index: 140;/, 'white bar z-index is 140');
+const navAstro = read(new URL('../../../packages/ui/src/Nav.astro', import.meta.url));
+assert.match(navAstro, /\.dropdown-menu \{[^}]*z-index: 150;/, 'dropdown menu z-index is 150');
+
 // 5. The one-pass fixes (Andrew, 2026-10-02, "shippable").
 const pageNav = read(new URL('PageNav.astro', ui));
 assert.match(pageNav, /window\.scrollTo\(\{ top: 0, behavior \}\)/, 'the side panel Top link scrolls to 0');
