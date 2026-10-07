@@ -1,0 +1,876 @@
+---
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+import SectionHeader from './SectionHeader.astro';
+
+// Photography portfolio: parallel vertical elevators.
+// Four columns (two on mobile), each a continuous vertical reel.
+// Columns alternate direction and speed. Photos keep their natural
+// aspect ratios (vertical and horizontal mix as part of the composition),
+// so a photo is never cropped to a sliver of itself.
+// Clicking a photo dollies the camera in just far enough to show the whole
+// photo; the neighbouring reels stay on screen and tappable.
+//
+// Rendered UNCONDITIONALLY (it is the homepage's photography section, right
+// after About): with no synced photos it shows a short empty state, never
+// nothing.
+
+interface DisplayPhoto {
+  id: string;
+  image: ImageMetadata;
+  caption: string;
+  category: 'cocktails' | 'bar' | 'product' | string;
+  location: string;
+  venue?: string;
+  event?: string;
+  permalink?: string;
+  /** An Instagram reel: its frame shows here, the film plays on Instagram. */
+  video: boolean;
+}
+
+
+export interface Props {
+  photos: DisplayPhoto[];
+  emptyText?: string;
+}
+
+const { photos: displayPhotos, emptyText = 'No photos configured yet.' } = Astro.props;
+
+// Distribute photos across 4 columns for visual rhythm.
+const COLUMN_COUNT = 4;
+const columns: number[][] = Array.from({ length: COLUMN_COUNT }, () => []);
+displayPhotos.forEach((_, i) => {
+  columns[i % COLUMN_COUNT].push(i);
+});
+
+const directions = ['up', 'down', 'up', 'down'];
+const durations = [58, 74, 66, 82];
+// The note links to the About page (this section also renders on /work,
+// where there is no #about).
+const aboutUrl = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/about/`;
+// Each reel renders its photos twice: the CSS/WAAPI loop translates the
+// track by -50%, which is seamless only over two identical sets. The copy
+// is aria-hidden and out of the tab order.
+const SETS = [0, 1];
+---
+
+<section id="photos" class="photo-section" aria-labelledby="photography-title">
+  <div class="photo-zoom-backdrop" aria-hidden="true"></div>
+  <div class="photo-intro">
+    <SectionHeader
+      kicker="Photography"
+      title="Shot on the job."
+      lede="Bar and beverage photography. The work behind Capture Create Caffeinate. Available for select photography work."
+      id="photography-title"
+    />
+  </div>
+
+  {displayPhotos.length === 0 ? (
+    <p class="photo-empty">The photographs could not be loaded right now. Please check back soon.</p>
+  ) : (
+  <div class="photo-grid-container">
+    <div class="photo-stage-wrap">
+      <div id="camera-stage" class="camera-stage">
+        <div class="photo-wall" role="region" aria-label="Photography portfolio, vertical image reels">
+    {columns.map((col, ci) => (
+      <div
+        class="photo-column"
+        data-direction={directions[ci]}
+        style={`--reel-duration: ${durations[ci]}s`}
+      >
+        <div class="photo-track">
+          {SETS.map((set) => (
+          <div class="photo-set" aria-hidden={set === 1 ? 'true' : undefined}>
+            {col.map((pi) => {
+              const p = displayPhotos[pi];
+              if (!p) return null;
+              return (
+                <button
+                  type="button"
+                  class="photo-item"
+                  data-camera-zoom
+                  data-photo-index={pi}
+                  data-video-url={p.video ? p.permalink : undefined}
+                  tabindex={set === 1 ? -1 : undefined}
+                  style={`aspect-ratio: ${p.image.width} / ${p.image.height}`}
+                  aria-label={p.video ? `View video: ${p.caption}` : `View photo: ${p.caption}`}
+                >
+                  <Image
+                    src={p.image}
+                    alt={p.caption}
+                    widths={[360, 540, 720, 1080]}
+                    sizes="(max-width: 767px) 50vw, 540px"
+                    format="webp"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <span class="photo-tag">{p.location || categoryLabels[p.category] || 'Cocktails'}</span>
+                </button>
+              );
+            })}
+          </div>
+          ))}
+        </div>
+      </div>
+    ))}
+        </div><!-- /.photo-wall -->
+      </div><!-- /#camera-stage -->
+    </div><!-- /.photo-stage-wrap -->
+  </div><!-- /.photo-grid-container -->
+  )}
+  {/* A reel in the elevator is its frame; the film is on Instagram (its
+      files are signed links that expire, so it cannot play here reliably).
+      Zoomed onto a reel, this is its play path. Photos get none. */}
+  <a class="btn btn-primary photo-watch" href="#" target="_blank" rel="noopener" hidden data-photo-watch>
+    Watch video on Instagram
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M2 12L12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
+    </svg>
+  </a>
+
+  <p class="photo-note">
+    All photographs by Andrew. The cocktails and dishes pictured are the bar's.
+    The photography is his. <a href={aboutUrl}>More about the work</a>.
+  </p>
+</section>
+
+<style>
+  .photo-section {
+    position: relative;
+    padding: var(--space-section) 0;
+    overflow: hidden;
+  }
+  /* Header, grid and note sit on the site's .container measure, so this
+     section lines up with every other section (it used its own max-width
+     plus padding and sat ~20px further in). */
+  .photo-intro {
+    position: relative;
+    z-index: 10;
+    transition: opacity 0.4s ease;
+    width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw));
+    margin: 0 auto;
+  }
+  .photo-section.is-zoomed .photo-intro {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .photo-grid-container {
+    width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw));
+    margin-inline: auto;
+    position: relative;
+  }
+
+  .photo-wall {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: clamp(12px, 1.5vw, 24px);
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 2rem 0 0;
+    /* Tall enough to feel like reels with proportional height across 4K displays */
+    height: clamp(540px, 75vh, 1600px);
+    min-height: 520px;
+    /* Fade the top and bottom edges so the reels dissolve. */
+    mask-image: linear-gradient(to bottom, transparent 0, black 8%, black 92%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 8%, black 92%, transparent 100%);
+  }
+
+  .photo-column {
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+  }
+
+  .photo-track {
+    display: flex;
+    flex-direction: column;
+    /* Seamless loop: two identical sets, translate -50%. */
+    animation: reel var(--reel-duration, 70s) linear infinite;
+    will-change: transform;
+  }
+  .photo-column[data-direction="down"] .photo-track {
+    animation-direction: reverse;
+  }
+  /* Pause the reel you're inspecting. */
+  .photo-column:hover .photo-track,
+  .photo-column:focus-within .photo-track {
+    animation-play-state: paused;
+  }
+
+  /* JS-driven reels: the keyframe animation is replaced by WAAPI
+     (compositor-thread, no main-thread jitter) plus pointer drag.
+     Applied only when the script initializes, so no-JS still gets
+     the CSS autoplay. */
+  .photo-wall.js-reels {
+    touch-action: pan-y;
+    cursor: grab;
+  }
+  .photo-wall.js-reels.is-dragging {
+    cursor: grabbing;
+    touch-action: none;
+  }
+  .photo-wall.js-reels .photo-track {
+    animation: none;
+  }
+  .photo-wall.js-reels .photo-item {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .photo-wall.js-reels .photo-item img {
+    -webkit-user-drag: none;
+    pointer-events: none;
+  }
+
+  @keyframes reel {
+    from { transform: translateY(0); }
+    to { transform: translateY(-50%); }
+  }
+
+  .photo-set {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(12px, 1.5vw, 24px);
+    padding-bottom: clamp(12px, 1.5vw, 24px);
+  }
+
+  .photo-item {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: #111;
+    cursor: pointer;
+    overflow: hidden;
+    /* The cell takes the photo's own aspect ratio (inline style), so the
+       whole photo shows. Forced 16:9 / 1:1 / 4:5 cells cut portrait photos
+       to slivers. */
+    aspect-ratio: 4 / 5;
+    transition: border-color 0.3s ease, transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  .photo-item img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    /* Subtle cinematic grade at rest, full color on hover. */
+    filter: grayscale(0.35) contrast(1.02);
+    transition: filter 0.4s ease, transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .photo-item:hover img,
+  .photo-item:focus-visible img {
+    filter: grayscale(0) contrast(1.05);
+    transform: scale(1.03);
+  }
+  .photo-item:hover,
+  .photo-item:focus-visible {
+    border-color: rgba(255, 255, 255, 0.35);
+    outline: none;
+  }
+  .photo-item:active {
+    transform: scale(0.98);
+  }
+
+  .photo-tag {
+    position: absolute;
+    left: 0.6rem;
+    bottom: 0.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.85);
+    background: rgba(0, 0, 0, 0.65);
+    padding: 0.3rem 0.55rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+  .photo-item:hover .photo-tag,
+  .photo-item:focus-visible .photo-tag {
+    opacity: 1;
+  }
+
+  .photo-empty {
+    width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw));
+    box-sizing: border-box;
+    margin: 1.5rem auto 0;
+    padding: 2.5rem clamp(1.25rem, 4vw, 2.5rem);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--color-white-muted, #888);
+    font-size: 0.9rem;
+    text-align: center;
+  }
+
+  .photo-note {
+    width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw));
+    margin: 2.5rem auto 0;
+    font-size: 0.85rem;
+    color: var(--color-white-muted, #888);
+    text-align: center;
+  }
+  .photo-note a {
+    color: var(--color-accent-text, #f0f0f0);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* Mobile: two columns, shorter reels — the concept adapts, not hidden. */
+  @media (max-width: 767px) {
+    .photo-wall {
+      grid-template-columns: repeat(2, 1fr);
+      height: 74vh;
+      min-height: 480px;
+    }
+    /* On mobile show columns 1 and 3 (up-direction pair) for variety. */
+    .photo-column:nth-child(2),
+    .photo-column:nth-child(4) {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .photo-track {
+      animation: none;
+    }
+    .photo-wall {
+      height: auto;
+      min-height: 0;
+      mask-image: none;
+      -webkit-mask-image: none;
+    }
+    .photo-item img {
+      filter: none;
+    }
+  }
+
+  /* Camera stage: the viewport wrapper for the zoom effect.
+     The entire photo wall scales from a transform-origin, simulating
+     a camera lens moving closer. Overflow hidden on the wrapper ensures
+     the scaled content flows past the screen edges cleanly. */
+  .photo-stage-wrap {
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+  }
+  /* `is-camera` holds from the moment the camera moves in until it has
+     landed back out (longer than `is-zoomed`, which drives the backdrop and
+     the header fade), so the return is never clipped by the section. */
+  .photo-stage-wrap.is-zoomed,
+  .photo-section.is-camera {
+    overflow: visible;
+    z-index: 50;
+  }
+
+  .photo-watch {
+    position: fixed;
+    left: 50%;
+    bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    z-index: 60;
+    transform: translateX(-50%);
+    background: #080808;
+    white-space: nowrap;
+  }
+  .photo-watch[hidden] {
+    display: none;
+  }
+  .photo-watch:hover,
+  .photo-watch:focus-visible {
+    transform: translateX(-50%) translateY(-2px);
+  }
+
+  .photo-zoom-backdrop {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #080808;
+    z-index: 45;
+    opacity: 0;
+    pointer-events: none;
+    /* Out of the page entirely while unused, not just transparent: a
+       full-screen fixed layer over the top of the screen is one more thing
+       iOS Safari weighs when it colours the status bar from fixed elements
+       at the top (see @andrew/ui Nav.astro). HQ has none. */
+    visibility: hidden;
+    transition: opacity 0.5s ease, visibility 0s linear 0.5s;
+  }
+  .photo-stage-wrap.is-zoomed .photo-zoom-backdrop,
+  .photo-section.is-zoomed .photo-zoom-backdrop {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.5s ease, visibility 0s linear 0s;
+  }
+
+  .camera-stage {
+    transform-origin: 0 0;
+    transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+    will-change: transform;
+    width: 100%;
+    position: relative;
+  }
+
+  .camera-stage.is-zoomed {
+    z-index: 50;
+  }
+
+  .camera-stage.is-zoomed .photo-wall {
+    mask-image: none !important;
+    -webkit-mask-image: none !important;
+  }
+
+  .camera-stage.is-zoomed .photo-column {
+    overflow: visible;
+  }
+
+  .camera-stage.is-zoomed .photo-item {
+    cursor: pointer;
+  }
+
+  .camera-stage.is-zoomed .photo-item img {
+    transform: none !important;
+  }
+
+  .photo-item[data-camera-zoom] {
+    cursor: pointer;
+  }
+  @media (max-width: 900px) {
+    .photo-wall {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .photo-set {
+      gap: 12px;
+      padding-bottom: 12px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .camera-stage {
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+
+<script>
+  // Manual reel control: AUTO MOVEMENT + USER CONTROL + CAMERA ZOOM
+  (() => {
+    const wall = document.querySelector('.photo-wall');
+    const stage = document.getElementById('camera-stage');
+    const stageWrap = document.querySelector('.photo-stage-wrap');
+    const photoSection = document.querySelector('.photo-section');
+    if (!wall || !stage || !('requestAnimationFrame' in window)) return;
+    wall.classList.add('js-reels');
+
+    const reduced = () =>
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const IDLE_RESUME_MS = 2500;
+    const DRAG_THRESHOLD_PX = 8;
+    const WHEEL_NUDGE = 0.35;
+
+    let zoomPaused = false;
+    let isZoomed = false;
+    let activeTarget: HTMLElement | null = null;
+    let frozenReel: Reel | null = null;
+
+    interface Reel {
+      column: HTMLElement;
+      track: HTMLElement;
+      anim: Animation | null;
+      direction: 1 | -1; // +1 content moves down, -1 content moves up
+      baseDuration: number; // seconds per full loop (from CSS var)
+      setH: number;
+      dragging: boolean;
+      hoverPaused: boolean;
+      idleTimer: number;
+      visible: boolean;
+      updatePlayState?: () => void;
+    }
+
+    const reels: Reel[] = [];
+    const columns = Array.from(
+      wall.querySelectorAll<HTMLElement>('.photo-column')
+    ).filter((c) => c.offsetParent !== null || c.style.display !== 'none');
+
+    const measure = (reel: Reel) => {
+      reel.setH = reel.track.scrollHeight / 2 || 1;
+    };
+
+    const pauseReels = () => {
+      zoomPaused = true;
+      reels.forEach((r) => r.updatePlayState?.());
+    };
+
+    const resumeReels = () => {
+      zoomPaused = false;
+      reels.forEach((r) => r.updatePlayState?.());
+    };
+
+    columns.forEach((column) => {
+      const track = column.querySelector<HTMLElement>('.photo-track');
+      if (!track) return;
+      const duration =
+        parseFloat(
+          getComputedStyle(column).getPropertyValue('--reel-duration')
+        ) || 70;
+      const reel: Reel = {
+        column,
+        track,
+        anim: null,
+        direction: column.dataset.direction === 'down' ? 1 : -1,
+        baseDuration: duration,
+        setH: 1,
+        dragging: false,
+        hoverPaused: false,
+        idleTimer: 0,
+        visible: true,
+      };
+      reels.push(reel);
+
+      const createAnim = () => {
+        if (reduced()) return;
+        const keyframes =
+          reel.direction === 1
+            ? [{ transform: 'translateY(-50%)' }, { transform: 'translateY(0)' }]
+            : [{ transform: 'translateY(0)' }, { transform: 'translateY(-50%)' }];
+        reel.anim = track.animate(keyframes, {
+          duration: reel.baseDuration * 1000,
+          iterations: Infinity,
+          easing: 'linear',
+        });
+      };
+
+      const updatePlayState = () => {
+        if (!reel.anim) return;
+        if (reel === frozenReel) {
+          if (reel.anim.playState === 'running') reel.anim.pause();
+          return;
+        }
+        const shouldPlay =
+          !zoomPaused && !reel.dragging && !reel.hoverPaused && reel.visible && reel.idleTimer === 0;
+        if (shouldPlay && reel.anim.playState === 'paused') reel.anim.play();
+        else if (!shouldPlay && reel.anim.playState === 'running') reel.anim.pause();
+      };
+      reel.updatePlayState = updatePlayState;
+
+      const pauseIdle = () => {
+        window.clearTimeout(reel.idleTimer);
+        reel.idleTimer = window.setTimeout(() => {
+          reel.idleTimer = 0;
+          updatePlayState();
+        }, IDLE_RESUME_MS);
+        updatePlayState();
+      };
+
+      column.addEventListener('mouseenter', () => {
+        reel.hoverPaused = true;
+        updatePlayState();
+      });
+      column.addEventListener('mouseleave', () => {
+        reel.hoverPaused = false;
+        updatePlayState();
+      });
+
+      let startY = 0;
+      let startTime = 0;
+      let moved = 0;
+      let isPointerActive = false;
+
+      column.addEventListener('pointerdown', (e) => {
+        if (isZoomed) return;
+        if (e.isPrimary === false) return;
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        startY = e.clientY;
+        startTime = typeof reel.anim?.currentTime === 'number' ? reel.anim.currentTime : 0;
+        moved = 0;
+        isPointerActive = true;
+      });
+
+      column.addEventListener('pointermove', (e) => {
+        if (!isPointerActive || isZoomed || e.isPrimary === false) return;
+        const dy = e.clientY - startY;
+        moved = Math.max(moved, Math.abs(dy));
+        if (moved > DRAG_THRESHOLD_PX) {
+          reel.dragging = true;
+          wall.classList.add('is-dragging');
+          window.clearTimeout(reel.idleTimer);
+          reel.idleTimer = 0;
+          updatePlayState();
+
+          if (reel.anim && typeof startTime === 'number') {
+            const dt = (dy / reel.setH) * reel.baseDuration * 1000;
+            reel.anim.currentTime = startTime + (reel.direction === 1 ? dt : -dt);
+          }
+        }
+      });
+
+      const endDrag = () => {
+        if (!isPointerActive) return;
+        isPointerActive = false;
+        if (reel.dragging) {
+          reel.dragging = false;
+          wall.classList.remove('is-dragging');
+          pauseIdle();
+        }
+      };
+      column.addEventListener('pointerup', endDrag);
+      column.addEventListener('pointercancel', endDrag);
+
+      column.addEventListener(
+        'click',
+        (e) => {
+          if (reel.dragging || moved > DRAG_THRESHOLD_PX) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        },
+        true
+      );
+
+      column.addEventListener('dragstart', (e) => e.preventDefault());
+
+      column.addEventListener(
+        'wheel',
+        (e) => {
+          if (isZoomed || reel.dragging || !reel.anim) return;
+          const dy = (e.deltaY || 0) * WHEEL_NUDGE;
+          const dt = (dy / reel.setH) * reel.baseDuration * 1000;
+          const cur = reel.anim.currentTime ?? 0;
+          reel.anim.currentTime = (cur as number) + (reel.direction === 1 ? dt : -dt);
+          pauseIdle();
+        },
+        { passive: true }
+      );
+      createAnim();
+    });
+
+    if (!reels.length) return;
+
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((en) => {
+            const reel = reels.find((r) => r.column === en.target);
+            if (reel) {
+              reel.visible = en.isIntersecting;
+              reel.updatePlayState?.();
+            }
+          });
+        },
+        { threshold: 0 }
+      );
+      reels.forEach((r) => io.observe(r.column));
+    }
+
+    reels.forEach(measure);
+    window.addEventListener('resize', () => reels.forEach(measure));
+
+    /* Load every photo once the section is near: lazy images inside the
+       clipped, moving reels were left as empty dark tiles. */
+    const section = photoSection as HTMLElement | null;
+    if (section && 'IntersectionObserver' in window) {
+      const near = new IntersectionObserver((entries) => {
+        if (!entries.some((en) => en.isIntersecting)) return;
+        section.querySelectorAll<HTMLImageElement>('.photo-item img').forEach((img) => { img.loading = 'eager'; });
+        near.disconnect();
+      }, { rootMargin: '800px 0px' });
+      near.observe(section);
+    }
+
+    /* ---- Camera: translate(X, Y) scale(s) about the stage's top-left ----
+       Every move (open, pan to a neighbour, close) is computed from the
+       photos' untransformed geometry, so it is exact at any zoom. */
+    let s = 1;
+    let X = 0;
+    let Y = 0;
+    let closeTimer = 0;
+    const EASE = 'cubic-bezier(0.25, 1, 0.5, 1)';
+
+    const navBottom = () => {
+      const nav = document.querySelector('.site-nav');
+      return nav ? Math.max(0, nav.getBoundingClientRect().bottom) : 0;
+    };
+
+    function apply(ms: number) {
+      if(stage) stage.style.transition = ms ? `transform ${ms}ms ${EASE}` : 'none';
+      if(stage) stage.style.transform = `translate(${X}px, ${Y}px) scale(${s})`;
+    }
+
+    /* Just far enough in to show the WHOLE photo: it may take at most 72%
+       of the width and 82% of the height under the header, so the
+       neighbouring reels and the photos above and below stay in view. */
+    function focusOn(target: HTMLElement, ms: number) {
+      if(!stage) return;
+      const sr = stage.getBoundingClientRect();
+      const tr = target.getBoundingClientRect();
+      const ux = (tr.left - sr.left) / s;
+      const uy = (tr.top - sr.top) / s;
+      const uw = tr.width / s;
+      const uh = tr.height / s;
+      const top = navBottom();
+      const vw = document.documentElement.clientWidth;
+      const vh = window.innerHeight;
+      const next = Math.min(3, Math.max(1.1, Math.min((vw * 0.72) / uw, ((vh - top) * 0.82) / uh)));
+      const originX = sr.left - X;
+      const originY = sr.top - Y;
+      s = next;
+      X = vw / 2 - originX - s * (ux + uw / 2);
+      Y = top + (vh - top) / 2 - originY - s * (uy + uh / 2);
+      apply(ms);
+    }
+
+    // The play path of a zoomed reel; nothing for a photo.
+    const watch = document.querySelector<HTMLAnchorElement>('[data-photo-watch]');
+    function setWatch(target: HTMLElement | null) {
+      if (!watch) return;
+      const url = target?.dataset.videoUrl;
+      if (url) watch.href = url;
+      watch.hidden = !url;
+    }
+
+    function setFrozen(target: HTMLElement | null) {
+      const column = target?.closest<HTMLElement>('.photo-column') ?? null;
+      const next = reels.find((r) => r.column === column) ?? null;
+      const prev = frozenReel;
+      frozenReel = next;
+      if (prev && prev !== next) prev.updatePlayState?.();
+      if (next?.anim && next.anim.playState === 'running') next.anim.pause();
+    }
+
+    // Delegated click listener on wall so every item click (original or loop) is handled reliably
+    wall.addEventListener('click', (e) => {
+      const item = (e.target as HTMLElement).closest<HTMLElement>('.photo-item');
+      if (!item) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (isZoomed) {
+        if (item === activeTarget) resetZoom();
+        else panToElement(item);
+      } else {
+        zoomToElement(item);
+      }
+    });
+
+    function zoomToElement(target: HTMLElement) {
+      if (isZoomed) {
+        if (target === activeTarget) resetZoom();
+        else panToElement(target);
+        return;
+      }
+      window.clearTimeout(closeTimer);
+      // Freeze ONLY the selected photo's reel; the neighbours keep moving.
+      setFrozen(target);
+
+      // Lock scrolling without the page reflowing under the camera.
+      const gutter = window.innerWidth - document.documentElement.clientWidth;
+      if (gutter > 0) document.body.style.paddingRight = `${gutter}px`;
+      document.body.style.overflow = 'hidden';
+
+      isZoomed = true;
+      activeTarget = target;
+      target.classList.add('is-active');
+      if(stage) stage.classList.add('is-zoomed');
+      stageWrap?.classList.add('is-zoomed');
+      photoSection?.classList.add('is-zoomed', 'is-camera');
+      setWatch(target);
+      focusOn(target, reduced() ? 0 : 600);
+    }
+
+    function panToElement(newTarget: HTMLElement) {
+      if (!isZoomed) {
+        zoomToElement(newTarget);
+        return;
+      }
+      if (newTarget === activeTarget) {
+        resetZoom();
+        return;
+      }
+      setFrozen(newTarget);
+      activeTarget?.classList.remove('is-active');
+      activeTarget = newTarget;
+      newTarget.classList.add('is-active');
+      setWatch(newTarget);
+      focusOn(newTarget, reduced() ? 0 : 650);
+    }
+
+    /* Back out from the same photo: the reel stays frozen and the zoomed
+       layout (unmasked, unclipped reels) stays in place until the camera
+       has landed, so nothing moves or re-crops under the return. */
+    function resetZoom() {
+      if (!isZoomed) return;
+      isZoomed = false;
+      s = 1;
+      X = 0;
+      Y = 0;
+      const ms = reduced() ? 0 : 600;
+      apply(ms);
+      photoSection?.classList.remove('is-zoomed');
+      setWatch(null);
+      if (activeTarget) {
+        activeTarget.classList.remove('is-active');
+        activeTarget = null;
+      }
+      const finish = () => {
+        window.clearTimeout(closeTimer);
+        if (isZoomed) return; // reopened meanwhile
+        if(stage) stage.style.transition = '';
+        if(stage) stage.style.transform = '';
+        if(stage) stage.classList.remove('is-zoomed');
+        stageWrap?.classList.remove('is-zoomed');
+        photoSection?.classList.remove('is-camera');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        setFrozen(null);
+      };
+      closeTimer = window.setTimeout(finish, ms + 40);
+    }
+
+    // Clicking stage background or backdrop when zoomed resets
+    stage.addEventListener('click', (e) => {
+      if (!isZoomed) return;
+      const item = (e.target as HTMLElement).closest('.photo-item');
+      if (item) return; // Handled by item/wall listener
+      e.preventDefault();
+      e.stopPropagation();
+      resetZoom();
+    });
+
+    const backdrop = document.querySelector('.photo-zoom-backdrop');
+    if (backdrop) {
+      backdrop.addEventListener('click', (e) => {
+        if (isZoomed) {
+          e.preventDefault();
+          resetZoom();
+        }
+      });
+    }
+
+    // Clicking stage wrapper outside photo items when zoomed resets
+    stageWrap?.addEventListener('click', (e) => {
+      if (isZoomed) {
+        resetZoom();
+      }
+    });
+
+    // ESC key resets
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isZoomed) {
+        e.preventDefault();
+        resetZoom();
+      }
+    });
+
+    // Browser navigation resets
+    window.addEventListener('popstate', () => {
+      if (isZoomed) resetZoom();
+    });
+  })();
+</script>

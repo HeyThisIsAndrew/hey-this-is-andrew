@@ -1,4 +1,7 @@
----
+import fs from 'fs';
+let p = 'sites/hey-this-is-andrew/src/components/PhotographyPortfolio.astro';
+
+let c = `---
 import { getInstagramPhotos } from '../lib/instagram';
 import PhotoElevator from '@andrew/ui/PhotoElevator.astro';
 
@@ -37,5 +40,8 @@ for (const p of rawDisplayPhotos) {
 ---
 <PhotoElevator
   photos={displayPhotos}
-  emptyText="There are no self-hosted photos in <code>src/assets/instagram/</code>. To view the photos, run the <a href=\"https://github.com/HeyThisIsAndrew/hey-this-is-andrew/blob/main/docs/instagram-sync.md\">Instagram Sync script</a>."
+  emptyText="There are no self-hosted photos in <code>src/assets/instagram/</code>. To view the photos, run the <a href=\\"https://github.com/HeyThisIsAndrew/hey-this-is-andrew/blob/main/docs/instagram-sync.md\\">Instagram Sync script</a>."
 />
+`;
+
+fs.writeFileSync(p, c);

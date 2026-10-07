@@ -1,5 +1,10 @@
 import fs from 'fs';
-let p = 'sites/hey-this-is-andrew/src/pages/sitemap.astro';
+let p = 'sites/hey-this-is-andrew/astro.config.mjs';
 let c = fs.readFileSync(p, 'utf8');
-c = c.replace("{ path: '/work/', title: 'Work', desc: 'Photography, videos, projects, and the production workflow.' },", "");
+
+c = c.replace(
+  "filter: (page) => !page.includes('/preview/') && !page.includes('/404')",
+  "filter: (page) => !page.includes('/preview/') && !page.includes('/404') && !page.includes('/kit/')"
+);
+
 fs.writeFileSync(p, c);

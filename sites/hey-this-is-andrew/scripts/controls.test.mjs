@@ -78,7 +78,7 @@ assert.doesNotMatch(navData, /Production & Gear|'The Kit'|Meet Andrew/, 'one nam
 assert.match(bacc, /--logo-zone:/, 'the collapsed name is centred above the logo zone (CCC overlap)');
 assert.match(bacc, /'copy logo'/, 'brand view: one stack bottom left, the logo bottom right');
 assert.match(bacc, /'chips chips'/, 'brand view: the chips upper left');
-const elevator = read(new URL('../src/components/PhotographyPortfolio.astro', import.meta.url));
+const elevator = read(new URL('../../../packages/ui/src/PhotoElevator.astro', import.meta.url));
 assert.match(elevator, /data-video-url=\{p\.video \? p\.permalink : undefined\}/, 'elevator reels carry their Instagram link');
 assert.match(elevator, /Watch video on Instagram/, 'a zoomed reel has a play path');
 
