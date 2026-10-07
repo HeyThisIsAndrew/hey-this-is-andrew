@@ -1,41 +1,67 @@
 ---
 /**
- * Selected Work (homepage, condensed): the latest video and the featured
- * projects, then View all -> /work. The pipeline (WorkflowStrip) lives on
- * /work only: the homepage is the overview (Andrew, 2026-10-02). No photo strip: the
- * photo elevator ("Shot on the job") sits right above it on the homepage,
- * so a strip here showed the same photos twice (removed 2026-10-01).
- * Keeps #projects as a landing anchor for old links (#photography is the
- * photo elevator itself, which sits on the homepage after About).
+ * Selected Work (homepage): the featured work visible by default, 
+ * expanding in-place to show the full archive from the former /work/ page.
  */
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
-import ViewAllLink from '@andrew/ui/ViewAllLink.astro';
+import ExpandSection from '@andrew/ui/ExpandSection.astro';
 import LatestCard from './LatestCard.astro';
 import ProjectCard from './ProjectCard.astro';
+import WorkflowStrip from './WorkflowStrip.astro';
+import { getCollection } from 'astro:content';
+import { getLatestVideos } from '../lib/latest-content';
 import { getHomeFeatured } from '../lib/home-featured';
 
-const rawBase = import.meta.env.BASE_URL;
-const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
+const { latestVideo, projects: featuredProjects } = await getHomeFeatured();
 
-const { latestVideo, projects } = await getHomeFeatured();
+// Full /work/ data
+const videos = await getLatestVideos(3);
+const allProjects = (await getCollection('projects'))
+  .sort((a, b) => Number(b.data.featured) - Number(a.data.featured) || +b.data.date - +a.data.date);
+
+// The preview is what was already on the homepage (featured)
+// The rest goes into the expander.
+const restVideos = videos.filter(v => v.id !== latestVideo?.id);
+const restProjects = allProjects.filter(p => !featuredProjects.some(fp => fp.id === p.id));
 ---
 <section id="work" aria-labelledby="work-heading" class="selected-work">
   <div class="container">
     <SectionHeader id="work-heading" index="02" kicker="Proof of process" title="Selected work" lede="Work behind the scenes: shoots, edits, and building in public." />
 
-    {latestVideo && (
-      <div class="sw-feature">
-        <LatestCard item={latestVideo} />
-      </div>
-    )}
+    <div class="sw-preview">
+      {latestVideo && (
+        <div class="sw-feature">
+          <LatestCard item={latestVideo} />
+        </div>
+      )}
 
-    {projects.length > 0 && (
-      <div class="sw-projects">
-        {projects.map((p) => <ProjectCard project={p} />)}
-      </div>
-    )}
+      {featuredProjects.length > 0 && (
+        <div class="sw-projects">
+          {featuredProjects.map((p) => <ProjectCard project={p} />)}
+        </div>
+      )}
+    </div>
 
-    <ViewAllLink href={`${base}/work/`} what="work" />
+    <ExpandSection id="work-expander" expandLabel={`Show all work (${restVideos.length + restProjects.length})`} collapseLabel="Show less">
+      <div class="sw-expanded">
+        {restVideos.length > 0 && (
+          <div class="sw-videos-extra">
+            {restVideos.map(v => <LatestCard item={v} />)}
+          </div>
+        )}
+        
+        {restProjects.length > 0 && (
+          <div class="sw-projects-extra sw-projects">
+            {restProjects.map(p => <ProjectCard project={p} />)}
+          </div>
+        )}
+        
+        <div id="workflow" class="sw-workflow">
+          <WorkflowStrip />
+        </div>
+      </div>
+    </ExpandSection>
+
   </div>
 </section>
 
@@ -53,5 +79,14 @@ const { latestVideo, projects } = await getHomeFeatured();
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
     gap: var(--gap);
     margin-top: var(--gap);
+  }
+  .sw-videos-extra {
+    display: grid;
+    gap: var(--gap);
+    margin-top: var(--gap);
+  }
+  .sw-workflow {
+    margin-top: calc(var(--gap) * 2);
+    margin-bottom: 1rem;
   }
 </style>

@@ -234,7 +234,7 @@ export async function getNetworkFeed(limit = 8): Promise<NetworkItem[]> {
             ? p.data.date.toISOString()
             : new Date(p.data.date).toISOString(),
         // No external link: the project's home is the work archive.
-        url: p.data.link ?? `${(import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/')}work/#projects`,
+        url: p.data.link ?? `${(import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/')}#work`,
         image: p.data.image ?? null,
         external: p.data.link ? true : false,
       })

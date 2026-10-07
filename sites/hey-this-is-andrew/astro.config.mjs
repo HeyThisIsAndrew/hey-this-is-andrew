@@ -14,7 +14,9 @@ export default defineConfig({
   // /feed was a second archive of the same videos and articles; /latest is
   // the one archive now (Prompt 2). Kept as a redirect so old links work.
   redirects: {
-    '/feed': withBase('/latest/'),
+    '/feed': withBase('/#latest'),
+    '/work': withBase('/#work'),
+    
   },
   server: {
     host: '0.0.0.0',
@@ -41,7 +43,7 @@ export default defineConfig({
     sitemap({
       // Hero concept previews and the 404 are not pages to index.
       // /events/ is hidden until there is a real event (the page is kept).
-      filter: (page) => !page.includes('/preview/') && !page.includes('/404') && !page.includes('/events/'),
+      filter: (page) => !page.includes('/preview/') && !page.includes('/404') && !page.includes('/events/') && !page.includes('/work/'),
     }),
   ],
 });
