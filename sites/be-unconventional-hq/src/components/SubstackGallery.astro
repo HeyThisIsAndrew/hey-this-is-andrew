@@ -1,0 +1,486 @@
+---
+/**
+ * A client-side Web Component that upgrades <substack-gallery> tags emitted by
+ * the HTML sanitizer into a swipeable carousel.
+ * 
+ * Included globally on article pages so any injected galleries are automatically
+ * enhanced without needing React or complex state. Uses CSS-only scroll snapping
+ * for performance.
+ */
+---
+<script>
+  import { lockScroll, unlockScroll } from '../lib/scroll-lock';
+
+  class SubstackGallery extends HTMLElement {
+    constructor() {
+      super();
+      
+      // Upgrade only once per element
+      if (this.dataset.initialized) return;
+      this.dataset.initialized = 'true';
+      
+      const images = Array.from(this.querySelectorAll('img'));
+      if (images.length === 0) return;
+
+      const imageSources = images.map(img => ({ src: img.src, alt: img.alt }));
+
+      // Wrap images in a scroll container
+      const wrapper = document.createElement('div');
+      wrapper.className = 'substack-gallery-wrapper';
+      
+      const container = document.createElement('div');
+      container.className = 'substack-gallery-container';
+      
+      images.forEach((img, index) => {
+        const slide = document.createElement('div');
+        slide.className = 'substack-gallery-slide';
+        
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'substack-gallery-trigger';
+        button.setAttribute('aria-label', 'View image full screen');
+        
+        button.addEventListener('click', (e) => {
+          e.preventDefault();
+          openLightbox(index, imageSources, (lastIndex) => {
+            // SYNC STATE: Scroll the inline gallery to the last viewed image
+            const slides = container.querySelectorAll('.substack-gallery-slide');
+            const targetSlide = slides[lastIndex] as HTMLElement;
+            if (targetSlide) {
+              container.scrollTo({
+                left: targetSlide.offsetLeft - container.offsetLeft - 16, // match gap
+                behavior: 'instant'
+              });
+            }
+          });
+        });
+        
+        button.appendChild(img);
+        slide.appendChild(button);
+        container.appendChild(slide);
+      });
+      
+      wrapper.appendChild(container);
+
+      // Create Cinematic Arrows
+      const leftArrow = document.createElement('button');
+      leftArrow.className = 'substack-gallery-arrow left-arrow';
+      leftArrow.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
+      leftArrow.setAttribute('aria-label', 'Previous image');
+
+      const rightArrow = document.createElement('button');
+      rightArrow.className = 'substack-gallery-arrow right-arrow';
+      rightArrow.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>';
+      rightArrow.setAttribute('aria-label', 'Next image');
+
+      wrapper.appendChild(leftArrow);
+      wrapper.appendChild(rightArrow);
+
+      this.innerHTML = '';
+      this.appendChild(wrapper);
+      
+      // Arrow Logic
+      const updateArrows = () => {
+        const scrollLeft = container.scrollLeft;
+        // Use a 2px tolerance for maxScroll due to browser rounding
+        const maxScroll = container.scrollWidth - container.clientWidth;
+        
+        if (scrollLeft <= 5) {
+          leftArrow.classList.add('disabled');
+        } else {
+          leftArrow.classList.remove('disabled');
+        }
+        
+        if (scrollLeft >= maxScroll - 5) {
+          rightArrow.classList.add('disabled');
+        } else {
+          rightArrow.classList.remove('disabled');
+        }
+      };
+
+      container.addEventListener('scroll', () => {
+        requestAnimationFrame(updateArrows);
+      }, { passive: true });
+
+      // Initial arrow state update
+      setTimeout(updateArrows, 50);
+
+      leftArrow.addEventListener('click', () => {
+        const slideWidth = container.querySelector('.substack-gallery-slide')?.clientWidth || 0;
+        // Scroll exactly one slide width minus the gap
+        container.scrollBy({ left: -slideWidth, behavior: 'smooth' });
+      });
+
+      rightArrow.addEventListener('click', () => {
+        const slideWidth = container.querySelector('.substack-gallery-slide')?.clientWidth || 0;
+        container.scrollBy({ left: slideWidth, behavior: 'smooth' });
+      });
+    }
+  }
+
+  /*
+    ONE LIGHTBOX for a gallery and for a single body image. It used to be a
+    method of the gallery, so a standalone image had no way into it and opened
+    Substack's CDN URL in a new tab instead. `onClose` gets the index the
+    reader ended on (the gallery scrolls its strip to match).
+  */
+  function openLightbox(startIndex: number, imageSources: Array<{src: string, alt: string}>, onClose?: (lastIndex: number) => void) {
+    // Check if lightbox already exists, if so remove it
+    let existing = document.getElementById('substack-lightbox');
+    if (existing) existing.remove();
+    
+    const lightbox = document.createElement('div');
+    lightbox.id = 'substack-lightbox';
+    lightbox.className = 'substack-lightbox';
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'substack-lightbox-close';
+    closeBtn.innerHTML = '&times;';
+    closeBtn.setAttribute('aria-label', 'Close fullscreen');
+    
+    let currentIndex = startIndex;
+    const img = document.createElement('img');
+    img.className = 'substack-lightbox-img';
+    
+    const updateImage = () => {
+      img.src = imageSources[currentIndex].src;
+      img.alt = imageSources[currentIndex].alt || '';
+    };
+    updateImage();
+    
+    lightbox.appendChild(closeBtn);
+    lightbox.appendChild(img);
+    
+    // Inject Lightbox Arrows
+    const lbLeftArrow = document.createElement('button');
+    lbLeftArrow.className = 'substack-gallery-arrow left-arrow';
+    lbLeftArrow.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
+    lbLeftArrow.setAttribute('aria-label', 'Previous image');
+
+    const lbRightArrow = document.createElement('button');
+    lbRightArrow.className = 'substack-gallery-arrow right-arrow';
+    lbRightArrow.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>';
+    lbRightArrow.setAttribute('aria-label', 'Next image');
+
+    lightbox.appendChild(lbLeftArrow);
+    lightbox.appendChild(lbRightArrow);
+
+    const updateLbArrows = () => {
+      if (currentIndex === 0) lbLeftArrow.classList.add('disabled');
+      else lbLeftArrow.classList.remove('disabled');
+      
+      if (currentIndex === imageSources.length - 1) lbRightArrow.classList.add('disabled');
+      else lbRightArrow.classList.remove('disabled');
+    };
+
+    const next = () => {
+      if (currentIndex < imageSources.length - 1) {
+        currentIndex++;
+        updateImage();
+        updateLbArrows();
+      }
+    };
+
+    const prev = () => {
+      if (currentIndex > 0) {
+        currentIndex--;
+        updateImage();
+        updateLbArrows();
+      }
+    };
+    
+    updateLbArrows();
+    
+    lbLeftArrow.addEventListener('click', (e) => { e.stopPropagation(); prev(); });
+    lbRightArrow.addEventListener('click', (e) => { e.stopPropagation(); next(); });
+    
+    // Close on click outside image or escape key
+    const closeHandler = (e?: Event) => {
+      if (e && e.target === img) return; // Don't close if clicking the image itself
+      lightbox.classList.remove('active');
+      setTimeout(() => lightbox.remove(), 300);
+      document.removeEventListener('keydown', keyHandler);
+      unlockScroll();
+      onClose?.(currentIndex);
+    };
+    
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeHandler();
+      if (e.key === 'ArrowRight') next();
+      if (e.key === 'ArrowLeft') prev();
+    };
+    
+    lightbox.addEventListener('click', closeHandler);
+    document.addEventListener('keydown', keyHandler);
+
+    let touchStartX = 0;
+    let touchEndX = 0;
+    lightbox.addEventListener('touchstart', e => {
+      touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+    lightbox.addEventListener('touchend', e => {
+      touchEndX = e.changedTouches[0].screenX;
+      if (touchEndX < touchStartX - 50) next();
+      if (touchEndX > touchStartX + 50) prev();
+    }, { passive: true });
+
+    let wheelTimeout: ReturnType<typeof setTimeout> | null = null;
+    lightbox.addEventListener('wheel', e => {
+      e.preventDefault();
+      if (wheelTimeout) return; // Debounce wheel
+      
+      if (e.deltaX > 20) {
+        next();
+        wheelTimeout = setTimeout(() => wheelTimeout = null, 300);
+      } else if (e.deltaX < -20) {
+        prev();
+        wheelTimeout = setTimeout(() => wheelTimeout = null, 300);
+      }
+    }, { passive: false });
+    
+    document.body.appendChild(lightbox);
+    lockScroll();
+    
+    // Trigger animation
+    requestAnimationFrame(() => {
+      lightbox.classList.add('active');
+    });
+  }
+
+  if (!customElements.get('substack-gallery')) {
+    customElements.define('substack-gallery', SubstackGallery);
+  }
+
+  /*
+    A SINGLE BODY IMAGE opens the same lightbox. labelImageLinks() (in
+    src/lib/article-images-transform.ts) replaces Substack's click-to-enlarge
+    anchors with `<button data-lightbox-image>`, so there is no link left to
+    open in a tab by any route (Cmd/Ctrl-click, middle click, context menu).
+    Delegated from the document, bound once: this module outlives ClientRouter
+    navigations, and the article body is new markup on each of them.
+  */
+  document.addEventListener('click', (e) => {
+    const trigger = (e.target as Element | null)?.closest?.('[data-lightbox-image]');
+    const img = trigger?.querySelector('img');
+    if (!img) return;
+    e.preventDefault();
+    openLightbox(0, [{ src: widestRendition(img), alt: img.alt }]);
+  });
+
+  /* The widest width in the image's own srcset. Not `currentSrc`: that is
+     sized for the ~720px column (800px wide, measured), which full screen
+     upscales. Not the link's href either: that can be a raw multi-megabyte
+     upload (scripts/article-images.md), the cost the renditions exist to
+     avoid. */
+  function widestRendition(img: HTMLImageElement): string {
+    let best = img.currentSrc || img.src;
+    let bestWidth = 0;
+    /* By `<url> <n>w` pairs, never by splitting on commas: a substackcdn URL
+       is full of them (`…!,w_800,f_auto,…`). */
+    for (const [, rawUrl, w] of (img.getAttribute('srcset') || '').matchAll(/(\S+)\s+(\d+)w/g)) {
+      const url = rawUrl.replace(/^,+/, '');
+      const width = Number(w);
+      if (url && width > bestWidth) {
+        best = new URL(url, location.href).href;
+        bestWidth = width;
+      }
+    }
+    return best;
+  }
+</script>
+
+<style is:global>
+  substack-gallery {
+    display: block;
+    margin: 2.5rem 0;
+    width: 100%;
+    position: relative;
+  }
+  
+  .substack-gallery-wrapper {
+    position: relative;
+    width: 100%;
+  }
+
+  /* Reveal arrows on hover of the wrapper or in active lightbox */
+  @media (hover: hover) and (pointer: fine) {
+    .substack-gallery-wrapper:hover .substack-gallery-arrow:not(.disabled),
+    .substack-lightbox.active .substack-gallery-arrow:not(.disabled) {
+      opacity: 0.35;
+      pointer-events: auto;
+    }
+  }
+  
+  .substack-gallery-container {
+    display: flex;
+    align-items: center; /* Prevents slides from stretching to the same height */
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 1rem;
+    mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
+    /* Custom scrollbar for webkit */
+    scrollbar-width: none; /* Hide scrollbar */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    container-type: inline-size;
+  }
+
+  .substack-gallery-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  .substack-gallery-slide {
+    flex: 0 0 85cqw;
+    scroll-snap-align: center;
+    scroll-snap-stop: always; /* Force precision magnetic stop */
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  @media (min-width: 768px) {
+    .substack-gallery-slide {
+      flex: 0 0 75cqw;
+    }
+  }
+
+  .substack-gallery-slide button.substack-gallery-trigger {
+    display: block;
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .substack-gallery-slide img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 70vh;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+  }
+  
+  .substack-gallery-slide button:hover img {
+    transform: scale(1.02);
+  }
+  
+  /* Cinematic Arrows */
+  .substack-gallery-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, filter 0.3s ease;
+    z-index: 10;
+    padding: 0;
+  }
+  
+  .substack-gallery-arrow svg {
+    overflow: visible;
+  }
+
+  .substack-gallery-arrow:hover {
+    opacity: 1 !important;
+    filter: drop-shadow(0 0 8px rgba(255, 0, 0, 1)) drop-shadow(0 0 16px rgba(255, 0, 0, 0.8));
+  }
+
+  .substack-gallery-arrow.left-arrow {
+    left: 1rem;
+  }
+
+  .substack-gallery-arrow.right-arrow {
+    right: 1rem;
+  }
+
+  /* Inside the lightbox the arrows sit against the screen edge rather than a
+     content box, so they need the same inset guard as the close button. */
+  .substack-lightbox .substack-gallery-arrow.left-arrow {
+    left: max(1rem, env(safe-area-inset-left));
+  }
+
+  .substack-lightbox .substack-gallery-arrow.right-arrow {
+    right: max(1rem, env(safe-area-inset-right));
+  }
+
+  .substack-gallery-arrow.disabled {
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+  
+  /* Lightbox Styles */
+  .substack-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    backdrop-filter: blur(5px);
+  }
+  
+  .substack-lightbox.active {
+    opacity: 1;
+    pointer-events: auto;
+    cursor: default !important;
+  }
+  
+  .substack-lightbox-img {
+    /* Inset-aware bounds. Plain 95vw/95vh let the image run under the notch
+       and under the close button in landscape; dvh also keeps it inside the
+       visible viewport when iOS Safari's bars are showing. */
+    max-width: min(95vw, calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 2rem));
+    max-height: min(95dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem));
+    object-fit: contain;
+    transform: scale(0.95);
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.2, 1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    cursor: default !important;
+  }
+  
+  .substack-lightbox.active .substack-lightbox-img {
+    transform: scale(1);
+  }
+  
+  /* `absolute` against the lightbox, which is itself `position: fixed;
+     inset: 0` and does not scroll — the same corner a fixed button would
+     land on, without nesting a fixed element inside a fixed one (fragile on
+     iOS). The safe-area floors keep it clear of the notch in landscape. */
+  .substack-lightbox-close {
+    position: absolute;
+    top: max(1rem, env(safe-area-inset-top));
+    right: max(1.5rem, env(safe-area-inset-right));
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 3rem;
+    line-height: 1;
+    font-weight: 300;
+    cursor: pointer;
+    z-index: 310;
+    padding: 0.5rem;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+  
+  .substack-lightbox-close:hover {
+    opacity: 1;
+  }
+</style>

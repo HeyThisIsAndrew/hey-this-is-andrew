@@ -1,0 +1,294 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   EVENTS PAGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.events-page {
+  padding-top: 120px;
+  padding-bottom: 2rem;
+}
+
+/*
+  ─── A FULL-BLEED HERO GOES UNDER THE HEADER, NOT BELOW IT ──────────────────
+
+  The 120px above clears the fixed navbar, which is right for a page that opens
+  on text. It is wrong for one that opens on a hero: the hero ran edge to edge
+  horizontally and then started 120px down, so a band of page background sat
+  between the translucent header and the artwork and the header had nothing to
+  be translucent over.
+
+  Same shape as `.feed-page.has-spotlight-hero` in FeedLayout.astro, and scoped
+  the same way for the same reason recorded there: removing the offset outright
+  once took /intel and /category/* with it, leaving their filter buttons in the
+  DOM but underneath the header at y=12px, reported as "the filter buttons are
+  gone". A page opts in by declaring it renders its own full-bleed element and
+  will handle the header itself.
+
+  `padding-top` only, unlike the feed's `padding: 0`. The bottom offset is not
+  about the header and this page has content that needs it.
+
+  /events/archive is the other `.events-page` and deliberately does NOT get
+  this: it opens on a page title, so its 120px is still doing the job.
+
+  The hero clears the header from the inside, via `.event-hero-overlay`'s
+  `padding-top: clamp(6rem, 4.5rem + 6vw, 8.5rem)`, so the copy never lands
+  under it even though the artwork does.
+*/
+.events-page.has-spotlight-hero {
+  padding-top: 0;
+}
+
+/*
+  ─── ONE CARD, ONE SIZE, WHEREVER THE GRID IS ──────────────────────────────
+
+  The track floor was 320px, which is smaller than an EventCard actually wants.
+  It let a full-width container fit FOUR columns, so the same card rendered at
+  333px on /events/archive and 449px on /events, where the grid sits inside the
+  8-of-12 column. A 26% swing in a card built around a logo beside two lines of
+  type: the archive's version had its lockup visibly tighter, and nothing about
+  the content justified the difference.
+
+  420px is measured from the layout that already looked right. At 1389px of
+  full-bleed width it settles on three columns of 447px, against 449px for the
+  two-up inside the narrower column — the same card either way. Four columns
+  would need 1752px, so no current breakpoint reaches back to the old size.
+
+  `min(100%, 420px)` keeps the floor from exceeding the container on a phone,
+  which is what makes this collapse cleanly to one column rather than
+  overflowing.
+*/
+.event-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+  width: 100%;
+}
+
+@media (min-width: 561px) {
+  .event-grid {
+    gap: 2rem 1.5rem;
+  }
+  .event-grid .content-card-title {
+    font-size: 1.15rem; /* Slightly smaller title for the 2-col layout */
+  }
+}
+
+.event-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 1.05rem + 0.9vw, 1.5rem);
+  font-weight: 700;
+  color: var(--color-white);
+  margin-bottom: 0.5rem;
+}
+
+.event-card {
+  position: relative;
+  background: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  transition:
+    transform 0.4s cubic-bezier(0.25, 0.8, 0.2, 1),
+    border-color 0.3s ease;
+  display: block;
+}
+
+.event-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--color-accent);
+  box-shadow: 0 8px 40px rgba(204, 0, 0, 0.15);
+}
+
+.event-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(10, 10, 10, 0.9) 0%,
+    transparent 100%
+  );
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 2rem;
+}
+
+.event-card-logo-wrap {
+  display: inline-block;
+  max-width: 80%;
+  margin-right: auto;
+  filter: drop-shadow(0 4px 15px rgba(0, 0, 0, 0.7));
+}
+
+.event-card-logo {
+  max-height: 80px;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  transition: transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.event-card-sr-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+
+/* ── Mobile Stacking & Breathing Room (Events Only) ── */
+/*
+  ─── "ON THIS PAGE" IS A DESKTOP RAIL, AND ONLY THE RIGHT RAIL COMES BACK ──
+
+  article.css used to hide BOTH rails at this breakpoint (`.article-rail {
+  display: none }`). This block used to override that wholesale —
+  `.article-rail { display: block !important }` — and then reorder them
+  underneath the content, which is how a jump-link list ended up wedged
+  between "Venue" and "Upcoming Events", two thirds of the way down a page the
+  reader is already scrolling. A table of contents earns its keep beside the
+  text, not inside it.
+
+  article.css now does the same thing this block does, for the same reason:
+  it hides `.article-rail-left` only, and stacks the right rail after the
+  column. Article pages needed it too, and were dropping their hub card,
+  editorial desk and Support The HQ block entirely on every phone.
+
+  So the TOC is still simply left alone, and nothing here re-shows it. What
+  remains below is the EVENT-specific half: flex instead of grid, the explicit
+  ordering, and the stacked-gap tuning measured on a 390px phone. The
+  `display: block` is now redundant with article.css and is kept because these
+  rules are `!important` as a set and splitting them would be a bigger change
+  than it looks.
+
+  The breakpoint is `1200px` to match article.css exactly. It was 1199px, which
+  left a one-pixel window at 1200 where article.css had already collapsed the
+  layout and this block had not yet reordered it.
+*/
+@media (max-width: 1200px) {
+  /*
+    ─── THE GAP THAT WAS A GUTTER ──────────────────────────────────────────
+
+    4rem is the horizontal gutter between the reading column and the rail.
+    Stacked, the same number becomes vertical space, and vertical space is
+    read completely differently: 64px between two columns standing side by
+    side is a comfortable gutter, 64px between the end of the details and the
+    next heading is a hole.
+
+    It was not alone. Measured on /events/blizzcon-2026 at 390px, from the
+    last line of the venue to the "Upcoming Events" heading:
+
+      41px   the closing space inside the last .intel-break (its rule and
+             padding, which is real section furniture and stays)
+      48px   that section's own margin-bottom, with nothing after it
+      64px   this gap
+      32px   the rail's first section lead-in
+      ----
+      185px  of nothing, about half a phone screen
+
+    2.5rem here and the trailing margin dropped below takes it to ~113px:
+    still an unmistakable section break, no longer a void.
+  */
+  .event-dashboard .article-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2.5rem !important;
+  }
+
+  /*
+    A margin-bottom on the last section is space before nothing. It exists to
+    separate that section from the NEXT one, and stacked there is no next one
+    inside this column: the layout gap above owns the distance to the rail.
+    Two rules were paying for the same piece of empty space.
+  */
+  .event-dashboard .article-column > *:last-child {
+    margin-bottom: 0 !important;
+  }
+  .event-dashboard .article-column {
+    order: 1 !important;
+    width: 100% !important;
+  }
+  .event-dashboard .article-rail-right {
+    display: block !important;
+    position: static !important;
+    order: 2 !important;
+    width: 100% !important;
+  }
+  /* The sticky wrapper inside it has nothing to stick to once stacked. */
+  .event-dashboard .article-rail-right .article-rail-sticky {
+    position: static !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .event-dashboard .article-column {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+
+  /*
+    ─── THE MOBILE HERO LOCKUP: CENTRED, BUT STILL FULL-WIDTH ──────────────
+
+    This block used to say `display: flex; flex-direction: column;
+    align-items: center`, and that one line broke the coverage carousel on
+    every hub page — including /featured/[slug], which shares the
+    `.event-dashboard` class and had no part in the events overhaul.
+
+    WHY: `align-items: center` on a column flex container sets each child's
+    CROSS size to fit-content, and fit-content resolves to
+    max(min-content, available). `.hub-rail` is five 108px cards plus gaps,
+    all `flex: 0 0 auto`, so its min-content is 482px — wider than a 390px
+    phone. The rail was therefore laid out 482px wide, centred, hanging 46px
+    off BOTH edges of the screen, with scrollWidth === clientWidth. Measured
+    on the DC hub: x = -46, width = 482, scrollWidth = 482. A horizontally
+    scrollable strip that is wider than its own scrollport cannot scroll:
+    there is no overflow left for `overflow-x: auto` to move.
+
+    THE FIX IS TO CENTRE WITHOUT SHRINK-WRAPPING. A single-column grid keeps
+    every child stretched to the track (so the rail is exactly as wide as the
+    hero and scrolls again) and `min-width: 0` re-arms the automatic-minimum
+    escape hatch that the grid track would otherwise ignore. The lockup is
+    then centred by aligning the CONTENT of each block, not by squeezing the
+    blocks themselves.
+
+    If you ever put `display: flex` back here, re-measure `.hub-rail`.
+  */
+  .event-dashboard .hero-grid-container {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 1.5rem !important;
+  }
+  /* Every hero child owns the full track and may shrink below its content. */
+  .event-dashboard .hero-grid-container > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  /*
+    ─── THE MOBILE HERO IS FLUSH LEFT, LIKE PRODUCTION ────────────────────
+
+    This block used to force `align-items: center; text-align: center` onto
+    `.event-hero-content`, `.hero-identity` and `.hero-info-cta`, plus
+    `justify-content: center` on the eyebrow row and the coverage rail.
+
+    That was a misreading of the brief. "Restore the intended centering or
+    structural alignment from the production branch" was taken as centering;
+    production is LEFT ALIGNED, compared directly on a phone — the tag plate,
+    the mark, the line under it and the trailer button all sit flush to the
+    same left edge, and the branch was centring every one of them.
+
+    Nothing replaces those rules, deliberately. The components already align
+    themselves left (`.hero-identity { align-items: flex-start }`, and the
+    eyebrow and the rail are flex rows that start at `flex-start`), so
+    DELETING the override is the fix. Adding a left-aligning override on top
+    would be a second opinion about something the components already state.
+
+    The structural rules above stay: they are what stopped the rail being laid
+    out 482px wide inside a 390px phone, and they are independent of alignment.
+  */
+}

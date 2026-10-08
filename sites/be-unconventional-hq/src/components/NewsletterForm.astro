@@ -1,0 +1,491 @@
+---
+/**
+ * NewsletterForm — native email capture.
+ *
+ * ─── WHY THIS EXISTS ──────────────────────────────────────────────────────
+ * This form captures email addresses natively so we own the audience directly,
+ * rather than sending traffic away to external platforms like Substack.
+ *
+ * ─── WHERE THE EMAIL GOES ─────────────────────────────────────────────────
+ * Calls the `subscribe` Astro Action (`src/actions/index.ts`), which stores
+ * the address in the Cloudflare `KV` namespace. It used to `fetch` a
+ * hand-written `/api/subscribe` route; that route still exists as a
+ * compatibility shim for external callers, but nothing here posts to it.
+ *
+ * ─── TURNSTILE, AND WHY THE FLOW IS INVERTED ──────────────────────────────
+ * The widget runs in EXECUTE mode (#190). A visible widget put a token in
+ * `getResponse()` before the reader ever pressed Subscribe, so submitting was
+ * synchronous. In execute mode the widget holds no token at rest: pressing
+ * Subscribe is what STARTS the challenge, and the submit path has to wait for
+ * a token to arrive before it has anything to send.
+ *
+ * That inversion is why the old "did the widget draw any children?" guard had
+ * to go. It was correct for a visible widget, but a working execute-mode
+ * widget also draws nothing, so the check could no longer tell a blocked
+ * challenge from a healthy one. Failure is detected through the callbacks
+ * instead (`error-callback`, `timeout-callback`, `expired-callback`) plus the
+ * bounded waits below.
+ *
+ * `appearance: 'interaction-only'` is doing real work here. Widget MODE
+ * (Managed / Invisible) is a property of the site key in the Cloudflare
+ * dashboard, not something this code can set, and flipping it is instant and
+ * global across every environment at once. With `interaction-only` the widget
+ * stays out of the layout on a Managed key too, drawing only when Cloudflare
+ * actually escalates to an interactive challenge. So this file is correct
+ * under either mode and the dashboard flip stops being a deploy-ordering
+ * hazard. `size` and `theme` are kept for exactly that escalation: they are
+ * ignored by an Invisible key and keep the box on-brand and inside the narrow
+ * mobile band when a Managed one does draw.
+ *
+ * The widget only mounts when a PUBLIC site key exists. See the matching
+ * guard in src/actions/index.ts: the action requires a token only when BOTH
+ * keys are configured, so a half-configured environment degrades to "no bot
+ * check" instead of "nobody can subscribe".
+ *
+ * ─── HOW THE STATES WORK ──────────────────────────────────────────────────
+ * idle → submitting → success | error. Each is a class on the form, so the
+ * CSS decides what is visible and no markup is created or destroyed. The
+ * status message is an `aria-live` region so screen readers hear the result,
+ * and `aria-busy` marks the form while the challenge and the request run.
+ *
+ * ─── HOW TO RESTYLE IT ────────────────────────────────────────────────────
+ * `.newsletter-form` and friends in styles/modules/newsletter.css.
+ */
+import { LABELS, MESSAGES } from '../data/content.js';
+import { PUBLIC_TURNSTILE_SITE_KEY } from 'astro:env/client';
+
+/*
+  No key → no script, no widget, and (see src/actions/index.ts) no server-side
+  requirement for a token either. The same guard used to live in SubscribeBox
+  and ContactModal, both since removed: with the key unset, Turnstile's
+  renderer reads null off the missing data-sitekey and logs a TurnstileError
+  on every page.
+*/
+const turnstileSiteKey = PUBLIC_TURNSTILE_SITE_KEY;
+---
+
+{/*
+  `data-sitekey` on the form is how the bundled script below learns the key —
+  a script tag cannot read Astro frontmatter, and inlining the key into the
+  script would mean marking it `is:inline` and losing bundling.
+*/}
+<form
+  class="newsletter-form"
+  id="newsletter-form"
+  novalidate
+  data-sitekey={turnstileSiteKey ?? ''}
+>
+  <div class="newsletter-row">
+    <label class="sr-only" for="newsletter-email">Email address</label>
+    <input
+      class="newsletter-input"
+      id="newsletter-email"
+      name="email"
+      type="email"
+      inputmode="email"
+      autocomplete="email"
+      required
+      placeholder="you@example.com"
+      aria-describedby="newsletter-status"
+    />
+    <button class="cta-button-primary newsletter-submit" type="submit">
+      <span class="newsletter-submit-label">{LABELS.subscribe ?? 'Subscribe'}</span>
+      <span class="newsletter-spinner" aria-hidden="true"></span>
+    </button>
+  </div>
+
+  {/* Mount point for the explicitly-rendered Turnstile widget. Empty in the
+      HTML, and empty at rest in execute mode too: it only fills if Cloudflare
+      escalates to an interactive challenge. Rendered only when a key exists,
+      so there is no stray element when Turnstile is not configured. */}
+  {turnstileSiteKey && <div class="newsletter-turnstile" id="newsletter-turnstile"></div>}
+
+  {/* aria-live so the outcome is announced, not just shown. `role="status"`
+      keeps it polite rather than interrupting. */}
+  <p class="newsletter-status" id="newsletter-status" role="status" aria-live="polite"></p>
+
+  <p class="newsletter-fineprint">{MESSAGES.newsletterFineprint}</p>
+</form>
+
+<script>
+  import { whenTurnstileReady } from '../lib/turnstile-lazy';
+  import { actions } from 'astro:actions';
+
+  /*
+    Newsletter submit handler.
+
+    Bound on astro:page-load because this site uses Astro's ClientRouter —
+    a handler bound to DOMContentLoaded would stop working after the first
+    client-side navigation.
+  */
+  /* Minimal shape of the bits of the Turnstile API this component uses. */
+  interface TurnstileApi {
+    render: (el: HTMLElement, opts: Record<string, unknown>) => string;
+    reset: (widgetId?: string) => void;
+    /* Execute mode's whole point: the challenge runs on demand, and the token
+       arrives at `callback` rather than sitting in `getResponse()`. That
+       method is deliberately no longer declared — nothing may read a token
+       synchronously any more. */
+    execute: (widgetId?: string) => void;
+  }
+  declare global {
+    interface Window {
+      turnstile?: TurnstileApi;
+    }
+  }
+
+  /**
+   * How long to wait for the API script and the widget to mount before giving
+   * up. Matches the old render poll's ceiling. This is only ever spent by a
+   * reader who submits within a second of touching the field: the script is
+   * requested on the first focus or pointerdown anywhere in this form, so it
+   * is normally in flight well before Subscribe is pressed.
+   */
+  const WIDGET_MOUNT_TIMEOUT_MS = 10_000;
+
+  /**
+   * How long to wait for a token once the challenge is running.
+   *
+   * This bounds the SILENT path only. If Cloudflare escalates and asks the
+   * reader to do something, `before-interactive-callback` fires and this timer
+   * is cancelled — a human solving a puzzle must not be cut off mid-solve, and
+   * Turnstile's own `timeout-callback` covers the challenge expiring.
+   */
+  const CHALLENGE_TIMEOUT_MS = 12_000;
+
+  /** Widget id from turnstile.render(), needed to execute and reset it. */
+  let widgetId: string | null = null;
+
+  /** True when a site key IS configured but the widget could never mount. */
+  let turnstileUnavailable = false;
+
+  /**
+   * Resolves with the widget id once the widget is mounted.
+   *
+   * The submit path AWAITS this rather than reading `widgetId` synchronously.
+   * Reading it synchronously is what made a fast submit fail: the API is
+   * lazy-loaded on first interaction (`src/lib/turnstile-lazy.ts`), so a
+   * reader who autofills and presses Subscribe immediately hit a null
+   * `widgetId`, posted an empty token, and got told to complete a challenge
+   * that had not loaded yet. Waiting turns that race into a short pause.
+   */
+  let widgetReady: Promise<string>;
+  let resolveWidgetReady: (id: string) => void;
+  let rejectWidgetReady: (error: Error) => void;
+
+  /**
+   * A fresh mount promise. Called per page-load because ClientRouter swaps in
+   * a new, unrendered holder on every client-side navigation, and the widget
+   * id from the previous page is dead.
+   */
+  function resetWidgetReady() {
+    widgetReady = new Promise<string>((resolve, reject) => {
+      resolveWidgetReady = resolve;
+      rejectWidgetReady = reject;
+    });
+    /* Nobody awaits this until a submit, and a rejection with no handler
+       attached is an unhandled rejection in the console. */
+    widgetReady.catch(() => {});
+  }
+  resetWidgetReady();
+
+  /** Deferred for the token from ONE `execute()` call. Null between attempts. */
+  let pendingChallenge: {
+    resolve: (token: string) => void;
+    reject: (error: Error) => void;
+  } | null = null;
+
+  /** Settle the in-flight challenge, if any, and clear it. */
+  function settleChallenge(token: string | null, error?: Error) {
+    const pending = pendingChallenge;
+    if (!pending) return;
+    /* Cleared BEFORE settling so a callback that fires twice — Turnstile does
+       re-fire `error-callback` on some retries — cannot settle the next
+       attempt's promise. */
+    pendingChallenge = null;
+    if (token !== null) pending.resolve(token);
+    else pending.reject(error ?? new Error('turnstile-failed'));
+  }
+
+  /**
+   * Mount the Turnstile widget.
+   *
+   * The API is injected on first interaction with a form
+   * (src/lib/turnstile-lazy.ts) because it costs ~234 KB that most readers
+   * never need, so this WAITS to be told the script arrived rather than
+   * polling from page load. Polling blind would spend its ceiling before the
+   * reader had touched anything and then blame their ad blocker for a script
+   * we had simply not requested yet — a confidently wrong error on a working
+   * setup.
+   */
+  function mountTurnstile(form: HTMLFormElement) {
+    const siteKey = form.dataset.sitekey;
+    const holder = document.getElementById('newsletter-turnstile');
+    if (!siteKey || !holder) return; // Not configured — nothing to mount.
+    if (holder.dataset.rendered) return; // Already mounted on this page.
+
+    let attempts = 0;
+    const tryRender = () => {
+      if (window.turnstile) {
+        holder.dataset.rendered = 'true';
+        widgetId = window.turnstile.render(holder, {
+          sitekey: siteKey,
+          /* The challenge runs when we call execute(), not at render. */
+          execution: 'execute',
+          /* Nothing in the layout unless Cloudflare escalates. */
+          appearance: 'interaction-only',
+          /* Only ever seen on escalation, and only on a Managed key. */
+          size: 'flexible',
+          theme: 'dark',
+          callback: (token: string) => settleChallenge(token),
+          'before-interactive-callback': () => {
+            /* The reader is now being asked to do something. Hand the clock
+               over to them and to Turnstile's own timeout. */
+            clearChallengeTimeout();
+          },
+          'timeout-callback': () => settleChallenge(null, new Error('turnstile-timeout')),
+          'expired-callback': () => settleChallenge(null, new Error('turnstile-expired')),
+          'error-callback': () => {
+            if (pendingChallenge) {
+              /*
+                An error DURING a challenge is this attempt's failure, not the
+                widget's death. Marking the widget permanently unavailable
+                here would brick the form on one transient error and leave the
+                reader with no way back short of a reload.
+              */
+              settleChallenge(null, new Error('turnstile-error'));
+              if (widgetId && window.turnstile) window.turnstile.reset(widgetId);
+              return;
+            }
+            /* An error at rest is the widget itself failing to come up. */
+            turnstileUnavailable = true;
+            rejectWidgetReady(new Error('turnstile-unavailable'));
+          },
+        });
+        resolveWidgetReady(widgetId);
+        return;
+      }
+      if ((attempts += 1) < 100) {
+        setTimeout(tryRender, 100); // ~10s ceiling.
+        return;
+      }
+      /*
+        Gave up. The API script never arrived — an ad blocker, a corporate
+        proxy, or Cloudflare being unreachable. This has to be recorded,
+        because the action requires a token when both keys are configured, and
+        knowing WHY lets the form say something true instead of guessing.
+      */
+      turnstileUnavailable = true;
+      rejectWidgetReady(new Error('turnstile-unavailable'));
+    };
+
+    whenTurnstileReady(
+      () => tryRender(),
+      () => {
+        turnstileUnavailable = true;
+        rejectWidgetReady(new Error('turnstile-unavailable'));
+      },
+    );
+  }
+
+  let challengeTimeout: ReturnType<typeof setTimeout> | null = null;
+  function clearChallengeTimeout() {
+    if (challengeTimeout !== null) {
+      clearTimeout(challengeTimeout);
+      challengeTimeout = null;
+    }
+  }
+
+  /** Reject `promise` if it has not settled within `ms`. */
+  function withTimeout<T>(
+    promise: Promise<T>,
+    ms: number,
+    reason: string,
+    register?: (timer: ReturnType<typeof setTimeout>) => void,
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(reason)), ms);
+      register?.(timer);
+      promise.then(
+        (value) => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        (error) => {
+          clearTimeout(timer);
+          reject(error);
+        },
+      );
+    });
+  }
+
+  /**
+   * Run one challenge and resolve with its token.
+   *
+   * Resolves with `''` when Turnstile is not configured at all, which is the
+   * case the action treats as "no bot check".
+   */
+  async function getTurnstileToken(form: HTMLFormElement): Promise<string> {
+    if (!form.dataset.sitekey) return '';
+    if (turnstileUnavailable) throw new Error('turnstile-unavailable');
+
+    const id = await withTimeout(
+      widgetReady,
+      WIDGET_MOUNT_TIMEOUT_MS,
+      'turnstile-unavailable',
+    );
+    const turnstile = window.turnstile;
+    if (!turnstile) throw new Error('turnstile-unavailable');
+
+    const token = new Promise<string>((resolve, reject) => {
+      pendingChallenge = { resolve, reject };
+    });
+
+    /* Single-use token discipline: clear whatever the last attempt left
+       behind so execute() runs a fresh challenge rather than replaying a
+       spent token. */
+    turnstile.reset(id);
+    turnstile.execute(id);
+
+    try {
+      return await withTimeout(
+        token,
+        CHALLENGE_TIMEOUT_MS,
+        'turnstile-timeout',
+        (timer) => {
+          challengeTimeout = timer;
+        },
+      );
+    } finally {
+      clearChallengeTimeout();
+      pendingChallenge = null;
+    }
+  }
+
+  function setStateForForm(
+    form: HTMLFormElement,
+    state: 'idle' | 'submitting' | 'success' | 'error',
+    message = '',
+  ) {
+    const status = form.querySelector<HTMLElement>('.newsletter-status');
+    form.classList.remove('is-submitting', 'is-success', 'is-error');
+    if (state !== 'idle') form.classList.add(`is-${state}`);
+    /* Assistive tech needs to know the form is working, not just that a
+       status line changed. Paired with the spinner the CSS shows. */
+    if (state === 'submitting') form.setAttribute('aria-busy', 'true');
+    else form.removeAttribute('aria-busy');
+    if (status) status.textContent = message;
+  }
+
+  if (!(window as any).newsletterFormSetup) {
+    (window as any).newsletterFormSetup = true;
+
+    document.addEventListener('input', (event) => {
+      const target = event.target as HTMLElement | null;
+      if (!target || !target.matches('.newsletter-input')) return;
+      const form = target.closest('#newsletter-form') as HTMLFormElement;
+      if (form && form.classList.contains('is-error')) {
+        setStateForForm(form, 'idle');
+      }
+    });
+
+    document.addEventListener('submit', async (event) => {
+      const form = (event.target as HTMLElement).closest('#newsletter-form') as HTMLFormElement;
+      if (!form) return;
+
+      event.preventDefault();
+
+      /*
+        The #188 single-request guarantee. The lock now covers the CHALLENGE
+        as well as the request: in execute mode the wait before the network
+        call is the long part, and without this a spam-clicker would fire an
+        execute() per click.
+      */
+      if (form.classList.contains('is-submitting')) return;
+
+      const input = form.querySelector<HTMLInputElement>('.newsletter-input');
+      if (!input) return;
+      const email = input.value.trim();
+
+      if (!email || !input.checkValidity()) {
+        setStateForForm(form, 'error', 'Please enter a valid email address.');
+        input.focus();
+        return;
+      }
+
+      /* Locked from here on, and unlocked by every path out below. */
+      setStateForForm(form, 'submitting', 'Verifying…');
+
+      let token: string;
+      try {
+        token = await getTurnstileToken(form);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : '';
+        setStateForForm(
+          form,
+          'error',
+          reason === 'turnstile-unavailable'
+            ? "Our anti-spam check couldn't load. This is usually caused by an ad blocker or network filter. Please disable it to subscribe."
+            : 'Our anti-spam check did not finish. Please try again.',
+        );
+        if (widgetId && window.turnstile) window.turnstile.reset(widgetId);
+        return;
+      }
+
+      setStateForForm(form, 'submitting', 'Subscribing…');
+
+      try {
+        const { data, error } = await actions.subscribe({
+          email,
+          'cf-turnstile-response': token,
+        });
+
+        if (!error && data?.success) {
+          const formStyle = getComputedStyle(form);
+          form.style.setProperty(
+            '--newsletter-locked-height',
+            `${form.offsetHeight + parseFloat(formStyle.marginTop || '0')}px`,
+          );
+          setStateForForm(form, 'success', "You're on the list. Watch your inbox.");
+          form.reset();
+        } else {
+          /*
+            `error.message` on a Zod failure is `Failed to validate: [ …raw
+            JSON… ]`, which must never reach the subscribe band. Input errors
+            carry their per-field messages on `.fields`; everything else has a
+            message written for a visitor.
+          */
+          const fieldMessage =
+            error && (error as any).type === 'AstroActionInputError'
+              ? Object.values((error as any).fields ?? {})
+                  .flatMap((messages) => (messages as string[]) ?? [])
+                  .find((message) => typeof message === 'string' && message.length > 0)
+              : undefined;
+          setStateForForm(
+            form,
+            'error',
+            fieldMessage ?? error?.message ?? 'Something went wrong. Please try again.',
+          );
+        }
+        if (widgetId && window.turnstile) window.turnstile.reset(widgetId);
+      } catch (e) {
+        if (widgetId && window.turnstile) window.turnstile.reset(widgetId);
+        setStateForForm(form, 'error', 'Network error. Please try again.');
+      }
+    }, { capture: true });
+  }
+
+  document.addEventListener('astro:page-load', () => {
+    const form = document.getElementById('newsletter-form') as HTMLFormElement;
+    if (!form) return;
+    const holder = document.getElementById('newsletter-turnstile');
+    /* A fresh holder means a fresh widget, so the previous page's mount
+       promise (resolved or rejected) must not be what a submit awaits. */
+    if (holder && !holder.dataset.rendered) {
+      widgetId = null;
+      turnstileUnavailable = false;
+      resetWidgetReady();
+    }
+    mountTurnstile(form);
+  });
+</script>

@@ -1,0 +1,234 @@
+---
+import { SECTIONS, META, pageTitle } from '../data/content.js';
+import Layout from '../layouts/Layout.astro';
+import PageTitle from '../components/PageTitle.astro';
+
+const title = pageTitle(META.collaborations.title);
+const description = META.collaborations.description;
+---
+
+<Layout title={title} description={description}>
+  <main class="press-kit-page flex-1 flex flex-col w-full pb-8 md:pb-12">
+    <div class="container-narrow flex-1 flex flex-col">
+      <header class="section-header animate-on-scroll" data-nav-anchor>
+        {/* "Partners", not "Partnerships". PageTitle's secondary word is set
+            in vw-scaled display type with a negative margin-right stagger;
+            at 320px "Partnerships" rendered 317px wide and pushed the page
+            8px past the viewport. The longest secondary anywhere else on the
+            site is "Not Found" at 248px, which clears it. */}
+        <PageTitle as="h1" {...SECTIONS.collaborations} />
+      </header>
+
+      <section class="press-kit-grid">
+        <!-- Section 1: Press Kit (editorial one-sheet, the primary action) -->
+        <div class="press-kit-card animate-on-scroll" data-delay="100">
+          <h2 class="press-kit-sub">Press Kit</h2>
+          <div class="press-kit-content">
+            <p class="hero-subtitle-style">
+              Editorial focus, coverage areas, and standards. For publicists,
+              studios, and credentialing bodies.
+            </p>
+            <a href="/collaborations/press-kit" class="press-kit-btn" target="_blank" rel="noopener">
+              View Press Kit
+            </a>
+          </div>
+        </div>
+
+        <!-- Section 2: Media Kit (audience and production one-sheet) -->
+        <div
+          class="press-kit-card animate-on-scroll download-card"
+          data-delay="200"
+        >
+          <h2 class="press-kit-sub">MEDIA KIT</h2>
+          <div class="press-kit-content">
+            <p class="hero-subtitle-style">
+              Audience demographics, reach, production services, and gear.
+              For brands and agencies.
+            </p>
+            <a href="/media-kit" class="press-kit-btn" target="_blank" rel="noopener">
+              View The Numbers
+            </a>
+          </div>
+        </div>
+
+        <!-- Section 3: Media Assets -->
+        <div class="press-kit-card animate-on-scroll" data-delay="300">
+          <h2 class="press-kit-sub">Media Assets</h2>
+          <div class="press-kit-content">
+            <p class="hero-subtitle-style">
+              Logo pack (wordmark, vector mark, and icon) for sponsor decks
+              and press walls.
+            </p>
+            <a href="/downloads/be-unconventional-hq-logo-pack.zip" class="press-kit-btn" download>
+              Download Logo Pack
+            </a>
+          </div>
+        </div>
+
+        <!-- Section 4: Contact Information -->
+        <div class="press-kit-card animate-on-scroll" data-delay="400">
+          <h2 class="press-kit-sub">Contact Information</h2>
+          <div class="press-kit-content">
+            <p class="hero-subtitle-style">
+                Press and editorial &nbsp;|&nbsp; Partnerships
+            </p>
+            <a
+              href="mailto:press@beunconventionalhq.com"
+              class="press-kit-email hero-subtitle-style">press@beunconventionalhq.com</a
+            >
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</Layout>
+
+<style>
+  .press-kit-page {
+    padding-top: 120px;
+  }
+
+  /* Reading-width wrapper now shared: `.container-narrow` in modules/layout.css */
+
+  .hero-subtitle-style {
+    color: rgba(255, 255, 255, 0.9);
+    /* Was 0.75rem. Uppercase at 0.15em tracking needs more size than
+       sentence case to stay readable, and at 12px it wasn't getting it.
+       This class is used nowhere outside this page. */
+    font-size: 0.875rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-weight: 600;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* Grid rather than a flex column so every card is the same height, and
+     `flex: 1` so the stack absorbs the leftover height in .container instead
+     of clustering at the top of a tall display and leaving a void above the
+     footer. `grid-auto-rows: 1fr` splits that height equally between the four
+     rows; 1fr resolves to minmax(auto, 1fr), so on a short viewport the rows
+     still fall back to their content height and nothing is ever clipped.
+     Everything here is Astro-scoped to this page, so no other route is
+     affected. */
+  .press-kit-grid {
+    display: grid;
+    /* minmax(0, 1fr), not a bare 1fr or an implicit column. An implicit grid
+       column is auto-sized, and auto floors at the widest item's min-content,
+       which here is the unbreakable contact email: on a 390px screen that
+       floor pushed the column to 424px and gave the whole page a horizontal
+       scrollbar. The flex column this replaced never had the problem because
+       flex items shrink. minmax(0, ...) drops the automatic minimum so the
+       column tracks the container instead. */
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: 1fr;
+    gap: 3rem;
+    flex: 1;
+    margin-bottom: 3rem;
+  }
+
+  /* Cards are stretched by the grid, so the contact card is as tall as the
+     others despite carrying less copy. Centring the content keeps that extra
+     height balanced above and below rather than pooling at the bottom. */
+  .press-kit-card {
+    background: var(--color-surface);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 3rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .press-kit-sub {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-accent-text);
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .press-kit-content p {
+    color: var(--color-white-muted);
+    line-height: 1.8;
+    margin-bottom: 1rem;
+  }
+
+  .press-kit-note {
+    font-size: 0.85rem;
+    font-style: italic;
+  }
+
+  .press-kit-email {
+    display: inline-block;
+    color: var(--color-white);
+    font-weight: 500;
+    /* The address is one unbreakable token; without this it sets a min-content
+       floor wider than a narrow phone's card and forces the page to scroll
+       sideways. Belt-and-braces alongside the grid track fix above. */
+    overflow-wrap: anywhere;
+    /* Declared after .hero-subtitle-style at equal specificity, so this is
+       what the address actually renders at. Raised in step with it (was
+       0.85rem) to keep the address a touch larger than the label above it. */
+    font-size: 1rem;
+    text-decoration: none;
+    position: relative;
+    padding-bottom: 4px;
+    transition:
+      color 0.3s ease,
+      text-shadow 0.3s ease;
+  }
+
+  .press-kit-email::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: var(--color-accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.2, 1);
+  }
+
+  .press-kit-email:hover {
+    color: var(--color-accent-text);
+    text-shadow: 0 0 16px rgba(204, 0, 0, 0.5);
+  }
+
+  .press-kit-email:hover::after {
+    transform: scaleX(1);
+  }
+
+  .press-kit-btn {
+    display: block;
+    width: 100%;
+    max-width: 400px;
+    margin: 2rem auto 0 auto;
+    text-align: center;
+    background: transparent;
+    border: 1px solid var(--color-accent);
+    color: white;
+    padding: 1.25rem 2rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.3s ease;
+  }
+  
+  .press-kit-btn:hover {
+    background: var(--color-accent);
+    color: var(--bg-color);
+  }
+
+  @media (max-width: 768px) {
+    .press-kit-card {
+      padding: 2rem 1.5rem;
+    }
+  }
+</style>

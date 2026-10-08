@@ -1,0 +1,140 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TakeoverBillboard from '../components/TakeoverBillboard.astro';
+import HomeSpotlightBar from '../components/HomeSpotlightBar.astro';
+import InstagramFeed from '../components/InstagramFeed.astro';
+import SubscribeCTA from '../components/SubscribeCTA.astro';
+import CommercialRotator from '../components/CommercialRotator.astro';
+import ReloadTopGuard from '../components/ReloadTopGuard.astro';
+import ChalkFilter from '../components/home/ChalkFilter.astro';
+import HeroAccordion from '../components/home/HeroAccordion.astro';
+import InsideHQ from '../components/home/InsideHQ.astro';
+import IntelSpread from '../components/home/IntelSpread.astro';
+import FeaturedWorld from '../components/home/FeaturedWorld.astro';
+import WatchingRail from '../components/home/WatchingRail.astro';
+import HomeSectionHeader from '../components/home/HomeSectionHeader.astro';
+import { getHomepageFeed } from '../data/homepage-feed';
+import { getHomeFeatured, featuredKey } from '../data/homepage-featured';
+import { HERO_SIZES } from '../lib/homepage-feed';
+import { getArticleFeedItems } from '../lib/articles';
+import { getVideoItems } from '../lib/feed-items';
+import { site } from '../data/site.js';
+import '../styles/modules/home.css';
+
+/*
+  ─── THE HOMEPAGE (feat/homepage-v4) ──────────────────────────────────────
+
+  Every headline, deck, date and image below comes from ONE module,
+  src/data/homepage-feed.ts, which reads the real stores (articles.json,
+  videos.json). Nothing on this page types copy of its own except section
+  names.
+
+  Order, and why:
+    1. Hero accordion     Film, TV, Games, Events, Latest
+       Live billboard     hidden unless /api/live-status.json says we are live
+    2. Intel              the written side, as a magazine spread
+    3. Featured           one curated story world
+       Ad rotator         the channel CTA + partners, a deliberate break
+                          between the editorial half and the video half
+    4. The HQ Is Watching the channel's long-form videos
+       Instagram          social proof, just before the ask
+       Subscribe          the page's one conversion point
+
+  The V3 splash intro (Hero.astro, HeroTrailer.astro, splash.css) and the
+  unused Categories / LatestArticles sections were deleted in V4, once nothing
+  imported them.
+*/
+const feed = await getHomepageFeed();
+const heroImage = feed.hero[0]?.story;
+
+/*
+  ─── ONE STORY, ONE PLACE ──────────────────────────────────────────────────
+  Dealt in page order, each section skipping what the ones above it show:
+  hero -> Featured -> Intel -> the rail. Keys are `video:<id>` or the link.
+*/
+const heroKeys = new Set(
+  feed.hero.map(({ story }) => (story.type === 'video' && story.videoId ? `video:${story.videoId}` : story.url)),
+);
+
+/* Featured mirrors /feed's featured shelf (src/data/homepage-featured.ts). */
+const featured = await getHomeFeatured(heroKeys);
+const featuredKeys = new Set((featured?.items ?? []).map(featuredKey));
+const taken = new Set([...heroKeys, ...featuredKeys]);
+
+/*
+  The mini Intel magazine: the newest articles nothing above is showing.
+  Four: one rail tile each side of the feature plus the feature's own tile,
+  which is what keeps a MINIATURE of the spread from running 900px tall.
+*/
+const INTEL_MINI_SIZE = 4;
+const intelArticles = getArticleFeedItems().filter((a) => !taken.has(a.link)).slice(0, INTEL_MINI_SIZE);
+
+/* The rail renders the FEED's own card (ContentCard), which takes the feed's
+   video records rather than HomeStory, so the rail's picks are looked up by
+   YouTube id, in the order the feed module chose them. The builder already
+   skips the hero; Featured's videos are skipped here. */
+const videoById = new Map((await getVideoItems()).map((v: any) => [v.youtubeId, v]));
+const railVideos = feed.rail
+  .filter((s) => !featuredKeys.has(`video:${s.videoId}`))
+  .map((s) => videoById.get(s.videoId))
+  .filter(Boolean);
+/*
+  No preconnect to wsrv.nl. The hero's own `<link rel="preload">` is in the
+  same <head>, one line above where Layout would print the preconnect, so the
+  preload opens that connection at the same moment and the hint adds nothing.
+  PageSpeed kept reporting it as "Unused preconnect" (with and without
+  `crossorigin`; see the note in Layout.astro), because the socket it warmed
+  was never the one the image used.
+*/
+---
+
+<Layout
+  title={site.name}
+  preloadImage={heroImage?.image || undefined}
+  preloadImageSrcset={heroImage?.imageSrcset || undefined}
+  preloadImageSizes={heroImage?.imageSrcset ? HERO_SIZES : undefined}
+>
+  <main class="home-v4">
+    <h1 class="sr-only">{site.name}: {site.tagline}</h1>
+    <ReloadTopGuard />
+    <ChalkFilter />
+
+    <HeroAccordion panels={feed.hero} />
+
+    {/* The switching banner immediately below the hero. It opens on the NEXT
+        EVENT (Andrew: the page has stories enough; the band always advertises
+        what the HQ covers next). With no event scheduled it falls back to the
+        newest story none of the sections above already show. */}
+    <HomeSpotlightBar variant="banner" label="More from the HQ" lead="event" exclude={[...taken, ...intelArticles.map((a) => a.link)]} />
+
+    <IntelSpread articles={intelArticles} />
+
+    <TakeoverBillboard />
+
+    <FeaturedWorld featured={featured} />
+
+    <div class="home-slot home-slot--ad home-container">
+      <CommercialRotator />
+    </div>
+
+    <InsideHQ />
+
+    <WatchingRail items={railVideos} />
+
+    <div class="home-slot home-slot--instagram">
+      <InstagramFeed>
+        <HomeSectionHeader
+          slot="header"
+          icon="instagram"
+          id="instagram-feed-heading"
+          title="Field Dispatches"
+          descriptor="Clips, takes & reactions"
+        />
+      </InstagramFeed>
+    </div>
+
+    <div class="home-slot home-slot--subscribe">
+      <SubscribeCTA />
+    </div>
+  </main>
+</Layout>

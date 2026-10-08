@@ -1,0 +1,309 @@
+---
+import { getCardImageSources } from '../lib/card-images.js';
+import { META, pageTitle } from '../data/content.js';
+import Layout from '../layouts/Layout.astro';
+import { site } from '../data/site.js';
+import { SOCIAL_ICONS } from '../data/icons.js';
+import { getArticleItems } from '../lib/feed-items';
+import { getVideosUnified } from '../lib/videos-source';
+import { parseVideoId } from '../lib/platforms/youtube';
+import { Image } from 'astro:assets';
+import logoImage from '../assets/logo.webp';
+import '../styles/links.css';
+import SubscribeCTA from '../components/SubscribeCTA.astro';
+
+
+const title = pageTitle(META.links.title);
+const description = META.links.description;
+
+const articles = getArticleItems();
+const videos = await getVideosUnified();
+
+const featuredArticles = articles.slice(0, 2);
+const featuredVideos = videos.slice(0, 2);
+
+const mainLinks = [
+  { label: 'The Feed', href: '/feed' },
+  { label: 'Amazon Storefront', href: site.socials.amazon },
+];
+
+/* Platform marks come from the shared icon library — src/data/icons.js.
+   This page used to carry its own copy of the whole set. */
+const socialIcons = SOCIAL_ICONS;
+
+const socialLinks = [
+  { label: 'YouTube', href: site.socials.youtube },
+  { label: 'Instagram', href: site.socials.instagram },
+  { label: 'TikTok', href: site.socials.tiktok },
+  { label: 'Threads', href: site.socials.threads },
+  { label: 'Twitter', href: site.socials.twitter },
+  { label: 'Facebook', href: site.socials.facebook },
+  { label: 'Substack', href: site.socials.substack },
+  { label: 'Letterboxd', href: site.socials.letterboxd },
+];
+---
+
+{/* noindex: /links is a bio/entry utility route, reached by direct URL — not a
+    search destination. No robots.txt Disallow on purpose: crawlers must be able
+    to READ the page to see the noindex (a crawl block would leave externally-
+    linked URLs indexed with no description). */}
+<Layout title={title} description={description} noindex={true}>
+  <main class="links-hub">
+    <div class="links-container">
+      <!-- Profile & Brand Section -->
+      <section class="links-profile-header animate-on-scroll" data-nav-anchor>
+        <a href="/" class="links-brand-link" aria-label="Return to homepage">
+          <div class="links-brand-stack">
+            <p class="links-kicker">WHERE NERD CULTURE GETS CINEMATIC</p>
+            <h1 class="links-title-stack">
+              <span class="links-word-be">Be</span>
+              <span class="links-word-unconventional">Unconventional</span>
+              <span class="links-word-hq">HQ</span>
+            </h1>
+            <p class="links-subtitle">
+              Stories Craft and Culture Through A Different Lens
+            </p>
+          </div>
+        </a>
+      </section>
+
+      <!-- Main Navigation -->
+      <section class="animate-on-scroll" data-delay="100">
+        <div class="links-grid">
+          {
+            mainLinks.map((link) => (
+              /*
+                This row mixes an internal route with an off-site one, so the
+                target cannot be hardcoded either way. The Amazon storefront
+                was navigating IN PLACE while every one of its siblings on this
+                page — the social row directly beneath it and the bento
+                articles below that — opened in a new tab, which is both
+                inconsistent and the one link on the page that could hand the
+                reader's tab to another origin. `/feed` must stay in place.
+              */
+              <a
+                href={link.href}
+                class="links-card"
+                target={link.href.startsWith('http') ? '_blank' : undefined}
+                rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+              >
+                <span class="links-label">{link.label}</span>
+                <span class="links-arrow">→</span>
+              </a>
+            ))
+          }
+        </div>
+      </section>
+
+      <!-- Social Icons -->
+      <section class="animate-on-scroll" data-delay="200">
+        <div class="links-socials-row">
+          {
+            socialLinks.map((social) => (
+              <a
+                href={social.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="links-social-icon"
+                aria-label={social.label}
+                set:html={socialIcons[social.label]}
+              />
+            ))
+          }
+        </div>
+      </section>
+
+      <!-- Featured Content Bento -->
+      <section class="animate-on-scroll" data-delay="300">
+        <h2 class="links-section-title">Featured Content</h2>
+        <div class="links-bento-grid">
+          <!-- Featured Videos -->
+          {
+            featuredVideos.map((video) => (
+              <div
+                class="links-bento-item"
+                data-video-id={parseVideoId(video.link)}
+                data-action="open-video"
+                style="cursor: pointer;"
+                role="button"
+                tabindex="0"
+                aria-label={`Play video: ${video.title}`}
+              >
+                <div class="links-bento-image">
+                  {/* Matches the article tiles directly below, which were
+                      already lazy — these sit in the same grid, at the same
+                      scroll depth, and were the only ones still eager. */}
+                  <img
+                    src={getCardImageSources(video.thumbnail).src || video.thumbnail}
+                    srcset={getCardImageSources(video.thumbnail).srcset || undefined}
+                    sizes="(max-width: 899px) 92vw, 280px"
+                    alt={video.title}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <span class="links-bento-badge">VIDEO</span>
+                </div>
+                <div class="links-bento-content">
+                  <h3 class="links-bento-title">{video.title}</h3>
+                </div>
+              </div>
+            ))
+          }
+
+          <!-- Featured Articles -->
+          {
+            featuredArticles.map((article) => (
+              <a href={article.link} target="_blank" rel="noopener noreferrer" class="links-bento-item">
+                <div class="links-bento-image">
+                  {/* A rendition, not the raw Substack original — the same
+                      3840x2160 upload the article pages were loading. */}
+                  <img
+                    src={getCardImageSources(article.image).src || article.image}
+                    srcset={getCardImageSources(article.image).srcset || undefined}
+                    sizes="(max-width: 899px) 92vw, 280px"
+                    alt={article.title}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <span class="links-bento-badge">ARTICLE</span>
+                </div>
+                <div class="links-bento-content">
+                  <h3 class="links-bento-title">{article.title}</h3>
+                </div>
+              </a>
+            ))
+          }
+        </div>
+      </section>
+
+      <section class="links-footer-logo animate-on-scroll" data-delay="400" style="display: flex; justify-content: center;">
+        <button
+          id="qr-trigger"
+          class="links-logo-trigger"
+          aria-label="Open QR Code Modal"
+        >
+          {/* width + densities matter here. logo.webp is a 2000x2000 source and
+              this <Image> carried no width, so Astro emitted width="2000" and
+              requested the image endpoint at w=2000 - a 4-megapixel render to
+              fill a box that is never wider than 340 CSS px. 340 with 1x/2x
+              densities gives a srcset topping out at 680px, which is exactly
+              what a retina screen needs and nothing more.
+
+              eager, not lazy: at the corrected size this is a small file, and
+              lazy-loading it meant the mark visibly popped in as you scrolled
+              to the bottom of the page. fetchpriority="low" keeps it from
+              competing with above-the-fold work while still loading up front. */}
+          <Image
+            src={logoImage}
+            alt="BE Unconventional HQ Logo"
+            class="links-main-logo"
+            width={340}
+            densities={[1, 2]}
+            loading="eager"
+            decoding="async"
+            fetchpriority="low"
+          />
+        </button>
+        {/* The glow is a sibling of the button, not a child of it, and that is
+            deliberate. .links-logo-trigger scales on hover, and a non-none
+            transform creates a stacking context, which would trap the glow's
+            negative z-index inside the button and float it back over the
+            neighbouring tiles the moment the pointer landed on it. Out here it
+            stays in .links-hub's stacking context, underneath every tile. */}
+        <div class="links-logo-glow" aria-hidden="true"></div>
+      </section>
+
+      <SubscribeCTA variant="compact" />
+
+      <div class="links-copyright animate-on-scroll" data-delay="500">
+        <p>&copy; {new Date().getFullYear()} BE Unconventional HQ. All rights reserved.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- QR Modal -->
+  <div
+    id="qr-modal"
+    class="qr-modal-overlay"
+    aria-hidden="true"
+    inert
+    role="dialog"
+    aria-modal="true"
+  >
+    <div class="qr-modal-content">
+      <button id="close-modal" class="qr-modal-close" aria-label="Close modal"
+        >&times;</button
+      >
+      <div class="qr-container">
+        <div class="qr-image-wrapper">
+          {/* This lives inside a CLOSED modal, so it was fetching a
+              cross-origin image from api.qrserver.com on every page load for
+              a picture nobody had asked to see yet. Lazy defers it until the
+              modal is actually opened. */}
+          <img
+            src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=https://beunconventionalhq.com/collaborations"
+            alt="Collaborations QR Code"
+            class="qr-code-img"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+        <div class="qr-brand-stack">
+          <a href="/collaborations" class="qr-collabs-link">COLLABS</a>
+        </div>
+        <p class="qr-subtext">Scan or click to view collaborations</p>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { lockScroll, unlockScroll } from '../lib/scroll-lock';
+  document.addEventListener('astro:page-load', () => {
+    const trigger = document.getElementById('qr-trigger');
+    const modal = document.getElementById('qr-modal');
+    const closeBtn = document.getElementById('close-modal');
+
+    if (!trigger || !modal || !closeBtn) return;
+
+    const openModal = () => {
+      modal.classList.add('is-active');
+      modal.setAttribute('aria-hidden', 'false');
+      modal.removeAttribute('inert');
+      lockScroll();
+      // Focus close button for accessibility
+      setTimeout(() => closeBtn.focus(), 100);
+    };
+
+    const closeModal = () => {
+      modal.classList.remove('is-active');
+      modal.setAttribute('aria-hidden', 'true');
+      modal.setAttribute('inert', '');
+      unlockScroll();
+      trigger.focus();
+    };
+
+    // Clean up old listeners by cloning or just rely on astro:page-load removing elements
+    // Astro replaces the DOM, so the elements are new and won't have the old listeners.
+    trigger.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.classList.contains('is-active')) {
+        closeModal();
+      }
+    });
+  });
+</script>
+
+<style>
+  /* Local overrides to hide site chrome on links page */
+  :global(#navbar),
+  :global(.site-footer) {
+    display: none !important;
+  }
+</style>

@@ -1,0 +1,121 @@
+# ── GOOGLE INDEXING API, BY HAND ONLY ────────────────────────────────────────
+#
+# READ scripts/indexing-api.md BEFORE USING THIS. Google's Indexing API is
+# documented to support JobPosting and BroadcastEvent only. Editorial articles
+# are NOT a supported type. This is a crawl hint that Google makes no promises
+# about, not the mechanism by which /intel/ pages get indexed. Sitemap lastmod,
+# internal linking and Publisher Center are what actually move that.
+#
+# A green run here means "Google accepted the notification". It does not mean
+# crawled, and it does not mean indexed. Check Search Console.
+#
+# ── WHY THIS IS A SEPARATE, MANUAL WORKFLOW ──────────────────────────────────
+#
+# It used to be a step at the end of sync-articles.yml, firing automatically on
+# every run that published an article. Two reasons it is not any more:
+#
+#   1. AUTOMATED submission of an unsupported content type is the part with
+#      real policy exposure. Google's docs say abuse of the API can cost you
+#      access entirely. Firing by hand, for one URL, when it actually matters,
+#      is a different risk profile from firing on a schedule forever.
+#   2. It held the `content-sync-push` concurrency group for up to 10 minutes
+#      while --require-live polled for the deploy, so the YouTube and Instagram
+#      syncs queued behind an article publish for that whole window.
+#
+# This workflow deliberately does NOT join `content-sync-push`: it pushes no
+# commits and touches no ref, so it has nothing to serialise against.
+#
+# The use case that survives: an embargo lifts, or you post from a convention,
+# and you want the URL in front of Googlebot in minutes rather than hours.
+# Google Search Console's own "Request Indexing" button does the same job with
+# no API involved, and is the first thing to reach for. This exists for when
+# you want it scripted, logged in the run history, and validated before it goes.
+name: Notify Google Indexing API (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: 'Article URL(s), comma or space separated. Must be https://beunconventionalhq.com/intel/<slug>'
+        type: string
+        required: true
+      execute:
+        description: 'Actually submit to Google (leave unchecked for a dry run)'
+        type: boolean
+        default: false
+      type:
+        description: 'Notification type'
+        type: choice
+        options: [URL_UPDATED, URL_DELETED]
+        default: URL_UPDATED
+
+# Its own group, NOT content-sync-push. Nothing here writes to main, so the
+# only thing worth serialising against is a second click of this same button.
+concurrency:
+  group: notify-indexing-api
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    # Read-only. This job never commits, so it must not be able to.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Submit to the Indexing API
+        env:
+          GOOGLE_INDEXING_CREDENTIALS: ${{ secrets.GOOGLE_INDEXING_CREDENTIALS }}
+          # Passed as an environment variable, never interpolated into the
+          # script below. `${{ inputs.x }}` inside a run block is substituted
+          # before bash ever sees it, which makes any free-text input a shell
+          # injection vector. This is the documented way to avoid that.
+          URLS: ${{ inputs.urls }}
+          NOTIFY_TYPE: ${{ inputs.type }}
+          EXECUTE: ${{ inputs.execute }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GOOGLE_INDEXING_CREDENTIALS:-}" ]; then
+            echo "GOOGLE_INDEXING_CREDENTIALS is not configured in this repository."
+            echo "Nothing was sent. Setup is section 1 of scripts/indexing-api.md."
+            exit 0
+          fi
+
+          # Split on commas and whitespace. The script's own assertSubmittableUrl()
+          # is what actually validates each one — it refuses anything that is not
+          # an /intel/ page on our own origin, and scripts/indexing-api.test.mjs
+          # pins that. This loop only has to shape the arguments.
+          ARGS=()
+          IFS=', ' read -ra RAW <<< "$URLS"
+          for u in "${RAW[@]}"; do
+            [ -n "$u" ] && ARGS+=(--url "$u")
+          done
+
+          if [ ${#ARGS[@]} -eq 0 ]; then
+            echo "No URLs supplied."
+            exit 1
+          fi
+
+          ARGS+=(--type "$NOTIFY_TYPE" --require-live --live-timeout 300)
+
+          # Dry run is the DEFAULT, matching every other script in this repo.
+          # --execute is the only thing that turns this into a real call.
+          if [ "$EXECUTE" = "true" ]; then
+            ARGS+=(--execute)
+          else
+            echo "Dry run. Tick 'Actually submit' to send for real."
+          fi
+
+          node scripts/notify-indexing-api.mjs "${ARGS[@]}"

@@ -1,0 +1,348 @@
+---
+// Thin wrapper: renders the full interactive calendar (DesktopCalendar) inside a
+// <dialog>. All month-grid math lives in DesktopCalendar itself — this component
+// only owns the modal shell, open/close wiring, and scroll-lock behavior.
+import DesktopCalendar from './DesktopCalendar.tsx';
+
+export interface Props {
+  events: any[];
+}
+const { events } = Astro.props;
+---
+
+<dialog id="spanning-calendar-modal" class="fade-in-overlay" aria-label="Events Calendar">
+  <!-- Unified Responsive Calendar View -->
+  {/*
+    `tabindex="-1" autofocus` — THE DIALOG MUST NOT LAND ON THE CLOSE BUTTON.
+
+    Reported as "a red box around the X that should not be there on desktop,
+    iPad or iPhone". It was the keyboard focus ring, painted every time the
+    calendar opened, before anyone had touched anything.
+
+    Nothing in this component focuses the button. `showModal()` does: the
+    dialog element automatically focuses the first focusable child, and
+    browsers treat that automatic focus as keyboard-style, so
+    `.close-btn:focus-visible` matched and the outline painted. Measured on
+    the built page immediately after opening:
+
+      desktop — just opened: {"outline":"2px solid rgb(204, 0, 0)",
+                              "focusVisible":true,"focused":true}
+      mobile  — just opened: identical
+
+    Deleting the ring was not the fix. It is how a keyboard user knows where
+    they are, and its colour is correct — an outline is decoration, which is
+    exactly what `--color-accent` is for. The bug was that it appeared when
+    nobody was using a keyboard.
+
+    A container with `tabindex="-1"` takes focus without painting a ring, so
+    the dialog lands here instead. Focus still moves inside the dialog, which
+    is what screen readers, Escape and <dialog>'s native Tab trapping all
+    depend on. Tab to the X and the ring appears, because now it is true.
+  */}
+  <div class="modal-inner" tabindex="-1" autofocus>
+    <div class="modal-close-bar">
+      <button class="close-btn" aria-label="Close Calendar">&times;</button>
+    </div>
+    {/*
+      MUST stay client:load, and this is load-bearing rather than a default.
+
+      The real calendar exists ONLY after hydration: DesktopCalendar renders
+      the `dc-skeleton` placeholder until an effect flips `isMounted`, so that
+      the server-rendered HTML and the first client render match exactly (the
+      grid is built from the CLIENT's clock — reading the date during SSR
+      would bake the build machine's timezone into it).
+
+      That makes the hydration trigger the difference between a working
+      calendar and an empty one. client:idle waits on requestIdleCallback and
+      this page never reliably goes idle — infinite kenburns animation, scroll
+      handlers, IntersectionObservers, GTM/Partytown — so hydration can be
+      starved indefinitely and the modal opens to an empty shell with just the
+      close bar. That is not hypothetical: it shipped to production in 1694a5c
+      and was reverted in hotfix 8314698. client:visible is not an alternative
+      either — this lives inside a closed <dialog>, so it is never "visible"
+      and would never hydrate at all.
+
+      (Note for anyone chasing React #310 here: the #310 this component
+      actually suffered was a hooks-order violation — a useMemo sitting below
+      an early return — not a suspense/lazy issue. It is fixed by keeping
+      EVERY hook above the `!isMounted` return in DesktopCalendar, which is
+      independent of the directive used here. Switching to client:idle or
+      client:only does not address it and reintroduces the bug above.)
+    */}
+    <DesktopCalendar client:load events={events} />
+  </div>
+</dialog>
+
+<style>
+  #spanning-calendar-modal {
+    background: transparent;
+    border: none;
+    margin: auto;
+    padding: 0;
+    max-width: 95vw;
+    width: 800px;
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 0.3s ease, transform 0.3s ease, overlay 0.3s allow-discrete, display 0.3s allow-discrete;
+  }
+
+  #spanning-calendar-modal[open] {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  @starting-style {
+    #spanning-calendar-modal[open] {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+  }
+
+  #spanning-calendar-modal::backdrop {
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(10px);
+    opacity: 0;
+    transition: opacity 0.3s ease, overlay 0.3s allow-discrete, display 0.3s allow-discrete;
+  }
+
+  #spanning-calendar-modal[open]::backdrop {
+    opacity: 1;
+  }
+
+  @starting-style {
+    #spanning-calendar-modal[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  /* It is only focusable so the dialog has somewhere to land (see the note in
+     the markup). It must never look focused — that is the button's job. */
+  .modal-inner:focus,
+  .modal-inner:focus-visible {
+    outline: none;
+  }
+
+  .modal-inner {
+    background: #111;
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 0;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    max-height: 95vh;
+  }
+  .modal-close-bar {
+    display: flex;
+    justify-content: flex-end;
+    padding: 1rem 1rem 0 0;
+  }
+
+  /* Breakpoint Toggle */
+  @media (min-width: 900px) {
+    #spanning-calendar-modal {
+      width: 1200px; /* Wider for desktop */
+      max-width: 95vw;
+    }
+  }
+
+.close-btn {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: white;
+  font-size: 2.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    color 0.2s ease,
+    transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  -webkit-tap-highlight-color: rgba(0,0,0,0);
+  -webkit-user-select: none;
+  user-select: none;
+  outline: none !important;
+}
+
+.close-btn:hover {
+  /* The READABLE red. #cc0000 is 3.21:1 and this is a glyph you look at. */
+  color: var(--color-accent-text, #ef4444);
+  transform: rotate(90deg);
+}
+
+.close-btn:focus,
+.close-btn:active {
+  background: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Keyboard users need to see where focus is. `:focus-visible` only, so a
+   pointer click still shows nothing — same treatment as .modal-close,
+   .qr-modal-close and the overlay close buttons. */
+.close-btn:focus-visible {
+  background: transparent !important;
+  outline: 2px solid var(--color-accent, #cc0000) !important;
+  outline-offset: 2px;
+}
+
+.close-btn::-webkit-focus-inner {
+  border: 0;
+}
+</style>
+
+<script>
+  /*
+    ─── WHY NOTHING HERE WAITS FOR `astro:page-load` ─────────────────────────
+
+    It used to. Every listener below was registered inside an
+    `astro:page-load` callback, and on a cold cache that made "View Full
+    Calendar" a dead button for the entire first pageview: tap it, nothing
+    happens; refresh, and it works. Reported from production on iOS Safari,
+    reproducible on any first (uncached) load.
+
+    The cause is what `astro:page-load` actually is on an INITIAL load. Astro's
+    ClientRouter fires it from `addEventListener('load', onPageLoad)`
+    (astro/dist/transitions/router.js) — the window `load` event, which does
+    not fire until every subresource on the page has finished: the Sanity CDN
+    hero art, the self-hosted font files, the React island's chunks, GTM via
+    Partytown. On a warm cache that is a few hundred milliseconds and the race
+    is invisible. On a cold mobile connection it is many seconds, and the
+    button is inert for all of them — it is painted and tappable long before
+    its handler exists.
+
+    So the wiring is registered EAGERLY, at module-execution time (module
+    scripts run before DOMContentLoaded, let alone `load`), and delegated from
+    `document` rather than bound to individual nodes. Delegation is what makes
+    that possible: the handler does not need `.open-full-calendar-btn` or the
+    <dialog> to exist yet, only to exist by the time someone clicks. It also
+    means this survives ClientRouter navigations for free — `document` is never
+    swapped — which is what the per-page-load re-binding was buying before.
+
+    The window flag guards against a second copy of this script (the bundle is
+    shared by any page that mounts the modal) double-binding the listeners.
+  */
+    import { lockScroll, unlockScroll } from '../lib/scroll-lock';
+
+    const w = window as any;
+    if (!w.spanningCalendarSetup) {
+      w.spanningCalendarSetup = true;
+
+      const getModal = (): HTMLDialogElement | null => {
+        const el = document.getElementById('spanning-calendar-modal');
+        return el instanceof HTMLDialogElement ? el : null;
+      };
+
+      const releaseScrollLock = () => {
+        unlockScroll();
+      };
+
+      document.addEventListener(
+        'close',
+        (event) => {
+          if ((event.target as HTMLElement)?.id === 'spanning-calendar-modal') releaseScrollLock();
+        },
+        true,
+      );
+
+      const closeModal = () => {
+        const modal = getModal();
+        if (modal?.open) modal.close();
+        else releaseScrollLock();
+      };
+
+      const openModal = () => {
+        const modal = getModal();
+        if (!modal || modal.open) return;
+
+        lockScroll();
+        modal.showModal();
+      };
+
+    document.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest) return;
+
+      if (target.closest('.open-full-calendar-btn')) {
+        openModal();
+        return;
+      }
+
+      const modal = getModal();
+      if (!modal || !modal.open) return;
+
+      if (target.closest('#spanning-calendar-modal .close-btn')) {
+        closeModal();
+        return;
+      }
+
+      /*
+        Backdrop dismissal. A click on the ::backdrop is reported with the
+        <dialog> itself as the target, so the hit test is geometric rather than
+        by element. `event.detail === 0` means the "click" came from the
+        keyboard (Enter/Space on a focused control), which has no meaningful
+        coordinates — those arrive as (0, 0) and would read as outside the
+        dialog, closing it out from under someone activating a calendar link.
+      */
+      if (target === modal && event.detail > 0) {
+        const rect = modal.getBoundingClientRect();
+        if (
+          event.clientY < rect.top ||
+          event.clientY > rect.bottom ||
+          event.clientX < rect.left ||
+          event.clientX > rect.right
+        ) {
+          closeModal();
+        }
+      }
+    });
+
+    /* Scroll-lock cleanup when ClientRouter navigates away with the modal
+       still open (e.g. tapping an event inside the calendar). Calls the
+       release directly as well, because a navigation can swap the <dialog>
+       out from under a lock that no `close` event ever fired for. */
+    document.addEventListener('astro:before-preparation', () => {
+      closeModal();
+      releaseScrollLock();
+    });
+
+    /*
+      ARCHITECTURAL NOTE: The auto-close behavior on mobile landscape has been
+      removed. Previously, this script would close the modal on short viewports
+      to prevent a broken, scrolling UI. It has been replaced with a CSS-only
+      solution within DesktopCalendar.astro that responsively scales the
+      calendar down to fit the viewport, providing a much better user experience.
+    */
+
+    // Sync hover across every segment of the same event. Multi-week events
+    // are split into one <a> per row to satisfy the grid, so :hover alone
+    // only lights the piece under the cursor — this bridges them by data id.
+    const setHover = (id: string | null, on: boolean) => {
+      const modal = getModal();
+      if (!id || !modal) return;
+      modal
+        .querySelectorAll(`.dc-highlighter-bar[data-event-id="${CSS.escape(id)}"]`)
+        .forEach((el) => el.classList.toggle('hover-active', on));
+    };
+
+    const hoverSync = (on: boolean) => (event: Event) => {
+      const bar = (event.target as HTMLElement)?.closest?.('.dc-highlighter-bar');
+      if (bar && bar.closest('#spanning-calendar-modal')) {
+        setHover(bar.getAttribute('data-event-id'), on);
+      }
+    };
+
+    document.addEventListener('mouseover', hoverSync(true));
+    document.addEventListener('mouseout', hoverSync(false));
+    document.addEventListener('focusin', hoverSync(true));
+    document.addEventListener('focusout', hoverSync(false));
+  }
+</script>

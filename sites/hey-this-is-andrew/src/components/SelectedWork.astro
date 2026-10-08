@@ -4,7 +4,8 @@
  * expanding in-place to show the full archive from the former /work/ page.
  */
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
-import ExpandSection from '@andrew/ui/ExpandSection.astro';
+import Accordion from '@andrew/ui/Accordion.astro';
+import AccordionRow from '@andrew/ui/AccordionRow.astro';
 import LatestCard from './LatestCard.astro';
 import ProjectCard from './ProjectCard.astro';
 import WorkflowStrip from './WorkflowStrip.astro';
@@ -42,25 +43,31 @@ const restProjects = allProjects.filter(p => !featuredProjects.some(fp => fp.id 
       )}
     </div>
 
-    <ExpandSection id="work-expander" expandLabel={`Show all work (${restVideos.length + restProjects.length})`} collapseLabel="Show less">
-      <div class="sw-expanded">
-        {restVideos.length > 0 && (
-          <div class="sw-videos-extra">
-            {restVideos.map(v => <LatestCard item={v} />)}
+    
+    <div class="sw-accordion-wrapper">
+      <Accordion>
+        <AccordionRow id="work-archive" kicker="Archive" title={`All Work (${restVideos.length + restProjects.length})`}>
+          <div class="sw-expanded">
+            {restVideos.length > 0 && (
+              <div class="sw-videos-extra">
+                {restVideos.map(v => <LatestCard item={v} />)}
+              </div>
+            )}
+            
+            {restProjects.length > 0 && (
+              <div class="sw-projects-extra sw-projects">
+                {restProjects.map(p => <ProjectCard project={p} />)}
+              </div>
+            )}
+            
+            <div id="workflow" class="sw-workflow">
+              <WorkflowStrip />
+            </div>
           </div>
-        )}
-        
-        {restProjects.length > 0 && (
-          <div class="sw-projects-extra sw-projects">
-            {restProjects.map(p => <ProjectCard project={p} />)}
-          </div>
-        )}
-        
-        <div id="workflow" class="sw-workflow">
-          <WorkflowStrip />
-        </div>
-      </div>
-    </ExpandSection>
+        </AccordionRow>
+      </Accordion>
+    </div>
+
 
   </div>
 </section>

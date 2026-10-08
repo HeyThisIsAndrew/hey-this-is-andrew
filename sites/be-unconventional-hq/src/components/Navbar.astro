@@ -1,0 +1,532 @@
+---
+import { site } from '../data/site.js';
+import { Image } from 'astro:assets';
+/* The PRE-CROPPED mark, not logo.webp: that file is a 2000x2000 square whose
+   artwork fills ~42% of it, so at navbar height the wordmark itself rendered
+   about 19px tall and could not be read (reported by Andrew). Same reasoning
+   as ArticleThumb.astro and Layout.astro, which already use this file. */
+import logoImage from '../assets/logo-mark.webp';
+
+const currentPath = Astro.url.pathname;
+/* Navigation comes from site.nav (src/data/site.js) so the navbar and the
+   footer cannot disagree about what sections exist. Add a section there once
+   and it appears in both, plus the mobile menu. */
+const navItems = site.nav;
+
+const base = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL;
+const isActive = (href: string) =>
+  currentPath === `${base}/${href}` || currentPath === `${base}/${href}/` || currentPath.startsWith(`${base}/${href}/`);
+---
+
+<header id="navbar" transition:name="navbar" transition:persist="global-nav" transition:animate="none" style="transition: none;">
+  <style is:global>
+    ::view-transition-group(navbar) {
+      z-index: 9999;
+    }
+  </style>
+  <div class="container nav-inner">
+    <div class="nav-brand-group">
+      <a href="/" class="nav-logo">
+        <Image src={logoImage} alt="BE Unconventional HQ" widths={[110, 150, 220, 300]} sizes="(max-width: 768px) 110px, 150px" loading="eager" />
+      </a>
+      <a
+        href="/"
+        class="nav-identity-wrapper"
+        id="nav-identity"
+        tabindex="-1"
+        style="transform: translateY(-10px) scale(0.95); opacity: 0; pointer-events: none; transition: opacity 0.4s ease, transform 0.4s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-left: 1rem; text-decoration: none; cursor: pointer;"
+      >
+        <div class="nav-identity-stack">
+          <span class="nav-word-be">BE</span>
+          <span class="nav-word-unconventional">UNCONVENTIONAL</span>
+          <span class="nav-word-hq">HQ</span>
+        </div>
+      </a>
+    </div>
+    <div class="mobile-search-wrapper mobile-only" style="display: flex; align-items: center;">
+      {/*
+        Styled by `.nav-search-btn` in navbar.css, not inline. The inline
+        version could not be overridden by any stylesheet rule, which is how
+        the desktop twin below ended up 0x0 with no way to fix it from CSS.
+      */}
+      <button class="nav-search-btn" data-action="open-search" aria-label="Search">
+        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </button>
+      <button class="nav-toggle" aria-label="Toggle Menu" aria-expanded="false">
+        <span class="line line-1"></span><span class="line line-2"></span><span class="line line-3"></span>
+      </button>
+    </div>
+    <nav class="nav-container">
+      <ul class="nav-list">
+        {
+          navItems.map((item) => (
+            <li class="nav-item">
+              {/*
+                `viewport`, overriding the site-wide `tap` default.
+
+                The navbar is on screen from the first paint and never leaves,
+                so these five destinations are warmed immediately and a click
+                on any of them has no document to wait for. The global default
+                stays `tap` deliberately: `viewport` applied to everything
+                would pull every in-view link's document on a feed this long,
+                and those documents are 264-619KB.
+
+                This is also what repairs the desktop regression from moving
+                the default off `hover`: hovering used to give a head start of
+                however long the pointer rested, and `tap` gives only the
+                ~80ms between mousedown and click. Prefetching on sight gives
+                back more than either.
+              */}
+              <a
+                href={`/${item.href}`}
+                data-astro-prefetch="viewport"
+                class:list={[{ active: isActive(item.href) }]}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+        <li class="nav-item desktop-only">
+          {/*
+            This SVG carried no width/height and nothing in CSS sized it, so
+            the button computed 0x0 and could not be clicked at all on desktop.
+            It looked fine in a scripted test because `.click()` works on a
+            zero-size element; a person has nothing to aim at. `.nav-search-btn
+            svg` in navbar.css now sizes both copies from one place.
+          */}
+          <button type="button" class="nav-search-btn desktop-only" data-action="open-search" aria-label="Search Be Unconventional">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </div>
+
+  <script is:inline>
+  (function () {
+    let scrollHandler = null;
+    let observer = null;
+    let currentVisibility = null;
+
+    function initNavObserver() {
+      const identity = document.getElementById('nav-identity');
+      const navbar = document.getElementById('navbar');
+      if (!identity || !navbar) return;
+
+      /*
+        ─── TWO BRAND CONTROLS, TWO DIFFERENT JOBS ───────────────────────────
+
+        The logo and the "BE UNCONVENTIONAL HQ" wordmark sit next to each
+        other and both carry `href="/"`, and this handler used to treat them
+        as the same thing — it bound every `a[href="/"]` and, on the homepage,
+        swallowed the click and jumped to the top. So the logo stopped being a
+        link and became a scroll button. Reported: "the logo is now causing
+        site to scroll to the top when clicked from the home page. It must
+        remain as Logo is immediate home button and be unconventional hq text
+        is the scroll to the top button for the page it is clicked from."
+
+        NOT a regression from the QA branch — main binds the same selector on
+        the same line. What changed is that the jump used to be written with a
+        `scroll-behavior` pin that never took effect (no forced recalc, see
+        src/lib/scroll-to.ts), so it animated instead of jumping and read as
+        ordinary smooth scrolling. Making the jump real made the wrong
+        behaviour obvious.
+
+        So they are separated by role rather than by href:
+
+          .nav-logo    — a home button, ALWAYS. Never intercepted, on any
+                         page. It still runs the housekeeping below so an open
+                         menu closes behind it.
+          #nav-identity — the scroll-to-top control for whatever page it is
+                         on, ALWAYS. It only appears past 100px of scroll,
+                         which is exactly when "back to the top" is the useful
+                         action; sending the reader to the homepage from
+                         halfway down an article never was.
+
+        `href="/"` stays on the wordmark deliberately: without JS it degrades
+        to a home link rather than a dead element, and a modifier-click still
+        opens the homepage in a new tab because those return early above.
+
+        Any OTHER `a[href="/"]` (the footer logo) keeps the original
+        homepage-only jump, which is what avoids the SPA re-render flicker
+        this block was written for.
+      */
+      const homeLinks = document.querySelectorAll('a[href="/"]');
+      homeLinks.forEach(link => {
+        if (!link.dataset.clickBound) {
+          link.addEventListener('click', (e) => {
+            if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+
+            if (navbar.classList.contains('menu-open')) {
+              navbar.classList.remove('menu-open');
+              const toggle = document.querySelector('.nav-toggle');
+              if (toggle) toggle.setAttribute('aria-expanded', 'false');
+              if (window['__hqScrollLock'] && window['__hqScrollLock'].isLocked()) {
+                window['__hqScrollLock'].release();
+              }
+            }
+
+            /* THE LOGO IS A HOME BUTTON, ALWAYS. Everything above this line is
+               housekeeping that should still run — an open menu closes behind
+               it — but the navigation itself is never swallowed. */
+            if (link.classList.contains('nav-logo')) return;
+
+            /* The wordmark is the scroll-to-top control for the page it is on,
+               on EVERY page, not just the homepage. */
+            const isIdentity = link.id === 'nav-identity';
+
+            // The base path is determined dynamically or falls back to '/'
+            const basePath = navbar.dataset.basePath || '/';
+            const onHomepage =
+              window.location.pathname === basePath || window.location.pathname === '/';
+
+            if (isIdentity || onHomepage) {
+              e.preventDefault();
+              
+              /* Jump, don't animate — via the scroll-lock bridge, because an
+                 is:inline script cannot import. The forced style recalc inside
+                 jumpTo() is what makes the `auto` override actually apply; see
+                 src/lib/scroll-to.ts. It restores the global smooth scroll
+                 synchronously, so iPad scroll inertia is untouched. */
+              window['__hqScrollLock'].jumpTo(0);
+            }
+          });
+          link.dataset.clickBound = 'true';
+        }
+      });
+
+      // Cleanup old observer and scroll handler to prevent memory leaks
+      if (observer) {
+        observer.disconnect();
+        observer = null;
+      }
+      if (scrollHandler) {
+        window.removeEventListener('scroll', scrollHandler);
+        scrollHandler = null;
+      }
+
+      // 3. Visibility Logic
+      // We use a basic scroll threshold so the navbar remains solid until the utmost part of the screen.
+      function updateVisibility(isVisible) {
+        if (isVisible === currentVisibility) return;
+        currentVisibility = isVisible;
+
+        if (isVisible) {
+          identity.style.opacity = '1';
+          identity.style.transform = 'translateY(0) scale(1)';
+          identity.style.pointerEvents = 'auto';
+          identity.removeAttribute('tabindex');
+          navbar.classList.add('scrolled');
+        } else {
+          identity.style.opacity = '0';
+          identity.style.transform = 'translateY(-10px) scale(0.95)';
+          identity.style.pointerEvents = 'none';
+          identity.setAttribute('tabindex', '-1');
+          navbar.classList.remove('scrolled');
+        }
+
+        // Restore transitions after state is instantly applied
+        if (window['__hqNavFrame1']) cancelAnimationFrame(window['__hqNavFrame1']);
+        if (window['__hqNavFrame2']) cancelAnimationFrame(window['__hqNavFrame2']);
+
+        window['__hqNavFrame1'] = requestAnimationFrame(() => {
+          window['__hqNavFrame2'] = requestAnimationFrame(() => {
+            navbar.style.transition = '';
+            identity.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+          });
+        });
+      }
+
+      scrollHandler = () => {
+        if (window['__hqScrollLock'] && window['__hqScrollLock'].isLocked()) return;
+        const scroll = window.scrollY || document.documentElement.scrollTop;
+        /* The wordmark slides in past 100px on EVERY page. (The layered bar
+           itself no longer depends on this: see #navbar in navbar.css.) */
+        updateVisibility(scroll > 100);
+      };
+      
+      window.addEventListener('scroll', scrollHandler, { passive: true });
+      // INSTANTLY check state on load so it doesn't get stuck visible!
+      scrollHandler();
+
+      // Clear the initial transition block after the first frame so CSS transitions take over
+      if (window['__hqNavFrame1']) cancelAnimationFrame(window['__hqNavFrame1']);
+      if (window['__hqNavFrame2']) cancelAnimationFrame(window['__hqNavFrame2']);
+      
+      window['__hqNavFrame1'] = requestAnimationFrame(() => {
+        window['__hqNavFrame2'] = requestAnimationFrame(() => {
+          if (navbar.style.transition === 'none' || navbar.style.transition === 'none 0s ease 0s') {
+            navbar.style.transition = '';
+          }
+        });
+      });
+    }
+
+    function updateActiveNavLinks() {
+      const currentPath = window.location.pathname.replace(/\/$/, '');
+      const navLinks = document.querySelectorAll('.nav-list .nav-item a');
+
+      navLinks.forEach((link) => {
+        const rawHref = link.getAttribute('href');
+        if (rawHref && rawHref.startsWith('#')) {
+          link.classList.remove('active');
+          return;
+        }
+
+        const linkPath = new URL(link.href).pathname.replace(/\/$/, '');
+        if (currentPath === linkPath || currentPath.startsWith(linkPath + '/')) {
+          link.classList.add('active');
+        } else {
+          link.classList.remove('active');
+        }
+      });
+    }
+
+
+    if (!window['navbarObserverSetup']) {
+      /*
+        ─── CALL, THEN LISTEN — NOT LISTEN ALONE ─────────────────────────────
+
+        These used to be registered on `astro:page-load` only, with no direct
+        call, which is a race against the module's own load. `astro:page-load`
+        does fire on the initial load, but if this deferred script executes
+        AFTER it has already fired, the listener is registered too late and
+        initNavObserver never runs for that page.
+
+        It is page-weight dependent, so it looked fine in casual testing and
+        was measured failing on exactly one route: on /feed the wordmark came
+        up with `clickBound="true"`, on the heavier /intel it was unbound and
+        stuck at `pointer-events: none` — i.e. the "BE UNCONVENTIONAL HQ"
+        control was dead on that page, and the nav links never got their
+        active state either.
+
+        Calling directly first fixes the race, and the listener still covers
+        every client-side navigation after it. initNavObserver tears down its
+        previous observer and scroll handler on each run and guards its click
+        bindings with `dataset.clickBound`, so running it one extra time is
+        free — which is the same call-then-listen shape Layout.astro already
+        uses for its own initialisers.
+      */
+      initNavObserver();
+      updateActiveNavLinks();
+      document.addEventListener('astro:page-load', initNavObserver);
+      document.addEventListener('astro:page-load', updateActiveNavLinks);
+
+      /*
+        ─── THE UNDERLINE MOVES ON PRESS, NOT WHEN THE PAGE ARRIVES ──────────
+
+        `updateActiveNavLinks` above runs on `astro:page-load`, the END of a
+        navigation. Measured warm and local, that was 114ms after the click,
+        and on a cold connection it is however long the document takes — the
+        reader presses a nav item and the navbar says nothing until the new
+        page is already there.
+
+        So the class moves immediately and the page catches up. It is a claim
+        about intent, not about state, and it is safe to be wrong: every
+        navigation ends in `updateActiveNavLinks()`, which recomputes from
+        `location.pathname` and corrects this if the navigation went somewhere
+        else or never happened at all.
+
+        `pointerdown`, not `click`: it fires before the browser has decided
+        whether this is a tap, a drag or a long-press, which is the earliest
+        moment a human can be told "yes, that one". Left button only, and
+        modifier-clicks are ignored because those open a new tab and this tab's
+        navbar should not move.
+
+        Delegated on the list rather than bound per link: ClientRouter swaps
+        the document, and the navbar is `transition:persist`, so per-link
+        binding would need re-binding rules this does not.
+      */
+      const navList = document.querySelector('.nav-list');
+      if (navList && !navList.dataset.pressBound) {
+        navList.dataset.pressBound = 'true';
+        /* Plain JS, no type casts: this block is an INLINE script, so nothing
+           strips TypeScript from it and an `as` cast reaches the browser as a
+           syntax error — which takes the whole navbar initialiser down with
+           it, active state and all. Found exactly that way. */
+        navList.addEventListener('pointerdown', (pe) => {
+          if (pe.button !== 0 || pe.ctrlKey || pe.metaKey || pe.shiftKey || pe.altKey) return;
+          const link = pe.target && pe.target.closest && pe.target.closest('.nav-item a');
+          if (!link) return;
+          const href = link.getAttribute('href');
+          if (!href || href.startsWith('#')) return;
+          if (new URL(link.href).pathname.replace(/\/$/, '') ===
+              window.location.pathname.replace(/\/$/, '')) return;
+          navList.querySelectorAll('.nav-item a.active').forEach((a) => a.classList.remove('active'));
+          link.classList.add('active');
+        });
+      }
+
+      window['navbarObserverSetup'] = true;
+    }
+
+    // The navbar uses transition:persist, so Astro preserves it (and any
+    // .menu-open class) across client-side navigations.
+    function resetMenuState() {
+      const navbar = document.getElementById('navbar');
+      if (navbar && navbar.classList.contains('menu-open')) {
+        navbar.classList.remove('menu-open');
+        navbar
+          .querySelector('.nav-toggle')
+          ?.setAttribute('aria-expanded', 'false');
+          
+        if (window['__hqScrollLock'] && window['__hqScrollLock'].isLocked()) {
+          window['__hqScrollLock'].release();
+        }
+      }
+    }
+
+    function purgeNavbarState() {
+      const navbar = document.getElementById('navbar');
+      const identity = document.getElementById('nav-identity');
+      
+      if (window['__hqNavFrame1']) cancelAnimationFrame(window['__hqNavFrame1']);
+      if (window['__hqNavFrame2']) cancelAnimationFrame(window['__hqNavFrame2']);
+
+      if (navbar) {
+        navbar.style.transition = 'none';
+        
+        if (navbar.classList.contains('menu-open') && window['__hqScrollLock'] && window['__hqScrollLock'].isLocked()) {
+          window['__hqScrollLock'].release();
+        }
+        
+        navbar.classList.remove('scrolled', 'menu-open');
+        
+        const toggle = document.querySelector('.nav-toggle');
+        if (toggle) toggle.setAttribute('aria-expanded', 'false');
+      }
+
+      if (identity) {
+        identity.style.transition = 'none';
+        identity.style.opacity = '0';
+        identity.style.transform = 'translateY(-10px) scale(0.95)';
+        identity.style.pointerEvents = 'none';
+        identity.setAttribute('tabindex', '-1');
+      }
+      
+      currentVisibility = null;
+    }
+
+    if (!window['navbarMobileMenuSetup']) {
+      document.addEventListener('astro:page-load', resetMenuState);
+      document.addEventListener('astro:before-swap', purgeNavbarState);
+
+      document.addEventListener('click', (e) => {
+        const target = e.target;
+        if (!target) return;
+        /*
+          SCOPED TO `#navbar`, DELIBERATELY.
+
+          `.nav-toggle` is not unique to the navbar: CategoryOverlay's close
+          button reuses the class to inherit the hamburger-to-X styling
+          (`class="close-fullscreen-btn nav-toggle menu-open"`). The
+          element-bound handler this replaced read
+          `document.querySelector('.nav-toggle')`, which only ever matched the
+          navbar's own button, so the overlay's close button was never a
+          toggle. A bare `closest('.nav-toggle')` matches BOTH, and closing the
+          category overlay then also opened the mobile menu behind it and left
+          `__hqScrollLock` held — a phantom menu plus a pinned page, which made
+          the next tap on the real hamburger look dead because it merely closed
+          the menu nobody asked for.
+        */
+        const toggle = target.closest('#navbar .nav-toggle');
+        const navLink = target.closest('#navbar .nav-list a');
+        const navbar = document.getElementById('navbar');
+        
+        if (toggle && navbar) {
+          const isOpened = navbar.classList.contains('menu-open');
+          if (isOpened) {
+            /* Guarded like every other `__hqScrollLock` read in this file.
+               Navbar never imports src/lib/scroll-lock, it only reads the
+               global another component's import defines, so on a page without
+               one of those components this is undefined. */
+            if (!window['__hqScrollLock'] || !window['__hqScrollLock'].isLocked()) {
+              navbar.classList.remove('menu-open');
+              toggle.setAttribute('aria-expanded', 'false');
+              return;
+            }
+            navbar.classList.remove('menu-open');
+            toggle.setAttribute('aria-expanded', 'false');
+            window['__hqScrollLock'].unlock();
+          } else {
+            if (window['__hqScrollLock']) window['__hqScrollLock'].lock();
+            navbar.classList.add('menu-open');
+            toggle.setAttribute('aria-expanded', 'true');
+          }
+        } else if (navLink && navbar && navbar.classList.contains('menu-open')) {
+          navbar.classList.remove('menu-open');
+          /* `#navbar`-scoped for the same reason as the selectors above:
+             a bare `.nav-toggle` can resolve to CategoryOverlay's close
+             button, which would leave the real hamburger still reading
+             aria-expanded="true" after the menu had closed. */
+          const toggleEl = document.querySelector('#navbar .nav-toggle');
+          if (toggleEl) toggleEl.setAttribute('aria-expanded', 'false');
+          
+          if (window['__hqScrollLock'] && window['__hqScrollLock'].isLocked()) {
+            if (navLink.getAttribute('href') === '/') {
+              window['__hqScrollLock'].release();
+            } else {
+              window['__hqScrollLock'].unlock();
+            }
+          }
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const navbar = document.getElementById('navbar');
+        if (!navbar || !navbar.classList.contains('menu-open')) return;
+        navbar.classList.remove('menu-open');
+        const toggle = document.querySelector('.nav-toggle');
+        if (toggle) {
+          toggle.setAttribute('aria-expanded', 'false');
+          toggle.focus();
+        }
+        if (window['__hqScrollLock'] && window['__hqScrollLock'].isLocked()) {
+          window['__hqScrollLock'].unlock();
+        }
+      });
+
+      window['navbarMobileMenuSetup'] = true;
+    }
+  })();
+  </script>
+</header>
+
+{/*
+  THE NAVBAR PUBLISHES ITS OWN HEIGHT as `--nav-h` on <html>, for anything that
+  must sit flush under it (the homepage hero's `--home-top`, home.css).
+
+  Its height is its content's: the logo's clamp, rem padding scaled by the
+  site's root size and a 1px border, so it is 66.55px on a 14" MacBook Pro,
+  74.75px at 1920 and 83px at 2560. The homepage cleared it with a fixed
+  104px and left a 37px dead band under it (issue #262). No single CSS value
+  matches every width, so it is measured.
+
+  Inline and directly after the header, so it runs before the hero is parsed
+  and the hero lays out at its final position (no shift). ResizeObserver
+  follows font swaps and resizes. The header is `transition:persist`, but a
+  ClientRouter swap rewrites <html>'s attributes and drops the property, so
+  it is re-applied on `astro:after-swap`.
+*/}
+<script is:inline>
+  (function () {
+    var nav = document.getElementById('navbar');
+    if (!nav) return;
+    var set = function () {
+      document.documentElement.style.setProperty('--nav-h', nav.getBoundingClientRect().height + 'px');
+    };
+    set();
+    if (window.__navHeightObserved) return;
+    window.__navHeightObserved = true;
+    if ('ResizeObserver' in window) new ResizeObserver(set).observe(nav);
+    document.addEventListener('astro:after-swap', set);
+  })();
+</script>

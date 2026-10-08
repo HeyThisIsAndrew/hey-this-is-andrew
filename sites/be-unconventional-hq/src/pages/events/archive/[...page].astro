@@ -1,0 +1,132 @@
+---
+/**
+ * /events/archive — the full past-events feed (and /events/archive/2, /3 …).
+ *
+ * ─── WHY THIS ROUTE EXISTS ────────────────────────────────────────────────
+ * /events shows the six most recent finished events under the "Past Event
+ * Archive" heading, and that cap is a display decision, not a retention one:
+ * nothing is ever deleted from src/data/videos.json. Before this route the
+ * seventh-oldest event was reachable only by typing its slug, which is the
+ * same problem the paginated /intel archive solves for articles.
+ *
+ * ─── ROUTE PRECEDENCE ─────────────────────────────────────────────────────
+ * `/events/[...page]` would also match "/events/archive". Astro resolves the
+ * more specific route first, and a directory segment beats a rest parameter,
+ * so this file owns /events/archive and its numbered pages while
+ * `/events/[slug]` keeps every event page. Do not add an `archive` slug to an
+ * event document — it would build to a URL this route already owns.
+ */
+import { SECTIONS, pageTitle } from '../../../data/content.js';
+import Layout from '../../../layouts/Layout.astro';
+import PageTitle from '../../../components/PageTitle.astro';
+import EventCard from '../../../components/EventCard.astro';
+import EmptyState from '../../../components/EmptyState.astro';
+import Pagination from '../../../components/Pagination.astro';
+import SubscribeCTA from '../../../components/SubscribeCTA.astro';
+import SpanningCalendarModal from '../../../components/SpanningCalendarModal.astro';
+import { getEventsLocal } from '../../../lib/local-content';
+import { toYMD } from '../../../lib/events';
+
+export async function getStaticPaths({ paginate }: any) {
+  const allEvents = getEventsLocal();
+  const today = toYMD();
+
+  /*
+    "Past" is decided by the LAST day of the event, not the first — a
+    three-day convention is not archive material on its opening morning.
+    Compared as same-precision "YYYY-MM-DD" strings (hard rule 1); the
+    `.slice(0, 10)` tolerates a document whose date was saved with a time.
+  */
+  const pastEvents = allEvents
+    .filter((e: any) => {
+      if (!e.startDate) return false;
+      const end = (e.endDate || e.startDate).slice(0, 10);
+      return end < today;
+    })
+    .sort((a: any, b: any) => b.startDate.localeCompare(a.startDate));
+
+  /* 12 matches the Feed and /intel, so paging feels the same site-wide. */
+  return paginate(pastEvents, { pageSize: 12, props: { allEvents } });
+}
+
+import type { Page } from 'astro';
+
+export interface Props {
+  page: Page<any>;
+  allEvents: any[];
+}
+
+const { page, allEvents } = Astro.props as Props;
+
+const title = pageTitle('Past Event Archive', page.currentPage);
+/*
+  WRITTEN OUT, NOT INTERPOLATED. This was
+  `Every event ${META.events.title.toLowerCase()} coverage has followed` and
+  META.events.title is the word "Events", so the shipped description read
+  "Every event events coverage has followed, newest first." A template that
+  reads correctly in source and nonsense once resolved is the worst kind,
+  because nothing in the file looks wrong. Length is aimed at the same
+  120-160 window event pages are held to in lib/event-seo.ts.
+*/
+const description =
+  'Every event BE Unconventional HQ has covered, newest first: conventions, premieres, ' +
+  'awards nights and showcases, with the coverage published for each.';
+---
+
+<Layout title={title} description={description} preconnect={["https://cdn.sanity.io"]}>
+  <main class="events-page flex-1 flex flex-col w-full">
+    <div class="container-page">
+      <header class="section-header animate-on-scroll" data-nav-anchor style="text-align: center; margin-bottom: 2.5rem;">
+        <PageTitle as="h1" {...SECTIONS.eventArchive} />
+      </header>
+
+      {/*
+        `data-rows-target` below MOVED HERE from /events when that page stopped
+        paginating. It is read by the `page-rows` transition, which fires when
+        two paths differ only by a trailing number, and the events index was the
+        only element in the project ever marked — so without this the in-place
+        fade in global-base.css, and the scroll restore in Layout.astro that
+        goes with it, would have had nothing to act on anywhere on the site.
+        This archive is the same list, still paged.
+
+        (Outside the ternary: a comment plus an element inside a branch is two
+        nodes, and the file stops parsing.)
+      */}
+      {page.data.length > 0 ? (
+        <section class="archive-section animate-on-scroll" data-rows-target aria-labelledby="past-archive-heading">
+          {/*
+            The grid sits under the page's own <h1>, so it needs a structural
+            <h2> naming it for the outline. sr-only because the display title
+            above already says it out loud — the site convention for card
+            grids under an h1.
+          */}
+          <h2 id="past-archive-heading" class="sr-only">Past events, newest first</h2>
+          <div class="event-grid">
+            {page.data.map((event: any, index: number) => (
+              <EventCard event={event} index={index} />
+            ))}
+          </div>
+        </section>
+      ) : (
+        <EmptyState message="No past events in the archive yet." actionLabel="Back to Events" actionHref="/events" />
+      )}
+
+      <Pagination page={page} />
+    </div>
+  </main>
+
+  <SubscribeCTA />
+  <SpanningCalendarModal events={allEvents} />
+</Layout>
+
+<style>
+  .archive-section {
+    margin-bottom: var(--space-section);
+  }
+  /* The grid carries a 2rem top margin of its own for the /events page, where
+     a ruled heading sits directly above it. Here the display title already
+     provides that clearance. */
+  .archive-section .event-grid {
+    margin-top: 0;
+  }
+</style>

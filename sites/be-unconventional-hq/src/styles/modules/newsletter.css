@@ -1,0 +1,231 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   NEWSLETTER FORM
+
+   Native email capture in the subscribe band. Styled to match the Media Kit
+   and Press Kit: dark surface, hairline border, accent focus ring.
+
+   The form's visual state is driven entirely by a class on the <form>
+   (.is-submitting / .is-success / .is-error) set by its script, so no markup
+   is created or destroyed as the state changes.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.newsletter-form {
+  width: 100%;
+  /* Wide enough to feel like the band's main event. The input is now the only
+     action here (the platform buttons were removed), so it should occupy the
+     row rather than sitting as a small box in the middle of it. */
+  max-width: 720px;
+  margin: 2rem auto 0;
+}
+
+.newsletter-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/*
+   Turnstile widget mount point.
+
+   Sits between the input row and the status message. It is EMPTY in the HTML
+   — the script renders the widget into it — so it must not reserve height
+   when Turnstile is unconfigured or still loading, or the band would carry a
+   permanent gap. No fixed height here: the iframe Turnstile injects brings
+   its own, and the margin only applies once there is something inside.
+*/
+.newsletter-turnstile:not(:empty) {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+/* Turnstile renders into a shadow root or iframe; `flexible` sizing makes it
+   fill the container, which must not exceed the form width on a narrow phone. */
+.newsletter-turnstile > div,
+.newsletter-turnstile iframe {
+  max-width: 100%;
+}
+
+/* Side by side once there is room; stacked on phones so the input stays
+   comfortably tappable. */
+@media (min-width: 560px) {
+  .newsletter-row {
+    flex-direction: row;
+  }
+}
+
+.newsletter-input {
+  /* flex: 1 lets the field absorb all leftover width; the button keeps only
+     what its label needs. */
+  flex: 1 1 auto;
+  min-width: 0;
+  background: rgba(10, 10, 10, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--color-white);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  padding: 1rem 1.25rem;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.newsletter-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.newsletter-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 20px rgba(204, 0, 0, 0.25);
+}
+
+/* A failed submit tints the field so the error is visible without relying on
+   the message text alone (colour is a secondary cue, not the only one — the
+   status message carries the meaning). */
+.newsletter-form.is-error .newsletter-input {
+  border-color: var(--color-accent);
+}
+
+.newsletter-submit {
+  position: relative;
+  white-space: nowrap;
+  padding-inline: 2.5rem;
+  /* Never grow — every extra pixel of row width belongs to the input. */
+  flex: 0 0 auto;
+}
+
+/* While submitting: label hidden, spinner shown, button not clickable. */
+.newsletter-spinner {
+  display: none;
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: var(--color-white);
+  border-radius: 50%;
+  animation: newsletter-spin 0.7s linear infinite;
+}
+
+@keyframes newsletter-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.newsletter-form.is-submitting .newsletter-submit-label {
+  visibility: hidden;
+}
+
+.newsletter-form.is-submitting .newsletter-spinner {
+  display: block;
+}
+
+.newsletter-form.is-submitting .newsletter-submit {
+  pointer-events: none;
+}
+
+/* Once subscribed there is nothing left to do, so the whole row goes away and
+   the success message stands on its own. */
+.newsletter-form.is-success .newsletter-row {
+  display: none;
+}
+
+.newsletter-status {
+  margin-top: 0.85rem;
+  font-size: 0.85rem;
+  min-height: 1.2em; /* Reserve the line so the layout doesn't jump. */
+  color: var(--color-white-muted);
+}
+
+.newsletter-form.is-error .newsletter-status {
+  color: var(--color-accent-text);
+}
+
+.newsletter-form.is-success .newsletter-status {
+  color: var(--color-white);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/*
+  0.5 alpha, not 0.3 — WCAG AA.
+
+  At 0.3 this composited to #545454 on the #0a0a0a subscribe band: a contrast
+  ratio of 2.61:1 against the 4.5:1 that 11.2px normal-weight text requires.
+  axe failed it on /featured (accessibility 96). It passed on / only because
+  the band there sits on a lighter gradient, so the same declaration was
+  compliant on one page and not another.
+
+  0.5 composites to ~#848484 on that background, ~5.3:1 — clears AA with a
+  margin, and only goes up on the lighter surfaces this text also appears on.
+  Raising the alpha rather than the font size keeps this reading as fineprint;
+  the large-text 3:1 threshold would need 18.66px bold, which it is not.
+*/
+.newsletter-fineprint {
+  margin-top: 0.5rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.newsletter-form.is-success .newsletter-fineprint {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .newsletter-spinner {
+    animation-duration: 2s;
+  }
+}
+
+/* ── Brand lockup ───────────────────────────────────────────────────────────
+
+   "BE Unconventional HQ" is three words, so ordinary wrapping was free to
+   break it — on a phone the subscribe subtitle split it across lines as
+   "…straight from Be / Unconventional HQ." A brand name reading as two
+   unrelated fragments is a branding problem, not a typographic one.
+
+   Applied by <BrandText />, which wraps only the name so the rest of the
+   sentence still wraps normally. Global rather than scoped so the same
+   protection is available anywhere the name appears in running text.
+*/
+.brand-lockup {
+  white-space: nowrap;
+}
+
+/* ── Success state ──────────────────────────────────────────────────────────
+
+   Once subscribed there is nothing left to verify, so the bot-check widget
+   goes with the input row. Leaving it behind was what opened the large empty
+   gap between the subtitle and the confirmation.
+*/
+.newsletter-form.is-success .newsletter-turnstile {
+  display: none;
+}
+
+/*
+   The confirmation is CENTRED in the space the form occupied, not left
+   sitting at the bottom of it.
+
+   The script records the form's height before switching state and writes it
+   to `--newsletter-locked-height`, so the band keeps exactly the size it had
+   — no collapse, no jump — and the message sits in the middle of that space
+   rather than hugging its lower edge.
+*/
+.newsletter-form.is-success {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--newsletter-locked-height, 0);
+  /* Folded into the locked height above so the message centres against the
+     band's real bounds, not the form's box inside its own margin. */
+  margin-top: 0;
+}
+
+.newsletter-form.is-success .newsletter-status {
+  margin-top: 0;
+}

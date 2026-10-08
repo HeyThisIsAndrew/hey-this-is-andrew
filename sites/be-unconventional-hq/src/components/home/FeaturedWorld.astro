@@ -1,0 +1,86 @@
+---
+/**
+ * Featured: whatever /feed features, in the production featured box.
+ *
+ * WHAT is decided by src/data/homepage-featured.ts: the feed's flagged
+ * collection (its first prestige shelf) or, with none, the site's featured
+ * content. The section links to that shelf on /feed ("Explore on the feed").
+ *
+ * HOW it looks is FeaturedHighlights, production's featured box: a contained
+ * card on the left plays the selected video; picking a row on the right
+ * replaces it. Reusing it keeps the one player implementation and its
+ * hard-rule-11/12 safeguards (escape link, embed-pause) instead of a copy.
+ *
+ * THEME (Andrew): the site's type colours for the text, and a touch of the
+ * brand or IP's own colour where the collection has one: the eyebrow, the
+ * rule under it, and the selected row. `--fw-accent` / `--fw-accent-rgb`
+ * carry it; with no accent the section keeps the site's red.
+ */
+import { Image } from 'astro:assets';
+import HomeSectionHeader from './HomeSectionHeader.astro';
+import FeaturedHighlights from '../FeaturedHighlights.astro';
+import type { HomeFeatured } from '../../data/homepage-featured';
+
+interface Props {
+  featured: HomeFeatured | null;
+}
+
+const { featured } = Astro.props;
+/* Longest word, in letters: the title's size is derived from it (home.css). */
+const fwLen = featured?.title ? Math.max(4, ...featured.title.split(/\s+/).map((w) => w.length)) : 8;
+const accentStyle = featured?.accentHex
+  ? `--fw-accent: ${featured.accentHex}; --fw-accent-rgb: ${featured.accentRgb}; --color-accent: ${featured.accentHex};`
+  : undefined;
+---
+
+{featured && featured.items.length > 0 && (
+  <section
+    class:list={['home-section', 'featured-world', { 'featured-world--branded': !!featured.accentHex }]}
+    aria-labelledby="home-featured-title"
+    style={accentStyle}
+  >
+    <div class="home-container">
+      <HomeSectionHeader
+        icon="featured"
+        id="home-featured-title"
+        title="Featured"
+        descriptor="Inside the stories we're following closely"
+        href={featured.href}
+        linkLabel="Explore on the feed"
+      />
+
+      <div class="fw-lockup">
+        {/* The show's own logo where it has one (the same file the /feed
+            shelf uses); the typeset name only when it does not. The logo
+            carries the name as its alt, the typeset title is decorative. */}
+        {/* The logo is the show's name, so it goes where the section does
+            (the header's "Explore on the feed"): readers tapped it and
+            nothing happened. A real link, named by the logo's alt. */}
+        {featured.logo ? (
+          <a href={featured.href} class="fw-logo-link">
+            <Image
+              src={featured.logo}
+              alt={featured.title ?? ''}
+              class="fw-logo"
+              widths={[400, 680]}
+              sizes="(max-width: 767px) 200px, 340px"
+              loading="lazy"
+              decoding="async"
+            />
+          </a>
+        ) : featured.title && (
+          <p class="fw-title" aria-hidden="true" style={`--fw-len: ${fwLen}`}>{featured.title}</p>
+        )}
+        <span class="fw-rule" aria-hidden="true"></span>
+      </div>
+
+      {/* Measured on this page: the lead card is 788px at 1440, 1073 at 1920,
+          1303 at 2560 and 1513 at 3840, wider than the box on production. */}
+      <FeaturedHighlights
+        items={featured.items}
+        heroImageSizes="(max-width: 767px) 92vw, (min-width: 2560px) 1520px, 58vw"
+        leadIsLcp={false}
+      />
+    </div>
+  </section>
+)}

@@ -1,8 +1,12 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import GoalsChecklist from '../components/GoalsChecklist.astro';
+import SectionHeader from '@andrew/ui/SectionHeader.astro';
+import Accordion from '@andrew/ui/Accordion.astro';
+import AccordionRow from '@andrew/ui/AccordionRow.astro';
 import { getCollection } from 'astro:content';
-import { BUILD_SECTIONS } from '../data/sections';
+
+const goalsCollection = await getCollection('goals');
+goalsCollection.sort((a, b) => a.data.order - b.data.order);
 
 // The Core Engine milestones and Andrew's ACTUAL status for each. This is
 // the only source of the tracker: the boxes are display-only (they were
@@ -18,241 +22,202 @@ const MILESTONES: { id: string; title: string; desc: string; status: MilestoneSt
 const STATUS_LABEL: Record<MilestoneStatus, string> = { done: 'Done', 'in-progress': 'In Progress', queued: 'Queued' };
 const doneCount = MILESTONES.filter((m) => m.status === 'done').length;
 const donePercent = Math.round((doneCount / MILESTONES.length) * 100);
-
-// The sub-brand roadmaps: four stages each, Andrew's actual position.
-type StageState = 'achieved' | 'active' | 'upcoming' | 'target';
-const STAGE_LABEL: Record<StageState, string> = { achieved: 'Achieved', active: 'Active Target', upcoming: 'Upcoming', target: 'Target' };
-const ROADMAPS: Record<'be' | 'ccc', { name: string; objective: string; stages: { name: string; detail: string; state: StageState }[] }> = {
-  be: {
-    name: 'BE Unconventional HQ',
-    objective: 'Scale into a credentialed entertainment outlet covering film, TV, gaming, and pop culture.',
-    stages: [
-      { name: 'Foundation', detail: 'Independent editorial calendar and breaking coverage system.', state: 'achieved' },
-      { name: 'On-Site Access', detail: 'Major event press credentials and live floor coverage.', state: 'active' },
-      { name: 'Commercial Integration', detail: 'Paid event photography and marketing partnerships.', state: 'upcoming' },
-      { name: 'Industry Milestone', detail: 'Critics Choice Association (CCA) accreditation.', state: 'target' },
-    ],
-  },
-  ccc: {
-    name: 'Capture Create Caffeinate',
-    objective: 'Commercial beverage, coffee, and cocktail photography and 9:16 video production.',
-    stages: [
-      { name: 'System Setup', detail: 'Native 9:16 capture pipeline and portfolio build.', state: 'achieved' },
-      { name: 'Local Penetration', detail: 'San Diego roasters and cocktail lounge retainers.', state: 'active' },
-      { name: 'Digital Products', detail: 'Lightroom drink presets and lighting recipe guides.', state: 'upcoming' },
-      { name: 'National Campaigns', detail: 'Commercial beverage brand contracts and licensing.', state: 'target' },
-    ],
-  },
-};
-
-const goals = (await getCollection('goals')).sort((a, b) => a.data.order - b.data.order);
-
-// The page IS the accordion (HQ's /featured): one row per goal group, then
-// the Core Engine and the two sub-brand roadmaps. Row ids and labels come
-// from BUILD_SECTIONS, the same list the nav dropdown reads, so the two
-// cannot disagree about what is on this page.
-type Row =
-  | { kind: 'goals'; group: (typeof goals)[number] }
-  | { kind: 'core' }
-  | { kind: 'roadmap'; key: 'be' | 'ccc' };
-const content = (id: string): Row | null => {
-  const group = goals.find((g) => g.id === id);
-  if (group) return { kind: 'goals', group };
-  if (id === 'core-engine') return { kind: 'core' };
-  if (id === 'be' || id === 'ccc') return { kind: 'roadmap', key: id };
-  return null;
-};
-const progressOf = (row: Row) => {
-  if (row.kind === 'goals') {
-    const items = row.group.data.items;
-    return { done: items.filter((i) => i.status === 'done').length, total: items.length };
-  }
-  if (row.kind === 'core') return { done: doneCount, total: MILESTONES.length };
-  const stages = ROADMAPS[row.key].stages;
-  return { done: stages.filter((st) => st.state === 'achieved').length, total: stages.length };
-};
-const rows = BUILD_SECTIONS.flatMap((sec) => {
-  const row = content(sec.id);
-  return row ? [{ ...sec, row, progress: progressOf(row) }] : [];
-});
 ---
 
 <BaseLayout
   title="Build in Public & Goals · HEY_THISISANDREW"
-  description="Brand roadmap, milestone checklists, and multi-stage sub-brand progression meters for Hey This Is Andrew, BE Unconventional HQ, and Capture Create Caffeinate."
+  description="Brand roadmap, interactive milestone checklists, and multi-stage sub-brand progression meters for Hey This Is Andrew, BE Unconventional HQ, and Capture Create Caffeinate."
 >
   <div class="container build-page">
-    {/* One unit: tag, title, lede. Section anchors live on the accordion
-        rows below, never as empty <section>s here (every <section> takes
-        the site's section padding, which stacked ~1150px of blank space
-        between the tag and the title on a 4K screen). */}
-    <header class="build-header">
+    <div class="build-header">
       <span class="mono-tag">Verified Milestones</span>
-      <h1 class="build-title">Build in Public &amp; Goals</h1>
+      <section id="now" aria-hidden="true"></section>
+<section id="roadmap" aria-hidden="true"></section>
+<section id="core-engine" aria-hidden="true"></section>
+<section id="be" aria-hidden="true"></section>
+<section id="ccc" aria-hidden="true"></section>
+<section id="goals" aria-hidden="true"></section>
+<h1 class="build-title">Build in Public &amp; Goals</h1>
       <p class="build-lede">
-        Brand roadmap, milestone checklists, and multi-stage sub-brand progression meters for Hey This Is Andrew, BE Unconventional HQ, and Capture Create Caffeinate.
+        Brand roadmap, interactive milestone checklists, and multi-stage sub-brand progression meters for Hey This Is Andrew, BE Unconventional HQ, and Capture Create Caffeinate.
       </p>
-    </header>
-  </div>
+    </div>
 
-  <div class="build-acc" id="goals" data-build-acc>
-    {rows.map(({ id, label, kicker, row, progress }, index) => {
-      const open = index === 0;
-      const pct = Math.round((progress.done / Math.max(1, progress.total)) * 100);
-      return (
-        <div class:list={['build-acc-row', open ? 'expanded' : 'collapsed']} data-row={id}>
-          {/* HQ's accordion pattern: a heading wrapping a button. The heading
-              carries the anchor, so a link to #<id> lands on its row. */}
-          <h2 class="build-acc-heading" id={id} data-pn-label={label}>
-            <button type="button" class="build-acc-header" aria-expanded={open ? 'true' : 'false'} aria-controls={`${id}-panel`}>
-              <span class="build-acc-header-bg" aria-hidden="true"></span>
-              <span class="container build-acc-header-inner">
-                <span class="build-acc-kicker" aria-hidden="true">{kicker}</span>
-                <span class="build-acc-title">{label}</span>
-                <span class="build-acc-meta">
-                  <span class="build-acc-bar" aria-hidden="true"><span style={`width: ${pct}%`}></span></span>
-                  <span class="build-acc-count">{progress.done}/{progress.total}<span class="vh"> done</span></span>
-                  <svg class="build-acc-chevron" width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden="true"><path d="M1 1.5l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" /></svg>
-                </span>
-              </span>
-            </button>
-          </h2>
-          <div class="build-acc-body" id={`${id}-panel`} role="region" aria-labelledby={id}>
-            <div class="container build-acc-panel">
-              {row.kind === 'goals' && <GoalsChecklist groups={[row.group]} />}
-
-              {row.kind === 'core' && (
-                <>
-                  <p class="panel-lede">Primary milestones for HEY_THISISANDREW: active targets across infrastructure, authority, revenue, and industry access.</p>
-                  <div class="milestones-progress-wrap">
-                    <div class="milestones-progress-header">
-                      <span class="milestones-progress-label font-mono">Verified Execution Tracker</span>
-                      <span class="milestones-progress-stat font-mono">{doneCount} of {MILESTONES.length} Completed ({donePercent}%)</span>
-                    </div>
-                    <div class="milestones-progress-bar-bg" role="progressbar" aria-valuenow={doneCount} aria-valuemin="0" aria-valuemax={MILESTONES.length} aria-label="Milestones completed">
-                      <div class="milestones-progress-fill" style={`width: ${donePercent}%;`}></div>
+    
+    <Accordion>
+      {goalsCollection.map((group) => {
+        const doneCount = group.data.items.filter(i => i.status === 'done').length;
+        const total = group.data.items.length;
+        return (
+          <AccordionRow
+            id={`goal-${group.id}`}
+            kicker="Goal Group"
+            title={group.data.title}
+            progressCount={doneCount}
+            progressTotal={total}
+          >
+            <ul class="checklist-container" style="padding-top: 1.5rem;">
+              {group.data.items.map(item => (
+                <li class:list={['checklist-card', { completed: item.status === 'done' }]}>
+                  <div class="checklist-left">
+                    <span class:list={['checklist-mark', { 'is-done': item.status === 'done' }]} aria-hidden="true">
+                      {item.status === 'done' && (
+                        <svg viewBox="0 0 16 16" width="12" height="12" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="square" /></svg>
+                      )}
+                    </span>
+                    <div class="checklist-info">
+                      <h3 class="checklist-title">{item.label}</h3>
+                      {item.note && <p class="checklist-desc">{item.note}</p>}
                     </div>
                   </div>
-                  <ul class="checklist-container">
-                    {MILESTONES.map((m) => (
-                      <li class:list={['checklist-card', { completed: m.status === 'done' }]} data-milestone-card={m.id}>
-                        <div class="checklist-left">
-                          <span class:list={['checklist-mark', { 'is-done': m.status === 'done' }]} aria-hidden="true">
-                            {m.status === 'done' && (
-                              <svg viewBox="0 0 16 16" width="12" height="12" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="square" /></svg>
-                            )}
-                          </span>
-                          <div class="checklist-info">
-                            <h3 class="checklist-title">{m.title}</h3>
-                            <p class="checklist-desc">{m.desc}</p>
-                          </div>
-                        </div>
-                        <div class:list={['status-badge', m.status === 'done' ? 'achieved' : m.status]}>
-                          {m.status === 'in-progress' && <span class="pulse-indicator"></span>}
-                          <span class="badge-text">{STATUS_LABEL[m.status]}</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-
-              {row.kind === 'roadmap' && (
-                <div class="brand-progression-card">
-                  <div class="brand-progression-head">
-                    <h3 class="brand-progression-title">{ROADMAPS[row.key].name}</h3>
-                    <p class="brand-objective">
-                      <strong>Objective:</strong> {ROADMAPS[row.key].objective}
-                    </p>
+                  <div class:list={['status-badge', item.status === 'done' ? 'achieved' : item.status]}>
+                    {item.status === 'in-progress' && <span class="pulse-indicator"></span>}
+                    <span class="badge-text">{item.status === 'done' ? 'Done' : item.status === 'in-progress' ? 'In Progress' : 'Queued'}</span>
                   </div>
-                  <div class="progression-rail-wrapper">
-                    <div class="progression-stages-grid">
-                      {ROADMAPS[row.key].stages.map((st, i) => (
-                        <div class="progression-stage-item">
-                          <div class:list={['stage-bar', st.state]}></div>
-                          <div class="stage-meta">
-                            <span class="stage-num font-mono">Stage {String(i + 1).padStart(2, '0')}</span>
-                            <span class:list={['stage-badge', st.state]}>{STAGE_LABEL[st.state]}</span>
-                          </div>
-                          <h4 class="stage-name">{st.name}</h4>
-                          <p class="stage-detail">{st.detail}</p>
-                        </div>
-                      ))}
-                    </div>
+                </li>
+              ))}
+            </ul>
+          </AccordionRow>
+        );
+      })}
+
+      <AccordionRow
+        id="core-engine"
+        kicker="Primary Milestones · HEY_THISISANDREW"
+        title="Core Engine"
+        progressCount={doneCount}
+        progressTotal={MILESTONES.length}
+      >
+        <div style="padding-top: 1.5rem;">
+          <ul class="checklist-container">
+            {MILESTONES.map((m) => (
+              <li class:list={['checklist-card', { completed: m.status === 'done' }]} data-milestone-card={m.id}>
+                <div class="checklist-left">
+                  <span class:list={['checklist-mark', { 'is-done': m.status === 'done' }]} aria-hidden="true">
+                    {m.status === 'done' && (
+                      <svg viewBox="0 0 16 16" width="12" height="12" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="square" /></svg>
+                    )}
+                  </span>
+                  <div class="checklist-info">
+                    <h3 class="checklist-title">{m.title}</h3>
+                    <p class="checklist-desc">{m.desc}</p>
                   </div>
                 </div>
-              )}
+                <div class:list={['status-badge', m.status === 'done' ? 'achieved' : m.status]}>
+                  {m.status === 'in-progress' && <span class="pulse-indicator"></span>}
+                  <span class="badge-text">{STATUS_LABEL[m.status]}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </AccordionRow>
+
+      <AccordionRow
+        id="be"
+        kicker="BE Unconventional HQ"
+        title="Entertainment Outlet"
+      >
+        <div style="padding-top: 1.5rem;">
+          <div class="progression-stages-grid">
+            <div class="progression-stage-item">
+              <div class="stage-bar achieved"></div>
+              <div class="stage-meta">
+                <span class="stage-num font-mono">Stage 01</span>
+                <span class="stage-badge achieved">Achieved</span>
+              </div>
+              <h4 class="stage-name">Foundation</h4>
+              <p class="stage-detail">Independent editorial calendar and breaking coverage system.</p>
+            </div>
+            <div class="progression-stage-item">
+              <div class="stage-bar active"></div>
+              <div class="stage-meta">
+                <span class="stage-num font-mono">Stage 02</span>
+                <span class="stage-badge active">Active Target</span>
+              </div>
+              <h4 class="stage-name">On-Site Access</h4>
+              <p class="stage-detail">Major event press credentials and live floor coverage.</p>
+            </div>
+            <div class="progression-stage-item">
+              <div class="stage-bar upcoming"></div>
+              <div class="stage-meta">
+                <span class="stage-num font-mono">Stage 03</span>
+                <span class="stage-badge upcoming">Upcoming</span>
+              </div>
+              <h4 class="stage-name">Commercial Integration</h4>
+              <p class="stage-detail">Paid event photography and marketing partnerships.</p>
+            </div>
+            <div class="progression-stage-item">
+              <div class="stage-bar target"></div>
+              <div class="stage-meta">
+                <span class="stage-num font-mono">Stage 04</span>
+                <span class="stage-badge target">Target</span>
+              </div>
+              <h4 class="stage-name">Industry Milestone</h4>
+              <p class="stage-detail">Critics Choice Association (CCA) accreditation.</p>
             </div>
           </div>
         </div>
-      );
-    })}
+      </AccordionRow>
+
+      <AccordionRow
+        id="ccc"
+        kicker="Capture Create Caffeinate"
+        title="Commercial Beverage"
+      >
+        <div style="padding-top: 1.5rem;">
+          <div class="progression-stages-grid">
+            <div class="progression-stage-item">
+              <div class="stage-bar achieved"></div>
+              <div class="stage-meta">
+                <span class="stage-num font-mono">Stage 01</span>
+                <span class="stage-badge achieved">Achieved</span>
+              </div>
+              <h4 class="stage-name">System Setup</h4>
+              <p class="stage-detail">Native 9:16 capture pipeline and portfolio build.</p>
+            </div>
+            <div class="progression-stage-item">
+              <div class="stage-bar active"></div>
+              <div class="stage-meta">
+                <span class="stage-num font-mono">Stage 02</span>
+                <span class="stage-badge active">Active Target</span>
+              </div>
+              <h4 class="stage-name">Local Penetration</h4>
+              <p class="stage-detail">San Diego roasters and cocktail lounge retainers.</p>
+            </div>
+            <div class="progression-stage-item">
+              <div class="stage-bar upcoming"></div>
+              <div class="stage-meta">
+                <span class="stage-num font-mono">Stage 03</span>
+                <span class="stage-badge upcoming">Upcoming</span>
+              </div>
+              <h4 class="stage-name">Digital Products</h4>
+              <p class="stage-detail">Lightroom drink presets and lighting recipe guides.</p>
+            </div>
+            <div class="progression-stage-item">
+              <div class="stage-bar target"></div>
+              <div class="stage-meta">
+                <span class="stage-num font-mono">Stage 04</span>
+                <span class="stage-badge target">Target</span>
+              </div>
+              <h4 class="stage-name">National Campaigns</h4>
+              <p class="stage-detail">Commercial beverage brand contracts and licensing.</p>
+            </div>
+          </div>
+        </div>
+      </AccordionRow>
+    </Accordion>
   </div>
 </BaseLayout>
 
-<script>
-  // HQ's /featured accordion: one row open at a time. Pressing the open row
-  // closes it. A link to a row's anchor (the nav dropdown, the side panel,
-  // a deep link) opens that row first, so the reader lands on its content.
-  function initBuildAccordion() {
-    const root = document.querySelector<HTMLElement>('[data-build-acc]');
-    if (!root || root.dataset.ready) return;
-    root.dataset.ready = '1';
-    const rows = Array.from(root.querySelectorAll<HTMLElement>('.build-acc-row'));
-    const setOpen = (target: HTMLElement | null) => {
-      for (const r of rows) {
-        const on = r === target;
-        r.classList.toggle('expanded', on);
-        r.classList.toggle('collapsed', !on);
-        r.querySelector('.build-acc-header')?.setAttribute('aria-expanded', String(on));
-      }
-    };
-    rows.forEach((row) => {
-      row.querySelector('.build-acc-header')?.addEventListener('click', () => {
-        setOpen(row.classList.contains('expanded') ? null : row);
-      });
-    });
-    const rowFor = (hash: string) => {
-      if (!hash || hash === '#') return null;
-      const el = document.getElementById(decodeURIComponent(hash.slice(1)));
-      return el ? (el.closest<HTMLElement>('.build-acc-row') ?? null) : null;
-    };
-    const openFromHash = (hash: string) => {
-      const row = rowFor(hash);
-      if (row && !row.classList.contains('expanded')) setOpen(row);
-    };
-    openFromHash(location.hash);
-    window.addEventListener('hashchange', () => openFromHash(location.hash));
-    // Same-page anchor clicks scroll with pushState (BaseLayout), which fires
-    // no hashchange: open the row in the capture phase, before that scroll
-    // measures where the heading is.
-    document.addEventListener(
-      'click',
-      (e) => {
-        const link = (e.target as Element | null)?.closest?.('a[href*="#"]') as HTMLAnchorElement | null;
-        if (!link) return;
-        const url = new URL(link.href, location.href);
-        if (url.pathname.replace(/\/$/, '') !== location.pathname.replace(/\/$/, '')) return;
-        openFromHash(url.hash);
-      },
-      true,
-    );
-  }
-  initBuildAccordion();
-</script>
 
 <style>
   .build-page {
     padding-top: clamp(2rem, 4vw, 4rem);
+    padding-bottom: clamp(4rem, 8vw, 7rem);
   }
-  /* The tag, title and lede read as one unit at every width: small fixed
-     steps between them, never section-sized padding. */
   .build-header {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.9rem;
-    margin-bottom: clamp(2rem, 3vw, 3rem);
+    margin-bottom: clamp(2rem, 4vw, 3.5rem);
   }
   .mono-tag {
     font-family: var(--font-mono);
@@ -265,6 +230,7 @@ const rows = BUILD_SECTIONS.flatMap((sec) => {
     border: 1px solid var(--border);
     padding: 0.3rem 0.65rem;
     display: inline-block;
+    margin-bottom: 0.75rem;
   }
   .build-title {
     font-family: var(--font-display);
@@ -273,7 +239,7 @@ const rows = BUILD_SECTIONS.flatMap((sec) => {
     text-transform: uppercase;
     letter-spacing: 0.01em;
     color: var(--ink);
-    margin: 0;
+    margin: 0 0 0.75rem;
     line-height: 1.05;
   }
   .build-lede {
@@ -283,162 +249,8 @@ const rows = BUILD_SECTIONS.flatMap((sec) => {
     line-height: 1.7;
     margin: 0;
   }
-
-  /* ---- The accordion (HQ's /featured rows) ---- */
-  .build-acc {
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    margin-bottom: clamp(4rem, 8vw, 7rem);
-  }
-  .build-acc-row {
-    position: relative;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.15);
-    background: #050505;
-  }
-  .build-acc-heading {
-    margin: 0;
-    font: inherit;
-    /* Land a #row link below the fixed header. */
-    scroll-margin-top: calc(var(--nav-bar-h, 76px) + 1rem);
-  }
-  .build-acc-header {
-    position: relative;
-    appearance: none;
-    -webkit-appearance: none;
-    border: 0;
-    background: none;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    width: 100%;
-    min-height: clamp(4.5rem, 7vw, 6.5rem);
-    display: flex;
-    align-items: center;
-    padding: 0;
-    cursor: pointer;
-  }
-  .build-acc-header:focus-visible {
-    outline: 2px solid var(--focus-ring, #f0f0f0);
-    outline-offset: -6px;
-  }
-  .build-acc-header-bg {
-    position: absolute;
-    inset: 0;
-    opacity: 0.6;
-    background: linear-gradient(to right, rgba(255, 255, 255, 0.07) 0%, rgba(0, 0, 0, 0) 60%);
-    transition: opacity 0.4s ease;
-    pointer-events: none;
-  }
-  .build-acc-row.collapsed .build-acc-header:hover .build-acc-header-bg {
-    opacity: 1;
-  }
-  .build-acc-row.expanded .build-acc-header-bg {
-    opacity: 0;
-  }
-  .build-acc-header-inner {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: clamp(0.85rem, 1.5vw, 1.5rem);
-  }
-  .build-acc-kicker {
-    flex: none;
-    min-width: 2.25rem;
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
-    color: rgba(255, 255, 255, 0.4);
-  }
-  /* A section label, not a headline: small, tracked, quieter when closed. */
-  .build-acc-title {
-    flex: 1 1 auto;
-    min-width: 0;
-    font-family: var(--font-display);
-    font-size: clamp(0.8rem, 1.15vw, 1.05rem);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.3em;
-    line-height: 1.25;
-    color: rgba(255, 255, 255, 0.55);
-    transition: color 0.4s ease, transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  .build-acc-row.collapsed .build-acc-header:hover .build-acc-title,
-  .build-acc-header:focus-visible .build-acc-title {
-    color: #fff;
-    transform: translateX(5px);
-  }
-  /* The open row leads (HQ): brighter, larger, with a rule down its edge. */
-  .build-acc-row.expanded .build-acc-title {
-    font-size: clamp(0.95rem, 1.5vw, 1.35rem);
-    color: rgba(255, 255, 255, 0.94);
-    padding-left: 0.9rem;
-    border-left: 2px solid var(--key, #b2b2b2);
-  }
-  .build-acc-meta {
-    flex: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.9rem;
-  }
-  .build-acc-bar {
-    display: block;
-    width: clamp(48px, 8vw, 160px);
-    height: 4px;
-    background: var(--surface-2);
-  }
-  .build-acc-bar span {
-    display: block;
-    height: 100%;
-    background: var(--key);
-  }
-  .build-acc-count {
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    color: var(--muted);
-    min-width: 2.5rem;
-    text-align: right;
-  }
-  .build-acc-chevron {
-    color: rgba(255, 255, 255, 0.6);
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .build-acc-row.expanded .build-acc-chevron {
-    transform: rotate(180deg);
-  }
-  /* Rows snap open (HQ); the content arrives on a short fade. Collapsed
-     bodies are hidden only once the script is running, so without it every
-     row reads open. */
-  :global(html.js) .build-acc-row.collapsed .build-acc-body {
-    display: none;
-  }
-  .build-acc-row.expanded .build-acc-body {
-    animation: build-acc-in 0.35s ease both;
-  }
-  @keyframes build-acc-in {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: none; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .build-acc-row.expanded .build-acc-body { animation: none; }
-    .build-acc-title, .build-acc-chevron { transition: none; }
-  }
-  .build-acc-panel {
-    padding-bottom: clamp(2rem, 4vw, 3.5rem);
-  }
-  /* GoalsChecklist's first group sits right under the row header. */
-  .build-acc-panel :global(.goal-group:first-child) {
-    margin-top: 0;
-  }
-  .panel-lede {
-    font-size: 0.98rem;
-    color: var(--muted);
-    max-width: 65ch;
-    line-height: 1.6;
-    margin: 0 0 1.25rem;
-  }
-  @media (max-width: 540px) {
-    .build-acc-kicker { display: none; }
-    .build-acc-title { letter-spacing: 0.18em; }
-    .build-acc-bar { display: none; }
+  .roadmap-section {
+    padding-top: 1rem;
   }
   .milestones-progress-wrap {
     background: var(--surface);
@@ -483,7 +295,7 @@ const rows = BUILD_SECTIONS.flatMap((sec) => {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    margin: 0;
+    margin: 0 0 3.5rem;
     padding: 0;
     list-style: none;
   }
@@ -575,10 +387,14 @@ const rows = BUILD_SECTIONS.flatMap((sec) => {
     border-radius: 50%;
     box-shadow: 0 0 8px #bdbdbd;
   }
+  .sub-brand-block {
+    margin-top: 3.5rem;
+  }
   .brand-progression-card {
     background: var(--surface);
     border: 1px solid var(--border);
     padding: clamp(1.5rem, 3vw, 2.5rem);
+    margin-top: 1.5rem;
   }
   .brand-progression-head {
     margin-bottom: 2rem;
@@ -693,5 +509,13 @@ const rows = BUILD_SECTIONS.flatMap((sec) => {
     color: var(--muted);
     line-height: 1.5;
     margin: 0;
+  }
+  /* This page's section titles carry long words ("ENTERTAINMENT" needs
+     16em at the site's tracked display face), so on phones they set
+     smaller than the site default to stay on screen. */
+  @media (max-width: 560px) {
+    .build-page :global(.section-title) {
+      font-size: 5.4vw;
+    }
   }
 </style>

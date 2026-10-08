@@ -1,0 +1,340 @@
+---
+import CategoryOverlay from './CategoryOverlay.astro';
+
+export interface Props {
+  showTypes?: boolean;
+  isNavMode?: boolean; // Kept for backward compatibility, but we now always use Nav mode behavior.
+}
+const { showTypes = false } = Astro.props;
+
+const categories = ['Film', 'TV', 'Games', 'Events'];
+const types = [
+  { label: 'Article', href: '/feed/articles' },
+  { label: 'Video', href: '/feed/videos' },
+];
+
+const currentPath = Astro.url.pathname;
+
+
+/* The same category set the desktop row renders, shaped for the shared
+   mobile overlay. Hash links on the Feed (it filters client-side); the
+   /intel copy passes real routes instead. */
+const overlayItems = categories.map((c) => {
+  const slug = c.toLowerCase();
+  const isFeedContext = currentPath.startsWith('/feed');
+  const isActive = !isFeedContext && currentPath.startsWith(`/category/${slug}`);
+  return {
+    label: c.toUpperCase(),
+    href: isFeedContext ? `#${slug}` : (isActive ? '/feed' : `/category/${slug}`),
+    slug,
+    active: isActive,
+  };
+});
+---
+
+{/*
+  ⚠ DO NOT ADD `animate-on-scroll` TO THIS ELEMENT.
+
+  It used to be here, and it broke the mobile Categories overlay on the Feed
+  in a way that was very hard to see: the overlay opened, the close button
+  appeared, and the four category buttons were nowhere.
+
+  Why: `.animate-on-scroll` sets `transform` and `filter` (they stay at
+  `scale(1)` / `blur(0)` even when revealed — still not `none`). An element
+  with a transform or filter becomes the CONTAINING BLOCK for any
+  `position: fixed` descendant. So the overlay, which is meant to cover the
+  viewport, was instead sized and positioned against this filter row: 326px
+  wide, offset 230px down the page, with its contents pushed off-screen.
+
+  /intel never had the bug because IntelFilters renders <CategoryOverlay />
+  at the top level, with no transformed ancestor above it.
+
+  Nothing is lost by leaving it off: this row sits above the fold, so a
+  scroll reveal never actually played, and without it the row no longer
+  starts at opacity 0 — which is better for LCP.
+
+  scripts/e2e-category-modal.test.mjs asserts the overlay fills the viewport
+  on BOTH routes, so this cannot silently regress again.
+*/}
+<div class="quadrant-filter-container flex flex-col justify-center items-center w-full" id="quadrant-filter-wrapper">
+  <div id="global-type-row" class={`type-row-wrapper w-full ${showTypes ? 'is-open' : ''}`}>
+    <div class="type-row-inner w-full">
+      <div class="mobile-top-bar">
+        <div class="filter-grid type-grid mobile-type-toggles" style="max-width: 480px;">
+          {
+            types.map((t) => {
+              const isActive = currentPath.includes(t.href);
+              let target = isActive ? '/feed' : t.href;
+              if (!isActive && currentPath.startsWith('/category/')) {
+                const categorySlug = currentPath.split('/category/')[1].split('/')[0];
+                target = `${target}#${categorySlug}`;
+              }
+              return (
+                <a
+                  href={target}
+                  class={`quadrant-btn type-btn ${isActive ? 'active' : ''}`}
+                  aria-current={isActive ? 'true' : undefined}
+                >
+                  {t.label.toUpperCase()}
+                </a>
+              );
+            })
+          }
+        </div>
+      </div>
+
+      <div class="filter-row desktop-type-row w-full">
+        <div class="filter-row-grid grid grid-cols-2 gap-[0.75rem] max-w-[800px] w-full">
+          {
+            types.map((t) => {
+              const isActive = currentPath.includes(t.href);
+              let target = isActive ? '/feed' : t.href;
+              if (!isActive && currentPath.startsWith('/category/')) {
+                const categorySlug = currentPath.split('/category/')[1].split('/')[0];
+                target = `${target}#${categorySlug}`;
+              }
+              return (
+                <a
+                  href={target}
+                  class={`quadrant-btn type-btn ${isActive ? 'active' : ''}`}
+                  aria-current={isActive ? 'true' : undefined}
+                >
+                  {t.label.toUpperCase()}
+                </a>
+              );
+            })
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  {/* Mobile: one button + full-screen menu. Shared with /intel. */}
+  <CategoryOverlay items={overlayItems} />
+
+  <div class="filter-row category-row desktop-category-row w-full">
+    <div class="filter-row-grid grid grid-cols-4 gap-[0.75rem] max-w-[800px] w-full">
+      {
+        categories.map((c) => {
+          const slug = c.toLowerCase();
+          const expectedHubPath = `/category/${slug}`;
+          
+          const isFeedContext = currentPath.startsWith('/feed');
+          // In feed context, active state is primarily managed client-side via hash
+          const isActive = !isFeedContext && currentPath.startsWith(`/category/${slug}`);
+          const className = `quadrant-btn cat-btn ${isActive ? 'active' : ''}`;
+          
+          const hrefTarget = isFeedContext ? `#${slug}` : (isActive ? '/feed' : expectedHubPath);
+
+          return (
+            <a href={hrefTarget} class={className} data-category={slug} aria-current={isActive ? 'true' : undefined}>
+              {c.toUpperCase()}
+            </a>
+          );
+        })
+      }
+    </div>
+  </div>
+</div>
+
+{/* An earlier <dialog> implementation lived here. It was dead code —
+    superseded by <CategoryOverlay />, which is now shared with /intel. */}
+
+
+<style>
+  /*
+    ─── TAILWIND MARGIN AND PADDING UTILITIES DO NOTHING IN THIS PROJECT ─────
+
+    This is the second thing to check whenever spacing here "just stops
+    working", and it is not obvious from the markup.
+
+    global-base.css carries an UNLAYERED `* { margin: 0; padding: 0 }` reset.
+    Tailwind v4 puts every utility inside `@layer utilities`. In the CSS
+    cascade, unlayered rules beat layered rules of the SAME origin no matter
+    what their specificity is, so `.mt-16` (specificity 0,1,0) loses to `*`
+    (specificity 0,0,0) purely on layer order.
+
+    So `mt-16 mb-12` on the wrapper and `mx-auto` on the rows computed to
+    margin 0 on every edge: the row sat flush against the hero above it and
+    the card grid below it, and its 800px measure was pinned to the left of a
+    1374px container instead of centred. Measured at 1440x900: 0px above, 0px
+    below, and a row starting at x=26 in a container running to x=1399.
+
+    Elsewhere in the codebase this is worked around with `!` (see `lg:!px-20`
+    in FeedSpotlightHero). Here the values simply live in real CSS, which is
+    where the ones this file replaced used to be.
+  */
+  .quadrant-filter-container {
+    /* The `mt-16 mb-12` the utilities could not apply. */
+    margin: 4rem 0 3rem;
+    gap: 2rem;
+  }
+
+  /*
+    A COLUMN flex container, so horizontal centring is `align-items`, not
+    `justify-content` — and not `mx-auto` on the child, for the reason above.
+    Without it a max-width row stretches from the left edge.
+  */
+  .filter-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  /* Belt and braces on the rows' own measure: a scoped class beats the bare
+     `*` reset on specificity, and both are unlayered, so this one holds. */
+  .filter-row-grid,
+  .mobile-type-toggles {
+    margin-inline: auto;
+  }
+
+  .type-row-wrapper {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      grid-template-rows 0.3s ease,
+      opacity 0.3s ease,
+      visibility 0.3s ease;
+  }
+
+  .type-row-wrapper.is-open {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /*
+     The `overflow: hidden` here is NOT removable — it is what makes the
+     `grid-template-rows: 0fr -> 1fr` collapse above actually clip. But it also
+     clipped the active button's red glow (`box-shadow: 0 0 20px` on
+     `.quadrant-btn.active`, styles/modules/filters.css): this element's box
+     sat exactly on the buttons' outer edges, so selecting "Article" cut the
+     glow off dead straight down its left side, and "Video" down its right.
+
+     Fix is padding + an equal negative margin: the padding grows the CLIP BOX
+     outward, the negative margin pulls the element back so nothing moves on
+     screen. The top already did this at 10px; the sides now do it at 24px,
+     which clears the 20px blur radius with room to spare.
+
+     Horizontal only, deliberately. Vertical padding would be added to the
+     element's height in the collapsed `0fr` state and could reopen a gap
+     under a closed row — and the top/bottom of the glow was never clipped.
+  */
+  .type-row-inner {
+    overflow: hidden;
+    min-height: 0;
+    padding-top: 10px;
+    margin-top: -10px;
+    /* Removed padding/margin-inline to prevent horizontal blowout */
+  }
+
+  .filter-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--color-white-muted);
+    text-transform: uppercase;
+  }
+
+  /* .filter-grid moved to styles/modules/filters.css so the /intel filter row
+     uses the identical grid (columns AND 1rem gap) rather than a copy. */
+
+  .type-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /*
+    Sleek styling inherited from the Intel page.
+    Reduces the physical scale of the filter buttons so they don't dominate the feed.
+  */
+  .quadrant-btn.cat-btn,
+  .quadrant-btn.type-btn {
+    padding: 0.85rem 0.5rem;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+  }
+
+  .quadrant-btn.type-btn {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  /* Override the default filter-grid to mirror the tighter Intel row layout */
+  .desktop-category-row .filter-grid,
+  .desktop-type-row .filter-grid {
+    gap: 0.75rem;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  /* .quadrant-btn and its hover/focus/active states moved to
+     styles/modules/filters.css so surfaces outside this component (the /intel
+     filter bar) can use the identical button rather than a copy. Nothing else
+     defines .quadrant-btn, so the cascade position is unchanged. */
+
+
+  .mobile-top-bar {
+    display: none;
+  }
+
+  /* .mobile-category-row / .full-width-btn moved to
+     styles/modules/filters.css — the markup they style now lives in
+     CategoryOverlay.astro, and Astro's scoped styles only apply to elements
+     declared in the SAME component file. Leaving them here silently stopped
+     hiding the button on desktop. */
+
+  @media (max-width: 768px) {
+    .mobile-top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .mobile-type-toggles {
+      display: flex;
+      flex-grow: 1;
+      gap: 0.5rem;
+    }
+    .mobile-type-toggles .quadrant-btn {
+      flex: 1;
+      padding: 0.75rem 0.5rem;
+      font-size: 0.8rem; /* scaled down slightly for mobile */
+    }
+    .desktop-type-row {
+      display: none;
+    }
+    .desktop-category-row {
+      display: none;
+    }
+  }
+
+  /* Full-screen overlay styles moved to styles/modules/filters.css so
+     <CategoryOverlay /> can be shared by the Feed and /intel. */
+
+  :global(body.modal-open) {
+    overflow: hidden !important;
+  }
+</style>
+
+{/*
+  ─── THIS COMPONENT HAS NO CLIENT SCRIPT (#189) ───────────────────────────
+  It used to carry a delegated block for the category overlay, guarded by the
+  same `window.categoryOverlayDelegated` flag CategoryOverlay.astro used. This
+  file renders <CategoryOverlay /> (line 113), so on /feed both scripts ran on
+  the same page and whichever chunk Vite emitted first claimed the flag,
+  silently disabling the other's entire block.
+
+  CategoryOverlay renders every element that behaviour touches — the open
+  button, the close button, the overlay and the category links — so it owns
+  all of it now, including the "Categories | Film" label handler.
+
+  Do not add a script back here that touches `#open-categories-btn`,
+  `#close-categories-btn` or `#category-fullscreen-overlay a.cat-btn`. Two
+  live handlers on those selectors double-close the overlay.
+  `scripts/category-overlay-ownership.test.mjs` fails if one returns.
+*/}

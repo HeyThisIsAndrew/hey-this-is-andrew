@@ -1,0 +1,69 @@
+---
+/**
+ * CardGrid — the responsive grid that every card layout on the site sits in.
+ *
+ * ─── WHY THIS EXISTS ──────────────────────────────────────────────────────
+ * This exact Tailwind class string used to be typed out in eight different
+ * files:
+ *     grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full
+ * Changing the gap, or how many columns appear on a laptop, meant finding and
+ * editing all eight and hoping none were missed. Now it lives here once.
+ *
+ * ─── HOW TO CHANGE THE LAYOUT ─────────────────────────────────────────────
+ * Everything is in the COLUMNS map just below. To change how many cards show
+ * per row, edit the Tailwind classes there:
+ *     grid-cols-1        → 1 column on the smallest phones
+ *     sm:grid-cols-2     → 2 columns from 640px up
+ *     lg:grid-cols-3     → 3 columns from 1024px up
+ *     xl:grid-cols-4     → 4 columns from 1280px up
+ * `gap-6` is the space between cards (6 = 1.5rem). `gap-8` would be roomier.
+ *
+ * ─── HOW TO USE IT ────────────────────────────────────────────────────────
+ *     <CardGrid>            ...cards...  </CardGrid>   // default, up to 4 wide
+ *     <CardGrid columns={3}>...cards...  </CardGrid>   // caps at 3 wide
+ *     <CardGrid columns="video">...</CardGrid>         // the 4-up video strip
+ */
+
+interface Props {
+  /**
+   * Which column arrangement to use. Add a new key to COLUMNS below if you
+   * need another one — don't pass raw classes in, or we're back to eight
+   * copies of a class string.
+   */
+  columns?: 4 | 3 | 'video';
+  /** Optional DOM id. FeedGrid's filtering script needs `id="feed-grid"`. */
+  id?: string;
+  /** Any extra classes to append (rare — prefer adding a `columns` variant). */
+  class?: string;
+  /** Anything else (aria-live, data-*) passes straight through to the div. */
+  [key: string]: any;
+}
+
+// ─── THE ONE PLACE COLUMN COUNTS ARE DEFINED ──────────────────────────────
+const COLUMNS = {
+  // The standard content grid: feed, article archive, category pages.
+  4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+  // Narrower pages (event and brand hubs) stop at 3 so cards stay large.
+  3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+  // The video break strip: jumps straight from 2 to 4, no 3-up step, so the
+  // strip always reads as one full row rather than 3 + 1 orphan.
+  video: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+} as const;
+
+const { columns = 4, id, class: className = '', ...rest } = Astro.props;
+
+const columnClasses = COLUMNS[columns] ?? COLUMNS[4];
+/*
+  `card-grid` is a stable, non-Tailwind hook so plain CSS can target every
+  card grid on the site at once — the Tailwind classes above change with the
+  column count and are not something a stylesheet can rely on. It is what the
+  mobile full-bleed rule in styles/modules/home-cards.css selects.
+*/
+const classes = ['card-grid', 'grid', columnClasses, 'gap-6', 'w-full', className]
+  .filter(Boolean)
+  .join(' ');
+---
+
+<div id={id} class={classes} {...rest}>
+  <slot />
+</div>

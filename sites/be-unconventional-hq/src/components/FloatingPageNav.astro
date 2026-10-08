@@ -1,0 +1,745 @@
+---
+/**
+ * FloatingPageNav — the article's contents, as a panel pinned to the left edge.
+ *
+ * ─── WHAT CHANGED, AND WHAT DELIBERATELY DID NOT ────────────────────────────
+ * This replaces ArticleToc, which rendered the same list as a static block at
+ * the top of the left rail. Two problems with that: the rail scrolled with the
+ * page until its `position: sticky` caught, so the contents were somewhere
+ * different depending on where you were, and the block held the top of a 14rem
+ * column that had one other thing in it.
+ *
+ * Pinned to the viewport's left edge it is always in the same place, always the
+ * same size, and it stops owning a column. The reading measure gets the width
+ * back (see .article-layout in article.css).
+ *
+ * The ACTIVE-SECTION SCRIPT BELOW IS LIFTED UNCHANGED from that component. It
+ * carries write-ups for five separate bugs — the teleport case where an
+ * IntersectionObserver never fires because both states are "not intersecting",
+ * the empty-set case that used to leave the last section highlighted after you
+ * jumped to the top, the module-scoped teardown that replaced a `window` global,
+ * the pending-timer clear before a ClientRouter swap, and the release that has
+ * to run BEFORE the early returns. Rewriting it to match a new presentation
+ * would have reintroduced them one at a time. Only the markup and CSS are new.
+ *
+ * ─── COLLAPSED IS TICKS, EXPANDED IS WORDS ──────────────────────────────────
+ * At rest it is a column of short rules, one per section, with the current one
+ * drawn long and in the accent. That is enough to say where you are in a piece
+ * without putting a list of headings permanently over the artwork. Hovering or
+ * tabbing into it opens the labels.
+ *
+ * The labels are CLIPPED, never `display: none`. A hidden label is out of the
+ * accessibility tree, and then a screen reader is offered a nav of six unnamed
+ * links. Width and opacity keep them announced at every state.
+ */
+import type { TocEntry } from '../lib/article-toc';
+
+interface Props {
+  entries: TocEntry[];
+  /**
+   * Page landmarks to fall back on when the article has too few headings to
+   * index. Real anchors that exist on the page, never invented section names.
+   */
+  landmarks?: TocEntry[];
+}
+
+const { entries, landmarks = [] } = Astro.props;
+
+/**
+ * Fewer headings than this and the list is not worth the space.
+ *
+ * Two, not three: a two-section article still gets a real nav.
+ */
+const MIN_ENTRIES = 2;
+
+/*
+  ─── WHAT HAPPENS WHEN AN ARTICLE HAS NO HEADINGS ──────────────────────────
+  Some posts genuinely have none — "Mortal Kombat 2 Review" has zero <h*> tags
+  in its Substack source, so there are no sections to index and no code can
+  invent them.
+
+  The owner's call, made twice, is that an empty rail reads as broken. So a post
+  that cannot be indexed by heading falls back to the page landmarks the caller
+  passes in. Recorded honestly, because it was argued: these are navigation
+  aids, not a table of contents. They are only ever shown when there is no real
+  alternative, and the heading list always wins when one exists. The durable fix
+  is editorial — two section headings in the Substack post turn this back into a
+  real index.
+*/
+const useLandmarks = entries.length < MIN_ENTRIES && landmarks.length >= 2;
+const items = entries.length >= MIN_ENTRIES ? entries : useLandmarks ? landmarks : [];
+const show = items.length >= MIN_ENTRIES;
+/* Landmarks are not sections, so they are labelled as what they are. */
+const heading = useLandmarks ? 'On This Page' : 'Contents';
+---
+
+{
+  show && (
+    <nav class="floating-page-nav" aria-label={heading}>
+      <p class="fpn-head" aria-hidden="true">{heading}</p>
+      <ul class="fpn-list">
+        {items.map((entry) => (
+          <li class:list={['fpn-item', { 'is-sub': entry.level >= 3 }]}>
+            <a href={`#${entry.id}`} data-toc-link={entry.id}>
+              <span class="fpn-tick" aria-hidden="true"></span>
+              <span class="fpn-label">{entry.text}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}
+
+<style>
+  /*
+    ─── PINNED TO THE VIEWPORT, NOT TO THE COLUMN ────────────────────────────
+
+    `fixed` rather than `sticky`: sticky still belongs to a grid track and moves
+    until it catches, which is the behaviour this replaced.
+
+    z-index 40 puts it under the navbar (which sits above it) and over the
+    article. It must not reach the PiP window's 90 — a contents list on top of a
+    video is the same mistake in the other direction.
+  */
+  /*
+    ─── STICKY WRAPPER ───────────────────────────────────────────────────────
+    It takes no layout space so it does not push the feed rows down. By being
+    `sticky`, it starts exactly where it is inserted (beneath the hero) and
+    scrolls up until it reaches 50vh, then sticks there for the rest of the page.
+  */
+  /*
+    ─── PINNED TO THE VIEWPORT, NOT TO THE CONTENT COLUMN ────────────────────
+
+    This was briefly a zero-size `position: sticky` wrapper with the nav
+    absolutely positioned inside it. A sticky box sits where it is inserted —
+    which is inside the page's content column — so the nav inherited that
+    column's left edge rather than the screen's.
+
+    At 1440 the column starts ~32px in and it looked correct. At 3840 the column
+    starts at 978px, so the nav landed directly on top of the first card in the
+    first row. Reported as "the contents thing we added is in the row on 4k
+    monitor".
+
+    `fixed` is measured from the viewport at every width, which is the only
+    thing that makes an edge-pinned element actually edge-pinned. It takes no
+    layout space either, so the rows are not pushed down — the reason the
+    wrapper was introduced is satisfied by this anyway.
+  */
+  .floating-page-nav {
+    position: fixed;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 70vh;
+    padding: 1rem 1rem 1rem 0.9rem;
+    border-radius: 0 10px 10px 0;
+    border: 1px solid transparent;
+    border-left: none;
+    background: transparent;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    transition:
+      background 0.28s ease,
+      border-color 0.28s ease,
+      box-shadow 0.28s ease,
+      padding 0.28s ease;
+  }
+
+  .floating-page-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .floating-page-nav:hover,
+  .floating-page-nav:focus-within {
+    background: rgba(12, 12, 12, 0.94);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6);
+    padding-right: 1.5rem;
+  }
+
+  /*
+    The word "Contents" is decoration here: the <nav> already carries it as its
+    accessible name, so announcing it twice would be the same label in a row.
+    `aria-hidden` on the element, not `.sr-only`, for that reason.
+  */
+  .fpn-head {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-white-muted, #888);
+    white-space: nowrap;
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: opacity 0.28s ease, max-height 0.28s ease;
+  }
+
+  .floating-page-nav:hover .fpn-head,
+  .floating-page-nav:focus-within .fpn-head {
+    opacity: 1;
+    max-height: 2rem;
+  }
+
+  .fpn-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .fpn-item.is-sub {
+    padding-left: 0.75rem;
+  }
+
+  .fpn-list a {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    text-decoration: none;
+    color: var(--color-white-muted, #888);
+    transition: color 0.2s ease;
+  }
+
+  .fpn-list a:hover,
+  .fpn-list a:focus-visible {
+    color: var(--color-white, #f0f0f0);
+  }
+
+  .fpn-list a:focus-visible {
+    outline: 2px solid var(--color-accent-text, #ef4444);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+
+  /* The whole nav at rest: one short rule per section. */
+  .fpn-tick {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 2px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.28);
+    transition: width 0.25s ease, background 0.25s ease;
+  }
+
+  .fpn-item.is-sub .fpn-tick {
+    width: 9px;
+  }
+
+  .fpn-list a:hover .fpn-tick {
+    background: rgba(255, 255, 255, 0.6);
+  }
+
+  /*
+    `.active` is set by the script below, on the <a>. Drawn long and in the
+    accent so the current section reads at a glance with the panel closed, which
+    is the state it is in almost all the time.
+  */
+  .fpn-list a.active .fpn-tick {
+    width: 26px;
+    background: var(--color-accent-text, #ef4444);
+  }
+
+  .fpn-list a.active {
+    color: var(--color-white, #f0f0f0);
+  }
+
+  /*
+    CLIPPED, NOT HIDDEN. `display: none` would take these out of the
+    accessibility tree and leave a screen reader a nav of unnamed links.
+  */
+  .fpn-label {
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    line-height: 1.4;
+    transition: max-width 0.28s ease, opacity 0.22s ease;
+  }
+
+  .floating-page-nav:hover .fpn-label,
+  .floating-page-nav:focus-within .fpn-label {
+    max-width: 15rem;
+    opacity: 1;
+  }
+
+  .fpn-item.is-sub .fpn-label {
+    font-size: 0.72rem;
+  }
+
+  /*
+    ─── IT ONLY EXISTS WHERE THERE IS ROOM BESIDE THE COLUMN ─────────────────
+
+    1200px is the same breakpoint the left rail used. Below it the reading
+    column IS the page, so a panel pinned to the left edge would sit on the
+    words rather than beside them. The article still renders its own headings,
+    and the scrollbar is the position indicator at that width.
+  */
+  @media (max-width: 1199px) {
+    .floating-page-nav {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .floating-page-nav,
+    .fpn-head,
+    .fpn-label,
+    .fpn-tick,
+    .fpn-list a {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  /*
+    Highlight the section currently in view.
+
+    IntersectionObserver rather than a scroll listener: the browser does the
+    work off the main thread and only tells us when a heading crosses the
+    threshold, so this costs nothing while scrolling.
+
+    rootMargin pulls the detection line up to ~30% from the top of the
+    viewport, so a heading counts as "current" once it reaches the upper third
+    rather than only at the very top edge.
+  */
+  let currentObserver: IntersectionObserver | null = null;
+  let teardownScroll: (() => void) | null = null;
+  
+  /*
+    Tear down BEFORE the early returns below, not only on swap. initFloatingPageNav
+    returns early on a page with no TOC, and the same mistake in FeedGrid is
+    already recorded there as "Memory leak fix: Cleanup old hashchange listener
+    before early returns on new pages".
+  */
+  function releaseFloatingPageNav() {
+    if (currentObserver) {
+      currentObserver.disconnect();
+      currentObserver = null;
+    }
+    if (teardownScroll) {
+      teardownScroll();
+      teardownScroll = null;
+    }
+  }
+
+  function initFloatingPageNav() {
+    releaseFloatingPageNav();
+    
+    const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-toc-link]'));
+    if (links.length === 0) return;
+
+    const headings = links
+      .map((link) => document.getElementById(link.dataset.tocLink ?? ''))
+      .filter((el): el is HTMLElement => Boolean(el));
+    if (headings.length === 0) return;
+
+    const setActive = (id: string) => {
+      links.forEach((link) => {
+        const isActive = link.dataset.tocLink === id;
+        link.classList.toggle('active', isActive);
+        if (isActive) link.setAttribute('aria-current', 'true');
+        else link.removeAttribute('aria-current');
+      });
+    };
+
+    /*
+      ─── A HEADING JUST BELOW THE LINE IS THE CURRENT ONE ────────────────────
+
+      This was only "the last heading whose top is above ZONE_TOP", which is
+      right while you are scrolling THROUGH a section and wrong the moment you
+      jump to one.
+
+      Clicking the second entry in the rail lands its heading at ~200px — below
+      the 80px line, so nothing had "passed" except the FIRST heading, and the
+      rail highlighted the first while the reader was looking at the second.
+      Reported as "I selected the 2nd tile it scrolled down but first is still
+      highlighted".
+
+      So a heading sitting in the upper part of the viewport wins outright: if
+      any heading's top is between the line and the middle of the screen, the
+      topmost of those IS the section you are on. Only when none is on screen
+      does the "last one passed" rule apply, which is the scrolling case it was
+      written for.
+    */
+    /*
+      ─── A CLICK OUTRANKS GEOMETRY, BECAUSE GEOMETRY RUNS OUT ───────────────
+
+      At the end of a document several sections are on screen at once and NONE
+      of them can scroll any further. Clicking Film and clicking TV then land
+      at the SAME scroll position, so no amount of measuring can tell the two
+      apart: at 3840x2160 both put the page at its maximum scroll.
+
+      Scroll position is not the better evidence there. The reader just told us
+      which section they want, so that answer is pinned and geometry stops
+      arguing with it until they move the page themselves.
+
+      Cleared by a REAL scroll gesture — wheel, touch, or a scrolling key —
+      never by the programmatic jump the click itself performs, which would
+      clear the pin in the same frame it was set.
+    */
+    let pinnedId: string | null = null;
+
+    const resolveActive = () => {
+      if (pinnedId) return;
+
+      const ZONE_TOP = 80;
+      const ZONE_BOTTOM = window.innerHeight * 0.5;
+
+      /*
+        ─── THE LAST SECTIONS CANNOT REACH THE ZONE ──────────────────────────
+
+        The detection zone is the top half of the viewport, and a section only
+        becomes active by scrolling INTO it. The last sections on a page never
+        can: once the document is scrolled to its end, they sit wherever the
+        bottom of the page leaves them and no further scrolling is possible.
+
+        The taller the viewport the worse it is, because the zone's floor is
+        `innerHeight * 0.5`. Measured on /feed after clicking TV:
+
+          2560x1400   TV lands at 481px, inside the 80-700 zone      correct
+          3840x2160   TV lands below the 1080 floor, unreachable     picked Games
+
+        So "no section is in the zone" has two different meanings and this only
+        handled one of them. Above the first heading the reader is at the start.
+        AT THE BOTTOM OF THE DOCUMENT they are at the end, and the honest answer
+        is the last section that has begun, not the last one that happened to
+        cross a line the remaining ones can never cross.
+      */
+      /*
+        ─── THE TOLERANCE IS A BAND, NOT A MEASUREMENT ───────────────────────
+
+        This was `- 2`, and reported as still picking the wrong section on a 4K
+        display. `scrollHeight` is an integer while `scrollY` is fractional, and
+        a scaled display rounds the two differently, so the maximum scroll
+        position can land several pixels short of the number this compares
+        against and the branch never runs.
+
+        STATED PLAINLY: I could not reproduce it. Measured here at 3840x2160,
+        `devicePixelRatio` 1, the gap at maximum scroll is exactly 0 and `- 2`
+        was sufficient. The failing case is a scaled display this browser is not
+        emulating, so the number below is a tolerance chosen to cover it rather
+        than one measured against it.
+
+        Widening it is safe whatever the real gap is: inside this band the
+        branch returns the same answer the geometry below would be trying to
+        reach. There is no reading of "ten pixels from the end of the document"
+        under which the last section that has begun is the wrong one.
+
+        `Math.ceil` because the sum is fractional and the comparison is not.
+      */
+      const BOTTOM_TOLERANCE = 10;
+      const atBottom =
+        Math.ceil(window.innerHeight + window.scrollY) >=
+        document.documentElement.scrollHeight - BOTTOM_TOLERANCE;
+      if (atBottom) {
+        const started = headings.filter((h) => h.getBoundingClientRect().top < window.innerHeight);
+        const last = started[started.length - 1] ?? headings[headings.length - 1];
+        if (last?.id) {
+          setActive(last.id);
+          return;
+        }
+      }
+
+      const onScreen = headings.filter((h) => {
+        const top = h.getBoundingClientRect().top;
+        return top >= ZONE_TOP && top < ZONE_BOTTOM;
+      });
+      if (onScreen[0]?.id) {
+        setActive(onScreen[0].id);
+        return;
+      }
+
+      const passed = headings.filter((h) => h.getBoundingClientRect().top < ZONE_TOP);
+      const fallback = passed.length > 0 ? passed[passed.length - 1] : headings[0];
+      if (fallback?.id) setActive(fallback.id);
+    };
+
+    /*
+      ─── THE OBSERVER REPORTS A CHANGE, IT DOES NOT DECIDE THE ANSWER ───────
+
+      It used to keep its own Set of intersecting targets and highlight the
+      TOPMOST of them, deferring to resolveActive() only when the Set emptied.
+      That is a SECOND rule for the same question, and the two disagreed the
+      moment the observed elements got tall.
+
+      They are tall now. The ids are on the rail SECTIONS, ~424px each, not on
+      the small heading text. An element counts as intersecting if ANY part of
+      it is in the band, so a rail whose top has already scrolled past the 80px
+      line still intersects on its lower half, and being topmost it won.
+
+      Measured on /feed at 2560x1400, scrolled to the bottom after clicking TV:
+
+        band            80 -> 700
+        film    top  13, bottom 437   intersects, top ABOVE the line
+        tv      top 481, bottom 906   intersects, top INSIDE the zone
+
+        observer picked        film
+        resolveActive picked   tv
+
+      The reader clicked TV, TV is the section under their eyes, and the rail
+      said Film. On a 14 inch screen the band is ~370px, narrower than one
+      rail, so usually only one intersects and it looked fine — which is
+      exactly the "inconsistent on the MacBook, wrong on the 4K" report.
+
+      So the observer's only job is to say "geometry changed, look again", and
+      resolveActive() is the single place that answers. One rule cannot
+      disagree with itself. The cost is one getBoundingClientRect pass per
+      intersection change, which is not per frame.
+    */
+    const observer = new IntersectionObserver(
+      () => resolveActive(),
+      { rootMargin: '-80px 0px -50% 0px', threshold: 0 },
+    );
+
+    headings.forEach((heading) => observer.observe(heading));
+    setActive(headings[0].id);
+
+    /*
+      ─── A CLICK IS AN ANSWER, NOT A HINT ───────────────────────────────────
+
+      The reader has just told us which section they want. Waiting for the
+      observer to agree is how the rail ends up pointing at the previous one:
+      the jump is instant, the callback is not, and if the heading lands outside
+      the detection band nothing fires at all.
+
+      `resolveActive()` after a beat covers the case where the browser settles
+      somewhere slightly different from where the anchor aimed — images above
+      finishing their layout, mostly.
+    */
+    /*
+      ─── EXCEPT DURING THE JUMP THE CLICK ITSELF STARTED ────────────────────
+
+      A `wheel` event is the reader taking the page back, which is exactly what
+      should release the pin — unless it lands in the middle of the smooth
+      scroll the click just began. A Mac trackpad emits microscopic residual
+      wheel events from the flick that PRECEDED the click, and one of those
+      inside the animation released the pin, let geometry resume, and lit up
+      every section the page was travelling past. That is the 1 > 4 > 2 > 3 > 4
+      flicker, and it is why the jump was made instant.
+
+      NOT A FIXED TIMEOUT. A one-second window was the obvious version and it
+      guesses twice: Chrome scales a smooth scroll's duration with distance, so
+      one second is too long for a jump to the next heading and too short for a
+      jump down a 6,500px feed, and the wrong guess either swallows a real
+      gesture or lets the flicker back in at the end of a long journey.
+
+      So the suppression ends when the SCROLL does: three consecutive frames
+      within a pixel. The 2s cap is a failsafe, not a duration — a page that
+      never settles must not wedge the pin, because the pin is what stops the
+      rail arguing with the reader at the bottom of the document.
+    */
+    let releaseArmed = true;
+    const armReleaseWhenSettled = () => {
+      releaseArmed = false;
+      let previous = window.scrollY;
+      let still = 0;
+      const deadline = Date.now() + 2000;
+      const tick = () => {
+        const now = window.scrollY;
+        still = Math.abs(now - previous) <= 1 ? still + 1 : 0;
+        previous = now;
+        if (still >= 3 || Date.now() > deadline) {
+          /* Only re-arms. No resolveActive() here: the pin is still set, so it
+             would return at its first line. The rail is already showing what
+             the reader clicked, and it keeps showing it until they scroll. */
+          releaseArmed = true;
+          return;
+        }
+        window.requestAnimationFrame(tick);
+      };
+      window.requestAnimationFrame(tick);
+    };
+
+    links.forEach((link) => {
+      link.addEventListener('click', (event) => {
+        const id = link.dataset.tocLink;
+        const heading = id ? document.getElementById(id) : null;
+        if (!id || !heading) return;
+
+        pinnedId = id;
+        setActive(id);
+
+        /*
+          ─── IT TRAVELS AGAIN, NOW THAT THE JOURNEY IS SURVIVABLE ───────────
+
+          This was instant, and the note here used to argue that switching beat
+          travelling because two animated versions had read as unsteady. That
+          was treating the symptom. The rail flickering 1 > 4 > 2 > 3 > 4 during
+          a smooth scroll was never caused by the animation: it was caused by
+          the animation being long enough for a stray trackpad `wheel` event to
+          land inside it and release the pin, after which geometry resumed and
+          lit up every section the page travelled past.
+
+          With the pin held for the duration (see `armReleaseWhenSettled`), a
+          smooth scroll passes through those sections without reporting any of
+          them, so the cinematic scroll comes back and the flicker does not.
+
+          AIMING is kept and still matters. A native anchor resolves against the
+          layout as it is at that instant, and on the first click of a cold load
+          the images above the fold have not finished laying out — the target
+          ended up at 842px against the ~90px its `scroll-margin-top` asks for.
+          The jump waits for the heading to stop moving, then goes once.
+        */
+        event.preventDefault();
+
+        const offsetOf = () => heading.getBoundingClientRect().top + window.scrollY;
+        let previous = offsetOf();
+
+        const jumpWhenAimed = (attempt: number) => {
+          const now = offsetOf();
+          /* Within a pixel counts as unmoved: sub-pixel layout rounding would
+             otherwise reset the counter every frame and the cap would always
+             be what fires. */
+          if (Math.abs(now - previous) <= 1 || attempt >= 8) {
+            /*
+              `behavior: 'smooth'` EXPLICITLY, rather than inheriting it from
+              `html { scroll-behavior: smooth }` in global-base.css. Written out
+              so that changing the global does not silently change this, which
+              is how it came to be animating while the note beside it claimed it
+              did not.
+
+              `armReleaseWhenSettled()` BEFORE the scroll, not after: the first
+              wheel event of a trackpad flick can arrive in the same frame as
+              the call, and arming afterwards leaves that frame unguarded.
+            */
+            armReleaseWhenSettled();
+            heading.scrollIntoView({ block: 'start', behavior: 'smooth' });
+            return;
+          }
+          previous = now;
+          window.setTimeout(() => jumpWhenAimed(attempt + 1), 16);
+        };
+
+        jumpWhenAimed(0);
+
+        /* The address bar should still say where the reader is. `replaceState`
+           rather than assigning `location.hash`, which would re-trigger the
+           browser's own jump and undo the correction above. */
+        history.replaceState(null, '', `#${id}`);
+      });
+    });
+    
+    currentObserver = observer;
+
+    /*
+      ─── TELEPORTATION BUG PROTECTION ───────────────────────────────────────
+      If the user jumps across the entire active zone instantly (e.g. clicking 
+      "BE UNCONVENTIONAL HQ" to scroll to top, or dragging the scrollbar very 
+      fast), the headings go from 'not intersecting' (below) to 'not intersecting' 
+      (above) in a single frame. The IntersectionObserver never fires because 
+      the boolean state didn't change! This debounced scroll listener catches 
+      those teleports gracefully without polling layout geometry every frame.
+    */
+    /*
+      ─── ARRIVING ON A HASH IS THE SAME STATEMENT AS CLICKING THE RAIL ───────
+
+      The pin above was set only by a click on this rail, so a reader arriving
+      from anywhere else got no pin and geometry was left to work it out. The
+      homepage category tiles land on /feed#film, /feed#games and so on, which
+      is exactly that case.
+
+      Geometry cannot work it out on a tall screen. The rule is "the last
+      heading above ZONE_TOP (80px)", and the trailing sections cannot reach
+      that line: at 3840x2160 the viewport is 2160 tall, so the page runs out
+      of scroll with the target still well down the screen. Measured on /feed
+      at that size, jumping to each section in turn:
+
+        streaming   heading lands at    0px   clears the line
+        studios     heading lands at    0px   clears the line
+        games       heading lands at   56px   clears the line
+        film        heading lands at  591px   does NOT -> "games" lit up
+        tv          heading lands at 1126px   does NOT -> "film" lit up
+
+      Which is the report: pick Film on the homepage and the rail says Games,
+      pick Games and it says Studios. Always the entry above, because that is
+      the last one that did clear the line.
+
+      The reader stated which section they wanted in the URL, so it is pinned
+      exactly as a click is and released the same way, by them scrolling.
+      `armReleaseWhenSettled()` is what stops the jump's own scrolling from
+      clearing the pin in the breath it was set.
+
+      Raising ZONE_TOP was the other candidate and is worse: it would move the
+      line for every section on every screen to fix the last two on one, and
+      the value it needs depends on viewport height, which is the thing that
+      varies.
+    */
+    const pinFromHash = () => {
+      const id = decodeURIComponent(location.hash.slice(1));
+      if (!id) return;
+      const link = links.find((candidate) => candidate.dataset.tocLink === id);
+      if (!link || !document.getElementById(id)) return;
+      pinnedId = id;
+      setActive(id);
+      armReleaseWhenSettled();
+    };
+    pinFromHash();
+    window.addEventListener('hashchange', pinFromHash);
+
+    /* The reader taking the page back releases the pin. These fire only for
+       input, never for scrollIntoView(), which is the distinction the pin
+       needs and which a plain `scroll` listener cannot make — and not while
+       the click's own smooth scroll is still running, which is what
+       `armReleaseWhenSettled` above is for. */
+    const releasePin = () => {
+      if (!releaseArmed) return;
+      pinnedId = null;
+    };
+    const SCROLL_KEYS = new Set([
+      'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ', 'Spacebar',
+    ]);
+    window.addEventListener('wheel', releasePin, { passive: true });
+    window.addEventListener('touchmove', releasePin, { passive: true });
+    window.addEventListener('keydown', (event) => {
+      if (SCROLL_KEYS.has((event as KeyboardEvent).key)) releasePin();
+    });
+
+    let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
+    const onScroll = () => {
+      /* The `activeHeadings.size > 0` early return that stood here skipped the
+         debounce whenever anything was intersecting. That Set is gone with the
+         observer's second rule, and the guard went with it: resolveActive() is
+         cheap, debounced to 50ms, and now the only thing that decides. */
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(resolveActive, 50);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    /*
+      MODULE SCOPE, NOT `window`. This was stored as
+      `(window as any).__hqTocScrollHandler`, which works only while init and
+      teardown alternate perfectly: a second init without a swap between
+      overwrites the global and orphans the first listener, with no handle left
+      to remove it. `currentObserver` right above is already module-scoped for
+      exactly this reason, so the two now tear down the same way — and the cast
+      that was needed to satisfy strict TS goes away with the global.
+
+      The pending timer is cleared too. A scroll inside the last 50ms before a
+      ClientRouter swap otherwise leaves a callback holding the OLD page's
+      heading and link nodes until it fires.
+    */
+    teardownScroll = () => {
+      window.removeEventListener('scroll', onScroll);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+      scrollTimeout = null;
+    };
+  }
+
+  document.addEventListener('astro:page-load', initFloatingPageNav);
+  
+  document.addEventListener('astro:before-swap', releaseFloatingPageNav);
+</script>

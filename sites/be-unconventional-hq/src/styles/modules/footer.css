@@ -1,0 +1,356 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FOOTER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.site-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--color-surface);
+  padding: 4rem 2rem 2rem;
+  margin-top: 4rem;
+
+  /*
+    ONE knob for the footer logo, read by both `.footer-logo` and
+    `.footer-logo img` below.
+
+    The logo used to be sized by four separate declarations across two files,
+    half of them `!important`, which is how it ended up correct on desktop and
+    tiny on a phone: the mobile override won and nobody noticed the desktop
+    rule had stopped applying. Now every breakpoint sets this ONE value —
+    see the overrides in footer-brand.css.
+  */
+  /* 260, down from 300: the mark outweighed the Explore and Follow columns
+     beside it (Andrew). */
+  --footer-logo-size: 260px;
+}
+
+.footer-inner {
+  /* The token, not a hardcoded 1536. This is a structural container, and it was
+     stopping a thousand pixels short of the page around it on a 4K screen while
+     `--page-max` said 2600. The token is 1536px below 1920, so nothing changes
+     at laptop widths. Prose columns and form fields keep their fixed caps: a
+     2600px line length is unreadable. */
+  max-width: var(--page-max, 1536px);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1.5rem;
+  padding-bottom: 3rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/*
+   Footer logo.
+
+   TO RESIZE IT: change `--footer-logo-size` on `.site-footer` above, or the
+   per-breakpoint override in footer-brand.css. Do NOT add a width or height
+   here — that is exactly how the mobile and desktop sizes drifted apart.
+
+   ─── THE ASSET: src/assets/logo-mark.webp, NOT logo.webp ────────────────
+   logo.webp (used elsewhere on the site) is a 2000x2000 square with the
+   wordmark occupying only ~42% of its height — the rest is transparent
+   padding, off-centre within the square rather than centred in it.
+
+   An earlier version of this rule tried to fix that in CSS: force the box to
+   the mark's aspect ratio and `overflow: hidden` + `place-items: center` to
+   crop the padding away. That assumed the padding was even on all sides. It
+   was not — sharp's trim reported the content starting 420px down and ending
+   580px from the bottom of the 2000px square — so a centred crop sliced
+   straight through the wordmark itself. That shipped to production visibly
+   clipping the logo on every breakpoint.
+
+   logo-mark.webp is the fix done properly, once, in the asset instead of in
+   CSS: the same artwork pre-cropped to its real content box (sharp trim) plus
+   a small even margin, so its own dimensions ARE the shape to render at.
+   No overflow trick needed — width/height auto is correct on its own.
+*/
+.footer-logo {
+  width: var(--footer-logo-size);
+  /* Never wider than its column, whatever the size above says. This is what
+     keeps the brand column from pushing Explore and Follow around. */
+  max-width: 100%;
+  height: auto;
+  margin-bottom: 0;
+  display: block;
+  transition: opacity 0.3s ease;
+}
+
+.footer-logo img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.footer-logo:hover {
+  opacity: 0.8;
+}
+
+.footer-nav-label {
+  color: var(--color-white);
+  font-family: var(--font-display);
+  font-size: max(0.75rem, 11px);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 1.25rem;
+  text-align: center;
+}
+
+.footer-nav,
+.footer-socials-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/*
+   Explore links.
+
+   Two things this used to get wrong, both reported directly:
+
+   1. `flex-wrap: wrap` inside `max-width: 300px` meant the five items never
+      fitted, so "ABOUT" dropped to its own line on every device — it read as
+      an accident, not a layout.
+   2. The first fix for that used `nowrap` with a gap that shrank on a
+      narrow viewport (`clamp(0.4rem, 2vw, 2rem)`) to force one row no matter
+      what. At 390px that clamp resolved to ~8px between five short words,
+      which is cramped enough to misread as a single run of text.
+
+   This gap is now a comfortable FIXED size — not shrunk to force a fit — and
+   `wrap` is back, but centred so a wrapped row still looks intentional rather
+   than ragged. At the widths this site is actually used at (375px and up)
+   five items at this gap still fit on one line; wrapping only kicks in on
+   very narrow phones, which is the accepted trade-off: readable spacing over
+   a forced single row.
+*/
+.footer-nav ul {
+  list-style: none;
+  /*
+    TWO ROWS OF THREE (Andrew). With Press / Media added there are six
+    links; one row of six was a thin strip, and a two-column list was
+    rejected. Items centre in their columns so the block sits centred under
+    the EXPLORE label.
+  */
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  justify-content: center;
+  justify-items: center;
+  gap: 1rem 2rem;
+  padding: 0;
+  max-width: 100%;
+}
+
+/* Individual items must not break mid-word either — "FEATURED" wrapping to
+   "FEATUR / ED" would defeat the point of keeping the row on one line. */
+.footer-nav ul li a {
+  white-space: nowrap;
+}
+
+.footer-socials {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 40px);
+  grid-auto-rows: 40px;
+  gap: 1rem;
+  padding: 0;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .footer-socials {
+    gap: 1.25rem !important;
+  }
+}
+.footer-social-link {
+  display: grid !important;
+  place-items: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: var(--color-surface) !important;
+  color: var(--color-white-muted) !important;
+  transition: all 0.3s ease !important;
+}
+.footer-social-link svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+.footer-social-link:hover {
+  background: transparent !important;
+  border-color: var(--color-accent) !important;
+  color: #fff !important;
+  box-shadow: 0 0 12px rgba(204, 0, 0, 0.4) !important;
+  transform: translateY(-3px) !important;
+}
+
+.contact-social-card .contact-social-icon-wrapper,
+.footer-social-link {
+  display: grid !important;
+  place-items: center !important;
+  width: 40px !important;
+  height: 40px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: var(--color-surface) !important;
+  color: var(--color-white-muted) !important;
+  border-radius: 0 !important;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease !important;
+}
+.contact-social-card:hover .contact-social-icon-wrapper {
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  background: #2a2a2a !important;
+  transform: translateY(-3px) !important;
+}
+
+.footer-nav ul li a {
+  color: var(--color-white-muted);
+  /* The EXPLORE label's own face, just under its size (Andrew): the label is
+     max(0.75rem, 11px), these are 90% of it. */
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: max(0.675rem, 10px);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  text-decoration: none;
+  transition: color 0.3s ease;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 2px;
+}
+
+.footer-social-link {
+  color: var(--color-white-muted);
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: color 0.3s ease;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 2px;
+}
+
+.footer-nav ul li a::after,
+.footer-social-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.footer-nav ul li a:hover {
+  color: #fff;
+}
+
+.footer-nav ul li a:hover::after {
+  transform: scaleX(1);
+}
+
+/*
+   Bottom bar: three items on the same three columns as the footer above, so
+   they line up with it: copyright left, Privacy Policy centred under
+   Explore, tagline right. Stacked and centred on a phone.
+*/
+.footer-bottom {
+  /* The token, not a hardcoded 1536. This is a structural container, and it was
+     stopping a thousand pixels short of the page around it on a 4K screen while
+     `--page-max` said 2600. The token is 1536px below 1920, so nothing changes
+     at laptop widths. Prose columns and form fields keep their fixed caps: a
+     2600px line length is unreadable. */
+  max-width: var(--page-max, 1536px);
+  margin: 0 auto;
+  padding-top: 2rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+  gap: 1rem;
+}
+.footer-bottom > :nth-child(2) {
+  justify-self: center;
+}
+.footer-bottom > :nth-child(3) {
+  justify-self: end;
+  text-align: right;
+}
+
+.footer-copy {
+  color: var(--color-white-muted);
+  font-size: max(0.75rem, 12px);
+}
+
+.footer-privacy-link {
+  color: var(--color-white-muted);
+  font-size: max(0.75rem, 12px);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-credit {
+  color: var(--color-accent-text);
+  font-size: max(0.7rem, 11px);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 768px) {
+  .footer-inner {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .footer-bottom {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 0.75rem;
+    text-align: center;
+  }
+  .footer-bottom > :nth-child(3) {
+    justify-self: center;
+    text-align: center;
+  }
+}
+
+
+/* ── Footer social icons ────────────────────────────────────────────────────
+
+   WHY THESE MOVED HERE
+   They were in styles/modules/home-cards.css, sharing a selector list with
+   `.contact-social-card`. Harmless while every stylesheet was pulled into
+   global.css — but once the sheets were split into per-component imports
+   (commit e1e3bef), home-cards.css only loads on pages that render a
+   <ContentCard>. The footer renders on EVERY page, so these silently stopped
+   applying on /events, /featured, /about and /privacy: the icons dropped to
+   their intrinsic 16px there while / and /intel still showed 20px, and the
+   hover treatment was missing entirely. Measured across pages before fixing.
+
+   Footer.astro imports this file, so footer chrome belongs here where no page
+   can drop it by not using some unrelated component.
+*/
+.footer-social-link svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.footer-social-link:hover {
+  background: transparent !important;
+  border-color: var(--color-accent) !important;
+  color: #fff !important;
+  box-shadow: 0 0 15px rgba(204, 0, 0, 0.3) !important;
+  transform: translateY(-3px) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-social-link:hover {
+    transform: none !important;
+    transition: none !important;
+  }
+}

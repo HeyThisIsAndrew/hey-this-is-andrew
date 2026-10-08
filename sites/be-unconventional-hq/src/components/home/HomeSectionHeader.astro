@@ -1,0 +1,43 @@
+---
+/**
+ * The homepage's ONE section header system:
+ *   [chalk icon] + [section name] + [small-caps descriptor] + [1px hairline]
+ *
+ * One treatment for every section: a white name, a red icon. (There used to
+ * be a `tone` prop that set only Intel's name in white; it made the headers
+ * disagree with each other and is gone.)
+ */
+import ChalkIcon, { type ChalkIconName } from './ChalkIcon.astro';
+
+interface Props {
+  icon: ChalkIconName;
+  title: string;
+  descriptor?: string;
+  /** Heading id, for the section's aria-labelledby. */
+  id: string;
+  /** Optional right-aligned "view all" link. */
+  href?: string;
+  linkLabel?: string;
+}
+
+const { icon, title, descriptor, id, href, linkLabel } = Astro.props;
+---
+
+<header class="hsh">
+  <ChalkIcon name={icon} size={30} class="hsh-icon" />
+  <h2 id={id} class="hsh-title">{title}</h2>
+  {descriptor && <p class="hsh-descriptor">{descriptor}</p>}
+  {/* A chalk stroke, not a hairline: drawn freehand and roughened by the
+      page's one #hq-chalk filter (ChalkFilter.astro), so every section
+      header carries the same hand as the hero's chalk tiles. The stroke
+      keeps its weight however wide the rule stretches. */}
+  <svg class="hsh-rule" viewBox="0 0 400 10" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+    <path class="hsh-rule-stroke" d="M2 6 C 40 4.2, 86 7.4, 140 5.4 S 236 3.6, 290 5.8 S 368 6.9, 398 4.2" />
+    <path class="hsh-rule-echo" d="M24 7.6 C 90 6.4, 170 8.2, 250 6.9 S 350 7.8, 380 6.6" />
+  </svg>
+  {href && linkLabel && (
+    <a class="hsh-link" href={href}>
+      {linkLabel} <span aria-hidden="true">&rarr;</span>
+    </a>
+  )}
+</header>

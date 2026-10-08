@@ -1,0 +1,220 @@
+@media (max-width: 768px), (orientation: landscape) and (max-height: 500px), (pointer: coarse) {
+  /* `pointer: coarse` catches iPad, whose CSS width is wider than the
+     max-width and landscape-height checks. */
+  /* Force visibility on mobile to rule out IntersectionObserver failures */
+  .animate-on-scroll,
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    transition: none !important;
+  }
+}
+
+.hero-kicker {
+  color: var(--color-accent-text);
+  font-size: clamp(0.65rem, 0.55rem + 0.4vw, 0.8rem);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+  opacity: var(--hero-content-opacity);
+}
+
+.hero-title-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 3rem;
+  line-height: 0.85;
+  text-transform: uppercase;
+  font-family: var(--font-display);
+}
+
+.hero-title-stack span {
+  display: block;
+  will-change: transform;
+}
+
+/* GEMINI-CLI CHANGE
+   - author: gemini-cli
+   - date: 2026-05-25T00:00:00Z
+   - file: src/styles/global.css
+   - summary: Scoped hero-title-stack transforms to .hero class
+   - reason: Prevents section headings in other areas (e.g., Categories) from inheriting hero scroll animations.
+   - revert: Remove .hero prefix from .word-be, .word-unconventional, and .word-hq transforms
+*/
+
+.word-be {
+  font-size: clamp(1rem, calc(0.5rem + 1.25vw), 1.8rem);
+  font-weight: 600;
+  align-self: center;
+  color: var(--color-white-muted);
+  will-change: transform;
+}
+
+.word-unconventional {
+  font-size: clamp(2rem, calc(1rem + 4vw), 4.5rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--color-white);
+  z-index: 2;
+  text-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  will-change: transform;
+}
+
+.word-hq {
+  font-size: clamp(1.5rem, calc(0.75rem + 2.5vw), 3rem);
+  font-weight: 800;
+  align-self: center;
+  margin-top: -1.2rem;
+  color: var(--color-accent-text);
+  text-shadow: 0 0 25px rgba(204, 0, 0, 0.5);
+  will-change: transform;
+}
+
+/* Reset tight lockup overlap for lower section headers */
+.section-header .word-hq {
+  margin-top: 0;
+}
+
+.hero-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: clamp(0.7rem, 0.62rem + 0.5vw, 0.95rem);
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 2.5rem;
+  opacity: var(--hero-content-opacity);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.hero-cta {
+  opacity: var(--hero-content-opacity);
+  transform: scale(var(--hero-cta-scale));
+  will-change: transform;
+}
+
+.hero-cta:hover {
+  transform: scale(calc(var(--hero-cta-scale) + 0.05));
+}
+
+@keyframes kenburns {
+  from {
+    transform: scale(1.15);
+  }
+  to {
+    transform: scale(1.25);
+  }
+}
+
+/* ===========================================================================
+   EVERY HERO FLOATS OVER THE PAGE, IN ONE PLACE
+   ===========================================================================
+
+   Heroes used to feather out with a `-webkit-mask-image` gradient. That was
+   removed because the fade was applied to the ART: the bottom of the picture
+   dissolved, and because the mask was sized in viewport units the seam moved
+   with the window. What replaced it was nothing, which left a hard horizontal
+   edge with the next section starting flat against it.
+
+   A cast shadow is the same intent applied to the LAYER rather than to the
+   artwork. The hero keeps its whole image and the depth comes from what it
+   throws onto what is beneath it. It is the treatment the sticky navbar
+   already uses, so the site has ONE way of saying "this sits above that".
+
+   ─── WHY THIS IS GLOBAL AND NOT FIVE SCOPED COPIES ───────────────────────
+
+   There are five hero roots: FeedSpotlightHero, EventFeatured,
+   EventAnnouncement, /featured/[slug] and the homepage Hero. Astro scopes a
+   component's styles, so the same declaration in each would be five things to
+   keep in step, and the first one somebody retuned would silently disagree
+   with the other four. This file is already imported by global.css and is
+   where `.hero` itself is defined.
+
+   Anything that wants to opt out overrides it in its own scoped block, where
+   the `[data-astro-cid-…]` attribute makes it the more specific rule.
+
+   ─── THE TWO PARTS THAT ARE LOAD-BEARING ─────────────────────────────────
+
+   NEGATIVE SPREAD. -10px pulls the shadow in horizontally so a full-bleed hero
+   casts downward instead of sideways into the viewport gutters.
+
+   Z-INDEX. A shadow is painted with its element, so without a stacking order a
+   later positioned sibling paints straight over it. FeedSpotlightHero already
+   set `z-index: 10`; the other heroes did not, and the shadow would simply not
+   have appeared on them. Stated here once, at the same value.
+
+   NOTE ON `overflow: hidden`: do not add it to `.event-hero`, and not
+   because of the shadow (overflow clips an element's CHILDREN, never its own
+   box-shadow): hard rule 3 says an
+   overflow:hidden ancestor makes a descendant YouTube iframe render as a black
+   box on iOS Safari.
+   =========================================================================== */
+.event-hero {
+  position: relative;
+  z-index: 10;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.9);
+}
+
+/* The shadow is deliberately static. Animating or parallaxing it would
+   reintroduce the moving seam it was brought in to replace. */
+
+/*
+  ─── DO NOT "RESTORE" 8.5rem / 130%. THOSE WERE REJECTED TWICE. ────────────
+
+  The original 4K brief specified `clamp(2rem, 5vw, 8.5rem)` and a 130% root,
+  and they were implemented exactly. The owner's response was "you scaled the
+  text to be way too big on a 4K monitor", and to the next pass at it, "4k
+  monitor, text is still too big!". A later change read the original brief,
+  took these smaller numbers for a half-finished implementation and put 8.5rem
+  and 130% back. They are not a half-finished anything. They are the answer to
+  the feedback that came after the brief.
+
+  The history, so nobody re-derives it: at 3840 production is about 79px and
+  was called too small, 8.5rem is 176.8px and was called way too big, and
+  6.5rem is 119.6px and was still too big. 5.4rem lands at 99.4px, near the
+  midpoint of the two ends that have actually been judged, and `.word-hq`
+  moves with it to hold the 1.5:1 the lockup has always had.
+
+  STILL MEASURED THROUGH AN EMULATED VIEWPORT, on both attempts, which is a
+  real limitation rather than a caveat for form's sake: emulation gets the CSS
+  pixels exactly right and tells you nothing about apparent physical size,
+  which is the only thing the feedback has ever been about. 99.4px is a
+  defensible step, not a proven answer. If it is still wrong, move it and
+  record the number here rather than starting again.
+
+  ─── SCOPED SO IT CANNOT REACH A LAPTOP ────────────────────────────────────────────────────────
+
+  The ceilings above are the production values and they are staying that way.
+  Raising them globally is what went wrong the first time: `.word-unconventional`
+  went to `clamp(2rem, 5vw, 8.5rem)`, whose vw term governs long before 4K, so a
+  1512px laptop went from 57.6px to 75.6px. Nothing asked for that, and the
+  laptop rendering is the one that was signed off.
+
+  So the raise lives here, behind the same condition the root font scale uses,
+  and it only moves the CEILING. Below 4K the vw term is still what wins, so
+  every width under this query renders exactly as production does.
+
+  THE SIZES ARE A MIDDLE, NOT A MAXIMUM. Measured at 3840: production's cap
+  lands the wordmark at about 79px, which was reported as too small for the
+  screen; the first attempt at this reached 176.8px, which was reported as way
+  too big. These sit near 120px, roughly halfway, and the smaller members keep
+  production's proportions to it (the wordmark is 1.5x the HQ, as it always
+  has been).
+*/
+@media (min-width: 3400px) {
+  .word-be { font-size: clamp(1rem, calc(0.5rem + 1.25vw), 2.1rem); }
+  .word-unconventional { font-size: clamp(2rem, calc(1rem + 4vw), 5.4rem); }
+  .word-hq { font-size: clamp(1.5rem, calc(0.75rem + 2.5vw), 3.6rem); }
+  .hero-subtitle { font-size: clamp(0.7rem, 0.62rem + 0.5vw, 1.15rem); }
+}
+
+/* Half of a 4K panel is a 1920px window, so the width query above never fires
+   there. Same ceilings, same reason — see global-base.css. */
+@media (min-width: 1600px) {
+  :root[data-screen-4k] .word-be { font-size: clamp(1rem, calc(0.5rem + 1.25vw), 2.1rem); }
+  :root[data-screen-4k] .word-unconventional { font-size: clamp(2rem, calc(1rem + 4vw), 5.4rem); }
+  :root[data-screen-4k] .word-hq { font-size: clamp(1.5rem, calc(0.75rem + 2.5vw), 3.6rem); }
+  :root[data-screen-4k] .hero-subtitle { font-size: clamp(0.7rem, 0.62rem + 0.5vw, 1.15rem); }
+}

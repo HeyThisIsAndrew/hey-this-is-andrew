@@ -1,0 +1,160 @@
+---
+/**
+ * /events/<slug>/coverage — one event's full coverage feed (and /2, /3 …).
+ *
+ * ─── WHY THIS ROUTE EXISTS ────────────────────────────────────────────────
+ * An event page shows the six newest pieces of coverage and stops, the same
+ * display cap "Past Event Archive" uses on /events. A cap without a door is
+ * just deletion with extra steps, so this is the door: everything that
+ * matched the event, newest first, twelve to a page.
+ *
+ * It is generated only for events that HAVE coverage. An event with none has
+ * no link pointing here and no page here either, rather than a built,
+ * indexable, permanently empty one.
+ *
+ * ─── ROUTE PRECEDENCE ─────────────────────────────────────────────────────
+ * `/events/[...page]` would also match "/events/sdcc-2026/coverage" as a
+ * rest parameter, and `/events/[slug]` owns "/events/sdcc-2026". Neither
+ * collides in a static build: `[...page]` only ever generates /events and
+ * its numbered pages, and `coverage` is a static segment that beats a rest
+ * parameter besides. Do not add a `coverage` slug to an event document.
+ */
+import type { Page } from 'astro';
+import Layout from '../../../../layouts/Layout.astro';
+import ContentCard from '../../../../components/ContentCard.astro';
+import Pagination from '../../../../components/Pagination.astro';
+import SubscribeCTA from '../../../../components/SubscribeCTA.astro';
+import EmptyState from '../../../../components/EmptyState.astro';
+import { getEventsLocal } from '../../../../lib/local-content';
+import { getArticleItems } from '../../../../lib/feed-items';
+import { getVideosUnified } from '../../../../lib/videos-source';
+import { collectHubCoverage, COVERAGE_FEED_PAGE_SIZE } from '../../../../lib/hub-coverage';
+import { pageTitle } from '../../../../data/content.js';
+import { formatEventDateRange } from '../../../../lib/events';
+
+export async function getStaticPaths({ paginate }: any) {
+  const events = getEventsLocal();
+  const allArticles = getArticleItems();
+  const allVideos = await getVideosUnified();
+  /* Same exclusion as the event page and the hub page, for the same reason. */
+  const longFormVideos = allVideos.filter((v: any) => !v.isShort && !v.isLive);
+
+  return events.flatMap((event: any) => {
+    const slug = event.slug?.current;
+    if (!slug) return [];
+
+    const { items } = collectHubCoverage({
+      hub: event,
+      videos: longFormVideos,
+      articles: allArticles,
+    });
+    if (items.length === 0) return [];
+
+    return paginate(items, {
+      params: { slug },
+      props: { event },
+      pageSize: COVERAGE_FEED_PAGE_SIZE,
+    });
+  });
+}
+
+export interface Props {
+  page: Page<any>;
+  event: any;
+}
+
+const { page, event } = Astro.props as Props;
+
+const eventHref = `/events/${event.slug?.current}`;
+const dateRange = formatEventDateRange(event.startDate, event.endDate);
+const title = pageTitle(`${event.title} Coverage`, page.currentPage);
+const description = `Every article and video covering ${event.title}, newest first.`;
+---
+
+<Layout title={title} description={description} preconnect={["https://cdn.sanity.io"]}>
+  <main class="event-coverage-page flex-1 flex flex-col w-full">
+    <div class="container-page">
+      <header class="coverage-header animate-on-scroll" data-nav-anchor>
+        <a class="coverage-back" href={eventHref}>&larr; {event.title}</a>
+        <h1 class="coverage-title">Coverage</h1>
+        {dateRange && <p class="coverage-dates">{dateRange}</p>}
+      </header>
+
+      {page.data.length > 0 ? (
+        <section class="coverage-section animate-on-scroll" aria-labelledby="event-coverage-heading">
+          {/*
+            The grid sits under the page's own <h1>, so it needs a structural
+            <h2> naming it for the outline. sr-only because the display title
+            above already says it out loud: the site convention for card
+            grids under an h1.
+          */}
+          <h2 id="event-coverage-heading" class="sr-only">
+            {event.title} coverage, newest first
+          </h2>
+          <div class="card-grid">
+            {page.data.map((item: any, index: number) => (
+              <ContentCard item={item} index={index} />
+            ))}
+          </div>
+        </section>
+      ) : (
+        <EmptyState message="No coverage here yet." actionLabel="Back to the event" actionHref={eventHref} />
+      )}
+
+      <Pagination page={page} />
+    </div>
+  </main>
+
+  <SubscribeCTA />
+</Layout>
+
+<style>
+  .coverage-header {
+    margin-bottom: 2.5rem;
+  }
+  .coverage-back {
+    display: inline-block;
+    margin-bottom: 1rem;
+    font-family: var(--font-display, 'Inter', sans-serif);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--color-accent-text, #ef4444);
+    text-decoration: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .coverage-back:hover,
+    .coverage-back:focus-visible {
+      color: #fff;
+    }
+  }
+  .coverage-title {
+    font-family: var(--font-display, 'Inter', sans-serif);
+    font-size: clamp(2rem, 1.2rem + 3vw, 3.25rem);
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    line-height: 1.05;
+    color: #fff;
+    margin: 0;
+  }
+  .coverage-dates {
+    margin: 0.6rem 0 0 0;
+    color: var(--color-white-muted, #888);
+    font-size: 0.95rem;
+  }
+
+  /*
+    Matches the coverage grid on the event page itself, so paging into the
+    overflow feed does not change how a tile looks or how many fit a row.
+  */
+  .coverage-section {
+    margin-bottom: var(--space-section);
+  }
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    gap: 1.5rem;
+  }
+</style>

@@ -1,0 +1,168 @@
+---
+/**
+ * ArticleSupportRail — the sticky right-hand rail on an article page.
+ *
+ * ─── WHAT IS IN IT ────────────────────────────────────────────────────────
+ *   1. "More From Intel"     — a few related articles.
+ *   2. "Official <X> Hub"    — the brand this piece is about, when there is
+ *                              one. Same card an event page carries.
+ *   3. "Editorial Desk"      — how to reach us about a story.
+ *   4. "Support The HQ"      — the referral / gear links, at the BOTTOM.
+ *
+ * That order is deliberate and was asked for directly: the reader came to
+ * read, so the rail leads with editorial and the commerce sits underneath it.
+ * The hub card and the desk are editorial too, so they go above the links.
+ *
+ * ─── ON A PHONE THIS IS NOT A RAIL ────────────────────────────────────────
+ * Below 1200px article.css hides `.article-rail` entirely, which meant a
+ * phone reader saw none of this. It now stacks under the article instead, the
+ * way the event templates already do, because the hub card and the press
+ * contact are things a phone reader still wants.
+ *
+ * "More From Intel" is the ONE block that stays hidden when stacked: the
+ * article column already renders "Suggested Reading" below the body on every
+ * viewport, so bringing the rail's copy down would print related articles
+ * twice in a row.
+ *
+ * ─── WHERE THE REFERRAL LINKS COME FROM ───────────────────────────────────
+ * This file holds no partner names and no URLs. <ReferralLinks /> renders
+ * them from src/data/referrals.js — the single registry for every referral
+ * on the site. To add a partner, edit that file; nothing here changes.
+ *
+ * There is no third-party ad network here, no tracking script and nothing
+ * that shifts layout. Every link is one we control.
+ *
+ * ─── HOW TO RESTYLE IT ────────────────────────────────────────────────────
+ * `.article-rail*` in src/styles/modules/article.css for the rail shell, and
+ * `.referral-*` in src/styles/modules/referrals.css for the links.
+ */
+import { getDisplayTags } from '../lib/tags';
+import ReferralLinks from './ReferralLinks.astro';
+import HubCard from './HubCard.astro';
+import type { ArticleRecord } from '../lib/articles';
+import { ARTICLE_SECTION } from '../data/sections.js';
+import { REFERRAL_HEADING } from '../data/referrals.js';
+
+interface Props {
+  /** A couple of further-reading links. Pass [] to omit that block. */
+  related?: ArticleRecord[];
+  /**
+   * The featuredBrand this article is about, or null. The caller resolves it
+   * with findHubForItem() — see src/lib/hub-coverage.ts for why an article
+   * infers its hub while an event is told which one it belongs to.
+   */
+  brand?: any;
+}
+
+const { related = [], brand = null } = Astro.props;
+---
+
+<aside class="article-rail article-rail-right" aria-labelledby="article-rail-head">
+  {/*
+    The rail's accessible name used to be the referral heading, which named
+    one block out of four. It is its own heading now, unseen but announced.
+  */}
+  <h2 id="article-rail-head" class="sr-only">More from the HQ</h2>
+  <div class="article-rail-sticky">
+    {/*
+      Further reading FIRST, referrals second — see the note above. It also
+      keeps the "self-funded, not annoying with ads" promise honest: the
+      commercial block is the last thing in the rail, not the first.
+    */}
+    {related.length > 0 && (
+      <div class="article-rail-related article-rail-more">
+        <p class="article-rail-head">More From {ARTICLE_SECTION.name}</p>
+        <ul class="article-related-list">
+          {related.map((item) => (
+            <li>
+              <a href={`${ARTICLE_SECTION.path}/${item.slug}`} class="article-related-item">
+                {getDisplayTags(item).length > 0 && <span class="article-related-meta">{getDisplayTags(item).join(' | ')}</span>}
+                <span class="article-related-title">{item.title}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    {/*
+      Renders nothing when the article matched no hub, which is the common
+      case for a piece about the industry rather than about a brand.
+    */}
+    <HubCard brand={brand} />
+
+    {/*
+      The event template's equivalent is "Coverage Inquiry", which is about
+      booking us for an event. On an article the same corner of the page has
+      a different job: it is where a publicist, a studio or a reader who
+      spotted a mistake finds us. Same desk, different invitation.
+
+      Copy lives here rather than in a data file because it is one block on
+      one template. Change the words below.
+    */}
+    <div class="article-rail-desk">
+      <p class="article-rail-head">Editorial Desk</p>
+      <p class="article-rail-desk-copy">
+        Story tips, review material and corrections all reach the same inbox.
+      </p>
+      <a href="mailto:press@beunconventionalhq.com?subject=Editorial%20Inquiry" class="press-desk-link">
+        Contact Editorial Desk &rarr;
+      </a>
+    </div>
+
+    {/*
+      `compact` because the rail is narrow — it drops the one-line note under
+      each group heading.
+    */}
+    <div class="article-rail-support mt-[3.5rem]">
+      <ReferralLinks compact heading={REFERRAL_HEADING} />
+    </div>
+  </div>
+</aside>
+
+<style>
+  /*
+    The desk block borrows the rail's own vocabulary rather than inventing
+    spacing: the same 3.5rem separation HubCard carries, so the four blocks
+    read as one column.
+  */
+  .article-rail-desk {
+    margin-top: 3.5rem;
+  }
+
+  .article-rail-desk-copy {
+    font-size: 0.78rem;
+    line-height: 1.6;
+    color: var(--color-white-muted);
+    margin: 0 0 1.25rem;
+  }
+
+  /*
+    The underline-on-hover link the event rail uses for its press desk.
+    Duplicated deliberately: `.press-desk-link` is declared inside
+    EventAnnouncement's scoped <style>, so it does not exist on this page at
+    all. Lifting it to a global stylesheet is the better long-term move and a
+    bigger change than this one.
+  */
+  .press-desk-link {
+    font-family: var(--font-display, 'Syne Variable', sans-serif);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-white, #fff);
+    background-image: linear-gradient(var(--color-accent, #cc0000), var(--color-accent, #cc0000));
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0% 2px;
+    padding-bottom: 2px;
+    transition: color 0.3s ease, background-size 0.3s ease;
+    display: inline-block;
+    text-decoration: none;
+  }
+  .press-desk-link:hover,
+  .press-desk-link:focus-visible {
+    color: var(--color-accent-text, #ef4444);
+    background-size: 100% 2px;
+  }
+</style>

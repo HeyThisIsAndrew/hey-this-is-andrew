@@ -1,0 +1,189 @@
+---
+/**
+ * BrandGlow — the cinematic red glow anchored to the top-right of every page.
+ *
+ * ─── WHERE THE LOOK COMES FROM ────────────────────────────────────────────
+ * The /links page, which already had exactly the right treatment:
+ *
+ *     radial-gradient(circle at 0% 100%, rgba(204,0,0,0.05) 0%, transparent 40%)
+ *
+ * The important part is that the gradient is painted as a BACKGROUND across a
+ * large element and fades to transparent well INSIDE it. That is what gives it
+ * a soft, round, edgeless falloff.
+ *
+ * The first version of this component sized a small box and put the gradient
+ * in it — so the gradient hadn't finished fading when the box ended, and the
+ * box edge showed as a hard straight line. Do not go back to that: keep the
+ * layer full-viewport and let the gradient's own falloff define the shape.
+ *
+ * ─── WHY IT SITS BEHIND THE FOOTER ────────────────────────────────────────
+ * `z-index: -1`. A fixed element at z-index 0 paints ABOVE non-positioned
+ * page content, which is why the glow was previously washing over the footer.
+ * At -1 it paints above the body's own background but beneath everything in
+ * the flow, so the footer's opaque surface covers it — which is the intent.
+ *
+ * ⚠ THIS ONLY WORKS BECAUSE `body` HAS `isolation: isolate`
+ * (src/styles/global-base.css). A negative z-index resolves against the
+ * nearest stacking context; without that line the context is the document
+ * root, where body's opaque black background paints AFTER negative-z-index
+ * layers and hid this component completely. If the glow ever vanishes
+ * site-wide, that is the first thing to check.
+ *
+ * ─── PERFORMANCE ──────────────────────────────────────────────────────────
+ *   • A CSS gradient, not an image: no request, and it can never be the LCP
+ *     element.
+ *   • The animation moves only `opacity` — the cheapest property to animate,
+ *     composited off the main thread, no layout and no repaint.
+ *   • `will-change: opacity` promotes it to its own layer so the page beneath
+ *     is never repainted as it breathes.
+ *   • Disabled entirely under `prefers-reduced-motion`.
+ *
+ * ─── MOBILE: STATIC, MATCHING /links EXACTLY ──────────────────────────────
+ * This used to be `display: none` below 768px — the glow was simply absent
+ * on every phone. Below 768px this now renders the SAME two-corner wash
+ * `.links-hub` uses (src/styles/links.css): top-right + a bottom-left
+ * counterweight, at fixed strength, with the breathing animation switched
+ * off. Not "hidden for cost reasons" — matched to a page that was already
+ * approved, deliberately static because a moving background is a bigger paint
+ * cost on the weakest devices than a static one and nobody asked for motion
+ * there. The per-page animated single-corner anchor (the POSITIONS logic
+ * below) stays a desktop-only treatment.
+ *
+ * ─── HOW TO TUNE IT ───────────────────────────────────────────────────────
+ *   intensity  strength of the red at the corner (alpha)
+ *   spread     how far across the viewport it reaches before hitting
+ *              transparent — larger is a wider, softer wash
+ *   POSITIONS  the corner anchors a page can pick from
+ */
+
+interface Props {
+  /** Alpha at the centre of the glow. The /links hero uses 0.15. */
+  intensity?: number;
+  /** Percentage at which the gradient reaches full transparency. */
+  spread?: number;
+  /** Set false to render it static. */
+  animate?: boolean;
+}
+
+const { intensity = 0.16, spread = 55, animate = true } = Astro.props;
+
+/*
+  Anchor points, all in the top-right region. Expressed as gradient positions
+  rather than element offsets, so the falloff always resolves against the full
+  viewport and can never be clipped by a box edge.
+*/
+const POSITIONS = [
+  '100% 0%',
+  '92% -4%',
+  '100% 8%',
+  '85% 0%',
+];
+
+/*
+  Chosen deterministically from the pathname, NOT Math.random(). A random pick
+  would differ between the server-rendered HTML and the client, and would make
+  every page's HTML uncacheable. Same URL always gets the same anchor.
+*/
+const path = Astro.url.pathname;
+let hash = 0;
+for (let i = 0; i < path.length; i += 1) hash = (hash + path.charCodeAt(i)) % 997;
+const anchor = POSITIONS[hash % POSITIONS.length];
+---
+
+<div
+  class:list={['brand-glow', { 'is-animated': animate }]}
+  aria-hidden="true"
+  style={`
+    --glow-anchor: ${anchor};
+    --glow-intensity: ${intensity};
+    --glow-spread: ${spread}%;
+  `}
+>
+</div>
+
+<style>
+  .brand-glow {
+    /* Full viewport. The SHAPE comes from the gradient's falloff, not from
+       the element's dimensions — see the note above. */
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+
+    /* Two stops beyond the anchor give a softer shoulder than a single stop,
+       so the wash never shows a visible ring where it ends. */
+    background-image: radial-gradient(
+      circle at var(--glow-anchor),
+      rgba(204, 0, 0, var(--glow-intensity)) 0%,
+      rgba(204, 0, 0, calc(var(--glow-intensity) * 0.35)) 25%,
+      transparent var(--glow-spread)
+    );
+
+    /* Behind all page content — including the footer, whose opaque surface
+       should cover it. */
+    z-index: -1;
+    pointer-events: none;
+
+    /* Own compositor layer, so the opacity animation never repaints the page. */
+    will-change: opacity;
+  }
+
+  /*
+    Slow breathe. Opacity only — no transform, no scale, so there is nothing
+    for the browser to re-rasterise. 18s is long enough to read as atmosphere
+    rather than a pulse you notice.
+  */
+  @keyframes brand-glow-breathe {
+    0%,
+    100% {
+      opacity: 0.75;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  .brand-glow.is-animated {
+    animation: brand-glow-breathe 18s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .brand-glow.is-animated {
+      animation: none;
+      opacity: 0.85;
+    }
+  }
+
+  /*
+    Phones: the /links treatment, static.
+
+    Same two gradients, same stops, same strengths as `.links-hub` in
+    src/styles/links.css — copied rather than shared because one is a CSS
+    background-image on a page element and this is a component with its own
+    animated custom properties; keeping both explicit means a change to one
+    can't silently retune the other. Overrides `--glow-anchor` entirely, so
+    the desktop per-page anchor variation does not apply here.
+  */
+  @media (max-width: 768px) {
+    .brand-glow {
+      background-image:
+        radial-gradient(
+          circle at 100% 0%,
+          rgba(204, 0, 0, 0.13) 0%,
+          rgba(204, 0, 0, 0.04) 22%,
+          transparent 45%
+        ),
+        radial-gradient(
+          circle at 0% 100%,
+          rgba(204, 0, 0, 0.05) 0%,
+          transparent 40%
+        );
+    }
+
+    /* No breathing on mobile — static, exactly like /links. */
+    .brand-glow.is-animated {
+      animation: none;
+      opacity: 1;
+    }
+  }
+</style>

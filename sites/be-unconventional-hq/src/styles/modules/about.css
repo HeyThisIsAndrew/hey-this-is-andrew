@@ -1,0 +1,307 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ABOUT PAGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.about-page {
+  padding-top: 120px;
+}
+
+/* GEMINI-CLI CHANGE
+   - author: gemini-cli
+   - date: 2026-05-25T00:00:00Z
+   - file: src/styles/global.css
+   - summary: Normalized about-hero bottom margin to 5rem
+   - reason: Aligns with global spacing scale and section consistency.
+   - revert: Change back to 6rem
+*/
+.about-hero {
+  display: grid;
+  /*
+    The logo column needs a FLOOR, not just a fraction.
+
+    `1fr` is `minmax(auto, 1fr)`, and `auto` resolves to the other column's
+    min-content width when that column refuses to wrap. `.about-title-main`
+    used to be `white-space: nowrap`, so the text column claimed the full
+    width of "WHERE NERD CULTURE GETS CINEMATIC" as its minimum and the logo
+    got whatever was left: measured at 149x69px on a 1000px viewport and
+    164x75px at 1024px. The site's own wordmark was rendering SMALLER on a
+    desktop than on a 375px phone, where it gets 300px.
+
+    Two changes, and both are load-bearing: the floor below, and dropping
+    that nowrap (see `.about-story h1.about-title-main` in about.astro) so
+    the title can take two balanced lines instead of dictating the grid.
+  */
+  grid-template-columns: minmax(240px, 1fr) 1.2fr;
+  gap: 4rem;
+  max-width: 1536px;
+  margin: 0 auto var(--space-section);
+  padding: 0 2rem;
+  align-items: center;
+}
+
+.about-image-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.about-profile-img {
+  width: 100%;
+  height: auto;
+  max-width: 600px;
+  object-fit: contain;
+}
+
+/* NOTE: a JS-driven fade-in was tried here and reverted. It hid the logo in
+   CSS and relied on a script to add `.is-loaded` — a fail-closed design, and
+   it did fail: Astro dropped the <script> from the build while the stylesheet
+   shipped, so the logo was hidden with nothing left to reveal it. Any future
+   attempt must fail OPEN (visible by default, JS only ever adds the
+   transition), and must be verified against a built bundle rather than source.
+   The underlying cause of the abrupt appearance is that this logo is served
+   from the runtime /_image transform endpoint and is slow on a cold cache;
+   pre-building it as a static asset fixes the cause rather than masking it. */
+
+.about-story {
+  display: flex;
+  flex-direction: column;
+}
+
+/* to fix the heading sizes */
+.about-story h1,
+.about-story h2 {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, calc(1.25rem + 2.5vw), 4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 2rem;
+}
+
+.about-text {
+  color: var(--color-white-muted);
+  font-size: 1.25rem;
+  line-height: 1.8;
+  margin-bottom: 0;
+}
+
+.about-text p {
+  margin-bottom: 1.5rem;
+}
+
+.about-text strong {
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--color-white);
+}
+
+.stats-section {
+  /* The token, not a hardcoded 1536. This is a structural container, and it was
+     stopping a thousand pixels short of the page around it on a 4K screen while
+     `--page-max` said 2600. The token is 1536px below 1920, so nothing changes
+     at laptop widths. Prose columns and form fields keep their fixed caps: a
+     2600px line length is unreadable. */
+  max-width: var(--page-max, 1536px);
+  margin: 0 auto var(--space-section);
+  padding: 0 2rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  /*
+    EVERY CARD THE SAME HEIGHT, at every column count.
+
+    Grid rows are sized independently, so once these stack (one column below
+    560px, two below 1024px) each row took its own content height and the
+    cards stopped matching: the "FILM / TV / GAMING" card ran 27-32px shorter
+    than the rest because its value wraps at a smaller size than "2026" does.
+
+    `1fr` on the implicit rows is what equalises them. With the grid's own
+    height indefinite, every `1fr` row resolves to the max-content of the
+    tallest row and they all take that size, so the tallest card sets the
+    height and the others fill it. That is also why this is a grid property
+    and not a `min-height` on the card: no magic number to re-tune when the
+    copy changes.
+  */
+  grid-auto-rows: 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stat-card {
+  background: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  transition:
+    border-color 0.3s ease,
+    transform 0.3s ease;
+}
+
+/* GEMINI-CLI CHANGE
+   - author: gemini-cli
+   - date: 2026-05-25T00:00:00Z
+   - file: src/styles/global.css
+   - summary: Added hover glow/shadow to stat-card
+   - reason: Parity with other HQ cards; reinforces interactive feedback.
+   - revert: Remove border-color and box-shadow from hover
+*/
+.stat-card:hover {
+  border-color: var(--color-accent);
+  transform: translateY(-5px);
+  box-shadow: 0 8px 30px rgba(204, 0, 0, 0.1);
+}
+
+.stat-value {
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 1.5rem + 2vw, 2.5rem);
+  font-weight: 800;
+  color: var(--color-white);
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  display: block;
+  color: var(--color-accent-text);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.press-kit-section {
+  /* The token, not a hardcoded 1536. This is a structural container, and it was
+     stopping a thousand pixels short of the page around it on a 4K screen while
+     `--page-max` said 2600. The token is 1536px below 1920, so nothing changes
+     at laptop widths. Prose columns and form fields keep their fixed caps: a
+     2600px line length is unreadable. */
+  max-width: var(--page-max, 1536px);
+  margin: var(--space-section) auto 2rem;
+  padding: 4rem 2rem;
+  background:
+    radial-gradient(
+      120% 140% at 0% 0%,
+      rgba(204, 0, 0, 0.16) 0%,
+      transparent 55%
+    ),
+    #111111;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  text-align: center;
+}
+
+/* The /about press panel follows the socials grid, which already carries its
+   own bottom margin, so it drops the panel's usual top section break. Lives
+   here rather than in about.astro's scoped block because the <section> is
+   rendered by CtaPanel.astro and never receives the page's scope attribute. */
+.press-inquiries-section {
+  margin-top: 0;
+  margin-bottom: var(--space-section);
+}
+
+/* `.press-kit-title` used to live here. It was the fourth heading treatment
+   on the site and the panel's own <PageTitle /> lockup replaced it when the
+   three copies of this panel became <CtaPanel />. Verified unreferenced
+   across src/ and public/ before removal. */
+
+.press-kit-desc {
+  color: var(--color-white-muted);
+  margin-bottom: 2.5rem;
+}
+
+@media (max-width: 992px) {
+  .about-hero {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+
+  .about-image-container {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+}
+
+/* GEMINI-CLI CHANGE
+   - author: gemini-cli
+   - date: 2026-05-27T00:00:00Z
+   - file: src/styles/global.css
+   - summary: Added specific mobile overrides for About page to prevent oversized image and improve pacing.
+   - reason: Resolves layout compression on iPhone-sized screens.
+
+   Every declaration in this block used to carry `!important` (26 of them).
+   Nothing was ever competing for them: no other stylesheet in the manifest
+   styles a `.about-*` selector, and these rules already sit later in this
+   same file than the base rules they override, so plain source order wins.
+   What the `!important`s actually did was make the block unadjustable, which
+   is why earlier attempts to close the gap under the publication section
+   ended up overlapping sections instead of moving them. Removed; verified
+   identical geometry at 320, 375, 414 and 768.
+*/
+@media (max-width: 768px) {
+
+  .about-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2.5rem;
+    padding: 0 1.5rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .about-image-container {
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+    display: block;
+  }
+
+  .about-story {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-sizing: border-box;
+  }
+
+  .about-text {
+    width: 100%;
+    max-width: 100%;
+    font-size: 1rem;
+    line-height: 1.6;
+    text-align: left;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  /* `.stats-section`'s bottom margin used to be re-declared here at 4rem.
+     `--space-section` already resolves smaller on a phone than on a desktop,
+     which is the whole point of the token, so the override is redundant. */
+
+  .press-kit-section {
+    margin-left: 1.5rem;
+    margin-right: 1.5rem;
+    padding: 3rem 1.5rem;
+    width: auto;
+  }
+
+  .cta-button-primary {
+    padding: 1rem 2rem;
+    font-size: 0.75rem;
+  }
+}

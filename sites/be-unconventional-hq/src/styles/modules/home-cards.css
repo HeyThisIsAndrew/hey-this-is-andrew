@@ -1,0 +1,1004 @@
+.cta-band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: clamp(2.25rem, calc(1.125rem + 2.5vw), 3.5rem);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(
+      120% 140% at 0% 0%,
+      rgba(204, 0, 0, 0.16) 0%,
+      transparent 55%
+    ),
+    #111111;
+}
+
+/* .cat-grid's column math is defined once at the bottom of this file,
+   together with the other two homepage rows. */
+.cat {
+  position: relative;
+  /*
+    A RATIO, NOT A FIXED HEIGHT. `min-height: 260px` was fine while the grid
+    was pinned at 1536px and every tile was about 340 wide. Once the grid was
+    routed through `--page-max` the tiles grew to 602px on a 3840 screen and
+    the height did not follow, so they became 602x260 letterboxes and
+    `object-fit: cover` on the sketches zoomed to fill the width and cropped
+    the crowns straight off the top.
+
+    4:3 is the shape they already were: 341x260 at the 1512 control is 1.31,
+    and 4/3 is 1.33, so the control moves by about 4px and every wider screen
+    grows in both directions at once. The min-height stays as a floor for the
+    single-column case at the narrow end.
+  */
+  aspect-ratio: 4 / 3;
+  min-height: 200px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-decoration: none;
+  /* See --shadow-tile in global-base.css. The transition below already
+     covered box-shadow; only the resting value was missing. */
+  box-shadow: var(--shadow-tile);
+  transition:
+    transform 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+.cat-bg-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.2, 1);
+}
+.cat:hover {
+  transform: translateY(-6px);
+  border-color: var(--color-accent);
+  /* The red glow LAYERS on the depth. It used to be the whole declaration,
+     which meant hovering replaced the cast shadow with a glow and the tile
+     dropped flat at the moment it lifted — the two motions fought. */
+  box-shadow: var(--shadow-tile), 0 8px 30px rgba(204, 0, 0, 0.15);
+}
+.cat:hover .cat-bg-img {
+  transform: scale(1.05);
+}
+.cat-overlay {
+  position: absolute;
+  inset: 0;
+  transition:
+    background 0.3s ease,
+    opacity 0.3s ease;
+  background: linear-gradient(
+    to top,
+    rgba(9, 9, 11, 0.95) 0%,
+    rgba(9, 9, 11, 0.5) 45%,
+    rgba(9, 9, 11, 0.2) 100%
+  );
+  z-index: 0;
+}
+.cat:hover .cat-overlay {
+  background: linear-gradient(
+    to top,
+    rgba(9, 9, 11, 0.95) 0%,
+    rgba(9, 9, 11, 0.4) 45%,
+    transparent 100%
+  );
+  opacity: 0.8;
+}
+.cat-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.4rem;
+}
+.cat-label {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.2rem, 1.05rem + 0.9vw, 1.5rem);
+  text-transform: uppercase;
+  color: #fff;
+}
+.cat-blurb {
+  color: var(--color-white);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.cat-cta {
+  margin-top: 0.4rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-white);
+  transition:
+    color 0.3s ease,
+    letter-spacing 0.3s ease,
+    transform 0.3s ease,
+    text-shadow 0.3s ease;
+  position: relative;
+  width: fit-content;
+  padding-bottom: 4px;
+  display: inline-block;
+}
+.cat-cta::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.2, 1);
+}
+.cat:hover .cat-cta {
+  color: var(--color-accent-text);
+  text-shadow: 0 0 16px rgba(204, 0, 0, 0.5);
+  letter-spacing: 0.2em;
+  transform: translateX(8px);
+}
+.cat:hover .cat-cta::after {
+  transform: scaleX(1);
+}
+
+.contact-social-card .contact-social-icon-wrapper svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+.contact-social-card:hover .contact-social-icon-wrapper {
+  background: transparent !important;
+  border-color: var(--color-accent) !important;
+  color: #fff !important;
+  box-shadow: 0 0 15px rgba(204, 0, 0, 0.3) !important;
+  transform: translateY(-3px) !important;
+}
+
+.content-card {
+  background: var(--color-surface);
+  border: 1px solid rgba(255,255,255,0.05);
+  overflow: hidden;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  height: 100%;
+  cursor: pointer;
+}
+
+.watch-now-btn {
+  margin-top: auto;
+  color: var(--color-white);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  z-index: 10;
+  position: relative;
+  width: fit-content;
+  transition: color 0.3s ease;
+  /*
+    WCAG 2.5.8 target size (Lighthouse `target-size`). At 12px/uppercase this
+    box was only about 14px tall, and in the hero card it is a real <a> to
+    YouTube — a tappable target, not decoration, so it is audited. 24px is
+    the minimum; the extra height is added with padding and pulled back out
+    with a negative margin so the text keeps sitting exactly where the layout
+    puts it and only the hit area grows.
+
+    `min-height` alone would not do it: the element is `inline-block`, so the
+    box grows downward from the baseline and shifts the underline with it.
+  */
+  min-height: 24px;
+  padding-block: 5px;
+  margin-block: -5px;
+  box-sizing: content-box;
+}
+.video-card-home:hover {
+  transform: translateY(-6px);
+  border-color: var(--color-accent);
+  box-shadow: 0 10px 30px rgba(204, 0, 0, 0.15);
+}
+.video-card-home:hover img {
+  transform: scale(1.05);
+}
+.video-card-home:hover .watch-now-btn {
+  color: var(--color-accent-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cat:hover,
+  .cat:hover .cat-bg-img,
+  .cat:hover .cat-cta,
+  .video-card-home:hover,
+  .video-card-home:hover img,
+  .contact-social-card:hover .contact-social-icon-wrapper {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* The `.nav-identity-wrapper` mobile hide that used to sit here has moved to
+   styles/modules/nav-identity.css, next to the rest of that component's rules.
+   It is navbar chrome and has to load on EVERY page; this file only loads on
+   pages that render a ContentCard. See the note in nav-identity.css. */
+
+/* ── Homepage tile grid (shared by all three homepage rows) ─────────────────
+
+   ONE definition of the homepage's column math, used by:
+     .cat-grid      "What We Cover" category tiles
+     .latest-grid   "From The Feed Latest" article tiles
+     .home-video-grid  "Recent Videos" tiles
+
+   WHY THIS EXISTS
+   Each row previously had its own `auto-fit minmax(...)` track. auto-fit packs
+   in as many columns as fit, so at mobile-landscape width (844px) four tiles
+   became a row of 3 and a row of 1 — the bug Andrew reported. Explicit column
+   counts remove the guesswork: the layout is the same at every width for every
+   row, and four tiles always divide evenly.
+
+   Note: a `.categories-grid` rule with the correct counts already existed in
+   categories.css but no markup ever used that class, so it never applied. It
+   is dead and superseded by this.
+
+   TO CHANGE HOW MANY TILES PER ROW: edit the three counts below. Nothing else.
+*/
+.cat-grid,
+.latest-grid,
+.home-video-grid {
+  display: grid;
+  /* Desktop: 4 across. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+  /*
+    THE TOKEN, NOT A HARDCODED 1536. This was a flat `max-width: 1536px` while
+    the rest of the page grid -- the hero column, the spotlight band's content
+    -- runs to `--page-max` (2600px). On a 3840px screen the tiles therefore
+    stopped growing a full 1000px before everything around them did, which is
+    the "tiles are now tiny" report: they were not shrinking, they were the
+    only thing on the page that had stopped.
+  */
+  max-width: var(--page-max, 1536px);
+  margin-inline: auto;
+}
+
+/* Tablet + mobile landscape: 2 across, so four tiles read as a clean 2x2
+   instead of 3 + 1. 1100px covers landscape phones (844px) and small tablets. */
+@media (max-width: 1100px) {
+  .cat-grid,
+  .latest-grid,
+  .home-video-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+/* Mobile portrait: single column — two tiles side by side at 390px would make
+   the titles unreadable. */
+@media (max-width: 560px) {
+  .cat-grid,
+  .latest-grid,
+  .home-video-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONTENT CARD
+
+   The card used by the Feed, /intel, the homepage rows and the hub pages.
+
+   These rules replaced inline `style` attributes on the markup. Inline styles
+   beat every class rule, so while they were inlined it was impossible to give
+   the card a different shape on mobile without `!important` — which is why
+   the compact variant at the bottom of this block could not exist before.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.content-card-media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/*
+   ─── HARD RULE 3: NOTHING CLIPS A YOUTUBE IFRAME ─────────────────────────
+
+   CLAUDE.md: "No `overflow: hidden` on any ancestor of a YouTube iframe —
+   iOS Safari renders the iframe as a black box." Both `.content-card-media`
+   (the iframe's direct parent) and `.content-card` (its grandparent) clip.
+
+   That was harmless for as long as a card's video opened in the modal: there
+   was no iframe inside a card to clip. The inline hero player put one there,
+   and iOS Safari duly mis-composited it — the picture shoved right with a
+   black band down the left, on a real iPhone, while Chromium renders it
+   perfectly because the bug is WebKit's.
+
+   The clipping is only ever protecting the `scale(1.05)` hover zoom on the
+   thumbnail. While a player exists that image is hidden — and the iframe is
+   absolutely positioned to fill the box exactly, so clipping it removes no
+   pixels. Releasing the clip for exactly that window therefore costs nothing
+   visually and takes the card out of the WebKit bug's path.
+
+   `has-player` is set from FeaturedHighlights.astro when the player is
+   constructed, NOT `is-playing-inline`: that one arrives 1.5s later, and the
+   iframe has to be un-clipped from the moment it exists.
+*/
+
+
+/* ── BROKEN-IMAGE FAIL-SAFE ──────────────────────────────────────────────────
+
+   A card whose cover URL is present but FAILS TO LOAD — a remote host that is
+   down, an expired CDN link, a blocked request — used to render as a plain
+   empty box. The branded fallback in ArticleThumb only covers a MISSING field;
+   nothing covered a field that was there and simply did not resolve.
+
+   `data-img-failed` is set by the global error listener in Layout.astro (image
+   `error` events do not bubble, so it listens in the capture phase). This turns
+   the container into the same brand-tinted panel the missing-image fallback
+   uses, so a dead link degrades to something deliberate instead of a hole in
+   the grid.
+
+   Deliberately scoped to the KNOWN MEDIA CONTAINERS rather than applied to
+   `[data-img-failed]` on its own. The marker is set on the parent of any
+   broken image anywhere on the page, so an unscoped rule would also paint a
+   red gradient behind — and hide — something like the navbar logo. Content
+   thumbnails are the only place a branded stand-in is the right answer;
+   everywhere else, default browser behaviour is left alone.
+*/
+.content-card-media[data-img-failed],
+.intel-rail-thumb[data-img-failed],
+.intel-feature-image[data-img-failed],
+.ig-carousel-tile .ig-tile-frame[data-img-failed],
+.article-thumb-fallback[data-img-failed] {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(204, 0, 0, 0.12) 0%, transparent 62%),
+    linear-gradient(135deg, var(--color-surface-2) 0%, var(--color-black) 100%);
+}
+
+/*
+   ─── THE BRAND MARK STANDS IN FOR A MISSING COVER ────────────────────────
+
+   Two different holes get the same patch:
+
+     .article-thumb-fallback   the record had no image at all, so the
+                               component rendered this panel instead of an
+                               <img>
+     [data-img-failed]         there WAS an image and it turned out to be
+                               unusable — a dead URL, or a provider
+                               placeholder (see the YouTube check in
+                               Layout.astro's fail-safe)
+
+   The second case is why this is a background rather than markup: those
+   cards have a real <img> in the DOM and no fallback element to fill, so
+   the panel is all there is to draw on.
+
+   `--brand-fallback-mark` is set in Layout.astro from a getImage()-optimised
+   copy of logo-mark.webp. If it is ever unset the shorthand simply paints
+   the gradient, which is the old behaviour — no broken-image icon.
+
+   Sized as `min(44%, 120px)`: proportional so it stays inside the 76px square
+   event tile, capped so it does not balloon on a wide feature panel, and
+   under half the width either way so it reads as a watermark rather than a
+   logo card. Deliberately NOT container-query units — nothing here declares
+   `container-type`, and an invalid `cqh` would drop the whole declaration.
+*/
+.article-thumb-fallback,
+.content-card-media[data-img-failed],
+.intel-rail-thumb[data-img-failed],
+.intel-feature-image[data-img-failed],
+/*
+   The Instagram rail belongs here for a reason the others do not share: its
+   tiles point at SIGNED, EXPIRING CDN URLs. Instagram's `oe=` parameter is a
+   hex expiry timestamp, and src/data/instagram.json stores those URLs
+   statically at sync time, so the whole feed goes dead a few days after every
+   sync no matter what the code does. Measured on the day this was added: 188
+   of 188 stored URLs already expired.
+
+   Without this line the marker was still being set on `.ig-tile-frame` by
+   Layout.astro's error listener — there was simply no rule to paint, so the
+   reader got the raw broken-image glyph instead of the branded panel every
+   other thumbnail on the site falls back to. Reported from production with a
+   screenshot.
+
+   This does not fix the expiry; nothing in CSS can. It makes the failure look
+   deliberate instead of broken while the feed is stale.
+
+   AND WHY THE SELECTOR CARRIES `.ig-carousel-tile` WHEN ITS NEIGHBOURS DO NOT.
+   CinematicGallery's scoped style sets `.ig-tile-frame { background: var(
+   --color-surface, #111) }`. Astro compiles that to
+   `.ig-tile-frame[data-astro-cid-…]`, which is specificity (0,2,0) — exactly
+   what a bare `.ig-tile-frame[data-img-failed]` here would be — and component
+   styles are injected after this stylesheet, so it won on source order and its
+   `background` shorthand reset background-image to `none`. The first version
+   of this rule therefore painted nothing at all, while looking correct in the
+   diff. The descendant selector takes it to (0,3,0) so it wins outright.
+   Verified in a browser, not reasoned about: setting the attribute on a live
+   tile now resolves background-image to the brand mark.
+*/
+.ig-carousel-tile .ig-tile-frame[data-img-failed],
+.article-thumb-fallback[data-img-failed] {
+  background-image:
+    var(--brand-fallback-mark, none),
+    radial-gradient(circle at 50% 35%, rgba(204, 0, 0, 0.12) 0%, transparent 62%),
+    linear-gradient(135deg, var(--color-surface-2) 0%, var(--color-black) 100%);
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  background-position: center, center, center;
+  background-size: min(44%, 120px) auto, cover, cover;
+}
+
+/*
+   The title text and the mark would collide in a small tile. Above 560px
+   there is room for both — the mark sits behind, the title over it — but the
+   phone layout gives the media column only 42% of the row, so the mark
+   carries it alone there and the title is left to the card body, where it is
+   already shown in full.
+*/
+@media (max-width: 560px) {
+  .article-thumb-fallback .article-thumb-fallback-title {
+    display: none;
+  }
+}
+
+/* The broken <img> itself must go, or the browser paints its alt text and/or
+   a broken-image glyph on top of the panel above. `> picture` covers the
+   art-directed case (EventCard), where the <img> is one level deeper. */
+.content-card-media[data-img-failed] > picture,
+.content-card-media[data-img-failed] > img,
+.intel-rail-thumb[data-img-failed] > img,
+.intel-feature-image[data-img-failed] > img,
+.article-thumb-fallback[data-img-failed] > img {
+  display: none;
+}
+
+
+.content-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.content-card-media .yt-player-target,
+.content-card-media iframe {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: translateZ(0) !important;
+  border: none !important;
+  z-index: 0;
+  /*
+    `transparent` is deliberate — the card's own thumbnail sits behind this
+    and must show through while the player fades up. It is also why the frame
+    cannot simply be painted black: `color-scheme` is what stops the EMBEDDED
+    document defaulting to a white canvas on iOS Safari, without putting an
+    opaque layer over the thumbnail.
+  */
+  background: transparent;
+  color-scheme: dark;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+/*
+   TWO STATES, NOT ONE — and conflating them broke both click and hover.
+
+     .is-playing-inline   the MUTED AUTOPLAY PREVIEW. Visible, and strictly
+                          inert: the card owns every pointer event.
+     .is-user-activated   the reader asked for this video. Now the iframe
+                          takes the clicks so YouTube's own controls work.
+
+   `pointer-events: auto` used to arrive with the preview, 1.5s after
+   autoplay began, and that single declaration caused both reported bugs.
+   The iframe is stacked over the whole media box, so once it was live:
+
+     - clicking the card hit YOUTUBE, not us. YouTube's default response to
+       a click on the video is to PAUSE, and our handler — the one that
+       calls playVideo()/unMute() — never ran. Hence "click the video and it
+       pauses rather than starts or unmutes".
+     - hovering summoned YouTube's own pause affordance on top of our play
+       icon. Two buttons, same spot. `controls: 0` does not suppress that
+       one; only withholding the pointer does.
+
+   So the preview keeps `pointer-events: none` (inherited from the base rule
+   above) and only opacity changes here.
+*/
+.content-card-media.is-playing-inline iframe {
+  opacity: 1 !important;
+}
+
+.content-card-media.is-user-activated iframe {
+  pointer-events: auto !important;
+}
+
+.content-card-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.content-card-body > * {
+  position: relative;
+  z-index: 1;
+}
+
+.content-card-title {
+  color: var(--color-white);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-bottom: 1rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.content-card-arrow {
+  color: var(--color-accent-text);
+}
+
+/* ── COMPACT MOBILE CARD ────────────────────────────────────────────────────
+
+   WHY THIS EXISTS
+   On a phone the standard card is a full-width 16:9 image plus copy — roughly
+   380px tall. A page of twelve is over 4500px of scrolling, which is why the
+   Feed and /intel felt endless on mobile.
+
+   Below 560px the card turns on its side: a small fixed-width thumbnail on
+   the left, copy on the right, about 110px tall. That is a ~70% reduction in
+   page height for the same number of items, with no change to what is shown
+   or to the markup — purely a different arrangement of the same elements.
+
+   Desktop and tablet are untouched.
+*/
+@media (max-width: 560px) {
+  .content-card {
+    flex-direction: row;
+    align-items: stretch;
+    min-height: 0;
+  }
+
+  /* ── THUMBNAIL GEOMETRY, BUILT AROUND A 16:9 SOURCE ──────────────────────
+
+     Every thumbnail on this site is a YouTube still, so the source is ALWAYS
+     16:9. That single fact should decide this box, and until now it didn't.
+
+     WHAT WAS WRONG
+     The rule set `aspect-ratio: 4 / 3` and assumed it applied. It did not:
+     `.content-card` is `align-items: stretch`, and for a flex item stretch
+     wins over `aspect-ratio` on the cross axis. So the box actually rendered
+     123x110 — an aspect of 1.12 — and `object-fit: cover` on a 1.78 source
+     inside a 1.12 box slices **37% of the image width away**. Measured, not
+     estimated. Anything off-centre in the frame (a face at the edge, a title
+     card, a reaction) was simply gone.
+
+     THE FIX, IN TWO PARTS
+     1. `align-self: center` opts this item out of the stretch, which is what
+        finally lets `aspect-ratio` mean anything here.
+     2. The box is 16 / 9 — the source's own ratio — so the crop is ZERO and
+        the whole frame is visible.
+
+     WHY 42% AND NOT MORE
+     A horizontal card cannot show a wide image AND be tall: at a fixed width
+     share, 16:9 fixes the height too (42% of 326px = 137px wide, so 77px
+     tall). Going wider to gain height quickly becomes the 50/50 split that
+     was explicitly not wanted — 16:9 filling a 110px-tall card would need a
+     71% column. 42/58 keeps the copy dominant while giving the image ~11%
+     more width than before and, far more importantly, all of its content.
+  */
+  .content-card .content-card-media {
+    flex: 0 0 42%;
+    width: 42%;
+    aspect-ratio: 16 / 9;
+    /* Without this the flex stretch overrides the ratio above — see note. */
+    align-self: center;
+    height: auto;
+  }
+
+  .content-card .content-card-body {
+    /*
+      The copy now sets the row height, because the image keeps its own 16:9
+      shape instead of stretching. So this padding is really a control for how
+      much clear space sits around the thumbnail.
+
+      0.85rem lands the card at ~101px against a 77px image — about 12px above
+      and below it. Enough to read as a deliberate margin; at the 1rem it was
+      briefly set to, the gap grew to 21px and started to look like the image
+      had failed to fill its column.
+    */
+    padding: 0.85rem 1rem;
+    justify-content: space-evenly;
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Keeps rows even when a headline runs short, so the image column does not
+     change size down the list. Just above the 77px the media occupies, so the
+     thumbnail always sits centred with a small, even margin. */
+  .content-card {
+    min-height: 100px;
+  }
+
+  .content-card .content-card-title {
+    font-size: 0.95rem;
+    line-height: 1.3;
+    margin-bottom: 0.4rem;
+    -webkit-line-clamp: 3;
+  }
+
+  .content-card .content-card-excerpt {
+    display: none;
+  }
+
+  .content-card .content-card-dynamic-tags {
+    margin-top: 0.2rem;
+  }
+
+  /* Ensure the CTA is visible on mobile and resets auto margin so it distributes evenly */
+  .content-card .watch-now-btn {
+    display: inline-flex;
+    margin-top: 0;
+  }
+
+}
+
+/* ===========================================================================
+   CINEMATIC FEED TILES  —  "the slate"
+   ---------------------------------------------------------------------------
+   Applied ONLY where ContentCard renders with context="feed" (the horizontal
+   rows). Everything is scoped under `.content-card--cinematic`, so the boxed
+   editorial card used by /intel, /category and the hub pages cannot be reached
+   by these rules.
+
+   ─── THE CARD HAS A BODY AGAIN, AND THAT WAS THE POINT ────────────────────
+   The first pass stripped the enclosure entirely and let the title float on the
+   page. That over-corrected: with no shared boundary the title and its artwork
+   stopped reading as one object, and the text lost its ground against the
+   row's ambient wash — worst on the prestige shelf, where the backdrop is lit.
+
+   What was actually wrong with the original card was never that it HAD a
+   container. It was 1.5rem of padding and a "WATCH NOW" footer link inside a
+   tile that is itself the click target. So the enclosure comes back and those
+   two do not: a tight tray under a full-bleed still.
+   ========================================================================== */
+
+.content-card.content-card--cinematic {
+  background: #111113;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  /*
+    The card clips, so the still meets its own corners with no inner margin.
+    Safe here specifically: a feed tile holds an <img> and never a YouTube
+    iframe — hard rule 3 forbids a clipping ancestor of an iframe, and the only
+    one on this page belongs to the hero, outside any card.
+  */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  /* Equal-height slates across a rail whose tiles have titles of different
+     lengths. The rail is a flex row, so the <li> already stretch. */
+  height: 100%;
+  padding: 0;
+  box-shadow: none;
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+/* Full-bleed at the top of the slate. The border and radius live on the card
+   now, so the media carries neither — two of each is what made the old tile
+   look like a picture glued onto a box. */
+.content-card--cinematic .content-card-media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: none;
+  border-radius: 0;
+  /*
+    ─── THE FLEX RESET IS WHAT MAKES aspect-ratio APPLY AT ALL ───────────────
+
+    Below 560px the BASE card turns into a horizontal row — media on the left at
+    `flex: 0 0 42%`, body on the right. The slate is a COLUMN, and in a column
+    flex container a flex-basis is a HEIGHT, so that inherited 42% was sizing
+    the artwork vertically and `aspect-ratio` never got a say.
+
+    Measured on a 375px phone: a 319px-wide card gave a 109px-tall media (42% of
+    262) instead of the 179px its own ratio asks for, and the 70px it saved
+    became dead space at the bottom of the tray — the "too much spacing" on
+    portrait tiles.
+
+    `align-self` goes back to stretch for the same reason: `center` is the row
+    layout's rule, and it left the artwork floating rather than filling.
+  */
+  flex: 0 0 auto;
+  align-self: stretch;
+}
+
+.content-card--cinematic .content-card-media img,
+.content-card--cinematic .content-card-media .content-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition:
+    transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 0.35s ease;
+}
+
+/* ─── THE TRAY ─────────────────────────────────────────────────────────────
+   0.85rem against the old 1.5rem. The hairline is barely there on purpose: it
+   separates the tray from the still without drawing a second border a few
+   pixels inside the card's own. */
+.content-card--cinematic .content-card-body {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  padding: 0.85rem 1rem;
+  background: #111113;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/*
+  The tray reads top-down now: metadata, title, description. Nothing inside is
+  bottom-pinned, so the wrapper no longer grows to create space for an auto
+  margin — that arrangement is what put a large gap between the title and the
+  tag line on a phone, which is the thing it was meant to tidy.
+*/
+.content-card--cinematic .content-card-title-wrapper {
+  min-height: 0;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.content-card--cinematic .content-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #f5f5f5;
+  /* The wrapper's `gap` owns the space between the eyebrow and the title now,
+     so the title carries no margin of its own — two sources of the same gap is
+     how it grew too large in the first place. */
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  /*
+    ─── TWO LINES OF ROOM, ALWAYS, AND THAT IS WHAT KILLS THE DEAD SPACE ─────
+
+    The card stretches to the tallest tile in its rail and the tray absorbs the
+    slack. While the tags were pinned to the bottom of the tray they filled it;
+    with the eyebrow moved to the top, that slack became 70px of visible empty
+    space under the title — measured on a 375px phone, a 151px tray holding
+    81px of content.
+
+    Reserving the second line makes every tray the same natural height, so the
+    tallest tile IS every tile and there is no slack left to absorb. It also
+    removes the ragged footer the old auto-margin was working around, without
+    an auto margin.
+  */
+  min-height: calc(2 * 1.35em);
+}
+
+/*
+  The description, where a variant renders one. Clamped to two lines for the
+  same reason the title is: the hero shows the full text when the card is
+  selected, so a long excerpt on the tile only makes the row taller.
+*/
+.content-card--cinematic .content-card-excerpt {
+  margin: 0.45rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.62);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/*
+  ─── PHONES GET THE TIGHT VERSION ────────────────────────────────────────
+
+  A portrait tile shows one card at a time, so every pixel between the eyebrow
+  and the title is one the artwork does not get. Reported as "way too much
+  vertical spacing between the title and the metadata".
+*/
+@media (max-width: 640px) {
+  .content-card--cinematic .content-card-body {
+    padding: 0.65rem 0.75rem;
+  }
+
+  .content-card--cinematic .content-card-title-wrapper {
+    gap: 0.2rem;
+  }
+
+  .content-card--cinematic .content-card-title {
+    font-size: 0.9rem;
+    line-height: 1.3;
+    min-height: calc(2 * 1.3em);
+  }
+
+  .content-card--cinematic .content-card-excerpt {
+    margin-top: 0.3rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* The tags are the footer now — `margin-top: auto` pins them to the bottom of
+   the tray so a one-line title and a two-line title still end on the same
+   baseline across a row. */
+/*
+  The eyebrow. `margin-top: auto` is gone with the old order — it pinned the
+  tags to the bottom of the tray, which is where the phone's title-to-metadata
+  gap came from.
+*/
+.content-card--cinematic .content-card-dynamic-tags {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 0;
+  order: 0;
+}
+
+/* ─── THE FORMAT PILL ─────────────────────────────────────────────────────
+   Bottom-left, over the artwork. Glass rather than a solid chip so it reads as
+   sitting on the image instead of punched into it. */
+.content-card--cinematic .content-card-format {
+  position: absolute;
+  left: 0.5rem;
+  bottom: 0.5rem;
+  z-index: 2;
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-family: var(--font-body, sans-serif);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
+  pointer-events: none;
+}
+
+/* ─── HOVER ───────────────────────────────────────────────────────────────
+   The whole slate lifts; the still grows inside it. Scale is on the IMAGE and
+   the crop is on its parent, so the artwork moves and the tile's footprint in
+   the rail does not. */
+/*
+  The hover border is the BRAND RED, not a white glass edge.
+
+  This rule sits below `.video-card-home:hover { border-color: var(--color-accent) }`
+  in the same sheet, so the translucent white it used to set did not sit beside
+  that rule, it replaced it — the site's signature red hover was extinguished on
+  every card the moment the slate went site-wide.
+
+  `--color-accent` (#cc0000) is the right token precisely here: CLAUDE.md notes
+  it measures 3.21:1 and is therefore a BORDER AND GLOW colour only, never text
+  or an icon. This is a border and a glow.
+*/
+/*
+  ─── HOVER HAS TO BE UNMISSABLE, NOT TASTEFUL ─────────────────────────────
+
+  This was a 1px border going red, a 4px lift and a soft shadow. Reported as
+  "I hovered over it and couldn't tell", and that is a fair reading of the
+  measurements: #cc0000 is 3.21:1, so a single-pixel line of it on a dark card
+  sitting on a coloured row wash is close to invisible. Every part of the old
+  state was an edge effect.
+
+  So the whole tile responds now — a 2px ring, a deeper lift, a real shadow,
+  and the artwork itself brightening. The ring is the SAME language the centred
+  tile uses on a phone, so "the one you are pointing at" looks the same whether
+  it is a cursor or a thumb doing the pointing.
+
+  `outline` rather than a thicker border for the reason the mobile ring gives:
+  a border changes the box and would shift the tiles next to it on hover.
+*/
+.content-card--cinematic:hover,
+.content-card--cinematic:focus-within {
+  transform: translateY(-6px);
+  border-color: var(--color-accent, #cc0000);
+  outline: none;
+  box-shadow:
+    0 18px 38px rgba(0, 0, 0, 0.8),
+    0 0 15px rgba(var(--brand-rgb, 204, 0, 0), 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.content-card--cinematic:hover .content-card-media img,
+.content-card--cinematic:focus-within .content-card-media img {
+  transform: scale(1.06);
+  /* The picture itself lifts out of the page, so the feedback is in the middle
+     of the tile and not only around its edge. */
+  filter: brightness(1.12);
+}
+
+.content-card--cinematic .content-card-media img {
+  filter: brightness(1);
+}
+
+/* The title brightens too: on a rail of dim tiles the one under the cursor
+   should read as the active one at a glance. */
+.content-card--cinematic:hover .content-card-title,
+.content-card--cinematic:focus-within .content-card-title {
+  color: #fff;
+}
+
+/* The play glyph blooms in rather than sitting there. Video tiles only: the
+   component renders the wrapper only when the item is playable. */
+.content-card--cinematic .play-button-wrapper {
+  opacity: 0;
+  transform: scale(0.88);
+  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.content-card--cinematic:hover .play-button-wrapper,
+.content-card--cinematic:focus-within .play-button-wrapper {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* A coarse pointer has no hover, so the glyph would never appear: it is simply
+   always on there rather than animated. */
+@media (hover: none) {
+  .content-card--cinematic .play-button-wrapper {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content-card--cinematic,
+  .content-card--cinematic .content-card-media img,
+  .content-card--cinematic .play-button-wrapper {
+    transition: none;
+  }
+
+  .content-card--cinematic:hover,
+  .content-card--cinematic:focus-within {
+    transform: none;
+  }
+
+  .content-card--cinematic:hover,
+  .content-card--cinematic:focus-within {
+    transform: none;
+  }
+
+  .content-card--cinematic:hover .content-card-media img,
+  .content-card--cinematic:focus-within .content-card-media img {
+    transform: none;
+  }
+}

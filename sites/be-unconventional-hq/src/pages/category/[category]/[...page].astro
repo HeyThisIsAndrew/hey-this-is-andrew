@@ -1,0 +1,100 @@
+---
+import FeedLayout from '../../../layouts/FeedLayout.astro';
+import { site } from '../../../data/site.js';
+import { getArticleItems } from '../../../lib/feed-items';
+import { getVideosUnified } from '../../../lib/videos-source';
+import Pagination from '../../../components/Pagination.astro';
+import ContentCard from '../../../components/ContentCard.astro';
+import CardGrid from '../../../components/CardGrid.astro';
+import EmptyState from '../../../components/EmptyState.astro';
+import FeedSpotlightHero from '../../../components/FeedSpotlightHero.astro';
+import { LABELS, MESSAGES } from '../../../data/content.js';
+import { categories } from '../../../data/categories.js';
+import { tagMatchesCategory } from '../../../data/constants.js';
+import type { GetStaticPathsOptions } from 'astro';
+
+export async function getStaticPaths({ paginate }: GetStaticPathsOptions) {
+  const articles = getArticleItems();
+  const videos = await getVideosUnified();
+
+  return categories.flatMap((cat) => {
+    /*
+      Matched through CATEGORY_TAG_ALIASES, not against the label directly.
+
+      Nothing tags its own content with our label. An article carries the tags
+      its Substack post was published with; a video carries the topic slugs the
+      YouTube sync derived. Both say "gaming", and renaming this category to
+      Games could not reach back and change either of them.
+
+      Comparing `cat.slug` to a tag literally would therefore have built
+      /category/games with zero items in it and no error anywhere: a page that
+      renders its own empty state looks like a content problem, not a taxonomy
+      one, and there is nothing in a build log to say otherwise. The alias map
+      in src/data/constants.js is what keeps the old tag spelling resolving to
+      the new slug. It also absorbs the events/event pair that used to be
+      special-cased here inline.
+    */
+    function matchesCategory(item: any) {
+      const itemTags = Array.isArray(item.tags) ? item.tags : [item.category || 'general'];
+      return itemTags.some((t: any) => tagMatchesCategory(cat.slug, t));
+    }
+
+    const filteredItems = [
+      ...articles.filter(matchesCategory).map((a: any) => ({ ...a, type: 'article' })),
+      ...videos.filter(matchesCategory).map((v: any) => ({ ...v, type: 'video', image: v.thumbnail })),
+    ].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return paginate(filteredItems, {
+      params: { category: cat.slug },
+      props: { categoryObj: cat },
+      pageSize: 12,
+    });
+  });
+}
+
+const { page, categoryObj } = Astro.props;
+const allItems = page.data;
+
+const pageNum = page.currentPage > 1 ? ` - Page ${page.currentPage}` : '';
+const title = `${categoryObj.label} Feed${pageNum} | ${site.name}`;
+const description = `Explore all ${categoryObj.label} articles, videos, and events.`;
+---
+
+<FeedLayout hideHero={true} hasSpotlightHero={true}
+  title={title}
+  description={description}
+  headingLabel={`All ${categoryObj.label} content`}
+  page={page}
+  mainClass="pb-16 md:pb-24"
+>
+  <FeedSpotlightHero slot="hero" interactive={true} />
+
+  {/*
+    The cards below carry `context="feed"`, which is what makes one drive the
+    hero above it. This page mounts <FeedSpotlightHero />, so its cards are
+    spotlight triggers exactly like the Feed's — without it they rendered as
+    plain links under a hero that could never change.
+
+    This comment lives at template top level rather than inside the expression
+    below. An Astro-style JSX comment placed inside a `(...)` branch or a
+    `.map()` return makes it evaluate to two nodes and the build fails with
+    "Expected , or ) but found ...". `astro check` does NOT catch it; only a
+    build does. CLAUDE.md documents this and I walked into it twice.
+  */}
+
+  {
+    allItems.length > 0 ? (
+      <CardGrid>
+        {allItems.map((item: any, index: number) => (
+          <ContentCard item={item} index={index} context="feed" />
+        ))}
+      </CardGrid>
+    ) : (
+      <EmptyState message={MESSAGES.noFilterMatch} actionLabel={LABELS.viewAllContent} actionHref="/feed" />
+    )
+  }
+
+  <div class="mt-auto w-full">
+    <Pagination page={page} />
+  </div>
+</FeedLayout>

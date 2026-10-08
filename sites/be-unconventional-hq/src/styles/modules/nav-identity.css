@@ -1,0 +1,115 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   NAVBAR COMPRESSION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+#navbar {
+  --nav-identity-opacity: 0;
+  --nav-identity-y: 10px;
+}
+
+#navbar.scrolled {
+  --nav-identity-opacity: 1;
+  --nav-identity-y: 0px;
+}
+
+/* Beautiful Stacked Branding */
+.js .nav-identity-wrapper {
+  opacity: 0;
+}
+
+.nav-identity-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* Inline style handles initial opacity and transform */
+  transition:
+    opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0.5s,
+    filter 0.3s ease;
+  padding: 1rem 3rem; /* Substantial buffer to prevent hover flicker */
+  margin: -1rem -2rem; /* Compensate for buffer without moving elements */
+  text-decoration: none;
+  cursor: pointer;
+  z-index: 10;
+}
+.nav-identity-wrapper:hover {
+  transform: translateY(0) scale(1.03) !important;
+  filter: brightness(1.1);
+}
+.nav-identity-wrapper:hover .nav-word-unconventional {
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+}
+.nav-identity-wrapper:hover .nav-word-hq {
+  text-shadow: 0 0 15px rgba(204, 0, 0, 0.7);
+}
+
+.nav-identity-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 0.85; /* Matches Hero */
+  text-transform: uppercase;
+  font-family: var(--font-display, sans-serif);
+}
+
+.nav-word-be {
+  font-size: 0.65rem;
+  font-weight: 600; /* Matches Hero */
+  color: var(--color-white-muted);
+  letter-spacing: 0.1em;
+  transform: translateX(-1.6rem);
+  transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.nav-word-unconventional {
+  font-size: 1.15rem;
+  font-weight: 800; /* Matches Hero */
+  color: white;
+  letter-spacing: -0.04em; /* Matches Hero */
+  z-index: 2;
+  text-shadow: 0 4px 15px rgba(0, 0, 0, 0.6); /* Scaled down Hero shadow */
+  transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.nav-word-hq {
+  font-size: 0.9rem;
+  font-weight: 800; /* Matches Hero */
+  color: var(--color-accent-text);
+  margin-top: -0.35rem; /* Scaled down from Hero's -1.2rem */
+  text-shadow: 0 0 10px rgba(204, 0, 0, 0.5); /* Scaled down Hero shadow */
+  transform: translateX(1.8rem);
+  transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nav-identity-wrapper:hover .nav-word-be {
+  color: white;
+}
+
+/* ── Mobile: the identity lockup is hidden entirely ─────────────────────────
+
+   WHY THIS RULE LIVES HERE NOW
+   It used to sit in styles/modules/home-cards.css, which was harmless only
+   while every stylesheet was pulled into global.css and therefore loaded on
+   every page. Once the stylesheets were split into per-component imports
+   (commit e1e3bef), home-cards.css began loading ONLY on pages that render a
+   <ContentCard>. /events, /featured and /about render none — so on those
+   pages this rule vanished, `.nav-identity-wrapper` kept the `display: flex`
+   from its base rule above, and the 310px "BE UNCONVENTIONAL HQ" lockup
+   stretched `.nav-brand-group` to 424px inside a 390px viewport. That pushed
+   the hamburger to x=444, 54px past the right edge: the reported "mobile nav
+   menu doesn't appear" on exactly those three pages. Measured, not inferred —
+   elementFromPoint at the button's centre returned nothing.
+
+   Navbar.astro imports this file and the navbar renders on every page, so
+   navbar chrome belongs here where it cannot be dropped by a page that
+   happens not to use some unrelated component.
+
+   `!important` because the element carries an inline `display: flex` (see
+   Navbar.astro) that a plain rule cannot beat. 820px matches the breakpoint
+   the lockup was authored against.
+*/
+@media (max-width: 820px) {
+  .nav-identity-wrapper {
+    display: none !important;
+  }
+}

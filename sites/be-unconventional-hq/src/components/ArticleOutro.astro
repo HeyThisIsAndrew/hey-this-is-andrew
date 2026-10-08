@@ -1,0 +1,173 @@
+---
+/**
+ * The standard closing section under every article.
+ *
+ * ─── IT IS THE SITE'S, NOT THE POST'S ───────────────────────────────────────
+ * This copy used to arrive inside the Substack body, which meant three things
+ * were wrong at once: it counted as article content, the sign-off was authored
+ * as an <h4> (the same level as the section title, which is why it rendered at
+ * section size and wrapped onto two lines), and both headings showed up in the
+ * Contents rail because buildToc() indexes the body.
+ *
+ * `stripArticleOutro()` takes it out of the body before the rail is built and
+ * this renders the real thing underneath. See src/lib/article-outro.ts.
+ *
+ * ─── THE SIGN-OFF IS NOT A HEADING ──────────────────────────────────────────
+ * "BE YOURSELF. BE PASSIONATE. BE UNCONVENTIONAL." is a sign-off, not a section
+ * title — nothing follows it and nothing is filed under it. It is a <p>, styled
+ * small and tracked out, which is what it looked like on Substack. Choosing the
+ * element for the size it renders at is how it became an <h4> in the first
+ * place, and that is what put it in the contents rail.
+ *
+ * `text-wrap: nowrap` is deliberately NOT used to keep it on one line: at 375px
+ * that would overflow the column. It fits on one line because it is sized to,
+ * and `balance` keeps it from breaking badly if a future edit makes it longer.
+ */
+import { getArticleOutro } from '../lib/local-content';
+
+const outro = getArticleOutro();
+
+/**
+ * Split prose on `{brand}` / `{substack}` / `{youtube}` into text and links.
+ *
+ * The alternative was storing HTML in the CMS and rendering it with `set:html`.
+ * This keeps the editable fields plain prose, so an editor can rewrite any
+ * sentence without writing markup and without the component ever injecting
+ * HTML it did not author.
+ *
+ * An unknown token is left as literal text rather than dropped, so a typo is
+ * visible on the page instead of silently deleting a link.
+ */
+const LINKS: Record<string, { label: string; href: string }> = {
+  brand: { label: outro.brandLabel, href: outro.brandHref },
+  substack: { label: outro.substackLabel, href: outro.substackHref },
+  youtube: { label: outro.youtubeLabel, href: outro.youtubeHref },
+};
+
+function parts(prose: string) {
+  return String(prose ?? '')
+    .split(/(\{brand\}|\{substack\}|\{youtube\})/g)
+    .filter((chunk) => chunk !== '')
+    .map((chunk) => {
+      const key = chunk.replace(/[{}]/g, '');
+      const link = /^\{(brand|substack|youtube)\}$/.test(chunk) ? LINKS[key] : null;
+      return link ? { type: 'link' as const, ...link } : { type: 'text' as const, text: chunk };
+    });
+}
+
+const introParts = parts(outro.intro);
+const ctaParts = parts(outro.cta);
+---
+
+<aside class="article-outro" aria-labelledby="article-outro-heading">
+  {/* A heading element for structure, but NOT one buildToc can index: the rail
+      is built from the body, and this sits outside it by design. */}
+  <h2 class="article-outro-heading" id="article-outro-heading">{outro.heading}</h2>
+
+  <blockquote class="article-outro-quote">
+    <p>
+      {introParts.map((part) =>
+        part.type === 'link' ? (
+          <a href={part.href} rel="noopener noreferrer">{part.label}</a>
+        ) : (
+          part.text
+        ),
+      )}
+    </p>
+  </blockquote>
+
+  <p class="article-outro-cta">
+    {ctaParts.map((part) =>
+      part.type === 'link' ? (
+        <a href={part.href} target="_blank" rel="noopener noreferrer">{part.label}</a>
+      ) : (
+        part.text
+      ),
+    )}
+  </p>
+
+  <p class="article-outro-signoff">{outro.signOff}</p>
+</aside>
+
+<style>
+  .article-outro {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .article-outro-heading {
+    font-family: var(--font-display, sans-serif);
+    font-size: clamp(1.15rem, 2vw, 1.5rem);
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: var(--color-white, #f0f0f0);
+    margin: 0 0 1.25rem;
+  }
+
+  /* The brand paragraph keeps the accent rule it had on Substack. */
+  .article-outro-quote {
+    margin: 0 0 1.25rem;
+    padding: 0 0 0 1.1rem;
+    border-left: 3px solid var(--color-accent, #cc0000);
+  }
+
+  .article-outro-quote p,
+  .article-outro-cta {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.78);
+  }
+
+  .article-outro-cta {
+    margin-bottom: 1.5rem;
+  }
+
+  .article-outro a {
+    color: var(--color-white, #f0f0f0);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: color 0.25s ease;
+  }
+
+  .article-outro a:hover,
+  .article-outro a:focus-visible {
+    color: var(--color-accent-text, #ef4444);
+  }
+
+  /*
+    ─── ONE LINE, BY SIZE RATHER THAN BY nowrap ──────────────────────────────
+
+    Small, tracked out, and sized so it fits the measure at every width this
+    site renders at. `nowrap` would guarantee one line by overflowing a 375px
+    column instead, which trades a wrap for a horizontal scrollbar.
+
+    `text-wrap: balance` is the safety net: if the copy is ever edited long
+    enough to wrap, it breaks into even lines rather than leaving one word
+    stranded.
+  */
+  .article-outro-signoff {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.62);
+    text-wrap: balance;
+  }
+
+  @media (max-width: 480px) {
+    .article-outro-signoff {
+      font-size: 0.62rem;
+      letter-spacing: 0.08em;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .article-outro a {
+      transition: none;
+    }
+  }
+</style>

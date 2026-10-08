@@ -1,0 +1,52 @@
+---
+// packages/ui/src/Accordion.astro
+---
+<div class="accordion-group" data-accordion-group>
+  <slot />
+</div>
+
+<script>
+  function initAccordions() {
+    const groups = document.querySelectorAll('[data-accordion-group]');
+    groups.forEach(group => {
+      const headers = group.querySelectorAll('[data-accordion-header]');
+      headers.forEach(header => {
+        header.addEventListener('click', () => {
+          const isExpanded = header.getAttribute('aria-expanded') === 'true';
+          header.setAttribute('aria-expanded', !isExpanded ? 'true' : 'false');
+          const row = header.closest('.accordion-row');
+          if (row) {
+            row.classList.toggle('is-expanded', !isExpanded);
+          }
+        });
+      });
+    });
+
+    if (window.location.hash) {
+      const target = document.querySelector(window.location.hash);
+      if (target) {
+        const row = target.classList.contains('accordion-row') ? target : target.closest('.accordion-row');
+        if (row) {
+          row.classList.add('is-expanded');
+          const header = row.querySelector('[data-accordion-header]');
+          if (header) header.setAttribute('aria-expanded', 'true');
+        }
+      }
+    }
+  }
+
+  // Initialize early and handle Astro swaps if applicable.
+  initAccordions();
+  document.addEventListener('astro:page-load', initAccordions);
+</script>
+
+<style>
+  .accordion-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--hairline);
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+  }
+</style>

@@ -1,0 +1,106 @@
+---
+/**
+ * CtaPanel: the bordered, red-washed panel that closes a page with one ask.
+ *
+ * ─── WHY THIS EXISTS ──────────────────────────────────────────────────────
+ * This arrangement (the `.press-kit-section` panel, a <PageTitle /> lockup, a
+ * line of context, then one action) was written out three times: the
+ * subscribe box, the event booking CTA, and the press enquiries block on
+ * /about. Each copy hand-rolled the same layout in inline styles, and they
+ * had already drifted:
+ *
+ *   - two of them set the description colour to a literal `#a0a0a0`, which
+ *     is NOT `--color-white-muted` (#888888), the token the rest of the
+ *     site uses for the same role;
+ *   - each picked its own `max-width` for that description (600px, 800px,
+ *     none) with no reason for the difference;
+ *   - the header margin was an inline `2rem` in two of them and a class in
+ *     the third.
+ *
+ * ─── HOW TO USE IT ────────────────────────────────────────────────────────
+ *     <CtaPanel kicker="Bookings" primary="Want us at" secondary="Your event?"
+ *               description="...">
+ *       <a href="/collaborations" class="cta-button-primary">Get in Touch</a>
+ *     </CtaPanel>
+ *
+ * The slot is the action. It takes a button, a link, or a whole form: the
+ * subscribe box passes its form and Turnstile widget straight through.
+ *
+ * `stagger` is forwarded to <PageTitle />. Leave it on for a short tail
+ * ("Drop", "Your event?"); turn it off for a multi-word one, or the lockup
+ * runs the second line through the first. See PageTitle.astro.
+ *
+ * ─── HOW TO RESTYLE IT ────────────────────────────────────────────────────
+ * `.press-kit-section` and `.press-kit-desc` in src/styles/modules/about.css
+ * (the panel is shared, so it does not live in this component).
+ */
+import PageTitle from './PageTitle.astro';
+
+interface Props {
+  kicker?: string;
+  primary?: string;
+  secondary?: string;
+  /** One line of context above the action. */
+  description?: string;
+  /** Pass false for a multi-word `secondary`. See PageTitle.astro. */
+  stagger?: boolean;
+  /** Extra classes on the <section>, for per-page spacing overrides. */
+  class?: string;
+}
+
+const {
+  kicker = '',
+  primary = '',
+  secondary = '',
+  description = '',
+  stagger = true,
+  class: className = '',
+} = Astro.props;
+---
+
+<section class:list={['press-kit-section', 'cta-panel', 'animate-on-scroll', className]}>
+  <div class="section-header cta-panel-header">
+    <PageTitle
+      kicker={kicker}
+      primary={primary}
+      secondary={secondary}
+      scale="secondary"
+      stagger={stagger}
+    />
+  </div>
+
+  {description && <p class="press-kit-desc cta-panel-desc">{description}</p>}
+
+  <slot />
+</section>
+
+<style>
+  .cta-panel {
+    text-align: center;
+  }
+
+  /* Overrides the shared `.section-header` gap: inside a panel the title sits
+     closer to its own copy than a page-level header does to a card grid. */
+  .cta-panel-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .cta-panel-desc {
+    /* `--color-white-muted`, not the literal #a0a0a0 two of the three copies
+       of this panel had drifted to. */
+    color: var(--color-white-muted);
+    font-size: 1.05rem;
+    line-height: 1.6;
+    text-wrap: balance;
+    /* One measure for all three call sites. `ch` tracks the font, so this
+       stays a readable line length rather than a px guess per page. */
+    max-width: 52ch;
+    margin: 0 auto 2.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .cta-panel-desc {
+      font-size: 0.95rem;
+    }
+  }
+</style>

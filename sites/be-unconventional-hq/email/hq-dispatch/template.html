@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en" dir="ltr" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="x-apple-disable-message-reformatting">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>THE HQ DISPATCH</title>
+<!--
+  THE HQ DISPATCH: Kit (ConvertKit) custom HTML email template.
+
+  Paste this whole file into Kit > Send > Email Templates > New > HTML.
+  Operator notes, the RSS handoff, the asset list and the test checklist
+  live in scripts/hq-dispatch.md. Keep the two in step.
+
+  Kit requires three things in a custom template, and all three are here:
+    message_content   the broadcast body (RSS cards arrive through it)
+    unsubscribe_url   used as an href, never on its own
+    a physical address, which Kit accepts either as its address tag or
+                      typed out. It is TYPED here ("Anaheim, CA 92805", the
+                      owner's call), in the footer's last block.
+  subscriber_preferences_url is optional for Kit but kept on purpose.
+
+  NEVER write a Kit tag with its double braces inside an HTML comment in
+  this file. Kit runs Liquid over the whole template, comments included, so
+  a tag named in a comment is RENDERED there: the broadcast body pasted into
+  a comment, whose own comments then close it early and spill the rest of
+  the note onto the page. scripts/hq-dispatch-email.test.mjs guards it.
+
+  Design language is the site's, translated to email:
+    #0a0a0a page (--color-black), #111111 boxes (--color-surface) with a
+    1px hairline that is the site's rgba(255,255,255,0.05) flattened to
+    #1d1d1d (Outlook ignores rgba), #cc0000 brand red (--color-accent) for
+    every fill, rule, border and glow, #ef4444 (--color-accent-text) only
+    where red is small TEXT, because #cc0000 is 3.21:1 on #111111 and fails
+    AA there. Large red display text (the "HQ" in a lockup) uses #cc0000:
+    at 24px+ bold it only needs 3:1, and it gets 3.36:1.
+
+  Layout rules: tables with role="presentation" for every layout box, a
+  600px ghost table for Outlook, a fluid 100% / max-width 600px wrapper for
+  everyone else. No flexbox, no grid, no web fonts. Every colour is written
+  inline AND as a bgcolor attribute where Outlook needs it, because the
+  style block below is a progressive enhancement: some Gmail accounts drop it.
+  The red glows are background-image gradients over a solid bgcolor, so a
+  client that can't draw them shows the plain dark ground and nothing else.
+-->
+<!--[if mso]>
+<noscript><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+<style>
+  table, td, div, h1, h2, h3, p, a, span { font-family: Arial, Helvetica, sans-serif !important; }
+  table { border-collapse: collapse; }
+</style>
+<![endif]-->
+<style>
+  /* The design is dark in BOTH schemes. Declaring "light dark" tells Apple
+     Mail and Outlook.com the email already handles dark mode, which is what
+     stops them from applying their own automatic inversion on top of it. */
+  :root { color-scheme: light dark; supported-color-schemes: light dark; }
+
+  html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+  body { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; background-color: #0a0a0a; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+  a { text-decoration: none; }
+  a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; font-size: inherit !important; font-family: inherit !important; font-weight: inherit !important; line-height: inherit !important; }
+  u + #body a { color: inherit; text-decoration: none; font-size: inherit; font-family: inherit; font-weight: inherit; line-height: inherit; }
+
+  /* Anything an editor types in Kit's editor lands inside .dx-content with no
+     inline styles of its own, so it inherits these. */
+  .dx-content p { margin: 0 0 18px 0; }
+  /* Links inside text take the site's article link (.article-body a): white,
+     a brand-red underline, red text on hover. */
+  .dx-content a { color: #f0f0f0; text-decoration: underline; text-decoration-color: #cc0000; text-underline-offset: 3px; }
+  .dx-content a:hover { color: #ef4444 !important; }
+  .dx-content h2, .dx-content h3 { color: #f0f0f0; }
+  .dx-content img { max-width: 100%; height: auto; }
+
+  /* Headline and button links keep their own colour, not the content red. */
+  .dx-content a.dx-hl, .dx-content a.dx-hl:visited { color: #f0f0f0; text-decoration: none; }
+  .dx-content a.dx-btn, .dx-content a.dx-btn:visited { color: #f0f0f0; text-decoration: none; }
+  .dx-content a.dx-cta, .dx-content a.dx-cta:visited { color: #f0f0f0; text-decoration: none; }
+
+  /* The site's hover states, for the clients that have a pointer and honour
+     :hover (Apple Mail, Outlook.com, some webmail). A box lights its border
+     red (.stat-card:hover) and a button fills red (.cta-button-primary). */
+  .dx-card:hover { border-color: #cc0000 !important; box-shadow: 0 10px 30px rgba(204, 0, 0, 0.15); }
+  /* The primary button (.cta-button-primary): hover fills it red with the
+     brand glow, and the TEXT STAYS WHITE. It has to be said with this much
+     specificity: the generic `.dx-content a:hover` below turns links red,
+     and on a red fill that made the label vanish. */
+  .dx-btn-td:hover { background-color: #cc0000 !important; box-shadow: 0 0 30px rgba(204, 0, 0, 0.4); }
+  .dx-content a.dx-btn:hover, .dx-btn-td:hover a.dx-btn { color: #ffffff !important; }
+
+  /* Every link rests the way its counterpart on the site rests (written
+     inline on the link) and turns red on hover (owner's call):
+       .dx-navlink   the navbar: rgba(245,245,245,0.8), flattened to #c6c6c6;
+                     hover red with the navbar's red line under it
+       .dx-footlink  the site footer: --color-white-muted #888888, no line;
+                     hover red (the site's goes white; the email goes red)
+       .dx-inline    a link inside text: the article link, white on a red
+                     underline; hover red
+       .dx-hl        a story headline: white; hover red
+       .dx-cta       a box's "Read the story" / "Watch now": the site card's
+                     .watch-now-btn, white at rest, red when the link OR its
+                     box is hovered */
+  .dx-navlink:hover { color: #ef4444 !important; text-decoration: underline !important; text-decoration-color: #cc0000 !important; text-underline-offset: 6px; }
+  .dx-footlink:hover, .dx-inline:hover, a.dx-hl:hover { color: #ef4444 !important; }
+  a.dx-cta:hover, .dx-card:hover a.dx-cta { color: #ef4444 !important; }
+
+  /* Phones: 320px to 430px must never scroll sideways. */
+  @media screen and (max-width: 620px) {
+    .dx-px { padding-left: 16px !important; padding-right: 16px !important; }
+    .dx-pad { padding-left: 18px !important; padding-right: 18px !important; }
+    .dx-img { width: 100% !important; height: auto !important; }
+    /* A progressive belt on top of the 16:9 source: clients that know
+       aspect-ratio and object-fit hold a 16:9 box even if an image arrives
+       the wrong shape. CONTAIN, never cover: an image is never cut off
+       (owner's rule). A wrong-shaped one letterboxes on the box colour. The
+       feed's images are already 16:9 with the whole picture inside (see
+       scripts/sync-dispatch-images.mjs), so normally this changes nothing. */
+    .dx-169 { aspect-ratio: 16 / 9; object-fit: contain; background-color: #111111; }
+    .dx-col { display: block !important; width: 100% !important; max-width: 100% !important; }
+    .dx-thumb-pad { padding-right: 0 !important; padding-bottom: 14px !important; }
+    .dx-thumb, .dx-thumb .dx-img { max-width: 100% !important; }
+    .dx-feature-hl { font-size: 23px !important; line-height: 29px !important; }
+    .dx-title { font-size: 24px !important; line-height: 28px !important; }
+    .dx-title-hq { font-size: 22px !important; line-height: 24px !important; padding-left: 90px !important; }
+    .dx-nav a { letter-spacing: 0.12em !important; }
+    .dx-nav-sep { padding: 0 6px !important; }
+    .dx-btn-wrap { width: 100% !important; }
+    .dx-btn { display: block !important; text-align: center !important; }
+  }
+
+  /* Apple Mail and iOS honour prefers-color-scheme. Re-assert the dark
+     palette so nothing drifts toward a system grey. */
+  @media (prefers-color-scheme: dark) {
+    .dx-bg { background-color: #0a0a0a !important; }
+    .dx-surface { background-color: #111111 !important; }
+    .dx-white { color: #f0f0f0 !important; }
+    .dx-body { color: #a3a3a3 !important; }
+  }
+
+  /* Outlook.com and Outlook apps tag what they recolour with data-ogsc (text)
+     and data-ogsb (background). Put ours back. */
+  [data-ogsb] .dx-bg { background-color: #0a0a0a !important; }
+  [data-ogsb] .dx-surface { background-color: #111111 !important; }
+  [data-ogsb] .dx-red-bg { background-color: #cc0000 !important; }
+  [data-ogsc] .dx-white { color: #f0f0f0 !important; }
+  [data-ogsc] .dx-body { color: #a3a3a3 !important; }
+  [data-ogsc] .dx-red { color: #ef4444 !important; }
+  [data-ogsc] .dx-red-lg { color: #cc0000 !important; }
+  [data-ogsc] .dx-cta { color: #f0f0f0 !important; }
+  [data-ogsc] .dx-navlink { color: #c6c6c6 !important; }
+  [data-ogsc] .dx-footlink { color: #888888 !important; }
+  [data-ogsc] .dx-inline { color: #f0f0f0 !important; }
+
+  /* Gmail iOS / Android "full invert" can flip light text on a dark ground.
+     This blend pair keeps white text white there (targets Gmail only, via
+     the <u></u> Gmail places before the body). */
+  u + .body .dx-gm-screen { background: #000000; mix-blend-mode: screen; }
+  u + .body .dx-gm-diff { background: #000000; mix-blend-mode: difference; }
+</style>
+</head>
+<body id="body" class="body dx-bg" style="margin:0; padding:0; width:100%; background-color:#0a0a0a; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
+
+  <!-- Hidden spacer so the inbox preview shows Kit's preview text, not the
+       first words of the header. Set the preview text itself in Kit's
+       broadcast settings. -->
+  <div style="display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden; mso-hide:all;">&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div>
+
+  <table role="presentation" class="dx-bg" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#0a0a0a" style="width:100%; background-color:#0a0a0a;">
+    <tr>
+      <td align="center" valign="top" style="padding:0;">
+
+        <!--[if mso]>
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" align="center"><tr><td>
+        <![endif]-->
+        <div style="max-width:600px; margin:0 auto;">
+          <table role="presentation" class="dx-bg" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#0a0a0a" style="width:100%; max-width:600px; background-color:#0a0a0a;">
+
+            <!-- ============ MASTHEAD ============ -->
+            <!-- The site's brand glow: red light from the top right corner,
+                 the same stops BrandGlow.astro uses on a phone. -->
+            <tr>
+              <td class="dx-bg" bgcolor="#0a0a0a" style="padding:0; background-color:#0a0a0a; background-image:radial-gradient(circle at 100% 0%, rgba(204,0,0,0.20) 0%, rgba(204,0,0,0.06) 30%, rgba(204,0,0,0) 62%);">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+
+                  <!-- Brand rule -->
+                  <tr>
+                    <td class="dx-red-bg" height="2" bgcolor="#cc0000" style="height:2px; line-height:2px; font-size:0; background-color:#cc0000;">&nbsp;</td>
+                  </tr>
+
+                  <!-- Top bar: publisher left, cadence right, like the
+                       site's navbar. Short enough for one line at 320px. -->
+                  <tr>
+                    <td class="dx-px" style="padding:2px 24px 2px 24px; border-bottom:1px solid #1d1d1d;">
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                        <tr>
+                          <td align="left" valign="middle" style="font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:11px; line-height:16px; font-weight:800; letter-spacing:0.2em; text-transform:uppercase; color:#f0f0f0;">
+                            <a href="https://beunconventionalhq.com" class="dx-navlink" style="display:inline-block; padding:14px 0; color:#c6c6c6; text-decoration:none;">BE Unconventional HQ</a>
+                          </td>
+                          <!-- White, not red: this corner sits in the red glow, and red
+                               lettering on it was illegible (owner's call). -->
+                          <td align="right" valign="middle" class="dx-white" style="font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:11px; line-height:16px; font-weight:700; letter-spacing:0.3em; text-transform:uppercase; color:#f0f0f0;">
+                            Weekly
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+
+                  <!-- Header image. 1200x400 source (3:1), shown at 600x200.
+                       width/height attributes hold the ratio in Outlook;
+                       width:100% plus height:auto scales it down without
+                       distortion elsewhere. The alt text is styled so the
+                       name still reads when images are blocked. -->
+                  <tr>
+                    <td align="center" style="padding:0;">
+                      <h1 style="margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:30px; line-height:36px; font-weight:900; letter-spacing:0.04em; color:#f0f0f0;">
+                        <a href="https://beunconventionalhq.com" style="text-decoration:none; color:#f0f0f0; display:block;">
+                          <!-- BE DISPATCH HEADER IMAGE (1200x400 PNG, 3:1). Served from the site at
+                               /dispatch/header-1200x400.png, built by
+                               scripts/build-dispatch-art.mjs. To use other
+                               art, replace this URL with any absolute https
+                               URL to a 1200x400 image. -->
+                          <img src="https://beunconventionalhq.com/dispatch/header-1200x400.png" width="600" height="200" alt="THE HQ DISPATCH" class="dx-img" style="display:block; width:100%; max-width:600px; height:auto; border:0; outline:none; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:30px; line-height:36px; font-weight:900; letter-spacing:0.04em; color:#f0f0f0; text-align:center;">
+                        </a>
+                      </h1>
+                    </td>
+                  </tr>
+
+                  <!-- Section links, set like the About hero's
+                       "FILM | TV | GAMES | EVENTS" line. -->
+                  <tr>
+                    <td align="center" class="dx-px dx-nav" style="padding:6px 24px 0 24px;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+                        <tr>
+                          <td><a class="dx-navlink" href="https://beunconventionalhq.com/feed" style="display:inline-block; padding:13px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:11px; line-height:18px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:#c6c6c6; text-decoration:none;">Feed</a></td>
+                          <td class="dx-nav-sep" style="padding:0 7px; font-family:Arial, sans-serif; font-size:11px; line-height:18px; color:#555555;">|</td>
+                          <td><a class="dx-navlink" href="https://beunconventionalhq.com/intel" style="display:inline-block; padding:13px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:11px; line-height:18px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:#c6c6c6; text-decoration:none;">Intel</a></td>
+                          <td class="dx-nav-sep" style="padding:0 7px; font-family:Arial, sans-serif; font-size:11px; line-height:18px; color:#555555;">|</td>
+                          <td><a class="dx-navlink" href="https://beunconventionalhq.com/events" style="display:inline-block; padding:13px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:11px; line-height:18px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:#c6c6c6; text-decoration:none;">Events</a></td>
+                          <td class="dx-nav-sep" style="padding:0 7px; font-family:Arial, sans-serif; font-size:11px; line-height:18px; color:#555555;">|</td>
+                          <td><a class="dx-navlink" href="https://beunconventionalhq.com/featured" style="display:inline-block; padding:13px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:11px; line-height:18px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:#c6c6c6; text-decoration:none;">Featured</a></td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+
+                  <!-- Introduction, set exactly like the footer's spaced
+                       capitals ("BE YOURSELF. BE PASSIONATE...") and the About
+                       page's closing line (owner's call, in place of the
+                       longer sentence the issue first specified). -->
+                  <tr>
+                    <td align="center" class="dx-px" style="padding:14px 24px 36px 24px;">
+                      <p class="dx-intro dx-white" style="margin:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:12px; line-height:20px; font-weight:600; letter-spacing:0.25em; text-transform:uppercase; color:#f0f0f0; text-align:center;">
+                        COVERAGE FROM THE HQ
+                      </p>
+                    </td>
+                  </tr>
+
+                </table>
+              </td>
+            </tr>
+
+            <!-- ============ BODY ============ -->
+            <!-- Kit replaces the tag below with the broadcast. For the weekly
+                 RSS digest that is Kit's Post content block, rendered through
+                 email/hq-dispatch/post-template.liquid.html (FEATURED first,
+                 then LATEST FROM THE HQ). Anything typed in the editor above
+                 or below that block lands here too, styled by .dx-content. -->
+            <tr>
+              <td class="dx-px dx-content dx-body" style="padding:8px 24px 8px 24px; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:16px; line-height:26px; color:#a3a3a3;">
+                {{ message_content }}
+              </td>
+            </tr>
+
+            <!-- ============ FOOTER ============ -->
+            <!-- The footer carries the second, fainter glow from the bottom
+                 left, the way BrandGlow balances the page. -->
+            <tr>
+              <td class="dx-bg" bgcolor="#0a0a0a" style="padding:0; background-color:#0a0a0a; background-image:radial-gradient(circle at 0% 100%, rgba(204,0,0,0.10) 0%, rgba(204,0,0,0) 55%);">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+
+                  <!-- Sign-off, the About page's closing line. -->
+                  <tr>
+                    <td align="center" class="dx-px" style="padding:40px 24px 28px 24px;">
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                        <tr>
+                          <td height="1" bgcolor="#1d1d1d" style="height:1px; line-height:1px; font-size:0; background-color:#1d1d1d;">&nbsp;</td>
+                        </tr>
+                      </table>
+                      <p class="dx-white" style="margin:32px 0 0 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:12px; line-height:20px; font-weight:600; letter-spacing:0.25em; text-transform:uppercase; color:#f0f0f0; text-align:center;">
+                        Be yourself. Be passionate. Be unconventional.
+                      </p>
+                      <!-- The site's tagline in capitals, then the pointer to
+                           the site on its own line beneath (owner's call). -->
+                      <p class="dx-white" style="margin:14px 0 0 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:12px; line-height:20px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:#f0f0f0; text-align:center;">
+                        WHERE NERD CULTURE GETS CINEMATIC.
+                      </p>
+                      <p style="margin:6px 0 0 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:14px; line-height:22px; color:#a3a3a3; text-align:center;">
+                        There's more every day at <a href="https://beunconventionalhq.com" class="dx-inline" style="color:#f0f0f0; text-decoration:underline; text-decoration-color:#cc0000; text-underline-offset:3px;">beunconventionalhq.com</a>.
+                      </p>
+                    </td>
+                  </tr>
+
+                  <!-- Follow rows: YouTube, Instagram, TikTok, then Bluesky, Letterboxd,
+                       Threads, the same URLs as site.socials. X is left out
+                       on purpose: the owner doesn't promote it in the
+                       newsletter. Text links, not icons: nothing to host,
+                       nothing to break with images off. Two rows of three so
+                       each fits a 320px phone; 44px tall for touch. -->
+                  <tr>
+                    <td align="center" class="dx-px dx-foot" style="padding:0 24px 4px 24px;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+                        <tr>
+                          <td style="padding:0 9px;"><a class="dx-footlink" href="https://www.youtube.com/@BeUnconventionalHQ" style="display:inline-block; padding:13px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:11px; line-height:18px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#888888; text-decoration:none;">YouTube</a></td>
+                          <td style="padding:0 9px;"><a class="dx-footlink" href="https://www.instagram.com/beunconventionalhq" style="display:inline-block; padding:13px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:11px; line-height:18px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#888888; text-decoration:none;">Instagram</a></td>
+                          <td style="padding:0 9px;"><a class="dx-footlink" href="https://www.tiktok.com/@beunconventionalhq" style="display:inline-block; padding:13px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:11px; line-height:18px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#888888; text-decoration:none;">TikTok</a></td>
+                        </tr>
+                      </table>
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+                        <tr>
+                          <td style="padding:0 9px;"><a class="dx-footlink" href="https://bsky.app/profile/beunconventionalhq.com" style="display:inline-block; padding:13px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:11px; line-height:18px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#888888; text-decoration:none;">Bluesky</a></td>
+                          <td style="padding:0 9px;"><a class="dx-footlink" href="https://letterboxd.com/beunconhq/" style="display:inline-block; padding:13px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:11px; line-height:18px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#888888; text-decoration:none;">Letterboxd</a></td>
+                          <td style="padding:0 9px;"><a class="dx-footlink" href="https://www.threads.com/@beunconventionalhq" style="display:inline-block; padding:13px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:11px; line-height:18px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#888888; text-decoration:none;">Threads</a></td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+
+                  <!-- Why you're getting this, preferences, unsubscribe,
+                       address. Kit rejects the template if the unsubscribe
+                       link or address is missing, so neither may move behind
+                       a condition. -->
+                  <tr>
+                    <td align="center" class="dx-px dx-foot" style="padding:8px 24px 44px 24px; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:13px; line-height:20px; color:#8a8a8a; text-align:center;">
+                      <p style="margin:0 0 2px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:13px; line-height:20px; color:#8a8a8a; text-align:center;">
+                        You're getting this because you signed up for THE HQ DISPATCH at beunconventionalhq.com.
+                      </p>
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+                        <tr>
+                          <td style="padding:0 12px;"><a class="dx-footlink" href="{{ subscriber_preferences_url }}" style="display:inline-block; padding:12px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:13px; line-height:20px; color:#888888; text-decoration:underline;">Update preferences</a></td>
+                          <td style="padding:0 12px;"><a class="dx-footlink" href="{{ unsubscribe_url }}" style="display:inline-block; padding:12px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:13px; line-height:20px; color:#888888; text-decoration:underline;">Unsubscribe</a></td>
+                        </tr>
+                      </table>
+                      <p style="margin:6px 0 0 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:12px; line-height:18px; color:#8a8a8a; text-align:center;">
+                        Anaheim, CA 92805
+                      </p>
+                      <p style="margin:6px 0 0 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:12px; line-height:18px; color:#8a8a8a; text-align:center;">
+                        &copy; BE Unconventional HQ
+                      </p>
+                    </td>
+                  </tr>
+
+                </table>
+              </td>
+            </tr>
+
+          </table>
+        </div>
+        <!--[if mso]>
+        </td></tr></table>
+        <![endif]-->
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -1,0 +1,128 @@
+---
+/**
+ * /feed — the main feed.
+ *
+ * ─── THIS ROUTE IS DELIBERATELY NOT PAGINATED ─────────────────────────────
+ * It was `feed/[...page].astro`, built with `paginate(..., { pageSize: 12 })`,
+ * which emitted /feed, /feed/2, /feed/3 and /feed/4.
+ *
+ * The horizontal rows in <FeedGrid /> render from `allItems` — the WHOLE feed,
+ * not a page of it — so a numbered page could only ever show the same six rows
+ * again. Once the numbered links came out of FeedGrid nothing linked to them
+ * either, so /feed/2..4 were unreachable duplicates of /feed that the sitemap
+ * was still advertising to Google. Ghost pages, and the kind that compete with
+ * the page they duplicate.
+ *
+ * Collapsing the route is what actually stops them being generated; hiding the
+ * links did not. The paths Google already knows are forwarded here in
+ * `redirects` in astro.config.mjs, so their crawl equity lands on /feed rather
+ * than on a 404.
+ *
+ * The `page` object below is the shape <FeedLayout /> and <FeedGrid /> expect,
+ * with no previous or next. It is built by hand rather than by paginate()
+ * precisely so no second page can ever come back by accident.
+ */
+import FeedLayout from '../../layouts/FeedLayout.astro';
+import FeedSpotlightHero from '../../components/FeedSpotlightHero.astro';
+import { META, pageTitle } from '../../data/content.js';
+import { getAllFeedItems } from '../../lib/feed-items';
+
+import { getVideosUnified } from '../../lib/videos-source';
+import { feedSortTime } from '../../lib/feed-items';
+import { getFeaturedBrandsLocal, getEventsLocal, urlFor } from '../../lib/local-content';
+import { resolveEntity } from '../../lib/entity-resolver';
+import { getCardImageSources } from '../../lib/card-images';
+
+import FeedGrid from '../../components/FeedGrid.astro';
+
+const allItems = await getAllFeedItems();
+
+/* One page, holding everything. `url.prev`/`url.next` stay undefined so
+   Layout emits no rel=prev/next, which is correct for a single-page route. */
+const page = { data: allItems, currentPage: 1, url: { prev: undefined, next: undefined } };
+
+const title = pageTitle(META.feed.title);
+
+const videos = await getVideosUnified();
+const latestVideo = [...videos].sort((a, b) => feedSortTime(b) - feedSortTime(a))[0] || {};
+const entity = resolveEntity(latestVideo, { brands: getFeaturedBrandsLocal(), events: getEventsLocal(), urlFor });
+const brandHero = entity?.hero || null;
+/*
+  THE SAME EXPRESSION FeedSpotlightHero USES, FIELD FOR FIELD.
+
+  This read `latestVideo.image` and then `latestVideo.snippet.thumbnails`,
+  which is the raw YouTube API shape. `getVideosUnified()` does not return
+  that: `videos.ts` projects an explicit whitelist and the thumbnail lands on
+  `thumbnail`. Neither `image` nor `snippet` exists on the object, so this
+  resolved to '' on every build, `getCardImageSources('')` returned an empty
+  src, and `Layout.astro` skipped the preload it is guarded on. The plumbing
+  was correct end to end and the preload tag was never emitted.
+
+  If this and the component ever disagree again, the preload silently points
+  at the wrong image or vanishes, and nothing fails -- so they are written the
+  same way on purpose.
+*/
+const itemBgRaw = latestVideo.thumbnail || '';
+const heroBgRaw = brandHero || itemBgRaw;
+/*
+  `preloadImageSizes` below is the same `sizes` #hero-bg declares ("100vw").
+  Without it the preload assumes one value while the <img> resolves another,
+  and the browser fetches two different candidates -- a preload that costs a
+  download instead of saving one.
+*/
+const { src: preloadImage, srcset: preloadImageSrcset } = getCardImageSources(heroBgRaw);
+
+const description = META.feed.description;
+---
+
+<FeedLayout hasSpotlightHero={true}
+  preloadImage={preloadImage}
+  preloadImageSrcset={preloadImageSrcset}
+  preloadImageSizes="100vw"
+  showFilters={false}
+  title={title}
+  description={description}
+  headingLabel="All content"
+  page={page}
+  isNavMode={true}
+  preconnect={["https://i.ytimg.com"]}
+>
+  <FeedSpotlightHero slot="hero" />
+  <FeedGrid page={page} allItems={allItems} />
+</FeedLayout>
+
+<script>
+  /*
+    ─── `/feed?play=<youtubeId>`: ARRIVE WITH A VIDEO ON THE STAGE ─────────
+
+    The homepage links its videos here instead of opening the site-wide modal
+    (Andrew: "use the modal as little as possible"). On arrival this finds the
+    feed card for that video and clicks it, which runs FeedSpotlightHero's own
+    swap handler: the video is promoted into the /feed hero, exactly as if the
+    reader had picked it from a rail, and the page is at the top.
+
+    It deliberately does NOT press the stage's Play button as well. Starting
+    an embed nobody clicked is the signature YouTube's bot check walls (hard
+    rule 11), and a browser refuses sound to a page that has not been clicked
+    yet in any case. So the reader lands on the video, cued, one tap from
+    playing, which is the same one click every other video on the site takes.
+
+    The param is then dropped from the URL, so a reload or a shared link shows
+    the plain feed rather than re-promoting on every visit.
+  */
+  function promoteFromQuery() {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('play');
+    if (!id || !/^[A-Za-z0-9_-]{11}$/.test(id)) return;
+    const card = document.querySelector<HTMLElement>(
+      `[data-action="spotlight-video"][data-video-id="${CSS.escape(id)}"]`,
+    );
+    params.delete('play');
+    const query = params.toString();
+    /* `history.state`, never null: a null state makes ClientRouter skip the swap on a later popstate. */
+    history.replaceState(history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+    card?.click();
+  }
+
+  document.addEventListener('astro:page-load', promoteFromQuery);
+</script>

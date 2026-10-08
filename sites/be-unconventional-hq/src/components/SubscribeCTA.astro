@@ -1,0 +1,144 @@
+---
+/**
+ * SubscribeCTA — "The HQ Dispatch", the newsletter band.
+ *
+ * ─── WHY THIS LOOKS THE WAY IT DOES ───────────────────────────────────────
+ * This component used to be written twice: an `if compact / else default`
+ * with two complete copies of the heading, the subtitle and both subscribe
+ * buttons. The two branches differed only in a handful of inline styles, so
+ * changing the wording or adding a third button meant editing it in two
+ * places — and they had already started to drift.
+ *
+ * Now there is ONE piece of markup and the variant only switches a CSS class.
+ * That is the general rule to follow in this codebase: if two blocks differ
+ * only in styling, they should be one block with a class, never two blocks.
+ *
+ * ─── THE TWO VARIANTS ─────────────────────────────────────────────────────
+ *   default   full-width band with page margins — used at the bottom of pages
+ *   compact   tighter, smaller type — used inside narrower columns
+ *
+ * ─── WHERE THE WORDS COME FROM ────────────────────────────────────────────
+ * Heading:  SECTIONS.subscribe   (src/data/content.js)
+ * Subtitle: MESSAGES.subscribeSubtitle
+ *
+ * To change that wording, edit that file — not this one.
+ *
+ * ─── WHY THERE ARE NO PLATFORM BUTTONS ────────────────────────────────────
+ * "Subscribe on Substack" and "Subscribe on YouTube" used to sit here. They
+ * were removed once this band started capturing the address directly: three
+ * competing subscribe actions split the decision, and two of them sent the
+ * reader off-site — the exact leak the native form exists to close.
+ *
+ * The Substack and YouTube links remain in the FOOTER, so nothing is lost;
+ * they are simply no longer competing with the primary action.
+ */
+import PageTitle from './PageTitle.astro';
+import { SECTIONS, MESSAGES } from '../data/content.js';
+import NewsletterForm from './NewsletterForm.astro';
+/* Keeps "BE Unconventional HQ" from wrapping mid-name — see BrandText. */
+import BrandText from './BrandText.astro';
+
+export interface Props {
+  /** Override the standard subtitle for a specific page. */
+  subtitle?: string;
+  /** `compact` tightens spacing for use inside a narrow column. */
+  variant?: 'default' | 'compact';
+}
+
+const { subtitle = MESSAGES.subscribeSubtitle, variant = 'default' } = Astro.props;
+
+const isCompact = variant === 'compact';
+---
+
+{/* `id` so an in-page link can reach it. The homepage spotlight bar's
+    subscribe slide points here rather than off the site — see
+    HomeSpotlightBar.astro, where every destination is internal on purpose. */}
+{/* Named, so the <section> is a landmark (axe `region`): on /events and
+    every other page that mounts it after </main>, the form was content in
+    no landmark at all, which a screen reader's landmark list skips. */}
+<section
+  id="subscribe"
+  aria-label="Newsletter"
+  class:list={['subscribe-cta', { 'is-compact': isCompact, container: !isCompact, reveal: isCompact }]}
+  data-delay={isCompact ? '400' : undefined}
+  style="scroll-margin-top: 7rem;"
+>
+  <div class:list={['cta-band', { reveal: !isCompact }]}>
+    <div class="subscribe-cta-copy">
+      <div class="section-header subscribe-cta-header">
+        <PageTitle {...SECTIONS.subscribe} scale="secondary" />
+      </div>
+      <p class="subscribe-cta-subtitle"><BrandText text={subtitle} /></p>
+    </div>
+
+    {/* The single action in this band: capture the address on our own domain. */}
+    <NewsletterForm />
+  </div>
+</section>
+
+<style>
+  /* Shared by both variants — this is what used to be typed inline twice. */
+  .subscribe-cta {
+    position: relative;
+    z-index: 10;
+    margin-bottom: 2rem;
+  }
+
+  .subscribe-cta .cta-band {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+
+  .subscribe-cta-copy {
+    width: 100%;
+    text-align: center;
+  }
+
+  .subscribe-cta-header {
+    margin-bottom: 1rem;
+  }
+
+  .subscribe-cta-subtitle {
+    color: var(--color-white-muted);
+  }
+
+  /* ── compact variant ────────────────────────────────────────────────────
+     The ONLY differences from the default. Anything not listed here is
+     shared, which is the point of the refactor. */
+  .subscribe-cta.is-compact {
+    margin-top: 1rem;
+    margin-bottom: 0;
+  }
+
+  .subscribe-cta.is-compact .subscribe-cta-subtitle {
+    font-size: 0.9rem;
+  }
+
+
+  /* ── buttons ────────────────────────────────────────────────────────────
+     Stacked on phones, side by side from 768px. */
+  .cta-buttons-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 2rem;
+    width: 100%;
+  }
+
+  .cta-buttons-wrapper .cta-button-primary {
+    width: 100%;
+    text-align: center;
+  }
+
+  @media (min-width: 768px) {
+    .cta-buttons-wrapper {
+      flex-direction: row;
+    }
+
+    .cta-buttons-wrapper .cta-button-primary {
+      flex: 1;
+    }
+  }
+</style>

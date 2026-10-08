@@ -1,0 +1,309 @@
+---
+/**
+ * Discovery: "The HQ Is Watching", the channel's long-form videos.
+ *
+ * ─── THE CARDS ARE THE FEED'S ─────────────────────────────────────────────
+ * Each tile is ContentCard, the same component /feed's rails render (Andrew:
+ * "must inherit the design of the feed page tiles"), so its hover-only play
+ * icon, badges and type come with it and cannot drift from the feed. With
+ * the default context a video card opens the site's shared #video-modal
+ * through Layout's delegated handler: no new YouTube player (hard rule 11).
+ *
+ * ─── ENDLESS ON DESKTOP ───────────────────────────────────────────────────
+ * From 768px up the rail loops: the script clones the whole set at least
+ * twice before and twice after the real one and, once the scroll comes to
+ * rest in a clone set, moves it back by whole sets. The clones are identical
+ * at that offset, so the jump is invisible and the arrows never run out.
+ * Clones are hidden from assistive tech and the tab order (the real set is
+ * the one to read), but NOT `inert`, which would also swallow the click that
+ * opens the modal. Their ids and JSON-LD are stripped, so the page never
+ * carries a duplicate of either. Phones keep a plain finite swipe.
+ */
+import ChalkIcon from './ChalkIcon.astro';
+
+/* A rail card is a FIXED width, not the grid's share of the page, so the
+   grid's CARD_IMAGE_SIZES (90vw on a phone, 47vw on a tablet) was wrong for
+   it both ways. Measured: 304-318px up to 1536, 378 at 1920, 438 at 2560,
+   498 at 3840. */
+const RAIL_IMAGE_SIZES = '(min-width: 3400px) 500px, (min-width: 2560px) 440px, (min-width: 1920px) 380px, 320px';
+import HomeSectionHeader from './HomeSectionHeader.astro';
+import ContentCard from '../ContentCard.astro';
+
+interface Props {
+  /** Video records in the feed's shape (getVideoItems), newest first. */
+  items: any[];
+}
+
+const { items } = Astro.props;
+---
+
+{items.length > 0 && (
+  <section class="home-section watching" aria-labelledby="home-watching-title" data-watching>
+    <div class="home-container">
+      <HomeSectionHeader
+        icon="watching"
+        id="home-watching-title"
+        title="The HQ Is Watching"
+        descriptor="Video Coverage"
+        href="/feed/videos"
+        linkLabel="All videos"
+      />
+
+      <div class="rail">
+        <button type="button" class="rail-arrow rail-arrow--prev" data-watching-prev aria-label="Previous videos" disabled>
+          <ChalkIcon name="arrow-left" size={22} />
+        </button>
+
+        <ul class="rail-track" data-watching-track>
+          {items.map((item, index) => (
+            <li class="rail-item" data-watching-item>
+              <ContentCard item={item} index={index} imageSizes={RAIL_IMAGE_SIZES} />
+            </li>
+          ))}
+        </ul>
+
+        <button type="button" class="rail-arrow rail-arrow--next" data-watching-next aria-label="Next videos">
+          <ChalkIcon name="arrow-right" size={22} />
+        </button>
+      </div>
+    </div>
+  </section>
+)}
+
+<script>
+  const DESKTOP = '(min-width: 768px)';
+  let cleanup: (() => void) | null = null;
+
+  function init() {
+    cleanup?.();
+    cleanup = null;
+    const root = document.querySelector<HTMLElement>('[data-watching]');
+    const maybeTrack = root?.querySelector<HTMLElement>('[data-watching-track]');
+    const maybePrev = root?.querySelector<HTMLButtonElement>('[data-watching-prev]');
+    const maybeNext = root?.querySelector<HTMLButtonElement>('[data-watching-next]');
+    if (!maybeTrack || !maybePrev || !maybeNext) return;
+    /* Re-bound as non-null consts: TS does not carry the guard above into
+       the hoisted `function sync()` below. */
+    const track: HTMLElement = maybeTrack;
+    const prev: HTMLButtonElement = maybePrev;
+    const next: HTMLButtonElement = maybeNext;
+
+    const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const desktop = window.matchMedia(DESKTOP);
+    const originals = Array.from(track.querySelectorAll<HTMLElement>('[data-watching-item]'));
+    let looping = false;
+    let settle = 0;
+
+    /*
+      ─── WHOLE CARDS ONLY, FEATHERED AT BOTH EDGES ──────────────────────────
+      Reported on desktop: the right-most card was sliced by the edge of the
+      rail. The cards were a fixed --feed-card wide, so how many fitted was
+      whatever the window allowed and the remainder was cut off. Now the
+      script works out the whole number of cards nearest that size and sizes
+      them to fill the row exactly (`--rail-w`, px). The track's inline
+      padding (`--rail-fade`, home.css) is the feather: the neighbouring cards
+      peek into it and are masked out, and `scroll-padding` makes every snap
+      land a card at its inner edge. The arrows page by exactly one row.
+    */
+    let step = 0;
+    const fit = () => {
+      const cs = getComputedStyle(track);
+      const gap = parseFloat(cs.columnGap) || 0;
+      const room = track.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const base = Math.min(window.innerWidth * 0.85, parseFloat(cs.getPropertyValue('--feed-card')) || 320);
+      if (room <= 0) return;
+      /* NEAREST whole count, not floor: floor stretched four cards into
+         three 400px ones at 1512. Rounding keeps them near the feed's size. */
+      const n = Math.max(1, Math.round((room + gap) / (base + gap)));
+      const w = (room - (n - 1) * gap) / n;
+      track.style.setProperty('--rail-w', `${w}px`);
+      step = n * (w + gap);
+    };
+
+    const makeClone = (li: HTMLElement) => {
+      const c = li.cloneNode(true) as HTMLElement;
+      c.removeAttribute('data-watching-item');
+      c.setAttribute('data-watching-clone', '');
+      c.setAttribute('aria-hidden', 'true');
+      c.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
+      c.querySelectorAll('script').forEach((el) => el.remove());
+      c.querySelectorAll<HTMLElement>('a, button, [tabindex]').forEach((el) => el.setAttribute('tabindex', '-1'));
+      /*
+        A clone is born VISIBLE. The cards carry `.reveal` (opacity 0 until the
+        shared observer in Layout.astro sets `data-state`), and the loop is
+        built one viewport BEFORE the rail is on screen, so every original was
+        still hidden when it was copied. The observer only watches the
+        originals, so all twelve clones stayed at opacity 0 forever: a fast
+        scroll ran into a blank rail, then the recentre snapped back to the
+        real cards (reported on desktop; measured 12 of 12 clones hidden).
+      */
+      [c, ...c.querySelectorAll<HTMLElement>('.reveal, .animate-on-scroll')].forEach((el) =>
+        el.classList.remove('reveal', 'animate-on-scroll'),
+      );
+      return c;
+    };
+
+    /*
+      ─── RUNWAY, AND WHEN TO JUMP BACK ─────────────────────────────────────
+      Reported on desktop: a fast trackpad fling hit a hard stop, and the rail
+      shifted when the scroll came to rest. Measured before this: with ONE
+      clone set per side (2016px at 1440) a left fling reached 195px from the
+      start of the scroller, so a harder one slammed into it; and a right
+      fling was jumped back mid-snap by the 140ms debounce, landing 100px off
+      the equivalent position and animating for 79 more frames.
+
+      So: enough clone sets per side that a fling cannot reach an edge
+      (at least two, more on a screen wider than a set), and the jump back
+      happens only at REST (`scrollend`, which fires after snapping ends),
+      by a whole number of sets, with snapping paused for that one write so
+      the frame after the jump is pixel-identical to the frame before.
+    */
+    let copies = 0;
+
+    /* One set's width, gaps included, and the scroll offset that puts the
+       first REAL card at the left edge. Both measured, never assumed. */
+    const setWidth = () => {
+      const lead = track.querySelectorAll<HTMLElement>('[data-watching-clone]')[(copies - 1) * originals.length];
+      return lead ? originals[0].offsetLeft - lead.offsetLeft : 0;
+    };
+    const homeOffset = () => {
+      const first = track.firstElementChild as HTMLElement | null;
+      return first ? originals[0].offsetLeft - first.offsetLeft : 0;
+    };
+
+    /* Move the scroll back into the real set by whole sets. */
+    const recentre = () => {
+      if (!looping) return;
+      const w = setWidth();
+      if (!w) return;
+      const k = Math.round((track.scrollLeft - homeOffset()) / w);
+      if (!k) return;
+      const prevSnap = track.style.scrollSnapType;
+      track.style.scrollSnapType = 'none';
+      track.scrollLeft -= k * w;
+      track.style.scrollSnapType = prevSnap;
+    };
+
+    const enableLoop = () => {
+      if (looping || originals.length < 2) return;
+      /* Only loop when there is actually more than a screen of cards. */
+      if (track.scrollWidth <= track.clientWidth + 2) return;
+      const oneSet = track.scrollWidth;
+      copies = Math.max(2, Math.ceil((2 * track.clientWidth) / oneSet));
+      for (let i = 0; i < copies; i++) {
+        track.prepend(...originals.map(makeClone));
+        track.append(...originals.map(makeClone));
+      }
+      looping = true;
+      const prevSnap = track.style.scrollSnapType;
+      track.style.scrollSnapType = 'none';
+      track.scrollLeft = homeOffset();
+      track.style.scrollSnapType = prevSnap;
+      sync();
+    };
+
+    const disableLoop = () => {
+      if (!looping) return;
+      track.querySelectorAll('[data-watching-clone]').forEach((c) => c.remove());
+      looping = false;
+      track.scrollLeft = 0;
+      sync();
+    };
+
+    function sync() {
+      if (looping) {
+        prev.disabled = false;
+        next.disabled = false;
+        return;
+      }
+      const max = track.scrollWidth - track.clientWidth - 2;
+      prev.disabled = track.scrollLeft <= 2;
+      next.disabled = track.scrollLeft >= max;
+    }
+
+    /* Recentre once the scroll has come to rest, never mid-gesture or
+       mid-snap, where moving scrollLeft cuts the motion short. `scrollend`
+       where supported, and ONLY that: the debounce used to run alongside it
+       and fired first, mid-snap. A quiet-period debounce is the fallback for
+       browsers without `scrollend`. */
+    const hasScrollEnd = 'onscrollend' in window;
+    const onScroll = () => {
+      if (!hasScrollEnd) {
+        window.clearTimeout(settle);
+        settle = window.setTimeout(recentre, 250);
+      }
+      sync();
+    };
+    const onScrollEnd = () => {
+      window.clearTimeout(settle);
+      recentre();
+    };
+
+    const page = (dir: 1 | -1) => () => {
+      recentre();
+      track.scrollBy({ left: dir * (step || track.clientWidth * 0.9), behavior: reduced() ? 'auto' : 'smooth' });
+    };
+    const onPrev = page(-1);
+    const onNext = page(1);
+    const onMedia = () => (desktop.matches ? enableLoop() : disableLoop());
+
+    prev.addEventListener('click', onPrev);
+    next.addEventListener('click', onNext);
+    track.addEventListener('scroll', onScroll, { passive: true });
+    track.addEventListener('scrollend', onScrollEnd);
+    const onResize = () => {
+      if (started) fit();
+      sync();
+    };
+    window.addEventListener('resize', onResize);
+    desktop.addEventListener('change', onMedia);
+
+    /*
+      Set up when the rail is near, not while the page loads. Both steps read
+      layout (`scrollWidth`, `offsetLeft`), and this section is
+      `content-visibility: auto` (home.css), so reading it at load forced a
+      style and layout of the whole rail the browser was skipping: PageSpeed's
+      "Forced reflow" line for this file. One viewport of lead time means the
+      loop and the arrow states are ready before the reader arrives.
+    */
+    let started = false;
+    const start = () => {
+      if (started) return;
+      started = true;
+      /* Size first: the loop measures the set's width to build itself. */
+      fit();
+      onMedia();
+      sync();
+    };
+    const gate =
+      'IntersectionObserver' in window
+        ? new IntersectionObserver(
+            (entries) => {
+              if (!entries.some((entry) => entry.isIntersecting)) return;
+              gate?.disconnect();
+              start();
+            },
+            { rootMargin: '100% 0px' },
+          )
+        : null;
+    if (gate) gate.observe(track);
+    else start();
+
+    cleanup = () => {
+      gate?.disconnect();
+      window.clearTimeout(settle);
+      prev.removeEventListener('click', onPrev);
+      next.removeEventListener('click', onNext);
+      track.removeEventListener('scroll', onScroll);
+      track.removeEventListener('scrollend', onScrollEnd);
+      window.removeEventListener('resize', onResize);
+      desktop.removeEventListener('change', onMedia);
+    };
+  }
+
+  document.addEventListener('astro:page-load', init);
+  document.addEventListener('astro:before-swap', () => {
+    cleanup?.();
+    cleanup = null;
+  });
+</script>

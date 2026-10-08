@@ -1,0 +1,123 @@
+# Manual-only YouTube channel-stats refresh.
+#
+# Runs `pnpm --filter beunconventionalhq refresh-analytics` (scripts/fetch-channel-stats.mjs) directly
+# and commits the result if it changed - same pattern as sync-youtube.yml.
+# Runs on a weekly schedule (every Monday at 8AM UTC) and can also be fired
+# manually via workflow_dispatch.
+#
+# This replaces the old Cloudflare Deploy Hook pattern, ensuring we only
+# hit the YouTube Analytics API on a deliberate cadence rather than as a
+# side effect of every code push.
+#
+# Also regenerates the media kit's downloadable PDF (scripts/
+# generate-media-kit-pdf.mjs) so it stays in sync with whatever numbers
+# just got fetched - that PDF is rendered via headless Chromium directly
+# (not a visitor's own browser print pipeline, which is what caused the
+# margin/footer bugs this replaced), so it needs a real Chromium, which
+# `pnpm install --frozen-lockfile` fetches for Puppeteer automatically.
+#
+# INERT UNTIL CONFIGURED: needs YOUTUBE_API_KEY, YOUTUBE_CLIENT_ID,
+# YOUTUBE_CLIENT_SECRET, and YOUTUBE_REFRESH_TOKEN as repo secrets (same
+# values as your local .env - see .env.example). Missing any of them, the
+# job logs a skip and exits green, same convention as sync-youtube.yml.
+name: Update YouTube Analytics
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 8 * * 1' # Every Monday at 8 AM UTC
+
+# ── SERIALISED AGAINST THE OTHER CONTENT SYNCS ───────────────────────────────
+# Five workflows commit and push to main. Two of them fired on the same cron
+# minute, so whichever finished second pushed onto a ref that had moved and
+# failed — a red run that had nothing to do with the sync itself.
+#
+# The cron times are now staggered (:00 youtube, :15 instagram, :30 articles),
+# which handles the scheduled case. This shared group handles everything the
+# schedule cannot: a run that overruns its slot, two workflow_dispatch clicks,
+# or a weekly job landing on top of a six-hourly one.
+#
+# ONE group name across all five is the point — concurrency only serialises
+# runs that share a group, and the resource being contended is main itself.
+# cancel-in-progress is false deliberately: these jobs push commits, and
+# cancelling one mid-push is how you get a partial sync, not a fast one.
+concurrency:
+  group: content-sync-push
+  cancel-in-progress: false
+
+jobs:
+  refresh-analytics:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check secrets configured
+        id: check
+        env:
+          HAS_KEY: ${{ secrets.YOUTUBE_API_KEY != '' }}
+          HAS_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID != '' }}
+          HAS_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET != '' }}
+          HAS_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN != '' }}
+        run: |
+          if [ "$HAS_KEY" != "true" ] || [ "$HAS_CLIENT_ID" != "true" ] || [ "$HAS_CLIENT_SECRET" != "true" ] || [ "$HAS_REFRESH_TOKEN" != "true" ]; then
+            echo "One or more of YOUTUBE_API_KEY / YOUTUBE_CLIENT_ID / YOUTUBE_CLIENT_SECRET / YOUTUBE_REFRESH_TOKEN not configured — skipping (see workflow header)."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.configured == 'true'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.configured == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.check.outputs.configured == 'true'
+        run: pnpm install --frozen-lockfile
+
+      # Puppeteer's own Chrome. `pnpm install --frozen-lockfile` fetches it into ~/.npm/_cacache via
+      # the postinstall, but the browser itself lands in ~/.cache/puppeteer,
+      # which the npm cache does not cover — so it is cached explicitly rather
+      # than re-downloaded on every run. Same steps as ci.yml; this job needs
+      # them because `generate-media-kit-pdf` renders through headless Chrome.
+      - name: Cache Puppeteer browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Chrome for Puppeteer
+        run: npx puppeteer browsers install chrome
+
+      - name: Refresh channel stats
+        if: steps.check.outputs.configured == 'true'
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          YOUTUBE_CHANNEL_ID: ${{ secrets.YOUTUBE_CHANNEL_ID }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: pnpm --filter beunconventionalhq refresh-analytics
+
+      - name: Regenerate media kit PDF
+        if: steps.check.outputs.configured == 'true'
+        run: pnpm --filter beunconventionalhq generate-media-kit-pdf
+
+      - name: Commit and push if anything changed
+        if: steps.check.outputs.configured == 'true'
+        run: |
+          if git diff --quiet -- src/data/cache/channel-stats.json public/downloads/be-unconventional-hq-media-kit.pdf; then
+            echo "No changes — nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/data/cache/channel-stats.json public/downloads/be-unconventional-hq-media-kit.pdf
+          git commit -m "chore: refresh YouTube channel stats + media kit PDF" -m "Refreshed by the update-analytics.yml workflow (run ${{ github.run_id }})."
+          git pull origin HEAD --rebase && git push origin HEAD:${{ github.ref }}

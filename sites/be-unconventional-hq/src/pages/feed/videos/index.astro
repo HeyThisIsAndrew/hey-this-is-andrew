@@ -1,0 +1,34 @@
+---
+/**
+ * /feed/videos — the video-only feed.
+ *
+ * Not paginated, for the same reason as /feed: see the note in
+ * src/pages/feed/index.astro. This route emitted /feed/videos/2 and
+ * /feed/videos/3, and it renders the same <FeedGrid /> rows built from the
+ * whole video set, so those were unreachable duplicates too. Both are
+ * forwarded here in `redirects` in astro.config.mjs.
+ */
+import FeedLayout from '../../../layouts/FeedLayout.astro';
+import FeedSpotlightHero from '../../../components/FeedSpotlightHero.astro';
+import { META, pageTitle } from '../../../data/content.js';
+import { getVideoItems } from '../../../lib/feed-items';
+import FeedGrid from '../../../components/FeedGrid.astro';
+
+const allItems = await getVideoItems();
+const page = { data: allItems, currentPage: 1, url: { prev: undefined, next: undefined } };
+
+const title = pageTitle(META.feedVideos.title);
+const description = META.feedVideos.description;
+---
+
+<FeedLayout hasSpotlightHero={true}
+  showFilters={false}
+  title={title}
+  description={description}
+  headingLabel="All videos"
+  page={page}
+  isNavMode={true}
+>
+  <FeedSpotlightHero slot="hero" />
+  <FeedGrid page={page} allItems={allItems} />
+</FeedLayout>

@@ -1,0 +1,190 @@
+---
+/**
+ * ArticleThumb — an article's cover image, with a branded fallback.
+ *
+ * ─── WHY THIS EXISTS ──────────────────────────────────────────────────────
+ * Every post is expected to have a cover image, but Substack does not
+ * guarantee one. Rather than shipping an empty grey box (or worse, a broken
+ * image icon), a post without a cover gets the site logo over the article
+ * title — so it still reads as intentional, branded content.
+ *
+ * This is a temporary treatment. The proper fix is running article images
+ * through Astro's image pipeline at sync time (logged as a follow-up in
+ * scripts/epic-001-article-syndication.md); until then this keeps the grid
+ * looking deliberate.
+ *
+ * ─── HOW TO USE IT ────────────────────────────────────────────────────────
+ *     <ArticleThumb image={a.image} title={a.title} />          // rail size
+ *     <ArticleThumb image={a.image} title={a.title} size="feature" id="x" />
+ *
+ * ─── HOW TO RESTYLE IT ────────────────────────────────────────────────────
+ * `.article-thumb-fallback` and friends in src/styles/modules/intel.css.
+ */
+import { Image } from 'astro:assets';
+import { getCardImageSources } from '../lib/card-images.js';
+/*
+  The PRE-CROPPED mark (src/assets/logo-mark.webp), not logo.webp.
+
+  logo.webp is a 2000x2000 square in which the artwork occupies only ~42% of
+  the height — the rest is transparent padding. Rendering it into a 44px-wide
+  fallback box therefore spent most of those pixels on nothing and left the
+  wordmark itself around 18px tall: the "incredibly low, blurry resolution"
+  this fallback was reported for. logo-mark.webp is the same artwork trimmed
+  to its real content box, so the box size IS the mark size.
+*/
+import logoImage from '../assets/logo-mark.webp';
+import { INTEL_FEATURE_SIZES } from '../lib/intel-sizes';
+
+interface Props {
+  /** Cover image URL. Empty/missing triggers the branded fallback. */
+  image?: string;
+  /** Article title — shown in the fallback, and used for the alt text. */
+  title: string;
+  /** `rail` is the small thumbnail; `feature` is the large centre image. */
+  size?: 'rail' | 'feature';
+  /** DOM id for the <img>, so the magazine script can swap its src. */
+  id?: string;
+  /**
+   * When true the image is decorative (a nearby heading already names the
+   * article), so alt is empty and screen readers skip it.
+   */
+  decorative?: boolean;
+  /**
+   * A rail thumb inside the homepage's compact spread, which is narrower than
+   * /intel's at most widths (measured below), so it takes its own `sizes`.
+   */
+  compact?: boolean;
+  /**
+   * Hold the request until the page has loaded (src/lib/deferred-images.ts).
+   * For images below the fold that Chrome's lazy-load distance would still
+   * start during the LCP window. The owning component must call
+   * initDeferredImages().
+   */
+  defer?: boolean;
+}
+
+const { image, title, size = 'rail', id, decorative = false, compact = false, defer = false } = Astro.props;
+
+const isFeature = size === 'feature';
+/*
+  ─── EVERY THUMBNAIL IS A RENDITION, NEVER THE ORIGINAL ─────────────────────
+
+  This rendered `src={image}` — whatever URL the article record carried. For a
+  Substack post that is frequently the raw S3 original: one on /intel measured
+  3840x2160 and 1.2 MB, rendered into a 640x360 box.
+
+  Found when /intel was added to the Lighthouse gate. Its feature image was the
+  LCP element at 9.1 seconds, scoring 1 out of 100, and this component renders
+  that feature AND every rail and card thumbnail beside it — so the same waste
+  repeated down the page and across /feed.
+
+  getCardImageSources() is what the rest of the site already uses: it rewrites
+  a Substack CDN url with width transforms, and routes anything else through a
+  resizing proxy, returning a srcset either way. `sizes` tells the browser
+  which rendition to take, since the feature and the small thumbs differ by
+  roughly a factor of four.
+*/
+const sources = getCardImageSources(image);
+
+/*
+  ─── BOTH LADDERS ARE MEASURED, NOT ESTIMATED ──────────────────────────────
+
+  These were two flat numbers — 720px for the feature, 320px for a rail thumb —
+  from when the page capped at 1536. The page steps up on wide screens now
+  (`--page-max`) and the magazine's proportions rebalance with it, so both
+  boxes grow well past what they claimed, and the browser fetched a rendition
+  for the old size and upscaled it.
+
+  Measured rail thumb widths:
+
+     375   271px   (72vw — the rail is single column here, not the 45vw
+                    two-up the old query assumed)
+     820   339px   (41vw)
+    1440   292px
+    1920   401px
+    2560   516px
+    3840   630px
+
+  So a phone was promised 169px for a 271px box (1.61x) and a 4K display 320px
+  for a 630px box (1.97x). The steps below are those numbers rounded up.
+
+  Largest-first among the min-widths, and the max-width queries ahead of them:
+  `sizes` takes the FIRST matching condition, so a narrow query placed after a
+  wide one never runs.
+*/
+const FEATURE_SIZES = INTEL_FEATURE_SIZES;
+
+const THUMB_SIZES =
+  '(max-width: 560px) 75vw, (max-width: 900px) 45vw, ' +
+  '(min-width: 3400px) 640px, (min-width: 2560px) 530px, (min-width: 1920px) 410px, 320px';
+
+/*
+  The homepage's compact spread (IntelMagazine `compact`), measured the same
+  way: 390 -> 155px, 700 -> 298, 1024 -> 433, 1440 -> 284, 1920 -> 395,
+  2560 -> 533, 3840 -> 647. THUMB_SIZES claimed 75vw on a phone, so a 155px
+  box fetched a rendition for 293px (x DPR), all eight of them, while the
+  page's LCP image was still loading.
+*/
+const COMPACT_THUMB_SIZES =
+  '(max-width: 560px) 42vw, (max-width: 1100px) 45vw, ' +
+  '(min-width: 3400px) 650px, (min-width: 2560px) 540px, (min-width: 1920px) 400px, 300px';
+
+const SIZES = isFeature ? FEATURE_SIZES : compact ? COMPACT_THUMB_SIZES : THUMB_SIZES;
+
+---
+
+{
+  image ? (
+    /*
+      width/height are set on the feature so the browser reserves the right
+      space before the image loads — that is what prevents the page jumping
+      (cumulative layout shift) as covers stream in.
+    */
+    <img
+      id={id}
+      src={defer ? undefined : sources.src || image}
+      srcset={defer ? undefined : sources.srcset || undefined}
+      data-defer-src={defer ? sources.src || image : undefined}
+      data-defer-srcset={defer ? sources.srcset || undefined : undefined}
+      sizes={sources.srcset ? SIZES : undefined}
+      alt={decorative ? '' : `Cover image for ${title}`}
+      width={isFeature ? 1456 : 640}
+      height={isFeature ? 816 : 360}
+      loading={isFeature ? 'eager' : 'lazy'}
+      decoding="async"
+    />
+  ) : (
+    /*
+      Branded fallback. aria-hidden on the logo because the title text beside
+      it already carries the meaning, and the surrounding link is labelled by
+      the article headline.
+    */
+    <div
+      id={id}
+      class:list={['article-thumb-fallback', { 'is-feature': isFeature }]}
+      data-fallback="true"
+    >
+      {/*
+        Emitted at 2x the size it is displayed at, and at the artwork's own
+        2.17:1 ratio rather than a square.
+
+        The old values asked Astro for a 160x160 (or 72x72) square and CSS then
+        drew it at 96px / 44px wide. Between the distorted aspect ratio and the
+        downscale, the wordmark was rendered from a handful of real pixels.
+        Doubling the intrinsic size is what makes it crisp on the 2x and 3x
+        displays every phone has — the file is a few KB either way.
+      */}
+      <Image
+        src={logoImage}
+        alt=""
+        width={isFeature ? 440 : 240}
+        height={isFeature ? 202 : 110}
+        class="article-thumb-fallback-logo"
+        loading="lazy"
+        decoding="async"
+        aria-hidden="true"
+      />
+      <span class="article-thumb-fallback-title">{title}</span>
+    </div>
+  )
+}

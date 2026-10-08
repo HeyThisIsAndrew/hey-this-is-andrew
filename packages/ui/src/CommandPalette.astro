@@ -1,0 +1,1266 @@
+---
+interface Props {
+  endpoint?: string;
+}
+const { endpoint = '/api/search-index.json' } = Astro.props;
+
+// src/components/CommandPalette.astro
+import { getImage } from 'astro:assets';
+import logoMark from './assets/logo-mark.webp';
+
+/*
+  `getImage()`, NOT `logoMark.src`.
+
+  With compile-time image optimization on, the raw import path is never
+  emitted into the build. Referencing `.src` directly produced
+  `/assets/logo-mark.BcqkpBBj.webp`, a URL that does not exist, on all 53
+  pages: a broken image behind every result row that has no artwork of its
+  own. `scripts/e2e-asset-integrity.test.mjs` caught it and names this exact
+  fix in its failure message.
+
+  Requested at 192px for a 96px box, so it stays sharp on a 2x screen. Same
+  pattern as media-kit.astro.
+*/
+const fallbackImage = await getImage({ src: logoMark, format: 'webp', width: 192 });
+---
+
+<dialog id="command-palette" class="cmd-palette" aria-label="Search content" transition:persist="command-palette" data-fallback-src={fallbackImage.src}>
+  <div class="cmd-palette-content">
+    <div class="cmd-palette-header">
+      <label for="cmd-palette-input" class="search-icon-label" aria-hidden="true">
+        <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </label>
+      {/*
+        A COMPLETE COMBOBOX, OR NONE.
+
+        The results carried role="listbox" and role="option" and the input got
+        `aria-activedescendant`, but the input itself had no role. A partial
+        pattern is worse than no pattern: options with no combobox to belong
+        to, and an activedescendant pointing out of nowhere. `aria-expanded` is
+        kept in step in JS on open and close.
+      */}
+      {/*
+        PHONE KEYBOARD HINTS (`enterkeyhint`, `autocapitalize`, `autocorrect`
+        below). All three change what the on-screen keyboard does, and none of
+        them apply on desktop.
+
+        `enterkeyhint` labels the return key "Search" instead of "Go".
+        `autocapitalize` stops the first letter of every query becoming a
+        capital. `autocorrect` stops iOS rewriting the words this site is
+        mostly made of: title casing and proper nouns like MCU, Sanderson or
+        Gundam are exactly what autocorrect treats as mistakes.
+
+        `type` stays "text", not "search": Safari decorates a search input with
+        its own clear button and inner shadow, which fights the panel.
+
+        This comment sits OUT here rather than among the attributes below: a
+        JSX comment block inside an element's attribute list is a parse error
+        that `astro build` does not report. `npx astro check` does. The two
+        catch different things, so run both.
+      */}
+      {/*
+        Placeholder: Short enough to survive a phone. The descriptive version,
+        "Search videos, articles, events...", was cut off mid-word in the
+        field on a 393px screen, which is where most of this gets used. The
+        full description lives on `aria-label` above, so nothing is lost for
+        a screen reader.
+      */}
+      <input
+        type="text"
+        id="cmd-palette-input"
+        role="combobox"
+        aria-label="Search videos, articles, events and hubs"
+        aria-controls="cmd-palette-results"
+        aria-expanded="false"
+        aria-autocomplete="list"
+        placeholder="Search the HQ"
+        autocomplete="off"
+        spellcheck="false"
+        enterkeyhint="search"
+        autocapitalize="off"
+        autocorrect="off"
+      />
+      {/*
+        THE DISMISS CONTROL HAS TO WORK ON A DEVICE WITH NO ESC KEY.
+
+        It was a ~30x20px chip reading "ESC". On desktop that is a good hint.
+        On a phone it names a key that does not exist, at well under a 44px
+        target, and it is the only visible way out: the backdrop is mostly
+        covered by the panel itself, so "tap outside" is not the escape hatch
+        it is on desktop.
+
+        So: the key name on desktop, a 44x44 close glyph on touch. The
+        accessible name stays the same in both, and stays a superset of the
+        visible "ESC" for WCAG 2.5.3 (Label in Name).
+      */}
+      <button type="button" class="clear-search-btn" id="cmd-palette-clear" aria-label="Clear search" hidden>
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <button class="close-btn" aria-label="Close search (Esc)">
+        <span class="close-btn-key" aria-hidden="true">ESC</span>
+        <span class="close-btn-glyph" aria-hidden="true">&#215;</span>
+      </button>
+    </div>
+    <div class="cmd-palette-results" id="cmd-palette-results" role="listbox">
+      {/*
+        "No results found." is a status code with a full stop. This is the one
+        moment the search talks back to a person, and it is the moment they
+        are most likely to give up, so it says what happened and then what to
+        try instead.
+      */}
+      <div class="cmd-palette-empty" id="cmd-palette-empty">
+        <span class="cmd-empty-line">Nothing matches that.</span>
+        <span class="cmd-empty-hint">Try a title, a studio, or a franchise.</span>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  /*
+    `toYMD` formats "today" as a YYYY-MM-DD string in the site's reference
+    timezone. Imported rather than reimplemented because hard rule 1 lives in
+    this helper: calendar dates are strings, and the moment you build a Date
+    from one it UTC-shifts to the previous day west of Greenwich. Comparing
+    same-precision date STRINGS is the only safe way to ask "is this over".
+  */
+  const toYMD = (d: string | number | Date) => String(d).split('T')[0];
+
+  let indexLoaded = false;
+  let searchData: any[] = [];
+  let fuse: any = null;
+  let activeIndex = -1;
+
+  /*
+    Track keyboard navigation so the focus ring can be shown to the people who
+    need it and hidden from the people who do not. Safari forces
+    `:focus-visible` on a text input even for a plain click, so the browser's
+    own signal cannot be used here.
+
+    Cmd+K COUNTS. It is keyboard navigation by definition, and gating only on
+    Tab meant a keyboard user who opened the palette with the shortcut landed
+    in the input with no focus indicator at all, while the same user pressing
+    Tab got one. Measured: opening via Cmd+K produced `outline: none`.
+  */
+  if (typeof document !== 'undefined') {
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab' || ((e.metaKey || e.ctrlKey) && e.key === 'k')) {
+        document.body.classList.add('is-keyboard-nav');
+      }
+    }, true);
+    document.addEventListener('mousedown', () => {
+      document.body.classList.remove('is-keyboard-nav');
+    }, true);
+    /* A tap is not keyboard navigation either, and it does not always emit a
+       mousedown before focus on iOS. */
+    document.addEventListener('touchstart', () => {
+      document.body.classList.remove('is-keyboard-nav');
+    }, { capture: true, passive: true });
+  }
+
+  async function loadIndex() {
+    if (indexLoaded) return;
+    try {
+      const [fuseModule, res] = await Promise.all([
+        import('fuse.js'),
+        fetch(document.getElementById('cmd-palette-backdrop').dataset.endpoint || '/api/search-index.json')
+      ]);
+      if (!res.ok) {
+        throw new Error(`Failed to fetch search index: HTTP ${res.status}`);
+      }
+      const Fuse = fuseModule.default;
+      const data = await res.json();
+      searchData = Array.isArray(data) ? data : [];
+      
+      fuse = new Fuse(searchData, {
+        keys: [
+          { name: 'title', weight: 2 },
+          { name: 'tags', weight: 1 },
+          { name: 'type', weight: 0.5 }
+        ],
+        threshold: 0.4,
+        ignoreLocation: true,
+      });
+      indexLoaded = true;
+    } catch (e) {
+      console.error('Failed to load search index:', e);
+      fuse = null;
+      searchData = [];
+    }
+  }
+
+  function initCommandPalette() {
+    const dialog = document.getElementById('command-palette') as HTMLDialogElement;
+    const input = document.getElementById('cmd-palette-input') as HTMLInputElement;
+    const resultsContainer = document.getElementById('cmd-palette-results');
+    const emptyState = document.getElementById('cmd-palette-empty');
+    const closeBtn = dialog?.querySelector('.close-btn');
+    
+    if (!dialog || !input || !resultsContainer || !emptyState) return;
+    if (dialog.dataset.init === 'true') return;
+    dialog.dataset.init = 'true';
+
+    const clearBtn = document.getElementById('cmd-palette-clear') as HTMLButtonElement | null;
+    const syncClearBtn = () => {
+      if (clearBtn) clearBtn.hidden = input.value.length === 0;
+    };
+
+    const DEFAULT_VIEW_SIZE = 10;
+    const DEFAULT_HUB_COUNT = 4;
+    const DEFAULT_EVENT_COUNT = 2;
+
+    const renderResults = (results: any[], isDefaultView = false) => {
+      // Clear previous
+      Array.from(resultsContainer.children).forEach(child => {
+        if (child !== emptyState) child.remove();
+      });
+
+      if (results.length === 0) {
+        emptyState.style.display = 'block';
+        return;
+      }
+      
+      emptyState.style.display = 'none';
+      
+      if (isDefaultView) {
+        const eyebrow = document.createElement('div');
+        eyebrow.className = 'cmd-palette-eyebrow';
+        /*
+          Was "RECENT TRANSMISSIONS". Two problems. It is not accurate: this
+          list is a curated spread across articles, videos, hubs and pages, not
+          a recency feed, and it stopped being one when the mix replaced the
+          date sort. And "transmissions" is broadcast-sci-fi, a register this
+          site does not otherwise use.
+
+          What the list actually is: the place to begin when you have not typed
+          anything yet. So it says that, in the verb-first form the site's
+          other eyebrows already use ("EXPLORE THE HQ", "WHAT WE COVER").
+        */
+        eyebrow.textContent = 'START HERE';
+        resultsContainer.appendChild(eyebrow);
+      }
+
+      results.slice(0, DEFAULT_VIEW_SIZE).forEach((result, idx) => {
+        const item = result?.item || {};
+        const a = document.createElement('a');
+        a.href = item.url || '#';
+        a.className = 'cmd-result-item';
+        a.setAttribute('role', 'option');
+        a.setAttribute('id', `cmd-result-${idx}`);
+        /*
+          A `role="option"` with no `aria-selected` is an incomplete option.
+          `aria-activedescendant` tells a screen reader WHICH row is current,
+          but the reader announces the selected STATE from this attribute, so
+          without it the row is read out with no indication it is the one
+          Enter will open. Every row carries it; `updateActiveState()` flips
+          the current one to true.
+        */
+        a.setAttribute('aria-selected', 'false');
+        // Lets the mix be asserted without parsing the badge's display text.
+        const itemType = (item.type || 'unknown').toLowerCase();
+        a.setAttribute('data-type', itemType);
+        
+        // If it's a video, use the global handler
+        if (itemType === 'video') {
+          a.setAttribute('data-action', 'open-video');
+          const videoId = (typeof item.url === 'string' ? item.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/)?.[1] : null) || item.id || '';
+          a.setAttribute('data-video-id', videoId);
+        }
+
+        /*
+          THE LEADING BOX IS ALWAYS RENDERED, EVEN WITH NOTHING TO PUT IN IT.
+
+          The row is a flex line: [96x54 image][text column]. Section pages
+          carry no image at all, so the image was skipped, the text column
+          became the first child, and the badge and title slid left into the
+          thumbnail's lane. In a list of ten rows the one page entry was the
+          only text not aligned with the rest, which reads as broken rather
+          than as different.
+
+          So the box is unconditional and holds a glyph when there is no
+          image. Same size, same border, same background: the column line
+          holds all the way down, and an entry with no artwork looks
+          deliberate instead of missing.
+        */
+        if (item.image) {
+          const img = document.createElement('img');
+          img.src = item.image;
+          /*
+            A hub's image is its LOGO, and a logo must never be cropped. The
+            thumbnail rule (`object-fit: cover` on a 16:9 box) chopped the top
+            and bottom off the Warner Bros shield and the DC disc, which is not
+            something to do to somebody else's brand mark. Tagged here so the
+            stylesheet can treat the two cases differently.
+          */
+          img.className = item.type === 'hub' ? 'cmd-result-image is-mark' : 'cmd-result-image';
+          img.alt = '';
+          img.loading = 'lazy';
+          a.appendChild(img);
+        } else {
+          /*
+            The box is appended UNCONDITIONALLY, with or without a source.
+
+            Guarding the whole append on `fallbackSrc` being present brings
+            back the bug this branch already fixed once: with no element, the
+            text column becomes the row's first child and slides left out of
+            the column line every other row holds. An <img> with no src still
+            occupies its 96x54 box, so the alignment survives even if the
+            attribute ever goes missing.
+          */
+          const fallbackSrc = document.getElementById('command-palette')?.getAttribute('data-fallback-src');
+          const img = document.createElement('img');
+          if (fallbackSrc) img.src = fallbackSrc;
+          img.className = 'cmd-result-image is-mark';
+          img.alt = '';
+          img.loading = 'lazy';
+          a.appendChild(img);
+        }
+
+        const info = document.createElement('div');
+        info.className = 'cmd-result-info';
+
+        const typeLabel = document.createElement('span');
+        typeLabel.className = 'cmd-result-badge';
+        typeLabel.textContent = (item.type || '').toUpperCase();
+
+        const title = document.createElement('span');
+        title.className = 'cmd-result-title';
+        title.textContent = item.title != null ? String(item.title) : '';
+
+        info.appendChild(typeLabel);
+        info.appendChild(title);
+
+        a.appendChild(info);
+        resultsContainer.appendChild(a);
+      });
+    };
+
+    /*
+      THE DEFAULT VIEW IS A CURATED MIX, NOT THE TOP OF A DATE SORT.
+
+      It used to be `searchData.slice(0, 10)`, and the index is sorted newest
+      first. Hubs and section pages were stamped with the BUILD TIME, so all 18
+      hubs sorted above every real article and video and the palette opened on
+      nothing but hubs. That is fixed at the source (they carry no date now),
+      but "the ten newest things" is still the wrong opening move for a search
+      box: it shows one kind of thing whenever one kind of thing was published
+      last.
+
+      An empty query is somebody who has not told us what they want yet. So
+      show them the SHAPE of the site — a few of each kind, newest first within
+      each — rather than a slice of one bucket.
+    */
+
+
+    /*
+      AN EVENT EARNS ITS SLOT ONLY WHILE IT IS STILL AHEAD OF US.
+
+      The empty-query view was showing D23, which finished on 16 August. Past
+      coverage is not a thing to put in front of somebody who has not asked
+      for it: the event page is retrospective, and the slot is better spent on
+      something they can still act on, or on more of the content they came for.
+
+      Compared as strings, never as Dates, and against the END of the event so
+      a multi-day show is not written off on its opening morning. Evaluated
+      here in the browser rather than baked into the index, because the index
+      is generated at BUILD time: an event that was upcoming when the site was
+      built would stay marked upcoming until the next deploy.
+
+      Past events stay in the index and stay findable by typing. This is only
+      about what we volunteer.
+    */
+    const today = toYMD();
+    const isStillAhead = (d: any) => {
+      const end = (d.endDate || d.date || '').slice(0, 10);
+      return end ? end >= today : true; // undated event: no basis to hide it
+    };
+
+    const eligibleForDefault = (d: any) => {
+      if (d.excludeFromDefault) return false;
+      if (d.type === 'event') return isStillAhead(d);
+      return true;
+    };
+
+    /*
+      renderResults() shows TEN. Everything below budgets against that number
+      rather than pushing and hoping, because the two things that went wrong
+      here both came from ignoring it.
+
+      Events are the newer arrival (#183). getEventsLocal() sorts DESCENDING by
+      startDate, so the index hands us the furthest-out event first and a plain
+      .slice(0, 2) volunteered next year's before next week's. Sort ascending
+      on the way in: "upcoming" means soonest.
+
+      And the four hubs are not padding. They are one per hubCategory, which is
+      the whole point of the block below. Prepending two events to a mix that
+      already totalled ten pushed the last two hubs past the slice, so two of
+      the four categories silently stopped being represented. So the events
+      come out of the article/video budget, not out of the hubs.
+    */
+    const defaultResults = () => {
+      const out: any[] = [];
+      if (!Array.isArray(searchData) || searchData.length === 0) {
+        return out.map((item) => ({ item }));
+      }
+
+      const upcomingEvents = searchData
+        .filter((d) => d.type === 'event' && eligibleForDefault(d))
+        .sort((a, b) => String(a.date ?? '').localeCompare(String(b.date ?? '')))
+        .slice(0, DEFAULT_EVENT_COUNT);
+      out.push(...upcomingEvents);
+
+      /*
+        Six between articles and videos when there is no event to show, which
+        is what this was before events joined the mix, and the articles-first
+        split when there are.
+      */
+      const mixBudget = DEFAULT_VIEW_SIZE - DEFAULT_HUB_COUNT - upcomingEvents.length;
+      const articleCount = Math.ceil(mixBudget / 2);
+      const DEFAULT_MIX: Array<[string, number]> = [
+        ['article', articleCount],
+        ['video', mixBudget - articleCount]
+      ];
+      
+      for (const [type, count] of DEFAULT_MIX) {
+        out.push(
+          ...searchData.filter((d) => d.type === type && eligibleForDefault(d)).slice(0, count)
+        );
+      }
+      
+      // Select exactly 4 hubs, the first from each section (hubCategory)
+      const selectedHubs: any[] = [];
+      const seenCategories = new Set();
+      
+      for (const d of searchData) {
+        if (d.type === 'hub' && eligibleForDefault(d)) {
+          const category = d.hubCategory || 'other';
+          if (!seenCategories.has(category)) {
+            seenCategories.add(category);
+            selectedHubs.push(d);
+            if (selectedHubs.length >= DEFAULT_HUB_COUNT) break;
+          }
+        }
+      }
+      
+      // If we didn't find 4 distinct categories, just backfill with any other hubs
+      if (selectedHubs.length < DEFAULT_HUB_COUNT) {
+        for (const d of searchData) {
+          if (d.type === 'hub' && eligibleForDefault(d) && !selectedHubs.includes(d)) {
+            selectedHubs.push(d);
+            if (selectedHubs.length >= DEFAULT_HUB_COUNT) break;
+          }
+        }
+      }
+      
+      out.push(...selectedHubs);
+
+      /* If a bucket is short (no events yet, say), backfill from whatever is
+         left so the panel never opens looking half-empty. */
+      if (out.length < DEFAULT_VIEW_SIZE) {
+        for (const d of searchData) {
+          if (out.length >= DEFAULT_VIEW_SIZE) break;
+          if (!out.includes(d) && eligibleForDefault(d)) out.push(d);
+        }
+      }
+      return out.map((item) => ({ item }));
+    };
+
+    const performSearch = () => {
+      if (!fuse) {
+        renderResults([], false);
+        return;
+      }
+      const query = input.value.trim();
+      if (!query) {
+        renderResults(defaultResults(), true);
+      } else {
+        renderResults(fuse.search(query));
+      }
+      activeIndex = -1;
+      updateActiveState();
+    };
+
+    const updateActiveState = () => {
+      const items = Array.from(resultsContainer.querySelectorAll('.cmd-result-item'));
+      items.forEach((item, idx) => {
+        if (idx === activeIndex) {
+          item.classList.add('active');
+          item.setAttribute('aria-selected', 'true');
+          item.scrollIntoView({ block: 'nearest' });
+          input.setAttribute('aria-activedescendant', `cmd-result-${idx}`);
+        } else {
+          item.classList.remove('active');
+          item.setAttribute('aria-selected', 'false');
+        }
+      });
+    };
+
+    // Open/Close logic
+    /*
+      WHERE FOCUS GOES WHEN THE PALETTE CLOSES.
+
+      A <dialog> is supposed to hand focus back to whatever opened it, and in
+      practice here it did not: opening from the header's search button and
+      pressing Escape left `document.activeElement` on <body>. For a keyboard
+      user that is not a cosmetic detail. Focus on <body> means the next Tab
+      restarts from the top of the document, so closing a search they decided
+      against costs them their place on the page. Remember the opener and put
+      focus back on it.
+    */
+    let lastFocused: HTMLElement | null = null;
+
+    const openPalette = (opener?: HTMLElement | null) => {
+      if (dialog.open) return;
+      /*
+        The opener is passed in rather than read off `document.activeElement`,
+        because a tap does not reliably focus a <button>: iOS Safari leaves
+        activeElement on <body>, so reading it there restored focus to nothing
+        for exactly the case that needed it. Cmd+K passes nothing and falls
+        back to activeElement, which is correct: that path should return the
+        user to whatever they were on.
+      */
+      lastFocused = opener ?? (document.activeElement as HTMLElement | null);
+      dialog.showModal();
+      if (window.__hqScrollLock) {
+        window.__hqScrollLock.lock();
+      } else {
+        document.body.style.overflow = 'hidden';
+      }
+      input.value = '';
+      syncClearBtn();
+      input.setAttribute('aria-expanded', 'true');
+      loadIndex().then(() => performSearch());
+    };
+
+    /*
+      TEARDOWN HANGS OFF THE DIALOG'S OWN `close` EVENT, NOT OFF closePalette().
+
+      A <dialog> opened with showModal() closes on Escape BY ITSELF, without
+      running any of our code. The teardown used to live inside closePalette(),
+      which Escape only reaches when focus happens to be in the input. Move
+      focus anywhere else first — one Tab lands on the ESC button — and Escape
+      closed the dialog while leaving `modal-open` on <html> and the page
+      unscrollable, with a reload as the only way out. Reproduced:
+
+        focus = close-btn, Escape -> open:false, body overflow:"hidden"
+
+      `close` fires for every path: Escape, dialog.close(), form submission.
+      Putting the unlock here makes it impossible to close this without
+      unlocking, which is the property that was missing.
+    */
+    dialog.addEventListener('close', () => {
+      if (window.__hqScrollLock) {
+        window.__hqScrollLock.unlock();
+      } else {
+        document.body.style.overflow = '';
+      }
+      input.value = '';
+      syncClearBtn();
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+      /*
+        Only if it is still in the document and still focusable: a result click
+        navigates away, and on a view transition the old button is gone.
+      */
+      if (lastFocused && lastFocused.isConnected && lastFocused !== document.body) {
+        lastFocused.focus({ preventScroll: true });
+      }
+      lastFocused = null;
+    });
+
+    const closePalette = () => {
+      /* The `close` listener above does the teardown. */
+      if (dialog.open) dialog.close();
+    };
+
+    // Listeners
+    closeBtn?.addEventListener('click', closePalette);
+    dialog.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (target === dialog) closePalette();
+      if (target.closest('.cmd-result-item')) closePalette();
+    });
+
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+      // Cmd+K / Ctrl+K
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        dialog.open ? closePalette() : openPalette();
+        return;
+      }
+      /*
+        `/` opens search too, the convention on GitHub, YouTube and most
+        search-led sites. Never while the reader is typing (any input,
+        textarea, select or contenteditable, including the newsletter form),
+        never with a modifier, and never when the palette is already open,
+        where `/` is a character they may want to search for.
+      */
+      if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey && !dialog.open) {
+        const t = e.target as HTMLElement | null;
+        if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+        e.preventDefault();
+        openPalette();
+      }
+    });
+
+    // Ensure it always closes on View Transition navigation
+    document.addEventListener('astro:before-swap', () => {
+      if (dialog.open) closePalette();
+    });
+    
+    // Mobile search affordance trigger (any button with data-action="open-search")
+    document.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const trigger = target.closest('[data-action="open-search"]') as HTMLElement | null;
+      if (trigger) {
+        e.preventDefault();
+        openPalette(trigger);
+      }
+    });
+
+    /*
+      THE CLEAR BUTTON'S VISIBILITY IS DERIVED FROM THE INPUT, NEVER SET AD HOC.
+
+      This dialog is created once and persists across navigations, so its state
+      outlives any single opening. The `input` listener was the only thing
+      unhiding the button, and openPalette() and the `close` handler both blank
+      `input.value` without telling it. Type "marvel", close, reopen: empty
+      field, X still sitting there, and clicking it did nothing you could see.
+
+      syncClearBtn() reads the field and is called from every path that can
+      change it, which makes the mismatch unrepresentable rather than merely
+      fixed in the two places it was noticed.
+
+      It tests `.length`, not `.trim().length`: a field holding only spaces is
+      not empty, and the button is what gets you back out of it.
+    */
+    if (clearBtn) {
+      clearBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        input.value = '';
+        syncClearBtn();
+        input.focus();
+        // Since input is cleared, trigger performSearch so it resets to default view
+        performSearch();
+      });
+    }
+
+    input.addEventListener('input', () => {
+      syncClearBtn();
+      performSearch();
+    });
+
+    
+    input.addEventListener('keydown', (e) => {
+      const items = Array.from(resultsContainer.querySelectorAll('.cmd-result-item')) as HTMLElement[];
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeIndex = (activeIndex + 1) % items.length;
+        updateActiveState();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeIndex = activeIndex - 1 < 0 ? items.length - 1 : activeIndex - 1;
+        updateActiveState();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (activeIndex >= 0 && activeIndex < items.length) {
+          items[activeIndex].click();
+          closePalette();
+        } else if (items.length > 0) {
+          items[0].click();
+          closePalette();
+        }
+      } else if (e.key === 'Escape') {
+        closePalette();
+      }
+    });
+  }
+
+  document.addEventListener('astro:page-load', initCommandPalette);
+  initCommandPalette();
+</script>
+
+<style is:global>
+  .cmd-palette {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 600px;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+    opacity: 0;
+    /*
+      ─── A <dialog> NEEDS allow-discrete TO ANIMATE *OUT* ───────────────────
+
+      Entering worked because `@starting-style` below gives the browser a frame
+      to animate from. Leaving did not: `dialog.close()` removes the element
+      from the top layer and flips `display` to none in the same frame, which
+      cancels an outbound transition before it can run a single step. The
+      palette vanished on a hard cut while the opening was smooth.
+
+      `display` and `overlay` are DISCRETE properties — they have no in-between
+      values — so by default they switch instantly and take the transition with
+      them. `transition-behavior: allow-discrete` tells the browser to hold
+      both at their old value for the duration of the transition instead, which
+      is what keeps the dialog painted and on top while it fades.
+
+      `overlay` must be in the list as well as `display`. Without it the
+      element keeps its box but leaves the top layer immediately, so it fades
+      out from BEHIND the backdrop and the page content.
+
+      Preferred over the alternative (a `.closing` class plus a setTimeout
+      around `dialog.close()`), which puts the duration in two places and
+      leaves the dialog open if the timer is interrupted mid-navigation.
+    */
+    transition:
+      opacity 0.3s ease,
+      transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.1),
+      display 0.3s allow-discrete,
+      overlay 0.3s allow-discrete;
+  }
+
+  .cmd-palette[open] {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+
+  @starting-style {
+    .cmd-palette[open] {
+      opacity: 0;
+      transform: translate(-50%, -45%) scale(0.95);
+    }
+  }
+
+  .cmd-palette::backdrop {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 0;
+    /* Same treatment for the backdrop, or the blur snaps away a beat before
+       the panel it sits behind has finished fading. */
+    transition:
+      opacity 0.3s ease,
+      display 0.3s allow-discrete,
+      overlay 0.3s allow-discrete;
+  }
+
+  .cmd-palette[open]::backdrop {
+    opacity: 1;
+  }
+
+  @starting-style {
+    .cmd-palette[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  .cmd-palette[open] .cmd-palette-content {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  /*
+    NEARLY OPAQUE, DELIBERATELY.
+
+    This was 0.85. The site's own lesson from the hub backdrops is in
+    CLAUDE.md: a plate that lets the layer behind it through reads as a leak,
+    not as depth, and the scrims there had to reach alpha 1 and hold it for
+    exactly this reason. A search panel is a surface you read dense text on, so
+    the argument is stronger here than it was there. 0.96 keeps a trace of the
+    blurred page behind it without the page's own type showing through the
+    results.
+  */
+  .cmd-palette-content {
+    background: rgba(10, 10, 10, 0.96);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0;
+    box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255,255,255,0.02);
+    display: flex;
+    flex-direction: column;
+    max-height: 80vh;
+    opacity: 0;
+    transform: scale(0.98) translateY(-10px);
+    transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  /*
+    THIS BLOCK MUST STAY BELOW THE BASE `.cmd-palette-content` RULE.
+
+    Both selectors are a single class, so they have identical specificity and
+    SOURCE ORDER decides. When this sat above the base rule, the base
+    `max-height: 80vh` won and the `60dvh` below never applied at all: the
+    panel still measured 682px in an 852px viewport. The fix was written and
+    silently did nothing. Do not move this block up.
+  */
+  @media (max-width: 640px), (orientation: landscape) and (max-height: 600px) {
+    .cmd-palette {
+      top: 0;
+      left: 0;
+      transform: none;
+      width: 100%;
+      height: 100dvh;
+      max-height: 100dvh;
+      max-width: none;
+      margin: 0;
+    }
+    /*
+      ─── AND THE OPEN STATE, OR THE LINE ABOVE NEVER APPLIES ────────────────
+
+      `.cmd-palette[open]` sets `transform: translate(-50%, -50%)`. A media query 
+      adds NO specificity, so `[open]` (0,2,0) beats the bare `.cmd-palette` (0,1,0).
+    */
+    .cmd-palette[open] {
+      transform: none;
+    }
+    @starting-style {
+      .cmd-palette[open] {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+    }
+    /*
+      Make the modal full-screen on mobile, sized in `dvh` so it follows the
+      browser's toolbars. The `interactive-widget=resizes-content` viewport tag
+      (Layout.astro) makes the keyboard shrink `dvh` on Android Chrome. iOS
+      Safari IGNORES that tag: there the keyboard overlays the page, and the
+      runway below plus iOS scrolling the focused input into view are what
+      keep the results reachable. Test changes here on a real iPhone.
+    */
+    .cmd-palette-content {
+      border: none;
+      border-radius: 0;
+      max-height: none;
+      height: 100dvh;
+    }
+    /*
+      The iOS virtual keyboard accessory bar (with the 'Done' button) overlays
+      the layout viewport. Adding extra padding to the bottom of the results
+      ensures the user can scroll the last item fully into view above it.
+      `flex: 1 1 auto` and `min-height: 0` ensure Safari correctly shrinks
+      the scrollable area when the keyboard resizes the viewport.
+    */
+    .cmd-palette-results {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+    /*
+      Safari ignores padding-bottom on overflow-y containers in its scrollHeight calculation,
+      causing the bottom elements to clip rather than scroll into view. Using an ::after
+      pseudo-element reliably forces the scroll runway for the iOS accessory bar.
+    */
+    .cmd-palette-results::after {
+      content: "";
+      display: block;
+      min-height: 4rem;
+      flex-shrink: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    /*
+      The dialog and its backdrop are listed alongside the content now. They
+      were not, so the outward fade added above would have animated for readers
+      who asked for no motion. `transition: none` also drops the
+      allow-discrete, which is right: with nothing to wait for, the dialog
+      should leave the top layer immediately.
+    */
+    .cmd-palette,
+    .cmd-palette::backdrop,
+    .cmd-palette-content {
+      transition: none;
+    }
+  }
+  .cmd-palette-header {
+    display: flex;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .search-icon-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-right: 1rem;
+    color: #888;
+    transition: color 0.2s ease, filter 0.2s ease;
+  }
+  .search-icon-label:hover,
+  .cmd-palette-header:has(#cmd-palette-input:focus) .search-icon-label {
+    color: var(--color-accent-text);
+    filter: drop-shadow(0 0 16px rgba(204, 0, 0, 0.6));
+  }
+  .search-icon {
+    width: 20px;
+    height: 20px;
+  }
+  /*
+    THE INPUT IS SET IN THE DISPLAY FACE, NOT THE BODY FACE.
+
+    It was `font-family: inherit` at weight 300, so the largest text in the
+    panel, the one thing a person is actually looking at, was the only element
+    in here not speaking in the site's voice. The eyebrow and the badges were
+    already Syne; the field between them was a generic light sans. That gap is
+    what made the panel read as a well-built stock component wearing the
+    site's colours.
+
+    Weight 500, not 700: this is something being typed, not a heading. The
+    slight negative tracking keeps a long query from running wide on a phone.
+  */
+  #cmd-palette-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--color-white);
+    /* Stays >= 16px: below that Safari zooms the page on focus and never
+       zooms back. 1.25rem is 20px. */
+    font-size: 1.25rem;
+    /*
+      NO `outline: none` HERE.
+
+      It was there, and it half-disabled the site's focus indicator rather
+      than replacing it. a11y.css defines one ring for the whole site: a 3px
+      white outline PLUS a dark halo, so it stays visible on any background.
+      `outline: none` removed the white outline and left the halo, which is
+      why the field showed a dark box with no bright edge: no contrast, no
+      indicator, and a stray rectangle on screen. Worst of both.
+
+      User feedback: The interactive focus rings (white or red) look terrible
+      breaking up the modal header when opening the modal by default. The 
+      blinking cursor is sufficient indication of focus when opened via mouse/tap.
+      However, we MUST retain the white `a11y.css` ring for true keyboard 
+      navigation (Tab). 
+      
+      Browsers (like Safari) force `:focus-visible` on text inputs even when 
+      they are clicked. So we unconditionally strip the outline on `:focus`, 
+      and manually restore it ONLY when the document body has our global 
+      `is-keyboard-nav` class applied (set via a global `keydown` listener).
+    */
+    font-family: var(--font-display, 'Syne Variable', sans-serif);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  #cmd-palette-input:focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  body.is-keyboard-nav #cmd-palette-input:focus {
+    outline: 3px solid #fff !important;
+    outline-offset: 2px !important;
+    box-shadow: 0 0 0 5px rgba(0, 0, 0, 0.6) !important;
+  }
+  
+  #cmd-palette-input::placeholder {
+    /*
+      Was `#555`: 2.66:1 on the panel, which fails WCAG AA for text and is
+      darker than anything else on the site. A placeholder is text, and this
+      one is the first thing anyone reads in here. `--color-white-muted` is
+      the site's established floor for subordinate copy at 5.58:1, and still
+      sits well below the #fff of what you type.
+    */
+    color: var(--color-white-muted);
+  }
+  .clear-search-btn {
+    background: none;
+    border: none;
+    color: var(--color-white-muted);
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.5rem;
+    transition: color 0.2s ease, transform 0.2s ease;
+  }
+  .clear-search-btn:hover {
+    color: var(--color-accent-text);
+  }
+  .clear-search-btn[hidden] {
+    display: none;
+  }
+
+  .close-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255,255,255,0.05);
+    color: #aaa;
+    /* The last element in the panel still in the body face. The badges and
+       the eyebrow beside it are already Syne; a lone body-font chip in a row
+       of display-font labels is the kind of inconsistency you feel without
+       being able to name. */
+    font-family: var(--font-display, 'Syne Variable', sans-serif);
+    font-size: 0.65rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 0;
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+  }
+  /*
+    RED ON HOVER, LIKE EVERY OTHER CONTROL ON THE SITE.
+
+    This went white-on-lighter-grey, which is a generic UI hover and the only
+    one of its kind here. The house state is red: `.modal-close:hover` and
+    `.nav-search-btn:hover` both go to `--color-accent-text`, and the VIDEO
+    badge a few rows down in this very panel is already a red-bordered chip.
+
+    Both tokens are used for what CLAUDE.md says each is for:
+    `--color-accent-text` (#ef4444) is the red you can read, and
+    `--color-accent` (#cc0000) is a border and glow colour only. The chip's
+    label uses the first, its border and wash use the second.
+
+    `:focus-visible` is included so a keyboard user sees the same state a
+    mouse does, and `:active` gives touch a press response, since a phone
+    never produces a hover at all.
+  */
+  .close-btn:hover,
+  .close-btn:focus-visible {
+    background: rgba(204, 0, 0, 0.1);
+    border-color: rgba(204, 0, 0, 0.4);
+    color: var(--color-accent-text);
+    filter: drop-shadow(0 0 10px rgba(204, 0, 0, 0.35));
+  }
+  .close-btn:active {
+    background: rgba(204, 0, 0, 0.2);
+    border-color: rgba(204, 0, 0, 0.65);
+    color: var(--color-accent-text);
+  }
+  .close-btn-glyph {
+    display: none;
+  }
+  @media (max-width: 640px) {
+    /*
+      44x44, the same as .close-btn beside it and the house minimum every other
+      control here holds to (issue #180 lists it explicitly). The desktop rule
+      sizes this from a 16px glyph plus 0.5rem of padding, which is 32x32 - fine
+      under a cursor, under the minimum under a thumb, and it sits directly
+      next to a control that IS 44px.
+    */
+    .clear-search-btn {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      flex-shrink: 0;
+      margin-right: 0.25rem;
+    }
+    .close-btn {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .close-btn-key {
+      display: none;
+    }
+    .close-btn-glyph {
+      display: block;
+      font-size: 1.35rem;
+      line-height: 1;
+      font-weight: 400;
+      letter-spacing: 0;
+    }
+  }
+  .cmd-palette-results {
+    overflow-y: auto;
+    /*
+      ─── THE SCROLL STOPS HERE ───────────────────────────────────────────────
+
+      Reported on a phone: with the keyboard up, dragging the results scrolled
+      the whole view instead of the list.
+
+      It is NOT the page lock, which was the obvious suspect and is fine.
+      Verified at runtime with the palette open at 375px: `__hqScrollLock` is
+      published, `modal-open` is on <html>, and `body` computes
+      `position: fixed` — the iOS lock in ios-lock.css is doing its job.
+
+      It is scroll CHAINING. This element was `overscroll-behavior: auto`, so
+      once a drag reaches the top or bottom of the list the browser hands the
+      remaining momentum to whatever is behind it, which on a phone is the
+      whole overlay moving under the reader's finger. `contain` keeps the
+      gesture inside this box and stops it at the boundary, without the
+      side effects of `none` (which would also kill pull-to-refresh
+      elsewhere).
+    */
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .cmd-palette-results::-webkit-scrollbar {
+    width: 6px;
+  }
+  .cmd-palette-results::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .cmd-palette-results::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+  }
+  .cmd-palette-results::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+  .cmd-palette-eyebrow {
+    font-family: var(--font-display, 'Syne Variable', sans-serif);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: #888;
+    text-transform: uppercase;
+    padding: 0.5rem 0.5rem 0.75rem 0.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    margin-bottom: 0.5rem;
+  }
+  .cmd-result-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    border-radius: 0;
+    text-decoration: none;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    gap: 1.25rem;
+    border: 1px solid transparent;
+  }
+  .cmd-result-item:hover, .cmd-result-item.active {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255,255,255,0.05);
+  }
+  .cmd-result-item.active {
+    background: rgba(204, 0, 0, 0.08);
+    border-color: rgba(204, 0, 0, 0.2);
+  }
+  .cmd-result-image {
+    width: 96px;
+    height: 54px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #111;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  /*
+    BRAND MARKS ARE CONTAINED, NEVER COVERED.
+
+    `cover` fills the box and crops whatever does not fit. That is right for a
+    video still, where the edges are incidental. It is wrong for a logo: the
+    Warner Bros shield and the DC disc were both losing their top and bottom,
+    and a cropped logo is the kind of thing the brand's own people notice.
+
+    `contain` fits the whole mark inside the box and letterboxes the remainder.
+    Slight padding so a wordmark that runs edge to edge in its own file does
+    not touch the border.
+  */
+  /*
+    `cover` crops whatever does not fit, which is right for a video still and
+    wrong for somebody else's logo, or for the site's own mark standing in for
+    a result that has no artwork.
+  */
+  .cmd-result-image.is-mark {
+    object-fit: contain;
+    padding: 6px;
+    background: #0a0a0a;
+  }
+  .cmd-result-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.35rem;
+    overflow: hidden;
+  }
+  .cmd-result-badge {
+    font-family: var(--font-display, 'Syne Variable', sans-serif);
+    font-size: 0.55rem;
+    padding: 0.15rem 0.4rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #aaa;
+    border-radius: 0;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    align-self: flex-start;
+    text-transform: uppercase;
+  }
+  .cmd-result-item[data-action="open-video"] .cmd-result-badge {
+    border-color: rgba(204, 0, 0, 0.4);
+    /* The site's readable red is a token. #ff4444 was a near-miss of it. */
+    color: var(--color-accent-text);
+  }
+  .cmd-result-title {
+    font-family: var(--font-display, 'Syne Variable', sans-serif);
+    font-weight: 600;
+    font-size: 1.05rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: -0.01em;
+  }
+  .cmd-palette-empty {
+    padding: 3rem 2rem;
+    text-align: center;
+    /*
+      Was `#666`: 3.45:1, under AA. This is the "no results" message, read at
+      the exact moment somebody's search has failed them.
+    */
+    color: var(--color-white-muted);
+    font-family: var(--font-display, 'Syne Variable', sans-serif);
+    font-size: 1.1rem;
+    display: none;
+    letter-spacing: 0.02em;
+  }
+  /*
+    Shown as a block by the script when there is nothing to list, so the two
+    lines need to stack. `display` on the parent is toggled in JS; these are
+    only ever laid out inside it.
+  */
+  /*
+    BOTH LINES ARE UPPERCASE, AND THAT IS THE POINT.
+
+    Reported as "these are different fonts". They were not: both measured as
+    Syne. What actually differed was CASE, and that turned out to be the real
+    problem rather than a mismatch.
+
+    Syne is a display face. This site sets it in uppercase everywhere it
+    speaks -- eyebrows, badges, buttons, the hero's own lines -- and uses
+    Inter for anything read as a sentence. A full lowercase sentence in Syne
+    was the one place that rule was broken, and its lowercase letterforms are
+    idiosyncratic enough that it read as a foreign typeface sitting above a
+    familiar one.
+
+    So the pair now matches, and hierarchy comes from size, weight and opacity
+    instead of from case. Same face, same voice, one clearly leading the other.
+  */
+  .cmd-empty-line,
+  .cmd-empty-hint {
+    display: block;
+    text-transform: uppercase;
+  }
+  .cmd-empty-line {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+  .cmd-empty-hint {
+    margin-top: 0.6rem;
+    font-size: 0.8rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    opacity: 0.7;
+  }
+</style>

@@ -1,0 +1,104 @@
+---
+/**
+ * PageTitle: the stacked display lockup (kicker / primary / secondary).
+ *
+ * ─── THE STAGGER ──────────────────────────────────────────────────────────
+ * `secondary` is drawn to TUCK UNDER `primary`: it carries a negative
+ * `margin-top` so the two lines overlap slightly, and a negative
+ * `margin-right` so it sits off-axis. That treatment is what makes the
+ * "UNCONVENTIONAL / HQ" lockup read as one mark rather than two lines.
+ *
+ * It is drawn for a SHORT tail. Give it a multi-word secondary and the tuck
+ * runs the long line straight through the primary: "Press and / Editorial
+ * Inquiries" was unreadable. Pass `stagger={false}` for those, and the lines
+ * stack plainly instead.
+ */
+const {
+  kicker = '',
+  primary = '',
+  secondary = '',
+  scale = 'default',
+  as = 'h2',
+  stagger = true,
+} = Astro.props;
+
+// Render as a section heading (<h2>) by default; pass as="h1" on the single
+// primary title of a page. Styling is unchanged (driven by the class).
+const Heading = as;
+---
+
+<Heading
+  class:list={[
+    'hero-title-stack',
+    scale === 'secondary' && 'title-secondary-scale',
+    !stagger && 'title-no-stagger',
+  ]}
+>
+  {kicker && <span class="word-be page-title-kicker">{kicker}</span>}
+  {primary && <span class="word-unconventional">{primary}</span>}
+  {secondary && <span class="word-hq page-title-secondary">{secondary}</span>}
+</Heading>
+
+<style>
+  /*
+    Scoped uniquely to these interior hub pages.
+
+    The colour and tracking here match `.section-kicker` (categories.css) on
+    purpose. Those two classes are the same thing semantically (the small
+    label above a title) and they had drifted apart: `.section-kicker` was
+    accent red at 0.4em, this one inherited `.word-be`'s muted grey at the
+    lockup's default tracking. On /about that put a red "The Publication"
+    directly above a grey "Masthead". One kicker treatment now.
+
+    `.word-be` itself is deliberately untouched: the homepage hero writes it
+    without `.page-title-kicker`, and its "BE" is meant to be muted.
+  */
+  .page-title-kicker {
+    font-size: clamp(0.75rem, calc(0.375rem + 0.9vw), 1.25rem);
+    color: var(--color-accent-text);
+    letter-spacing: 0.3em;
+    margin-left: 0 !important; /* Forces center alignment */
+    margin-bottom: 0.5rem;
+  }
+
+  .page-title-secondary {
+    margin-right: -8%; /* Subtle stagger for mobile */
+    margin-top: -0.2rem !important; /* Moves text down to prevent unreadable overlap on mobile */
+  }
+
+  /* Secondary scale class for lower-page sections */
+  html body .title-secondary-scale .word-unconventional {
+    font-size: clamp(1.5rem, calc(0.75rem + 2.5vw), 3rem);
+  }
+
+  html body .title-secondary-scale .page-title-secondary {
+    font-size: clamp(1.1rem, calc(0.55rem + 1.75vw), 2rem);
+  }
+
+  @media (min-width: 768px) {
+    .page-title-secondary {
+      margin-right: -15%; /* Slightly more stagger on desktop */
+      margin-top: -0.6rem !important; /* Tighter overlap on desktop where fonts are larger */
+    }
+
+    .title-secondary-scale .page-title-secondary {
+      margin-top: -0.4rem !important; /* Tighter overlap for smaller scale */
+    }
+  }
+
+  /*
+    `stagger={false}`: stack the lines instead of tucking them.
+
+    The `!important`s here are answering the ones above, which cannot simply
+    be dropped: they exist to beat `.hero .word-hq` in responsive-mobile.css,
+    which is a longer selector than anything scoped can write. Kept to the
+    two properties that actually define the tuck, and to this one modifier,
+    rather than spread through the base rules.
+  */
+  .title-no-stagger .page-title-secondary,
+  html body .title-no-stagger .page-title-secondary {
+    margin-top: 0 !important;
+    margin-right: 0 !important;
+    text-wrap: balance;
+  }
+</style>

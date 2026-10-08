@@ -1,0 +1,204 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   GLOBAL VIDEO MODAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300; /* High z-index to be above navbar */
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  overscroll-behavior: none;
+
+  /* PHANTOM OVERLAY GUARD — see styles/modules/a11y.css for the rule.
+     `visibility: hidden` alone does NOT stop iOS Safari routing touches to a
+     composited, viewport-covering fixed layer. This element sits at z-index
+     300, above the navbar, on every page that mounts it — so while it was
+     tap-transparent on Chromium it was swallowing taps on iPad, which is what
+     made the whole navbar feel dead. */
+  pointer-events: none;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.modal-content {
+  width: 90%;
+  max-width: 1000px;
+  position: relative;
+  transform: scale(0.9);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.modal-overlay.active .modal-content {
+  transform: scale(1);
+}
+
+.video-container {
+  position: relative;
+  padding-bottom: 56.25%; /* 16:9 */
+  height: 0;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 0 50px rgba(204, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /*
+    The container behind this is `background: #000`, which does nothing for
+    the frame in front of it: a cross-origin YouTube iframe paints its own
+    canvas, and on iOS Safari that canvas is WHITE until YouTube's CSS
+    arrives. `background` covers the element, `color-scheme` reaches the
+    document inside it. Both, because either one alone still flashes.
+  */
+  background: #050505;
+  color-scheme: dark;
+}
+
+.modal-close {
+  position: absolute;
+  top: -45px;
+  right: 0;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 2.5rem;
+  cursor: pointer;
+  transition:
+    color 0.3s ease,
+    transform 0.3s ease;
+  line-height: 1;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.modal-close:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.modal-close:hover {
+  color: var(--color-accent-text);
+  transform: rotate(90deg);
+}
+
+/* Force Native-like Fullscreen in Landscape on Mobile */
+@media (orientation: landscape) and (max-height: 600px) {
+  .modal-overlay {
+    align-items: stretch;
+    justify-content: stretch;
+  }
+  
+  .modal-content {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    transform: none !important;
+    margin: 0;
+  }
+  
+  .video-container {
+    padding-bottom: 0 !important;
+    height: 100dvh !important;
+    width: 100vw !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  
+  .modal-close {
+    position: fixed;
+    top: max(env(safe-area-inset-top, 10px), 10px);
+    right: max(env(safe-area-inset-right, 10px), 25px);
+    z-index: 310;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/*
+  ─── THE VIDEO MODAL'S WAY OUT ──────────────────────────────────────────────
+
+  A reader on /feed hit a Google sign-in prompt inside the player, signed in,
+  and the embed still refused. With only a Close button on screen that reads as
+  a broken site rather than as YouTube declining to serve an age-restricted
+  video to a third-party embed, which is what it is. See the note in
+  Layout.astro for why no player parameter can fix that.
+
+  The link is ALWAYS rendered, so it never depends on detecting the refusal.
+  `.video-modal-note` is `hidden` in the markup and revealed only when the
+  player reports an error, so the ordinary case is one quiet line rather than a
+  warning on every video.
+
+  Muted rather than accent-red at rest: this sits under every video that plays
+  perfectly well, and a red call-out there would read as an error on content
+  that has nothing wrong with it. `--color-accent-text` is the legible red
+  (5.02:1) for the hover, per the palette note in CLAUDE.md -- never
+  `--color-accent`, which is a border colour at 3.21:1.
+*/
+.video-modal-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  text-align: center;
+}
+
+.video-modal-note {
+  margin: 0;
+  color: var(--color-white-muted, #888888);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  max-width: 46ch;
+}
+
+.video-modal-note[hidden] {
+  display: none;
+}
+
+.video-modal-watch {
+  color: var(--color-white-muted, #888888);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  padding-bottom: 2px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.video-modal-watch:hover,
+.video-modal-watch:focus-visible {
+  color: var(--color-accent-text, #ef4444);
+  border-color: var(--color-accent-text, #ef4444);
+}
+
+.video-modal-watch:focus-visible {
+  outline: 2px solid var(--color-accent-text, #ef4444);
+  outline-offset: 3px;
+}

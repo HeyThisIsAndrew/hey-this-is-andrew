@@ -1,0 +1,178 @@
+---
+---
+
+<div class="inapp-escape" data-inapp-escape role="status" aria-live="polite">
+  <div class="inapp-escape-content">
+    <p class="inapp-escape-text" data-inapp-text hidden>
+      <!-- Populated by JS based on platform -->
+    </p>
+
+    {/* Android only button */}
+    <button type="button" class="inapp-escape-open" data-inapp-open hidden>
+      Open in browser
+    </button>
+  </div>
+
+  <button type="button" class="inapp-escape-dismiss" data-inapp-dismiss aria-label="Dismiss this message">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+      <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+    </svg>
+  </button>
+</div>
+
+<style>
+  .inapp-escape {
+    display: none;
+  }
+
+  .inapp-escape.is-visible {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 500;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-black, #0a0a0a);
+    border-bottom: 1px solid var(--color-accent, #cc0000);
+    color: var(--color-white, #f0f0f0);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  }
+
+  .inapp-escape-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+  }
+
+  .inapp-escape-text {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.3;
+    flex: 1;
+  }
+
+  .inapp-escape-open {
+    flex: 0 0 auto;
+    padding: 0.35rem 0.6rem;
+    background: transparent;
+    border: 1px solid var(--color-accent, #cc0000);
+    color: var(--color-accent-text, #ef4444);
+    font-size: 0.75rem;
+    font-family: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  .inapp-escape-dismiss {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: 0;
+    color: var(--color-white-muted, #888888);
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .inapp-escape-open:focus-visible,
+  .inapp-escape-dismiss:focus-visible {
+    outline: 2px solid var(--color-accent-text, #ef4444);
+    outline-offset: 2px;
+  }
+</style>
+
+<script>
+  import { detectInApp, detectPlatform } from '@vdaluz/astro-inapp-escape';
+
+  function androidIntentUrl(href: string): string {
+    const parsed = new URL(href);
+    const scheme = parsed.protocol.replace(':', '');
+    return `intent://${parsed.host}${parsed.pathname}${parsed.search}#Intent;scheme=${scheme};end`;
+  }
+
+  const DISMISS_KEY = 'hq:inapp-escape-dismissed';
+
+  function dismissed(): boolean {
+    try { return sessionStorage.getItem(DISMISS_KEY) === '1'; } catch { return false; }
+  }
+
+  function rememberDismissal() {
+    try { sessionStorage.setItem(DISMISS_KEY, '1'); } catch {}
+  }
+
+  function initInAppEscape() {
+    const banner = document.querySelector('[data-inapp-escape]') as HTMLElement | null;
+    if (!banner) return;
+    if (banner.dataset.inappInit === '1') return;
+    banner.dataset.inappInit = '1';
+
+    if (dismissed()) return;
+    if (!detectInApp().isInApp) return;
+
+    const platform = detectPlatform(navigator.userAgent);
+    const openBtn = banner.querySelector('[data-inapp-open]') as HTMLButtonElement | null;
+    const textNode = banner.querySelector('[data-inapp-text]') as HTMLElement | null;
+    if (!openBtn || !textNode) return;
+    if (platform !== 'android' && platform !== 'ios') return;
+
+    /*
+      ONE BANNER, ONE LAYOUT, BOTH PLATFORMS.
+
+      An earlier pass gave Android a short line plus a button and gave iOS a
+      full sentence of instructions with no button. Same component, two
+      different shapes: Android sat on one line, iOS wrapped to two and was
+      visibly taller. Nothing about the site changes between the two, so
+      nothing about this banner should either.
+
+      What genuinely differs is only what the BUTTON CAN DO. Android can hand
+      the URL to the default browser through an `intent://`. iOS exposes no
+      such API, so nothing a script does will open Safari there. That is a
+      one-word difference in behaviour, and it does not justify a different
+      layout: both platforms get the same sentence and the same button, and
+      on iOS the button swaps the sentence for the menu instructions in
+      place. The banner keeps its height either way.
+    */
+    textNode.textContent = 'Social browsers break videos.';
+    textNode.hidden = false;
+    openBtn.hidden = false;
+
+    if (platform === 'android') {
+      openBtn.addEventListener('click', () => {
+        window.location.href = androidIntentUrl(window.location.href);
+      });
+    } else {
+      openBtn.addEventListener('click', () => {
+        /*
+          textContent, not innerHTML. The bullets are literal characters, so
+          there is nothing here that needs parsing as markup, and a node that
+          is only ever assigned plain text cannot become an injection point
+          later when somebody makes the copy configurable.
+        */
+        textNode.textContent = 'Tap the ••• menu, then choose Open in Browser.';
+        /* The button has said everything it can say. Hiding it gives the
+           longer sentence the full width, so this stays one line too. */
+        openBtn.hidden = true;
+      });
+    }
+
+    banner.querySelector('[data-inapp-dismiss]')?.addEventListener('click', () => {
+      banner.classList.remove('is-visible');
+      rememberDismissal();
+    });
+
+    banner.classList.add('is-visible');
+  }
+
+  document.addEventListener('DOMContentLoaded', initInAppEscape);
+  document.addEventListener('astro:page-load', initInAppEscape);
+</script>

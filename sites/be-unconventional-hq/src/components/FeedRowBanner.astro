@@ -1,0 +1,360 @@
+---
+/**
+ * The full-bleed key-art strip above a tentpole row.
+ *
+ * ─── WHY THIS IS ABOVE THE ROW AND NOT BEHIND IT ────────────────────────────
+ * Behind was the obvious place, and it was measured before it was built: at a
+ * 1920px viewport the row's cards cover 86% of the viewport width across the
+ * rail's 285px, leaving only the ~100px heading band and the feathered 32/38px
+ * margins ever unobstructed. A banner there is art commissioned to be hidden.
+ *
+ * Above, it is a mini-hero for the shelf: seen in full, and it gives the row
+ * the thing a streaming service's tentpole shelf actually has, which is the
+ * title's own artwork rather than its name set in the site's typeface.
+ *
+ * ─── THE BANNER IS ARTWORK. THE ROW STILL OWNS ITS HEADING ──────────────────
+ * This shipped once with the logo bottom-LEFT, standing in for the row's whole
+ * lockup: the eyebrow, the publisher badge, the divider and the title all moved
+ * up onto the artwork. The reasoning was that a studio logo already carries its
+ * publisher's mark, so drawing DC again beside it was repetition.
+ *
+ * That was tried, reverted to the full lockup in the row head, and then
+ * reported as exactly what it is: "FEATURED SERIES - DC" on screen twice and
+ * the series named twice, once as this logo and once as type below it.
+ *
+ * ─── WHERE IT LANDED ────────────────────────────────────────────────────────
+ * This banner owns the lockup whenever it renders: the eyebrow in WORDS at the
+ * lower left, the series in ART at the lower right, and the row's <h2> here as
+ * sr-only. FeedGrid renders the row head's eyebrow/badge/title ONLY for a
+ * collection that has no banner art, which would otherwise have no visible
+ * heading and no <h2> at all.
+ *
+ * The note below about the row head carrying only its actions is now true of
+ * the code as well as of this file. Both halves live in one place; changing
+ * one without the other is what produced the duplicate.
+ */
+import { Image } from 'astro:assets';
+
+interface Props {
+  /** Key art, imported from src/assets/rows. Null renders nothing at all. */
+  art: ImageMetadata | null;
+  /** The title's own logo. Null renders the art alone. */
+  logo?: ImageMetadata | null;
+  /** Alt text for the logo, and the row's accessible heading. */
+  title: string;
+  /**
+   * The small line naming the hub, e.g. "FEATURED SERIES • DC". It sits at the
+   * lower LEFT, opposite the mark.
+   */
+  eyebrow: string;
+  /** `R, G, B` — the row's accent, for the wash under the lockup. Null where a
+      row has no accent of its own; the CSS default covers it. */
+  accentRgb?: string | null;
+  /** The hub the row belongs to. When set, the whole strip links there. */
+  href?: string | null;
+}
+
+const { art, logo = null, title, eyebrow, accentRgb = null, href = null } = Astro.props;
+---
+
+{art && (
+  <div class="feed-row-banner" style={accentRgb ? `--banner-rgb: ${accentRgb};` : undefined}>
+    {/*
+      `sizes="100vw"` because the strip is full-bleed at every width. The widths
+      ladder tops out at 2560, which is 1x on the widest desktop this site sees
+      and 2x at 1280 — past that the art is behind a scrim and a gradient, and
+      the bytes buy nothing.
+    */}
+    <Image
+      src={art}
+      alt=""
+      class="feed-row-banner-art"
+      widths={[640, 960, 1280, 1920, 2560]}
+      sizes="100vw"
+      loading="lazy"
+      decoding="async"
+    />
+
+    <div class="feed-row-banner-scrim" aria-hidden="true"></div>
+
+    {/*
+      The strip is the hub's key art and logo, and readers tapped it expecting
+      the hub; it did nothing. It links where the row's "Explore <hub> hub"
+      does. A mouse and touch target only (aria-hidden, out of the tab order):
+      that link is the keyboard and screen-reader path, so the hub stays one
+      stop with one name. Covers this box and not the bleed, so it never sits
+      over the row's heading or tiles.
+    */}
+    {href && <a href={href} class="feed-row-banner-link" tabindex="-1" aria-hidden="true"></a>}
+
+    {/*
+      ─── ONE THING IN EACH CORNER, AND NEITHER REPEATS THE OTHER ────────────
+
+      Lower left names the hub in WORDS. Lower right names the series in ART.
+      The row head below now carries only its actions, so nothing on this shelf
+      says "Lanterns" or "DC" a third time.
+
+      The <h2> is here and screen-reader-only. The heading has to exist and has
+      to sit with the thing it titles, and the only visible rendering of the
+      series name on this row is the logo, which is an image.
+    */}
+    {/*
+      ─── THE FURNITURE SITS IN THE CONTENT COLUMN, NOT ON THE VIEWPORT ──────
+
+      `.container-page` is on this element on purpose, and it is the same class
+      the rows below use. The art is full-bleed; the words and the mark are not.
+
+      They were pinned to the viewport's own edges with a clamped inset, which
+      is indistinguishable from correct until the screen is much wider than the
+      content column. Measured on a 3840px viewport: the eyebrow sat at x=31 and
+      the mark ended at x=3794, while the first card in the rail underneath
+      started at x=1170 and the last ended at x=2655. The banner's furniture was
+      over a thousand pixels outside the column it belongs to, at both ends.
+
+      Sharing the class rather than copying its numbers is the point: a change
+      to the page's width cannot leave this behind.
+    */}
+    <div class="container-page feed-row-banner-inner">
+      <div class="feed-row-banner-meta">
+        <span class="feed-row-banner-eyebrow">{eyebrow}</span>
+        <h2 class="sr-only">{title}</h2>
+      </div>
+
+      {logo && (
+        <Image
+          src={logo}
+          alt={title}
+          class="feed-row-banner-logo"
+          widths={[400, 800, 1200]}
+          sizes="(max-width: 899px) 60vw, 460px"
+          loading="lazy"
+          decoding="async"
+        />
+      )}
+    </div>
+  </div>
+)}
+
+<style>
+  /*
+    FULL-BLEED, the same way the rails are: pull out to the viewport edges by
+    half the difference between the container and the viewport. `100vw` would
+    include the scrollbar's width and overflow by ~15px on Windows, which is the
+    horizontal scrollbar this page has been through twice.
+  */
+  .feed-row-banner {
+    position: relative;
+    margin-inline: calc(50% - 50vw);
+    width: 100vw;
+    max-width: 100vw;
+
+    /*
+      ─── THE ART CARRIES ON BEHIND THE ROW ──────────────────────────────────
+
+      `--banner-bleed` is how far the artwork paints PAST this box, down behind
+      the row heading and the top of the tiles. The box itself keeps its own
+      height, so the row still flows underneath as before — only the picture
+      overhangs, and it dissolves out rather than ending on a line.
+
+      This replaces a `mask-image` that used to live on this element, fading its
+      bottom 15%. A mask resolves its percentages against the element's own
+      box, so it cut the art off at exactly the height the row starts at, which
+      is the hard horizontal edge above the heading. The fade belongs to the
+      ART, which is now taller than this box, not to the box.
+
+      `overflow: visible` for the same reason. Nothing spills sideways: this is
+      already exactly 100vw wide and the art is 100% of it.
+    */
+    --banner-bleed: clamp(160px, 18vw, 420px);
+    /*
+      A FLUID HEIGHT, NOT AN ASPECT RATIO PER BREAKPOINT.
+
+      The art is supplied 16:9 and this strip is much wider than that at every
+      size, so it is always a centred crop. Driving the height directly means
+      one rule instead of three breakpoints of aspect-ratio arithmetic, and it
+      is what makes the safe-zone advice to the artist a single sentence: keep
+      the subject in the middle band, the top and bottom go.
+
+      Capped at 380px so the shelf stays a shelf. Uncapped, 22vw is 563px on a
+      2560 display, which is a second hero halfway down the feed.
+    */
+    height: clamp(200px, 22vw, 380px);
+    overflow: visible;
+    /* The row below owns the space between them. */
+    margin-bottom: 0;
+    /*
+      A stacking context at level 0, so the overhanging art stays BEHIND the
+      heading and the tiles. Without it the art is a positioned element and the
+      row's static content would paint underneath it.
+    */
+    z-index: 0;
+  }
+
+  .feed-row-banner-art,
+  .feed-row-banner-scrim {
+    /* Both run past the box by the bleed, so the scrim keeps shaping the art
+       the whole way down instead of stopping halfway through it. */
+    height: calc(100% + var(--banner-bleed));
+  }
+
+  .feed-row-banner-art {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    object-fit: cover;
+    object-position: center;
+    /* This is real artwork, not a plate: no blur, no brightness lift. */
+
+    /*
+      The dissolve. Held at full strength through the box, then faded to nothing
+      across the bleed, so the picture thins out behind the row rather than
+      ending on an edge. The stops are percentages of the ART's height, which is
+      why the bleed has to be part of that height rather than a separate layer.
+    */
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 52%, rgba(0,0,0,0.55) 74%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 52%, rgba(0,0,0,0.55) 74%, transparent 100%);
+  }
+
+  /*
+    Two scrims, and both are doing a specific job.
+
+    ─── THE VERTICAL ONE NO LONGER SEATS AN EDGE ─────────────────────────────
+    It used to reach alpha 1 at the bottom and hold, because the art stopped
+    there and the black was what joined the strip to the page. The art now
+    carries on past this box and dissolves on its own mask, so there is no edge
+    left to hide — and an opaque band in the middle of the picture would be a
+    dark stripe across it rather than a seam.
+
+    What it still owes is LEGIBILITY for the lockup, which sits just above the
+    box's bottom edge. So it darkens through that band and then eases off,
+    rather than going to black and staying there.
+
+    The horizontal one is legibility for the mark, and it carries the row's
+    accent rather than plain black so the strip agrees with the wash below it.
+    It runs to the RIGHT, following the mark: it used to darken the left, which
+    is where the lockup was before the row took its heading back.
+  */
+  .feed-row-banner-scrim {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    pointer-events: none;
+    background:
+      linear-gradient(to bottom,
+        transparent 0%,
+        rgba(10, 10, 10, 0.30) 34%,
+        rgba(10, 10, 10, 0.62) 50%,
+        rgba(10, 10, 10, 0.52) 62%,
+        rgba(10, 10, 10, 0.30) 80%,
+        transparent 100%),
+      linear-gradient(to left,
+        rgba(6, 18, 14, 0.78) 0%,
+        rgba(6, 18, 14, 0.42) 26%,
+        rgba(6, 18, 14, 0.10) 48%,
+        transparent 68%),
+      /* And the lower left, where the eyebrow sits. Much lighter: it is one
+         small line of type, not a mark the size of a quarter of the strip. */
+      linear-gradient(to right,
+        rgba(6, 18, 14, 0.52) 0%,
+        rgba(6, 18, 14, 0.18) 18%,
+        transparent 38%),
+      radial-gradient(70% 90% at 86% 72%,
+        rgba(var(--banner-rgb, 16, 185, 129), 0.20) 0%,
+        transparent 72%);
+  }
+
+  /*
+    Right-hand end, bottom-aligned. Bottom rather than centred because the art's
+    right side is where the standing figure and the sun are: a mark across the
+    middle of it sits on the subject, and down here it sits on the water.
+
+    The gutter matches the page container's, so the mark lines up with the end of
+    the rail below rather than with the raw viewport edge.
+  */
+  /*
+    One row, pinned to the bottom of the strip: words at one end, mark at the
+    other. `.container-page` supplies the width and the gutters, so both ends
+    line up with the rail below rather than with the screen.
+  */
+  .feed-row-banner-link {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+  .feed-row-banner-inner {
+    /* Words and mark only: a tap on either falls through to the link. */
+    pointer-events: none;
+    z-index: 2;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: clamp(0.85rem, 2vw, 1.6rem);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .feed-row-banner-meta {
+    display: flex;
+    align-items: flex-end;
+    /* Nudged off the strip's own baseline so it sits with the mark's, which is
+       much taller and bottom-anchored. */
+    padding-bottom: 0.35rem;
+  }
+
+  .feed-row-banner-eyebrow {
+    font-family: var(--font-body);
+    font-size: clamp(0.58rem, 1.1vw, 0.72rem);
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.86);
+    white-space: nowrap;
+  }
+
+  /*
+    Sized off the viewport so the mark holds its weight on a phone, capped so a
+    wide wordmark cannot run into the middle of the strip. HARD RULE 6: no
+    drop-shadow on an <img> — the scrim above is what separates it from the art.
+  */
+  .feed-row-banner-logo {
+    height: clamp(52px, 7.5vw, 124px);
+    width: auto;
+    max-width: min(78%, 460px);
+    object-fit: contain;
+    object-position: right bottom;
+  }
+
+  @media (max-width: 560px) {
+    /* The art is 16:9 and this is a 2:1-ish crop on a phone, so the centre band
+       is all that survives. Pulling the mark in keeps it off the edge. */
+    /*
+      ─── ON A PHONE THE TWO ENDS COMPETE FOR ONE LINE ───────────────────────
+
+      Measured at 375px: the eyebrow is 146px and the mark 168px, which with the
+      1rem gap needs 330px inside a 311px column. `space-between` does not
+      shrink anything, so the overflow went out the right-hand end and the mark
+      sat 20px past the column the cards line up with.
+
+      The mark yields, because it is the element that can: at 46% it comes down
+      to ~143px and the line fits with room to spare. The eyebrow keeps its
+      `nowrap` — it is one short string, and wrapping "FEATURED SERIES • DC"
+      onto two lines under a mark is worse than a slightly smaller mark.
+
+      `min-width: 0` is required as well. A replaced element's automatic minimum
+      size is its intrinsic width, so without it flex refuses to shrink the
+      image below its natural size and max-width alone would not have helped.
+    */
+    .feed-row-banner-inner {
+      gap: 0.75rem;
+    }
+
+    .feed-row-banner-logo {
+      max-width: 46%;
+      min-width: 0;
+    }
+  }
+</style>

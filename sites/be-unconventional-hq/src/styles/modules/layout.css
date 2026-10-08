@@ -1,0 +1,148 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   UI SYSTEM: LAYOUT PRIMITIVES
+
+   Single source for the page-width wrappers. `.container` previously lived in
+   latest.css while nine interior pages each re-declared their own scoped copy,
+   so a layout fix had to land in ten places.
+
+   THREE geometries exist, and they are NOT interchangeable. Verified by
+   measuring computed style on main before this extraction (note that a page
+   has more than one `.container` — the navbar has its own, so measure
+   `main .container`, not the first match):
+
+     .container        navbar + homepage + shared components
+                       padding-inline: clamp() -> 20px @320, 46px @1440
+     .container-page   feed / events / featured page bodies
+                       padding: 0 2rem -> 32px at every width
+     .container-narrow /collaborations page body, max-width 1000px
+
+   The interior pages carried `class="container"` plus a scoped override that
+   won on max-width and padding but inherited `width: 100%` from the global
+   rule — hence the explicit `width: 100%` on the variants below. Dropping it
+   let /events overflow its viewport by 9px at 320px.
+
+   Unifying the two gutters would change rendering on every interior page, so
+   it is left as an explicit decision rather than folded into this extraction.
+
+   Imported immediately after latest.css to preserve the original cascade
+   position of `.container` (import order matters — see global.css).
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/*
+  ─── THE SAME WIDTH AS THE PAGE BODY, INCLUDING ON A BIG MONITOR ───────────
+
+  `.container` and `.container-page` are the same idea — the page's content
+  column — and they have to be the same number or the furniture stops lining up
+  with the content. This was a hard 1536px while `.container-page` stepped up
+  with the screen, and the navbar is a `.container`: measured on a 3840 display,
+  the nav ran 1145 -> 2681 while the rows under it ran 648 -> 3177. The logo sat
+  497px inboard of the content's left edge and the links clustered in the middle
+  of the screen. Reported as "navbar element positions are too narrowly centered
+  on a 4K monitor".
+
+  `--page-max` is 1536px at its base step, so nothing below 1920 moves at all.
+*/
+.container {
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-inline: clamp(1.25rem, calc(0.625rem + 2.5vw), 3rem);
+}
+
+/* Interior content pages: feed, events, featured. */
+.container-page {
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/*
+  ─── ONE WIDTH, AND THE HERO USES IT TOO ───────────────────────────────────
+
+  `--page-max` is the page's content width. It is read here AND by every hero's
+  `.hero-grid-container`, which used to carry its own Tailwind caps
+  (`2xl:!max-w-[1920px]`, `3xl:!max-w-[2400px]`). Two sources for one
+  measurement is how the hero and the rows came to disagree about where the
+  content column is in the first place.
+
+  The ladder exists because a fixed cap is wrong at both ends of the range. At
+  1536 on a 4K screen the page sat in the middle of 2304px of empty ground, and
+  the rails made it worse: a rail is full-bleed and insets its first card to
+  this column, so at 3840 there were 978px of nothing before the first card
+  while the cards ran off the right-hand edge. That asymmetry is what reads as
+  "a ton of empty space on the left side".
+
+  It stops at 2600 rather than filling the screen. These are card rails, but the
+  hero shares the measurement, and past roughly 2600 its copy column starts
+  setting lines too long to read comfortably.
+*/
+/*
+  ─── CARDS SCALE WITH THE PAGE, SO THE ROW ALWAYS SHOWS ABOUT FIVE ─────────
+
+  `--feed-card` was a flat 320px at every width. On a 4K screen that is ten
+  postage stamps in a row, and with a dozen items per row the rail barely
+  scrolls — the page reads as a lot of empty ground with small pictures on it.
+  Reported as "why are the tiles so small on 4K monitor ... especially since we
+  have so little content".
+
+  Each step is chosen so `--page-max / --feed-card` stays near five:
+
+    1536 / 320 = 4.8      1920 / 380 = 5.1
+    2240 / 440 = 5.1      2600 / 500 = 5.2
+
+  and the featured shelf near three, which is what makes it read as the
+  dominant row rather than just a wider one:
+
+    1536 / 560 = 2.7      1920 / 660 = 2.9
+    2240 / 760 = 2.9      2600 / 860 = 3.0
+
+  A constant COUNT rather than a constant SIZE is the streaming-service model,
+  and it is the only version that looks deliberate at both 1440 and 4K.
+
+  `card-images.ts` mirrors these numbers in its `sizes`. If you change one, the
+  browser starts fetching the wrong rendition and the cards go soft — there is
+  a test that fails when they disagree.
+*/
+:root {
+  --page-max: 1536px;
+  --feed-card: 320px;
+  --feed-card-featured: 560px;
+  --ig-card: 220px;
+}
+
+@media (min-width: 1920px) {
+  :root {
+    --page-max: 1920px;
+    --feed-card: 380px;
+    --feed-card-featured: 660px;
+    --ig-card: 270px;
+  }
+}
+
+@media (min-width: 2560px) {
+  :root {
+    --page-max: 2240px;
+    --feed-card: 440px;
+    --feed-card-featured: 760px;
+    --ig-card: 320px;
+  }
+}
+
+@media (min-width: 3400px) {
+  :root {
+    --page-max: 2600px;
+    --feed-card: 500px;
+    --feed-card-featured: 860px;
+    --ig-card: 370px;
+  }
+}
+
+
+/* Reading-width page: collaborations. */
+.container-narrow {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}

@@ -1,0 +1,148 @@
+---
+import { Image } from 'astro:assets';
+import logoImage from '../assets/logo-mark.webp';
+import { site } from '../data/site.js';
+import { SOCIAL_ICONS } from '../data/icons.js';
+
+/* Platform marks come from the shared icon library — src/data/icons.js.
+   This object used to be pasted into three files (here, SocialsSection.astro
+   and pages/links.astro), each with slightly different attributes. */
+const socialIcons = SOCIAL_ICONS;
+
+const socialLinks = [
+  { label: 'YouTube', href: site.socials.youtube },
+  { label: 'Instagram', href: site.socials.instagram },
+  { label: 'TikTok', href: site.socials.tiktok },
+  { label: 'Threads', href: site.socials.threads },
+  { label: 'Letterboxd', href: site.socials.letterboxd },
+  { label: 'Substack', href: site.socials.substack },
+  { label: 'Bluesky', href: site.socials.bluesky },
+  { label: 'Facebook', href: site.socials.facebook },
+  { label: 'Twitter', href: site.socials.twitter },
+];
+---
+
+<footer class="site-footer" transition:name="footer" transition:animate="none">
+  <div class="footer-inner">
+    {/*
+      Brand column: the logo alone, sized to fill the space the old three-line
+      text lockup occupied.
+
+      That lockup repeated the hero's tagline, the brand name (which the
+      copyright line below already states), and a third strapline — three
+      lines of text saying what the logo says. Removing it and enlarging the
+      logo removes the repetition and lets the three footer columns read as
+      equal weight.
+
+      IMPORTANT: the alt text is the full brand name, not "HQ". With the
+      wordmark text gone, this image is the only thing naming the brand in
+      this column, so a screen reader and a search engine both depend on it.
+    */}
+    <div class="footer-brand">
+      <div class="mobile-footer-brand-wrapper">
+        <a href="/" class="footer-logo footer-logo-wrapper" aria-label={`${site.name} home`}>
+          {/*
+            ─── WHY `widths` AND `sizes` ARE BOTH PINNED HERE ─────────────────
+            This was the heaviest asset on every page — 77KB, and on mobile the
+            browser was actually choosing a 144KB variant.
+
+            Two separate mistakes stacked. `width={1981}` asked Astro for the
+            full-resolution mark, and with no `sizes` Astro emitted
+            `sizes="(min-width: 600px) 600px, 100vw"`. That `100vw` claims the
+            image spans the whole viewport on a phone, so at a ~2.6x device
+            pixel ratio the browser resolved ~1080 device px and downloaded the
+            1080w file — to paint it into a box that
+            `--footer-logo-size` caps at 300px (220px, then 170px at the
+            narrower breakpoints in footer-brand.css).
+
+            So `sizes` now states the real CSS box at each breakpoint, and
+            `widths` stops generating anything past 600 — 2x the largest
+            display size, which is as crisp as any current phone can show.
+
+            If --footer-logo-size changes in footer-brand.css, update the
+            matching value here; they describe the same box.
+          */}
+          <Image
+            src={logoImage}
+            alt={site.name}
+            width={600}
+            height={276}
+            widths={[170, 220, 300, 440, 600]}
+            sizes="(min-width: 1024px) 300px, (min-width: 768px) 220px, 170px"
+            loading="lazy"
+            decoding="async"
+          />
+        </a>
+      </div>
+    </div>
+
+    <nav class="footer-nav" aria-label="Footer Navigation">
+      <p class="footer-nav-label">Explore</p>
+      <ul>
+        {/* Same list the navbar renders — see site.nav in src/data/site.js. */}
+        {site.nav.map((item) => (
+          <li><a href={`/${item.href}`}>{item.label}</a></li>
+        ))}
+        {/* Not in site.nav: the press hub is for press and partners, not the
+           reader-facing top navigation. */}
+        <li><a href="/collaborations">Press / Media</a></li>
+        <!-- <li class="break"></li> -->
+        <!-- <li><a href={`/about`}>About</a></li> -->
+      </ul>
+      {import.meta.env.DEV && (
+        <div class="footer-links-group" style="border-top: 1px dashed rgba(255,255,255,0.2); margin-top: 1rem; padding-top: 1rem;">
+          <p class="footer-nav-label" style="color: var(--color-white-muted);">Dev Tools</p>
+          <ul>
+            <li><a href={`/links`} style="color: var(--color-accent-text); font-weight: 600;">Links (Dev)</a></li>
+            <li><a href={`/local-cms`} style="color: var(--color-accent-text); font-weight: 600;">Local CMS (Dev)</a></li>
+            <li><a href={`/admin`} style="color: var(--color-accent-text); font-weight: 600;">Sanity CMS (Dev)</a></li>
+            <li><a href={`/media-kit`} style="color: var(--color-accent-text); font-weight: 600;">Media Kit (Dev)</a></li>
+            <li><a href={`/collaborations`} style="color: var(--color-accent-text); font-weight: 600;">Collaborations (Dev)</a></li>
+            <li><a href={`/collaborations/press-kit`} style="color: var(--color-accent-text); font-weight: 600;">Press Kit (Dev)</a></li>
+          </ul>
+        </div>
+      )}
+    </nav>
+
+    <div class="footer-socials-col">
+      <p class="footer-nav-label">Follow</p>
+      <ul class="footer-socials">
+        {
+          socialLinks.map((social) => (
+            <li>
+              <a
+                href={social.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="footer-social-link"
+                aria-label={social.label}
+                set:html={socialIcons[social.label]}
+              />
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    {/* Three separate items on the footer's three columns (footer.css), so
+        Privacy Policy is never an inline continuation of the copyright line:
+        that run once wrapped mid-link on a phone ("Privacy" / "Policy") with
+        a stray "|" left above it. */}
+    <p class="footer-copy">
+      &copy; {new Date().getFullYear()} BE Unconventional HQ. All rights reserved.
+    </p>
+    <a href="/privacy" class="footer-privacy-link">Privacy Policy</a>
+    <p class="footer-credit">Where Nerd Culture Gets Cinematic</p>
+  </div>
+</footer>
+
+<style>
+  .footer-nav ul .break {
+    flex-basis: 100%;
+    height: 0;
+    margin: 0;
+    padding: 0;
+  }
+</style>

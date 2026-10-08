@@ -1,0 +1,1068 @@
+---
+import { getCardImageSources } from '../lib/card-images.js';
+
+interface GalleryItem {
+  id: string;
+  mediaType: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM';
+  displayUrl: string;
+  /* A copy of `displayUrl` downloaded to public/instagram/ by
+     scripts/sync-instagram.mjs. Present only after a sync has run with
+     --execute; see the note at the render site below. */
+  localImage?: string;
+  videoUrl?: string;
+  caption?: string;
+  permalink?: string;
+  likeCount?: number | string;
+  commentCount?: number | string;
+}
+
+export interface Props {
+  items: GalleryItem[];
+  /** Profile URL for the mobile "See More on Instagram" card the script injects. */
+  profileUrl?: string;
+}
+
+const { items = [], profileUrl = 'https://instagram.com/' } = Astro.props;
+---
+
+{items.length > 0 && (
+  <infinite-marquee data-profile-url={profileUrl}>
+    <div class="ig-carousel-wrapper" style="mask-image: linear-gradient(to right, transparent 0, black 24px, black calc(100% - 24px), transparent 100%); -webkit-mask-image: linear-gradient(to right, transparent 0, black 24px, black calc(100% - 24px), transparent 100%);">
+      <div class="ig-carousel-track">
+        {/*
+          DUPLICATE GROUPS ARE HIDDEN FROM SCREEN READERS, NOT DISABLED.
+
+          This is a MARQUEE. Every group scrolls through the visible area —
+          that is the entire point of the component — so a duplicate group is
+          not an offscreen copy, it is tiles the visitor is looking at and
+          expects to click.
+
+          `inert` was used here and it broke exactly that. It removes a
+          subtree from the tab order, which is what was wanted, but it also
+          disables POINTER EVENTS on everything inside it. Thirteen of the
+          fifteen groups were inert, so most of the tiles scrolling past were
+          dead to clicks. Reported from production as "the tiles in the
+          Instagram carousel are not clickable".
+
+          `tabindex="-1"` on the links is the correct tool. It takes the
+          duplicates out of sequential focus navigation, which is what
+          satisfies axe's `aria-hidden-focus` rule (that rule is about
+          TABBABLE elements inside an aria-hidden subtree), while leaving
+          them fully clickable with a mouse or a finger.
+
+          ONLY THE FIRST GROUP IS READABLE. Groups 3-5 used to be the only
+          hidden ones, so group 2 was a full second copy for assistive tech:
+          on desktop a keyboard user tabbed through all ten posts twice and a
+          screen reader read them twice (phones never saw it: the script
+          removes groups 2-5 there). The script's own clones are hidden the
+          same way, so exactly one copy of each post is announced.
+        */}
+        {Array.from({ length: 5 }, (_, i) => i + 1).map((groupIndex) => (
+          <div 
+            class="ig-marquee-group" 
+            aria-hidden={groupIndex > 1 ? "true" : undefined}
+          >
+          {items.map((item) => {
+            if (!item || !item.displayUrl) return null;
+            /*
+              PREFER THE LOCAL COPY. Instagram's CDN URLs are signed and
+              expire in a couple of days — `displayUrl` is guaranteed to rot,
+              and did, taking the whole rail with it (188 of 188 dead when it
+              was reported from production). scripts/sync-instagram.mjs now
+              downloads each image to public/instagram/ and records it as
+              `localImage`.
+
+              `displayUrl` stays as the fallback rather than being replaced:
+              until a sync has run with --execute nothing has a `localImage`,
+              and an item whose download failed should still render from the
+              remote URL for as long as that URL lives. getCardImageSources()
+              passes a root-relative path straight through, so a local image
+              skips the /api/proxy round trip entirely.
+            */
+            const sources = getCardImageSources(item.localImage || item.displayUrl);
+            
+            return (
+              <a href={item.permalink} target="_blank" rel="noopener noreferrer" class="ig-carousel-tile" data-play-hover="true" tabindex={groupIndex > 1 ? -1 : undefined}>
+                {/* The anchor is the HOVER TARGET and never moves; this frame
+                    is what lifts, clips and draws the border. Splitting them
+                    is what stops the hover from flickering — see the note on
+                    .ig-tile-frame in the stylesheet below. */}
+                <span class="ig-tile-frame">
+                <img
+                  src={sources.src}
+                  srcset={sources.srcset}
+                  sizes="(max-width: 768px) 45vw, (max-width: 1919px) 240px, (max-width: 2559px) 290px, (max-width: 3399px) 340px, 390px"
+                  alt={item.caption?.slice(0, 50) || 'Instagram Media'}
+                  loading="lazy"
+                  decoding="async"
+                  class="ig-tile-img"
+                  width="220"
+                  height="275"
+                />
+                <div class="ig-tile-overlay">
+                  {item.mediaType === 'VIDEO' && (
+                    <div class="play-button-wrapper" aria-hidden="true">
+                      <div class="cinematic-play-button">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </div>
+                    </div>
+                  )}
+                  <div class="ig-tile-content">
+                    <div class="ig-accent-line"></div>
+                    <p class="ig-text">{item.caption || "View post on Instagram"}</p>
+                  </div>
+                </div>
+                </span>
+              </a>
+            );
+          })}
+          </div>
+        ))}
+      </div>
+    </div>
+  </infinite-marquee>
+)}
+
+<script>
+  class InfiniteMarquee extends HTMLElement {
+    private _animationFrame?: number;
+    private _resizeObserver?: ResizeObserver;
+    private _visibility?: IntersectionObserver;
+    private _visible: boolean = true;
+    private _isTouching: boolean = false;
+    private _isDragging: boolean = false;
+    private _isActuallyDragging: boolean = false;
+    private _startX: number = 0;
+    private _startY: number = 0;
+    private _scrollLeftStart: number = 0;
+    private _setupGate?: IntersectionObserver;
+
+    /*
+      ─── BUILT WHEN IT IS NEAR, NOT WHEN THE PAGE LOADS ──────────────────────
+      Everything below used to run in the constructor, i.e. while the page
+      was still loading, for a rail that sits at the very foot of the
+      homepage. On desktop that meant cloning the row to fifteen groups
+      (+1,300 elements, 2,745 in all) and measuring them, which forces a
+      layout of a section `content-visibility: auto` was skipping: PageSpeed
+      reported it as 111ms + 111ms of forced reflow, landing in the frame that
+      painted the hero. On a phone the equivalent was a `scrollWidth` read
+      (266ms task at 9x CPU). The loop, the clones and the mobile rail are
+      unchanged; they are simply built one viewport before the reader gets
+      there. The observer fires at once if the rail is already near.
+    */
+    constructor() {
+      super();
+      if (!('IntersectionObserver' in window)) {
+        this.setup();
+        return;
+      }
+      this._setupGate = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          this._setupGate?.disconnect();
+          this._setupGate = undefined;
+          this.setup();
+        },
+        { rootMargin: '100% 0px' },
+      );
+      this._setupGate.observe(this);
+    }
+
+    private setup(): void {
+      /* Tests wait on this: the rail is built when near, not on load. */
+      this.dataset.ready = '1';
+      const track = this.querySelector('.ig-carousel-track') as HTMLElement;
+      if (!track) return;
+      
+      let groups = Array.from(track.querySelectorAll('.ig-marquee-group'));
+      if (groups.length === 0) return;
+      
+      const isMobileTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches || window.innerWidth <= 768;
+
+      if (isMobileTouch) {
+        track.classList.add('is-mobile-native');
+        groups.forEach((group, index) => {
+          if (index > 0) group.remove(); 
+        });
+
+        // Create Mobile Title Card (Index 0)
+        const titleCard = document.createElement('div');
+        titleCard.className = 'ig-rail-label ig-title-card';
+        titleCard.innerHTML = `
+          <div class="ig-title-content">
+            <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="ig-title-icon"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+            <span>Latest on<br>Instagram</span>
+          </div>
+        `;
+        groups[0].insertBefore(titleCard, groups[0].firstChild);
+        
+        // Create Mobile CTA Card
+        const ctaCard = document.createElement('a');
+        ctaCard.href = this.dataset.profileUrl || "https://instagram.com/";
+        ctaCard.target = "_blank";
+        ctaCard.rel = "noopener noreferrer";
+        ctaCard.className = 'ig-rail-label ig-cta-card';
+        ctaCard.innerHTML = `
+          <div class="ig-cta-content">
+            <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="ig-cta-icon"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+            <span>See More on<br>Instagram</span>
+          </div>
+        `;
+        groups[0].appendChild(ctaCard);
+        
+        /* Only real media tiles participate in the active/centre behaviour.
+           The title and CTA are plain text labels in the rail, not tiles:
+           highlighting them made several things look tappable that are not,
+           and tapping the title (index 0) ran the tap-to-centre path, which
+           flashed it and bounced the rail back to the first tile. */
+        const tiles = track.querySelectorAll('.ig-carousel-tile');
+
+        /*
+          ─── WHY THIS IS NOT AN IntersectionObserver ANY MORE ────────────────
+
+          It was one, with `root: track` and
+          `rootMargin: '0px -50% 0px -50%'` — a razor-thin trigger line down
+          the exact horizontal centre of the rail. A tile got `.is-active`
+          only while crossing that line.
+
+          A tile can only cross the centre if the scroll offset that centres
+          it lies inside [0, maxScroll]. The tiles at each end fail that by
+          construction: at `scrollLeft = 0` the rail has already hit its stop
+          while the first tiles are still left of centre, and the wider the
+          screen the more of them there are. On an iPad, with ~5 tiles
+          visible, the two leftmost and two rightmost could NEVER be
+          highlighted. On touch there is no `:hover` to fall back on, so those
+          tiles simply read as dead.
+
+          Two fixes were tried and rejected, correctly:
+            · `padding-inline: calc(50vw - 110px)` on the track let the edge
+              tiles physically reach the centre, but opened a huge empty gap
+              at the start of the rail. It fixed the mechanism by breaking the
+              layout.
+            · A tap handler that highlighted an edge tile on first tap and
+              opened it on the second. That changes what a tap means.
+
+          So neither the layout nor the interaction moves. What changes is how
+          the active tile is CHOSEN: scroll progress is mapped across the whole
+          tile range rather than asking which tile is over a fixed line.
+
+              index = round(scrollLeft / maxScroll * (tiles.length - 1))
+
+          Both mappings are linear, so through the middle of the rail this
+          picks the same tile the centre line did — the spotlight still tracks
+          the centre where it always did. They diverge only at the two ends,
+          which is exactly where the old one had nothing to offer: at
+          `scrollLeft = 0` this resolves to tile 0, at the far end to the last
+          tile, and every index in between is reachable.
+        */
+        let activeIndex = -1;
+        const setActiveFromScroll = () => {
+          if (!tiles.length) return;
+          const maxScroll = track.scrollWidth - track.clientWidth;
+          const progress = maxScroll > 0 ? track.scrollLeft / maxScroll : 0;
+          const next = Math.round(
+            Math.min(1, Math.max(0, progress)) * (tiles.length - 1)
+          );
+          if (next === activeIndex) return; // no class churn while scrolling
+          activeIndex = next;
+
+          tiles.forEach((tile, i) => tile.classList.toggle('is-active', i === next));
+        };
+
+        let activeQueued = false;
+        track.addEventListener(
+          'scroll',
+          () => {
+            if (activeQueued) return;
+            activeQueued = true;
+            requestAnimationFrame(() => {
+              activeQueued = false;
+              setActiveFromScroll();
+            });
+          },
+          { passive: true }
+        );
+        setActiveFromScroll();
+
+        tiles.forEach(tile => {
+          /*
+            Tap-to-centre, gated on VISIBILITY — never on `.is-active`.
+
+            `.is-active` means "this tile is crossing the horizontal centre
+            line". Gating the link on it made every tile that cannot REACH the
+            centre permanently unopenable, because the handler would
+            preventDefault() forever. A tile can only be centred if the scroll
+            offset that centres it lies within [0, maxScroll], so the tiles at
+            each end of the rail are exactly the ones that can never qualify —
+            and the wider the screen, the more of them there are. Measured on
+            an iPad Pro 12.9": 4 of 10 tiles dead in landscape (0, 1, 8, 9) and
+            2 of 10 in portrait (0, 9).
+
+            Visibility is the right test: if the whole tile is already on
+            screen there is nothing to scroll to, so the tap should open it.
+            A partially visible tile still centres itself first, which is the
+            affordance this was written for.
+          */
+          tile.addEventListener('click', (e) => {
+            const trackBox = track.getBoundingClientRect();
+            const tileBox = tile.getBoundingClientRect();
+            const fullyVisible =
+              tileBox.left >= trackBox.left - 1 && tileBox.right <= trackBox.right + 1;
+
+            if (!fullyVisible) {
+              e.preventDefault(); // First tap brings it into view; the next opens it.
+              tile.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+          });
+        });
+
+        return; 
+      }
+      
+      // Pre-clone padding for mobile momentum and 4K (Always pad to 15 groups)
+      // This absorbs iOS momentum scrolling so it never hits the physical DOM limits.
+      while (groups.length < 15) {
+        const clone = groups[0].cloneNode(true) as HTMLElement;
+        /*
+          `aria-hidden` PLUS `tabindex="-1"` ON THE LINKS. NOT `inert`.
+
+          These clones exist only to make the marquee loop look continuous.
+          Each one is a full copy of the row, links and all. `aria-hidden`
+          keeps them out of the accessibility tree but leaves every one of
+          those links IN THE TAB ORDER — so a keyboard user tabbing through
+          the gallery walks the same set of posts up to fifteen times, and
+          each stop announces nothing, because the tree says it is not there.
+          axe rates that serious (`aria-hidden-focus`), 13 nodes on a hub page.
+
+          `inert` was the first fix and it was wrong. It does remove the
+          subtree from the tab order, but it ALSO disables pointer events on
+          everything inside it — and these clones are not offscreen, they
+          scroll through the visible area like every other group. Most of the
+          tiles a visitor could see became unclickable. Reported from
+          production.
+
+          tabindex="-1" removes them from sequential focus navigation, which
+          is what the axe rule actually measures, and leaves the links working
+          for a mouse or a finger.
+        */
+        clone.setAttribute('aria-hidden', 'true');
+        clone.querySelectorAll('a').forEach((a) => a.setAttribute('tabindex', '-1'));
+        track.appendChild(clone);
+        groups.push(clone);
+      }
+      
+      if (groups.length < 2) return;
+
+      /*
+        ─── SIZING IS MEASURED, NOT GUESSED AT AFTER A TIMER ────────────────
+
+        This whole block used to run inside `setTimeout(..., 100)`, whose only
+        job was "let the images load before measuring". It was never a
+        guarantee. In Firefox a pass of font or image painting can still be in
+        flight at 100ms, and a `groupWidth` measured mid-paint is wrong for the
+        entire life of the page: the wrap boundary lands in the wrong place and
+        the rail visibly jumps every time it comes round.
+
+        It is not needed any more either. Every tile now carries a rigid
+        width AND height in CSS (see `.ig-carousel-tile`), so a group's width
+        no longer depends on whether its images have arrived. One animation
+        frame is enough to be past the first layout, and the ResizeObserver
+        below re-measures if anything does shift later.
+      */
+      let groupWidth = 0;
+
+      const measureGroupWidth = () => {
+        /*
+          getBoundingClientRect() + the flex gap, NOT
+          `groups[1].offsetLeft - groups[0].offsetLeft`.
+
+          offsetLeft is rounded to whole pixels, so a fractional group width
+          (a 1.25rem gap at a non-integer root font size, or any browser zoom)
+          is truncated — and that error compounds on every wrap. The rect is
+          subpixel exact. `columnGap` is read rather than the `gap` shorthand
+          because the shorthand serialises inconsistently across engines.
+
+          This deliberately does NOT give `.ig-carousel-track`
+          `position: relative`. The touch branch's tap-to-centre maths and the
+          desktop drag both read `tile.offsetLeft - track.offsetLeft`, which
+          assumes the tiles and the track share an offsetParent (the wrapper).
+          Positioning the track would make the track itself the tiles'
+          offsetParent and silently break both.
+        */
+        const styles = getComputedStyle(track);
+        const gap = parseFloat(styles.columnGap || styles.gap || '0') || 0;
+        const rect = (groups[0] as HTMLElement).getBoundingClientRect().width;
+        if (rect > 0) return rect + gap;
+        return (groups[1] as HTMLElement).offsetLeft - (groups[0] as HTMLElement).offsetLeft;
+      };
+
+      let exactScrollLeft = 0;
+      /*
+        The last value the BROWSER stored, read straight back out after we
+        wrote it — not the float we asked for.
+
+        Firefox truncates `scrollLeft` to an integer while Chromium keeps the
+        fraction, so comparing the engine's value against our own float
+        `exactScrollLeft` reported a divergence on virtually every frame in
+        Gecko. That pinned `isPaused` on and re-armed the 150ms resume timer
+        forever: the rail stuttered continuously, and only in Firefox.
+
+        Comparing against what the engine actually took makes this check
+        measure user scrolling, which is the only thing it was ever for.
+      */
+      let lastAppliedScroll = 0;
+      let isPaused = false;
+
+      const centreOnMiddleGroup = () => {
+        exactScrollLeft = groupWidth * Math.floor(groups.length / 2);
+        track.scrollLeft = exactScrollLeft;
+        lastAppliedScroll = track.scrollLeft;
+      };
+
+      this._resizeObserver = new ResizeObserver(() => {
+        const newWidth = measureGroupWidth();
+        if (newWidth > 0 && Math.abs(newWidth - groupWidth) > 5) {
+          groupWidth = newWidth;
+          // Snap to middle immediately on layout shift
+          centreOnMiddleGroup();
+        }
+      });
+      this._resizeObserver.observe(track);
+
+      let interactionTimeout: ReturnType<typeof setTimeout>;
+
+      const handleInteractionEnd = () => {
+        clearTimeout(interactionTimeout);
+        interactionTimeout = setTimeout(() => {
+          this._isTouching = false;
+          this._isDragging = false;
+          this._isActuallyDragging = false;
+          isPaused = false;
+          track.classList.remove('is-scrolling');
+        }, 150);
+      };
+
+      /*
+        SPEED IS PER SECOND, NOT PER FRAME.
+
+        This was `exactScrollLeft += 0.5` once per rAF, which is only "half a
+        pixel per frame" if the display runs at 60Hz. On a 120Hz ProMotion
+        panel or a 144Hz monitor the same code moved the rail at double or
+        triple the intended speed, and under Gecko's variable refresh it
+        stuttered. 30px/s is the same visual speed 0.5px/frame gave at 60Hz,
+        now independent of the refresh rate.
+      */
+      const PIXELS_PER_SECOND = 30;
+      let lastTimestamp = performance.now();
+
+      const updateScroll = (now: DOMHighResTimeStamp) => {
+        /* Off screen, the loop stops rather than ticking: it writes and reads
+           back scrollLeft every frame, which is a layout per frame for a rail
+           nobody can see, for as long as the page is open. The observer below
+           restarts it. */
+        if (!this._visible) {
+          this._animationFrame = 0;
+          return;
+        }
+        // Capped so a backgrounded tab (rAF stops firing) does not resume with
+        // one enormous jump.
+        const delta = Math.min((now - lastTimestamp) / 1000, 0.1);
+        lastTimestamp = now;
+
+        if (!isPaused && !this._isTouching && !this._isDragging) {
+          const currentScroll = track.scrollLeft;
+
+          // Detect native scroll (trackpad, keyboard) by divergence from the
+          // value the engine stored for us last frame. The threshold is well
+          // clear of a 1px rounding step; a real scroll gesture is far larger.
+          if (Math.abs(currentScroll - lastAppliedScroll) > 6) {
+            isPaused = true;
+            exactScrollLeft = currentScroll;
+            lastAppliedScroll = currentScroll;
+            handleInteractionEnd();
+          } else {
+            // Apply infinite wrap boundary ONLY when momentum is completely finished
+            if (groupWidth > 0) {
+              if (currentScroll >= groupWidth * (groups.length - 2)) {
+                exactScrollLeft -= groupWidth;
+              } else if (currentScroll <= groupWidth) {
+                exactScrollLeft += groupWidth;
+              }
+            }
+
+            exactScrollLeft += PIXELS_PER_SECOND * delta;
+            track.scrollLeft = exactScrollLeft;
+            /* Read back rather than assuming the write took: this is the
+               integer Firefox actually kept, and it is what the next frame's
+               divergence check has to be measured against. */
+            lastAppliedScroll = track.scrollLeft;
+          }
+        } else {
+          exactScrollLeft = track.scrollLeft;
+          lastAppliedScroll = exactScrollLeft;
+        }
+
+        this._animationFrame = requestAnimationFrame(updateScroll);
+      };
+
+      // Touch handling
+      track.addEventListener('touchstart', (e) => {
+        isPaused = true;
+        this._isTouching = true;
+        this._isActuallyDragging = false;
+        if (e.touches && e.touches.length > 0) {
+          this._startX = e.touches[0].pageX - track.offsetLeft;
+          this._startY = e.touches[0].pageY;
+          this._scrollLeftStart = track.scrollLeft;
+        }
+      }, { passive: true });
+      
+      track.addEventListener('touchmove', (e) => {
+        if (!this._isTouching || !e.touches || e.touches.length === 0) return;
+        const x = e.touches[0].pageX - track.offsetLeft;
+        if (!this._isActuallyDragging && (Math.abs(x - this._startX) > 5 || Math.abs(e.touches[0].pageY - this._startY) > 5)) {
+          this._isActuallyDragging = true;
+          track.classList.add('is-scrolling');
+        }
+      }, { passive: true });
+
+      track.addEventListener('touchend', handleInteractionEnd, { passive: true });
+      track.addEventListener('touchcancel', handleInteractionEnd, { passive: true });
+
+      // Desktop Mouse Dragging
+      track.addEventListener('mousedown', (e) => {
+        this._isDragging = true;
+        this._isActuallyDragging = false;
+        isPaused = true;
+        this._startX = e.pageX - track.offsetLeft;
+        this._startY = e.pageY;
+        this._scrollLeftStart = track.scrollLeft;
+      });
+
+      track.addEventListener('mousemove', (e) => {
+        if (!this._isDragging) return;
+        const x = e.pageX - track.offsetLeft;
+        const walk = (x - this._startX) * 1.5;
+        
+        if (!this._isActuallyDragging && (Math.abs(x - this._startX) > 5 || Math.abs(e.pageY - this._startY) > 5)) {
+          this._isActuallyDragging = true;
+          track.classList.add('is-scrolling');
+        }
+        
+        if (this._isActuallyDragging) {
+          e.preventDefault();
+          track.scrollLeft = this._scrollLeftStart - walk;
+          exactScrollLeft = track.scrollLeft;
+        }
+      });
+
+      track.addEventListener('mouseup', () => {
+        if (this._isDragging) handleInteractionEnd();
+      });
+
+      track.addEventListener('mouseleave', () => {
+        isPaused = false;
+        if (this._isDragging) handleInteractionEnd();
+      });
+
+      // Click Interception
+      track.addEventListener('click', (e) => {
+        if (this._isActuallyDragging || track.classList.contains('is-scrolling')) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }, { capture: true });
+
+      // Hover Pause
+      track.addEventListener('mouseenter', () => {
+        if (!this._isDragging && !this._isTouching) {
+          isPaused = true;
+        }
+      });
+
+      /*
+        One frame, not a timer. By the time this callback runs the initial
+        layout has been computed, so the measurement is against real geometry
+        rather than a hopeful 100ms. Every listener above is wired
+        synchronously, so an interaction landing before this frame is still
+        handled.
+      */
+      requestAnimationFrame(() => {
+        groupWidth = measureGroupWidth();
+        centreOnMiddleGroup();
+        lastTimestamp = performance.now();
+        if (!this._animationFrame) this._animationFrame = requestAnimationFrame(updateScroll);
+      });
+
+      /* Resume where it left off: a fresh timestamp, so the time spent off
+         screen is not paid back as one jump. */
+      this._visibility = new IntersectionObserver(([entry]) => {
+        this._visible = entry.isIntersecting;
+        /* groupWidth > 0: not before the first measurement above, which
+           starts the loop itself. */
+        if (this._visible && !this._animationFrame && groupWidth > 0) {
+          lastTimestamp = performance.now();
+          this._animationFrame = requestAnimationFrame(updateScroll);
+        }
+      });
+      this._visibility.observe(this);
+    }
+
+    /* Moved rather than removed: keep waiting to be built. */
+    connectedCallback() {
+      if (this._setupGate) this._setupGate.observe(this);
+    }
+
+    disconnectedCallback() {
+      if (this._setupGate) this._setupGate.disconnect();
+      if (this._animationFrame) cancelAnimationFrame(this._animationFrame);
+      if (this._resizeObserver) this._resizeObserver.disconnect();
+      if (this._visibility) this._visibility.disconnect();
+    }
+  }
+    
+  if (!customElements.get('infinite-marquee')) {
+    customElements.define('infinite-marquee', InfiniteMarquee);
+  }
+</script>
+
+<style>
+  infinite-marquee {
+    display: block;
+    width: 100%;
+  }
+  /* 
+    The wrapper fits standard layout, avoiding full-width bleed unless on small mobile.
+    It contains the scrolling track.
+  */
+  .ig-carousel-wrapper {
+    position: relative;
+    width: 100%;
+    /* Keep it in bounds on desktop */
+    margin: 2rem 0;
+    overflow: hidden; /* Hide the scrollbar visually for the wrapper */
+  }
+
+  /* 
+    The track handles the horizontal scrolling natively now.
+  */
+  .ig-carousel-track {
+    display: flex;
+    gap: 1.25rem;
+    padding: 1rem 0 2rem;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain; /* Prevents swipe navigation and bouncing */
+    /* Cursor hinting that it can be dragged/swiped */
+    cursor: grab;
+  }
+
+  .ig-carousel-track.is-mobile-native {
+    scroll-snap-type: x mandatory;
+    cursor: auto;
+    scroll-padding-inline: 1.25rem;
+    padding-inline: 1.25rem;
+  }
+
+  .ig-carousel-track:active {
+    cursor: grabbing;
+  }
+  
+  .ig-carousel-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  /*
+    `width: max-content` IS LOAD-BEARING, NOT BELT-AND-BRACES.
+
+    The track is a flex container and each group is a flex item, so without an
+    intrinsic width the groups are sized from the container and WebKit is free
+    to shrink them below the sum of their tiles. It did: the tiles inside were
+    squeezed together and overlapped, and the 1.25rem gaps between them
+    vanished. `max-content` pins each group to exactly the width its tiles and
+    gaps need, and `flex-shrink: 0` then stops the track taking it back.
+    Both are needed — `flex-shrink: 0` alone leaves the BASE size wrong.
+  */
+  .ig-marquee-group {
+    display: flex;
+    gap: 1.25rem;
+    flex-shrink: 0;
+    width: max-content;
+    min-width: max-content;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* No native snap on standard touch since we have JS momentum loop logic */
+    /* .ig-carousel-track { scroll-snap-type: x mandatory; } */
+  }
+
+  /* 
+    Tiles are strictly constrained to avoid internal scrolling.
+    Fixed aspect ratio 4:5 (Standard Instagram Portrait).
+  */
+  /*
+    TWO BOXES, ON PURPOSE.
+
+    The anchor is the hover target and is STATIC — its geometry never changes.
+    `.ig-tile-frame` is the visual: it holds the border, the clipping and the
+    lift.
+
+    Both used to be the same element, and hovering near the bottom edge of a
+    tile flickered violently: :hover lifted the tile 8px, which moved it out
+    from under the cursor, which dropped :hover, which put it back under the
+    cursor — a loop running at frame rate. It also produced the thin bright
+    sliver along the edge, because the scaled image was being clipped by a box
+    that was itself mid-transform, so the clip and the content disagreed by a
+    subpixel each frame.
+
+    Keep the transform OFF the anchor. Anything that moves belongs on the
+    frame.
+  */
+  /*
+    RIGID BOX, NOT A FLEX BASIS PLUS AN ASPECT RATIO.
+
+    `flex: 0 0 220px` with `aspect-ratio: 4 / 5` and nothing else is enough in
+    Chromium and is NOT enough in WebKit. Every child of this anchor is
+    absolutely positioned (`.ig-tile-frame` is `position: absolute; inset: 0`),
+    so the tile has no in-flow content at all, and WebKit treats the
+    aspect-ratio on a zero-content flex item as indefinite. The tiles collapsed
+    and the row's flex `gap` collapsed with them — reported from Safari as
+    overlapping tiles with no spacing.
+
+    Stating width AND height outright removes the resolution step entirely.
+    `aspect-ratio` stays as the declaration of intent; the explicit height is
+    the same number it would compute to (220 * 5/4).
+  */
+  .ig-carousel-tile {
+    flex: 0 0 var(--ig-card, 220px); /* Locked width */
+    width: var(--ig-card, 220px);
+    min-width: var(--ig-card, 220px);
+    max-width: var(--ig-card, 220px);
+    aspect-ratio: 4 / 5; /* Forces the height to wrap perfectly */
+    height: calc(var(--ig-card, 220px) * 1.25); /* width * (5/4) — WebKit will not resolve this from the ratio alone */
+    scroll-snap-align: start;
+    position: relative;
+    text-decoration: none;
+    display: block;
+  }
+
+  .ig-tile-frame {
+    position: absolute;
+    inset: 0;
+    display: block;
+    overflow: hidden;
+    background: var(--color-surface, #111);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition:
+      transform 0.4s cubic-bezier(0.25, 0.8, 0.2, 1),
+      box-shadow 0.4s ease,
+      border-color 0.4s ease;
+  }
+  
+  .ig-carousel-track.is-mobile-native .ig-carousel-tile {
+    scroll-snap-align: center; /* Center snap on mobile */
+  }
+
+  @media (max-width: 560px) {
+    /* Full bleed on small mobile without using 100vw to prevent horizontal scrollbars */
+    .ig-carousel-wrapper {
+      width: calc(100% + 2.5rem); /* layout padding is 1.25rem on each side at this size */
+      margin-left: -1.25rem;
+      margin-right: -1.25rem;
+    }
+    .ig-carousel-tile {
+      flex: 0 0 160px; /* Even smaller on phones */
+      width: 160px;
+      min-width: 160px;
+      max-width: 160px;
+      height: 200px; /* 160px * (5/4) */
+    }
+  }
+
+  /* `.is-active` is the touch/scroll-driven state (set by the observer).
+     `:hover` is gated to devices with a real pointer — on iOS Safari a tap
+     leaves :hover stuck on the tapped element until you tap elsewhere, which
+     is why several tiles stayed highlighted at once while swiping. */
+  .ig-carousel-tile.is-active > .ig-tile-frame {
+    transform: translateY(-8px);
+    border-color: var(--color-accent);
+    box-shadow: 0 12px 30px rgba(204, 0, 0, 0.2);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ig-carousel-tile:hover > .ig-tile-frame {
+      transform: translateY(-8px);
+      border-color: var(--color-accent);
+      box-shadow: 0 12px 30px rgba(204, 0, 0, 0.2);
+    }
+  }
+
+  /* Prevent taps or hovers from sticking while the user is actively swiping */
+  .ig-carousel-track.is-scrolling .ig-carousel-tile {
+    pointer-events: none;
+  }
+
+  .ig-tile-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Locks the image into the bounds perfectly */
+    transition: transform 0.6s ease;
+  }
+
+  .ig-carousel-tile.is-active .ig-tile-img {
+    transform: scale(1.05);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ig-carousel-tile:hover .ig-tile-img {
+      transform: scale(1.05);
+    }
+  }
+
+  /* 
+    Cinematic Overlay matching the site's dark aesthetic 
+  */
+  .ig-tile-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      rgba(9, 9, 11, 0.95) 0%,
+      rgba(9, 9, 11, 0.4) 40%,
+      transparent 100%
+    );
+    opacity: 0.8;
+    transition: background 0.3s ease, opacity 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 1.25rem;
+    pointer-events: none;
+  }
+
+  .ig-carousel-tile.is-active .ig-tile-overlay {
+    background: linear-gradient(
+      to top,
+      rgba(9, 9, 11, 0.98) 0%,
+      rgba(9, 9, 11, 0.7) 50%,
+      transparent 100%
+    );
+    opacity: 1;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ig-carousel-tile:hover .ig-tile-overlay {
+      background: linear-gradient(
+        to top,
+        rgba(9, 9, 11, 0.98) 0%,
+        rgba(9, 9, 11, 0.7) 50%,
+        transparent 100%
+      );
+      opacity: 1;
+    }
+  }
+
+
+
+  .ig-tile-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    transform: translateY(10px);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+
+  .ig-carousel-tile.is-active .ig-tile-content {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ig-carousel-tile:hover .ig-tile-content {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .ig-accent-line {
+    height: 2px;
+    width: 24px;
+    background: rgba(220, 38, 38, 0.8);
+    transition: width 0.5s ease-out;
+  }
+
+  .ig-carousel-tile.is-active .ig-accent-line {
+    width: 40px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ig-carousel-tile:hover .ig-accent-line {
+      width: 40px;
+    }
+  }
+
+  .ig-text {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.85);
+    font-family: var(--font-heading, "Syne", sans-serif);
+    font-size: 0.85rem;
+    font-weight: 400; /* Ensure it is not bold */
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    transition: color 0.4s ease, text-shadow 0.4s ease;
+  }
+  
+  .ig-carousel-tile.is-active .ig-text {
+    color: #fff;
+    text-shadow: 0 0 12px rgba(204, 0, 0, 0.4);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ig-carousel-tile:hover .ig-text {
+      color: #fff;
+      text-shadow: 0 0 12px rgba(204, 0, 0, 0.4);
+    }
+  }
+</style>
+
+<style is:global>
+  /*
+    MOBILE RAIL LABELS — "LATEST ON INSTAGRAM" (left) and "See More on
+    Instagram" (right).
+
+    Deliberately `is:global`: both are built in the script above with
+    `document.createElement` / `innerHTML`, so Astro never stamps them with
+    this component's `data-astro-cid-*` hash. Every scoped rule compiles to
+    `.selector[data-astro-cid-...]` and therefore CANNOT match them. Move any
+    of this into the scoped block and it silently stops applying.
+
+    They are TEXT, not tiles. They carry `.ig-rail-label` rather than
+    `.ig-carousel-tile`, which keeps them out of the IntersectionObserver, the
+    `.is-active` highlight and the tap-to-centre handler — they no longer look
+    tappable, no longer flash, and tapping the left one no longer bounces the
+    rail back to the first tile. Only the right one is a link, because only it
+    has somewhere to go.
+  */
+  .ig-carousel-track .ig-rail-label {
+    /* Same footprint as a tile so the rail rhythm and placement are unchanged.
+       That includes the explicit width/height: these are injected into the
+       same `max-content` group as the tiles, so a label left to resolve its
+       own size from `aspect-ratio` alone collapses in WebKit exactly the way
+       the tiles did, and takes the rail's spacing with it. */
+    flex: 0 0 var(--ig-card, 220px);
+    width: var(--ig-card, 220px);
+    min-width: var(--ig-card, 220px);
+    max-width: var(--ig-card, 220px);
+    aspect-ratio: 4 / 5;
+    height: calc(var(--ig-card, 220px) * 1.25);
+    scroll-snap-align: center;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    /* No panel, no border: these read as captions in the rail, not cards. */
+    background: none;
+    border: 0;
+    text-decoration: none;
+  }
+
+  @media (max-width: 560px) {
+    .ig-carousel-track .ig-rail-label {
+      flex: 0 0 160px;
+      width: 160px;
+      min-width: 160px;
+      max-width: 160px;
+      height: 200px;
+    }
+  }
+
+  /* The left label is not interactive at all — it is a heading that happens
+     to live in the rail, so it must not swallow taps or show a text caret. */
+  .ig-carousel-track .ig-title-card {
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* One type treatment for BOTH labels: centred, and dimmed to the same
+     weight as the "ALL INTEL" / `.view-all-link` treatment. */
+  .ig-carousel-track .ig-title-content,
+  .ig-carousel-track .ig-cta-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    gap: 1.25rem;
+    padding: 0 0.75rem;
+    color: var(--color-white-muted);
+    font-family: var(--font-display, 'Syne', sans-serif);
+    /* ONE declaration block for both labels on purpose: the two ends of the
+       rail must read as the same thing. They previously differed in case
+       ("LATEST ON INSTAGRAM" vs "See More on Instagram") because the casing
+       was baked into the markup of each. It now comes from `text-transform`,
+       so neither label can drift from the other. */
+    text-transform: uppercase;
+    font-size: 1.1rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-align: center;
+    transition: color 0.4s ease;
+  }
+
+  /* "SEE MORE ON INSTAGRAM" is four characters longer than "LATEST ON
+     INSTAGRAM" and overruns the 160px card on small phones. Only the size
+     steps down — family, weight, letter-spacing, colour and case stay
+     identical, which is the part that has to match. */
+  .ig-carousel-track .ig-cta-content {
+    font-size: 0.95rem;
+  }
+
+  /* The <span> is a flex item, so `text-align` on the parent alone does not
+     centre its own line boxes — it has to be set on the span too. */
+  .ig-carousel-track .ig-title-content > span,
+  .ig-carousel-track .ig-cta-content > span {
+    display: block;
+    width: 100%;
+    text-align: center;
+    text-wrap: balance;
+  }
+
+  .ig-carousel-track .ig-title-icon,
+  .ig-carousel-track .ig-cta-icon {
+    flex-shrink: 0;
+    stroke: var(--color-white-muted);
+    transition: stroke 0.4s ease;
+  }
+
+  /* Only the CTA reacts, and only to a real pointer — a tap on iOS leaves
+     :hover stuck, which is exactly the "stays highlighted" problem the media
+     tiles had. */
+  @media (hover: hover) and (pointer: fine) {
+    .ig-carousel-track .ig-cta-card:hover .ig-cta-content {
+      color: var(--color-white);
+    }
+
+    .ig-carousel-track .ig-cta-card:hover .ig-cta-icon {
+      /* `--color-accent-text`, not `--color-accent`: these labels sit on the
+         bare page, where the deep red measures 3.36:1 against the icon's own
+         resting 5.58:1. Hover is not the place to lose contrast. Same change
+         as the founder social marks on /about. */
+      stroke: var(--color-accent-text);
+    }
+  }
+
+  .ig-carousel-track .ig-cta-card:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 4px;
+  }
+</style>

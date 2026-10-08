@@ -1,0 +1,77 @@
+---
+import { getArticleItems } from '../../lib/feed-items';
+import { getVideosUnified } from '../../lib/videos-source';
+import { getEventsLocal } from '../../lib/local-content';
+import { collectHubCoverage, COVERAGE_PAGE_LIMIT } from '../../lib/hub-coverage';
+import EventAnnouncement from '../../components/EventAnnouncement.astro';
+import EventFeatured from '../../components/EventFeatured.astro';
+import SpanningCalendarModal from '../../components/SpanningCalendarModal.astro';
+
+export async function getStaticPaths() {
+  const events = getEventsLocal();
+  return events.map((event: any) => ({
+    params: { slug: event.slug?.current || 'unknown' },
+    props: { event },
+  }));
+}
+
+const { event } = Astro.props;
+
+// 1. Fetch Global Data
+const allVideos = await getVideosUnified();
+const allArticles = getArticleItems();
+
+/*
+  ─── COVERAGE IS MATCHED THE SAME WAY A HUB PAGE MATCHES IT ────────────────
+
+  This used to be its own substring matcher over article titles/excerpts and
+  video titles/descriptions. It matched nothing: measured against the shipped
+  store it returned ZERO articles for all 19 events, because it was searching
+  prose for sync tokens like "sdcc-2026". See src/lib/hub-coverage.ts for the
+  full account, including why events need `coverageTags` and brands do not.
+
+  Shorts and live streams are no longer merged in here. /featured/[slug] has
+  always excluded them and this page included them, and one of the two had to
+  give; the coverage grid is the long-form reading list.
+*/
+const longFormVideos = allVideos.filter((v: any) => !v.isShort && !v.isLive);
+const coverage = collectHubCoverage({ hub: event, videos: longFormVideos, articles: allArticles });
+
+/*
+  Six, then the rest moves to /events/<slug>/coverage — the same display cap
+  plus overflow route that "Past Event Archive" uses on /events. Nothing is
+  hidden, only paged: `coverageTotal` drives the "All coverage" link, which is
+  rendered only when there is actually a seventh item behind it.
+*/
+const unifiedContent = coverage.items.slice(0, COVERAGE_PAGE_LIMIT);
+const coverageTotal = coverage.items.length;
+const coverageHref = `/events/${event.slug?.current}/coverage`;
+
+/*
+  The ARTICLES/VIDEOS row is offered only when BOTH kinds are present in what
+  is actually on screen. A filter that can only show everything or empty the
+  grid is not a filter (the phantom "Upcoming Events" button, again), and the
+  visible six can be all one kind even when the full set is mixed.
+*/
+const visibleArticles = unifiedContent.some((item: any) => item.contentType === 'article');
+const visibleVideos = unifiedContent.some((item: any) => item.contentType === 'video');
+const showCoverageFilters = visibleArticles && visibleVideos;
+
+// Determine the layout mode. The Sanity field `layoutMode` should dictate this.
+// Fallback to 'announcement' if undefined.
+// Also check if there's a url parameter override for archival purposes, though getStaticPaths doesn't get request url in SSG.
+// Since it's SSG, we can't do ?mode=announcement easily on the server. So we'll just check `layoutMode`.
+const isFeatured = event.layoutMode === 'featured';
+
+const allEvents = getEventsLocal();
+
+---
+
+<>
+  {isFeatured ? (
+    <EventFeatured event={event} unifiedContent={unifiedContent} allEvents={allEvents} coverageTotal={coverageTotal} coverageHref={coverageHref} showCoverageFilters={showCoverageFilters} />
+  ) : (
+    <EventAnnouncement event={event} unifiedContent={unifiedContent} allEvents={allEvents} coverageTotal={coverageTotal} coverageHref={coverageHref} showCoverageFilters={showCoverageFilters} />
+  )}
+  <SpanningCalendarModal events={allEvents} />
+</>

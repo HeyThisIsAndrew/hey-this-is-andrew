@@ -1,0 +1,287 @@
+---
+/**
+ * Takeover Billboard (issue #20) — the homepage's "we are LIVE" state.
+ *
+ * Progressive enhancement: this renders into the static HTML `hidden` and only
+ * reveals when /api/live-status.json reports an active stream. Every failure
+ * mode — endpoint not deployed yet, API key not configured, quota exhausted,
+ * network error — leaves the page exactly as it is today. Ship-safe before
+ * credentials exist.
+ *
+ * Playback reuses the site's global video modal (Layout's #video-modal via the
+ * data-action="open-video" delegation); the script injects the live videoId before
+ * revealing. A "Watch on YouTube" link is populated as the escape hatch for
+ * streams that disallow embedding.
+ */
+import { SOCIAL_ICONS } from '../data/icons.js';
+---
+
+<div class="sr-only" aria-live="polite" id="tb-announcer"></div>
+
+<section
+  id="takeover-billboard"
+  class="tb-container"
+  hidden
+  aria-label="Live broadcast announcement"
+>
+  <div class="tb-banner">
+    <div class="tb-overlay"></div>
+    <div class="tb-content">
+      <p class="tb-kicker">
+        <span class="tb-live-dot" aria-hidden="true"></span>
+        Live Right Now
+      </p>
+      <h2 class="tb-title">We're live!</h2>
+      <div class="tb-actions">
+        <button class="cta-button-primary tb-video-trigger">
+          Watch The Stream
+        </button>
+        <a class="tb-external" href="#" target="_blank" rel="noopener noreferrer">
+          <span class="yt-mark" aria-hidden="true" set:html={SOCIAL_ICONS.YouTube} /><span>Watch on YouTube</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .tb-container {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 1536px;
+    padding: 0 2rem;
+    z-index: 50;
+  }
+
+  .tb-banner {
+    position: relative;
+    min-height: 320px;
+    background-color: #111;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid rgba(204, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    /* The takeover glow — this banner only ever exists while live. */
+    box-shadow:
+      0 0 35px rgba(204, 0, 0, 0.45),
+      0 20px 40px rgba(0, 0, 0, 0.4);
+    animation: tb-glow 2.5s ease-in-out infinite alternate;
+  }
+  @keyframes tb-glow {
+    from {
+      box-shadow:
+        0 0 25px rgba(204, 0, 0, 0.35),
+        0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+    to {
+      box-shadow:
+        0 0 50px rgba(204, 0, 0, 0.65),
+        0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  .tb-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0.92) 0%,
+      rgba(0, 0, 0, 0.45) 60%,
+      transparent 100%
+    );
+  }
+
+  .tb-content {
+    position: relative;
+    z-index: 2;
+    padding: 2.5rem 3rem;
+    max-width: 640px;
+  }
+
+  .tb-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    /* Text, so it takes the readable red — see scripts/a11y-tokens.test.mjs. */
+    color: var(--color-accent-text, #ef4444);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin: 0 0 1rem;
+  }
+  .tb-live-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--color-accent, #cc0000);
+    animation: tb-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes tb-pulse {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.45;
+      transform: scale(0.8);
+    }
+  }
+
+  .tb-title {
+    font-family: var(--font-display, 'Syne Variable', sans-serif);
+    font-size: clamp(1.75rem, calc(1rem + 2vw), 2.75rem);
+    font-weight: 800;
+    line-height: 1.15;
+    margin: 0 0 1.75rem;
+    color: white;
+  }
+
+  .tb-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .tb-external {
+    color: var(--color-white-muted, #aaa);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    transition: color 0.2s ease;
+  }
+  .tb-external:hover,
+  .tb-external:focus-visible {
+    color: white;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tb-banner {
+      animation: none;
+    }
+    .tb-live-dot {
+      animation: none;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .tb-banner {
+      min-height: 380px;
+      align-items: flex-end;
+    }
+    .tb-overlay {
+      background: linear-gradient(
+        to top,
+        rgba(0, 0, 0, 0.92) 0%,
+        rgba(0, 0, 0, 0.45) 100%
+      );
+    }
+    .tb-content {
+      padding: 2rem;
+    }
+  }
+</style>
+
+<script>
+  // Reveal the billboard only when the edge endpoint reports a live stream.
+  // Any failure (endpoint 404 before the worker is deployed, key missing,
+  // network error, malformed body) leaves the billboard hidden — the static
+  // page is the fallback state.
+  async function checkTakeover() {
+    const billboard = document.getElementById('takeover-billboard');
+    if (!billboard) return;
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch('/api/live-status.json', { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!res.ok) return;
+      const status = await res.json();
+      const stream =
+        status?.streams?.find?.((s: any) => s.platform === 'youtube') ??
+        status?.streams?.[0];
+      if (!status?.isLive || !stream?.videoId) return;
+
+      const title = billboard.querySelector('.tb-title');
+      if (title && stream.title) title.textContent = stream.title;
+
+      const trigger = billboard.querySelector('.tb-video-trigger');
+      if (trigger) {
+        trigger.setAttribute('data-video-id', stream.videoId);
+        trigger.setAttribute('data-action', 'open-video');
+      }
+
+      const external = billboard.querySelector<HTMLAnchorElement>('.tb-external');
+      if (external && stream.url) external.href = stream.url;
+
+      const announcer = document.getElementById('tb-announcer');
+      if (announcer && stream.title) announcer.textContent = `Live Right Now: ${stream.title}`;
+
+      // Live thumbnail as the banner art (YouTube serves a frame for live IDs).
+      const banner = billboard.querySelector<HTMLElement>('.tb-banner');
+      if (banner) {
+        banner.style.backgroundImage = `url(https://i.ytimg.com/vi/${stream.videoId}/maxresdefault.jpg)`;
+      }
+
+      billboard.hidden = false;
+    } catch (err) {
+      console.warn('[TakeoverBillboard] Live status check failed:', err);
+      // Dormant by design on any failure, but logged for debugging.
+    }
+  }
+
+  /*
+    ─── WHY THIS WAITS FOR IDLE ───────────────────────────────────────────────
+    Fired directly on `astro:page-load`, this request went out while the
+    browser was still working on the first paint, and Lighthouse measured it on
+    the critical path at 2,816ms — the longest chain on the homepage (issue
+    #63). It is an edge route with a CDN cache in front of it, so its latency is
+    not something markup can fix; what it can fix is *when* it is asked for.
+
+    Nothing above the fold depends on the answer. The billboard ships hidden and
+    reveals only when a stream is actually live, so deferring costs a dormant
+    element a moment longer and takes the fetch off the critical path entirely.
+
+    requestIdleCallback with a timeout, not a bare setTimeout: on a busy page it
+    yields until the main thread is free, and the timeout guarantees it still
+    runs on browsers where idle never arrives.
+
+    ─── AND IDLE WAS NOT LATE ENOUGH ────────────────────────────────────────
+    PageSpeed (mobile, 73) still put this request on the critical path at
+    2,502ms, the longest chain on the page, with an LCP of 6.2s. On a first
+    load `astro:page-load` fires as soon as the module scripts have run,
+    well before `load`, and an idle period arrives almost at once. Lighthouse's
+    simulated LCP counts every request that STARTED before the observed LCP,
+    so an edge route that answers in ~2.5s lands inside the LCP estimate even
+    though nothing above the fold waits on it.
+
+    So a first load now waits for `load`, then for a frame to be presented
+    (two rAFs: the first runs before the paint, the second after it), and only
+    then asks for idle. The hero is painted by then. A client-side navigation
+    arrives with `readyState` already 'complete' and goes straight through.
+  */
+  function scheduleTakeoverCheck() {
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => checkTakeover(), { timeout: 4000 });
+    } else {
+      setTimeout(checkTakeover, 1200);
+    }
+  }
+
+  function afterFirstPaint() {
+    requestAnimationFrame(() => requestAnimationFrame(scheduleTakeoverCheck));
+  }
+
+  document.addEventListener('astro:page-load', () => {
+    if (document.readyState === 'complete') afterFirstPaint();
+    else window.addEventListener('load', afterFirstPaint, { once: true });
+  });
+</script>

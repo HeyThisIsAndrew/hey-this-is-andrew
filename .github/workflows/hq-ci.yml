@@ -1,0 +1,334 @@
+# CI: unit tests + production build + Lighthouse gate on every push and PR.
+#
+# Why these jobs cover what matters:
+# - `npm test` runs the offline suites (events date helpers, live-status,
+#   video merge) — 40 assertions, no credentials, no network.
+# - `astro build` compiles every page. Sanity fetches fail in CI (no token,
+#   and none should ever be added here) — pages try/catch to empty data by
+#   design, so a green build still proves templates, imports, Tailwind, and
+#   the worker bundle all compile.
+# - `pnpm --filter beunconventionalhq lighthouse` (scripts/lighthouse-check.mjs) boots the built
+#   worker via `astro preview` and audits Home/Feed/Events/Featured/About
+#   against a 90% floor across Performance, Accessibility, Best Practices,
+#   and SEO. This is the regression gate for the site's "always 90%+"
+#   Lighthouse goal — it fails the build, not just a dashboard somewhere,
+#   so a slow image or an eager client:load can't merge quietly.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    env:
+      # Keeps GTM/Partytown out of the Lighthouse run so the gate measures our
+      # own code rather than a third party's variable response time. This one
+      # DOES work from the job env: PUBLIC_DISABLE_ANALYTICS is not in the
+      # astro:env schema, so it resolves through Vite's import.meta.env, which
+      # reads process.env. Verified: gtm.js?id= appears in 29 pages without it
+      # and 0 with it.
+      #
+      # Note the trade-off — the gate no longer catches an analytics-caused
+      # regression. Measure with this off if that is what you are chasing.
+      #
+      # Do NOT add PUBLIC_TURNSTILE_SITE_KEY here expecting it to take effect.
+      # It is in the astro:env schema, and @astrojs/cloudflare resolves those
+      # from wrangler.jsonc `vars`, which outranks process.env — setting it
+      # here leaves the real production key in all 29 pages. It has to go
+      # through `.env`; see the step below.
+      PUBLIC_DISABLE_ANALYTICS: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Unit tests
+        run: npm test
+
+      # Type check, and it BLOCKS.
+      #
+      # `astro check` was run by hand and quoted in review notes, but never by
+      # CI, so nothing enforced it. #196 shipped a `routeRules` entry with a
+      # `headers` key that does not exist on `RouteRule`; `astro check` caught
+      # it as ts(2353) and the PR was still green, because `astro build` does
+      # not type-check `astro.config.mjs`. The rule silently stripped to `{}`
+      # and disabled the edge cache in front of a 100-unit-per-call YouTube
+      # endpoint.
+      #
+      # The baseline is 0/0/0 (CLAUDE.md: "introduce zero NEW errors"), so
+      # this can be a hard gate rather than a warning.
+      - name: Type check
+        run: npx astro check
+
+      # Keep Turnstile off the pages the gate measures.
+      #
+      # An EMPTY value, not a test key. That distinction is the whole point
+      # and it was got wrong once already, so it is worth stating plainly:
+      # Cloudflare's always-passes test key (1x00000000000000000000AA) does
+      # NOT stop the download. The widget still pulls api.js and then ~234 KB
+      # of challenge-platform script, with the test key sitting right there in
+      # the request URLs. Verified from the gate's own diagnostics on /events:
+      #
+      #   104kB  343ms  challenges.cloudflare.com/.../turnstile/f/av0/rch/...
+      #   104kB  187ms  challenges.cloudflare.com/.../turnstile/f/av0/rch/...
+      #    26kB  119ms  challenges.cloudflare.com/turnstile/v0/g/.../api.js
+      #
+      # On a 1.6 Mbps link that is most of a second of bandwidth taken from
+      # the LCP image, and it is why /events sat at 88% with an LCP score of
+      # 55 while every other metric on the page scored 97-100.
+      #
+      # PUBLIC_TURNSTILE_SITE_KEY is optional in the astro:env schema and
+      # every consumer guards on it, so an empty value makes the widget omit
+      # itself and no third-party request happens at all. Confirmed in the
+      # built output: challenges.cloudflare.com appears once on /events with
+      # the test key and zero times with this.
+      #
+      # It has to be written to `.env` rather than the job env: the var is in
+      # the astro:env schema, and @astrojs/cloudflare resolves those from
+      # wrangler.jsonc `vars` — which carries the real production key — and
+      # that outranks process.env. Leaving it unset does not work either, for
+      # the same reason.
+      #
+      # Trade-off, same one already accepted for analytics above: the gate no
+      # longer sees Turnstile's cost. That cost is real for users, and worth
+      # attacking in the app (loading the widget on first form interaction
+      # rather than on every page view) rather than by measuring it here.
+      - name: Keep Turnstile out of the Lighthouse gate
+        run: echo "PUBLIC_TURNSTILE_SITE_KEY=" >> .env
+
+      - name: Production build
+        run: pnpm --filter beunconventionalhq build
+
+      # The global QA sweep: nine site-wide rules over every built page (one
+      # high-priority image, no unresized originals, srcset covers sizes, no
+      # self-starting or non-fullscreen YouTube frame, one h1, nothing
+      # focusable in hidden content, alt on every image, rel=noopener, no em
+      # dashes in copy). Seconds, no browser. scripts/e2e-global-qa-sweep.test.mjs
+      - name: Global QA sweep (built site)
+        run: pnpm --filter beunconventionalhq test:dist
+
+      - name: Generate SEO Audit SARIF
+        run: |
+          npx astro-seo-audit@0.3.3 --dir dist/client --baseline .astro-seo-audit-baseline.json --fail-on none --format sarif --output seo-audit.sarif || true
+          if [ ! -f seo-audit.sarif ]; then echo '{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"astro-seo-audit"}},"results":[]}]}' > seo-audit.sarif; fi
+
+      - name: Upload SEO SARIF
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: seo-audit.sarif
+          category: seo-audit
+
+      - name: Enforce SEO Baseline
+        run: npx astro-seo-audit@0.3.3 --dir dist/client --baseline .astro-seo-audit-baseline.json --fail-on error --output seo-report.html
+
+      - name: Upload SEO HTML Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-audit-report
+          path: seo-report.html
+          retention-days: 14
+
+
+      - name: Lighthouse gate (90%+)
+        run: pnpm --filter beunconventionalhq lighthouse
+
+      # include-hidden-files is REQUIRED here, not optional tuning.
+      #
+      # The reports land in `.lighthouse-reports/` — dot-prefixed, so
+      # upload-artifact v4 classifies the whole directory as hidden and skips
+      # it, which it defaults to since v4.4. The step still "succeeds": it
+      # logs `No files were found with the provided path` as a warning and
+      # uploads nothing. Every run of this gate since it was added has
+      # therefore discarded exactly the artifact you need when it goes red —
+      # the per-page JSON naming the failing audits and the console errors
+      # behind them. The failure table in the log gives you four numbers and
+      # no reason for any of them.
+      #
+      # Renaming the directory would work too, but it is gitignored under the
+      # dotted name and the name is load-bearing in scripts/lighthouse-check.mjs;
+      # this is the one-line version.
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: .lighthouse-reports/
+          include-hidden-files: true
+          retention-days: 14
+
+  # ── What production actually serves ─────────────────────────────────────────
+  #
+  # REPORTING ONLY. This job never fails the build, and that is deliberate.
+  #
+  # The gate above builds with PUBLIC_DISABLE_ANALYTICS=true, so it has never
+  # measured GTM, gtag or the Cloudflare beacon — and production serves all
+  # three. That is why the gate reports 96-100 while a real desktop run of
+  # production came back at 88:
+  #
+  #   Performance 88 | FCP 0.5s | LCP 0.7s | TBT 280ms | CLS 0.002 | SI 1.1s
+  #
+  # Every metric is excellent except TBT, which is 30% of the desktop score.
+  # The 280ms is third-party analytics on the main thread.
+  #
+  # The decision taken, deliberately: analytics keeps loading immediately.
+  # Deferring it until first interaction would recover most of those points but
+  # would stop counting visitors who leave without interacting, and the owner
+  # is growing an audience and needs that data. So this does not gate — it
+  # MEASURES, so the gap between what CI checks and what a reader gets is
+  # visible in every run instead of being discovered from a PageSpeed
+  # screenshot months later.
+  #
+  # `continue-on-error` on the job, not just the step: the point is a number in
+  # the log and an artifact, never a red X someone has to triage.
+  lighthouse-production-equivalent:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Turnstile is still kept out — it is a per-page widget cost that is
+      # being attacked in the app rather than measured here, and leaving the
+      # real site key in would put it in every built page.
+      - name: Keep Turnstile out
+        run: echo "PUBLIC_TURNSTILE_SITE_KEY=" >> .env
+
+      # NOTE: no PUBLIC_DISABLE_ANALYTICS. That omission is the entire purpose
+      # of this job.
+      - name: Build with analytics enabled
+        run: pnpm --filter beunconventionalhq build
+
+      - name: Lighthouse — desktop, analytics on (reporting only)
+        run: pnpm --filter beunconventionalhq lighthouse -- --desktop || true
+
+      - name: Upload production-equivalent reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports-production-equivalent
+          path: .lighthouse-reports-desktop/
+          include-hidden-files: true
+          retention-days: 14
+
+  # ── Browser end-to-end suites ───────────────────────────────────────────────
+  #
+  # Nineteen Puppeteer suites that had NEVER run in CI. They were invoked by
+  # hand, which means in practice they ran when someone remembered — and
+  # several of them cover things that have already broken in production once:
+  # the landscape hero, the logo/wordmark split, the broken-image fallbacks,
+  # the splash scroll lock.
+  #
+  # A SEPARATE JOB, not extra steps on test-and-build, for two reasons: it
+  # takes ~7 minutes and would otherwise double the wait for the Lighthouse
+  # result, and it needs a browser download that the other job has no use for.
+  # Running in parallel keeps the fast feedback fast.
+  #
+  # scripts/e2e-run.mjs is what makes this viable as a gate at all — each suite
+  # boots its own worker and Chrome, and chained back to back they contend and
+  # time out. It waits for the port handover and retries a suite once, so a
+  # load flake does not turn the gate into noise everyone learns to ignore.
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      PUBLIC_DISABLE_ANALYTICS: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Puppeteer's own Chrome. `pnpm install --frozen-lockfile` fetches it into ~/.npm/_cacache via
+      # the postinstall, but the browser itself lands in ~/.cache/puppeteer,
+      # which the npm cache above does not cover — so it is cached explicitly
+      # rather than re-downloaded on every run.
+      - name: Cache Puppeteer browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Chrome for Puppeteer
+        run: npx puppeteer browsers install chrome
+
+      # ── TURNSTILE: THE TEST KEY, NOT EMPTY AND NOT PRODUCTION'S ─────────────
+      #
+      # Two suites pull in opposite directions here, and getting this wrong
+      # failed CI twice in a row — once each way.
+      #
+      #   EMPTY KEY (copied from the Lighthouse job) → e2e-turnstile-lazy fails
+      #
+      #     ✗ the newsletter widget container exists but nothing is rendered yet
+      #     TimeoutError: Waiting failed: 5000ms exceeded
+      #
+      #   An empty key makes the widget omit ITSELF. That is exactly why the
+      #   Lighthouse job sets it — to keep ~234 KB of challenge-platform script
+      #   out of the pages it measures — but e2e-turnstile-lazy exists to test
+      #   that widget, so the step disabled the thing the suite tests.
+      #
+      #   PRODUCTION KEY (from wrangler.jsonc) → e2e-newsletter-subscribe fails
+      #
+      #     BROWSER: [Cloudflare Turnstile] Error: 600010.
+      #     TimeoutError: Timed out after waiting 8000ms
+      #
+      #   600010 is "sitekey not valid for this domain". The production key is
+      #   registered for beunconventionalhq.com and the suites run against
+      #   localhost:4321, so Turnstile refuses to issue a token and the
+      #   subscribe flow waits forever.
+      #
+      # Cloudflare's documented ALWAYS-PASSES test key is the one thing that
+      # satisfies both: it renders (so the lazy-load suite has a widget to
+      # watch) and it is valid on ANY domain (so the subscribe suite gets a
+      # token). e2e-turnstile-lazy only asserts a sitekey is present, never a
+      # particular value, so nothing here is pinned to production's.
+      #
+      # Note this does NOT hide a real failure: it is not reachable from a dev
+      # sandbox that blocks challenges.cloudflare.com, which is why both suites
+      # pass locally with the production key — the server fails open when no
+      # token arrives. CI can reach Cloudflare, so CI sees the domain check.
+      #
+      # It goes through `.env` rather than the job env for the reason spelled
+      # out in the Lighthouse job: PUBLIC_TURNSTILE_SITE_KEY is in the
+      # astro:env schema, and @astrojs/cloudflare resolves those from
+      # wrangler.jsonc `vars`, which outranks process.env.
+      - name: Use Cloudflare's always-passes Turnstile test key
+        run: |
+          echo "PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA" >> .env
+          echo "TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA" >> .env
+
+      - name: Production build
+        run: pnpm --filter beunconventionalhq build
+
+      - name: End-to-end suites
+        run: pnpm --filter beunconventionalhq test:e2e

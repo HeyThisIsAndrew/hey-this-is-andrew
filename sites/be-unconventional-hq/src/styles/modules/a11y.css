@@ -1,0 +1,373 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ACCESSIBILITY
+   Imported last so these rules win the cascade.
+
+   - Skip link: the first focusable element on the page. Lets keyboard
+     and screen-reader users jump past the nav straight to the main
+     content. Hidden off-screen until it receives focus.
+   - Focus ring: one consistent, high-contrast keyboard focus indicator
+     (white outline + dark halo so it stays visible on both dark and
+     light backgrounds). Uses :focus-visible, so it appears only for
+     keyboard users and never on mouse click — the cinematic look is
+     preserved.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 400;
+  padding: 0.75rem 1.25rem;
+  background: #000;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  border: 2px solid #fff;
+  transform: translateY(-120%);
+  transition: transform 0.15s ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px rgba(0, 0, 0, 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skip-link {
+    transition: none;
+  }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TOUCH TARGET SIZE (WCAG 2.5.8, AA)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/*
+  A handful of text links render shorter than the 24px minimum a finger needs:
+  the footer's Explore/Privacy links at 19px and 18px, `.view-all-link` at
+  19-22px, `.intel-break-link` at 21px, `.notfound-link` at 23px, and
+  `.hero-read-more` at 20px. Their WIDTHS are all fine — only the line box is
+  too short.
+
+  `.article-tag` was on this list and has been removed. It is a <span> that
+  renders "MARVEL | REVIEW" in an article's eyebrow and has never been
+  interactive, so there was no tap to make bigger — only an invisible 29px
+  band over static text, sitting where it could take a tap meant for
+  something else. A tap target belongs to something you can tap.
+
+  Fixed with an invisible `::before` overlay rather than padding, because
+  padding would grow the boxes and push the footer rows apart. An absolutely
+  positioned pseudo-element takes part in hit-testing but takes NO part in
+  layout, so every one of these targets clears 24px with the design pixel-for-
+  pixel unchanged.
+
+  `::before` specifically: `::after` is already the animated red underline on
+  `.view-all-link`, `.intel-break-link` and `.footer-nav ul li a`, and reusing
+  it would silently delete those underlines.
+
+  Only the BLOCK axis is expanded. These links sit in horizontal rows (the
+  footer's Explore list) or on their own line, so growing them vertically
+  cannot overlap a neighbour and steal its taps — growing them horizontally
+  could, and is why this is `inset-block` and not `inset`.
+*/
+.footer-nav ul li a,
+.footer-privacy-link,
+.view-all-link,
+.intel-break-link,
+.notfound-link,
+.hero-read-more {
+  position: relative;
+}
+
+.footer-nav ul li a::before,
+.footer-privacy-link::before,
+.view-all-link::before,
+.intel-break-link::before,
+.notfound-link::before,
+.hero-read-more::before {
+  content: '';
+  position: absolute;
+  /* 19px + 5px + 5px = 29px; the shortest (16px tag) reaches 26px. */
+  inset-block: -5px;
+  inset-inline: 0;
+  /* Hit area only — never paints, never affects layout. */
+  background: none;
+  pointer-events: auto;
+}
+
+/* The media kit's contact lines render at 11px, so they need a deeper
+   expansion than the 5px above to clear 24px (11 + 7 + 7 = 25px). They are
+   separate stacked blocks with generous spacing, so there is nothing directly
+   above or below to collide with. */
+.footer-item a {
+  position: relative;
+}
+
+.footer-item a::before {
+  content: '';
+  position: absolute;
+  inset-block: -7px;
+  inset-inline: 0;
+  background: none;
+  pointer-events: auto;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CORNER CONTROLS — THE TOP-RIGHT PROBLEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/*
+  Reported on iPhone in LANDSCAPE, and reported for "any area where the X
+  button is present": the hamburger, the X it turns into, the category
+  overlay's close and the video modal's close are all hard to press.
+
+  They are the same control in three costumes, and they share the two
+  properties that make a target fragile on this exact device:
+
+    .nav-toggle ............ 44×44, top 5px,               right ~45px
+    .close-fullscreen-btn .. 44×44, top max(1rem, inset),  right max(1rem, inset)
+    .modal-close ........... 44×44, top max(inset, 10px),  right max(inset, 25px)
+
+  1. Every one is EXACTLY 44×44 — Apple's minimum, with no margin for error.
+  2. Every one sits in the TOP-RIGHT CORNER, and in landscape that corner is
+     the worst real estate on the screen: it is cut by the display's rounded
+     corner, and on a notched iPhone it is where a downward swipe opens
+     Control Centre, so iOS is watching that strip for a system gesture at the
+     same time the page wants a tap. The result is not a dead button — it is
+     an unreliable one, which is exactly how it was reported.
+
+  Chromium cannot show any of this. Hit-tested across a grid at every landscape
+  phone size, with and without simulated 59px insets, all three measure 100%
+  reachable — so the invariant tests pass while the reader cannot press the
+  button. What CAN be fixed from here is the margin for error.
+
+  So: grow the hit area DOWN and to the LEFT — away from both screen edges —
+  using the invisible `::before` overlay established above. The glyph does not
+  move by a single pixel and no layout changes; the finger simply gets
+  ~60×58 of target instead of 44×44, most of it outside the corner strip.
+
+  Asymmetric on purpose. Expanding up or right would push the target further
+  INTO the edge iOS is already contending for, which is the opposite of the
+  fix. scripts/e2e-corner-controls.test.mjs asserts the effective area and the
+  direction of the expansion at landscape sizes.
+*/
+/*
+  ONLY THE NAVBAR'S OWN TOGGLE GETS `position: relative`, AND IT MUST BE
+  SCOPED TO `#navbar`. This shipped broken once; here is the trap.
+
+  `.close-fullscreen-btn` is `position: absolute` and `.modal-close` is
+  `absolute` in portrait and `fixed` in landscape — each already establishes
+  the containing block its ::before needs, and a11y.css is imported LAST, so
+  any bare rule here that reaches them resets that positioning and drops them
+  out of their corners.
+
+  Naming only `.nav-toggle` is NOT enough to avoid that, which is the part
+  that was missed: the category overlay's close button is
+  `class="close-fullscreen-btn nav-toggle menu-open"` — it deliberately reuses
+  the toggle's class so the two controls look and animate identically
+  (CategoryOverlay.astro). An unscoped `.nav-toggle` rule therefore hits it
+  too. Reported from a device as the categories X appearing in the middle of
+  the overlay instead of the corner, on /feed and /intel, in both
+  orientations; measured as `position: relative` with the filters.css `top`
+  and `right` still applied and doing nothing.
+
+  `#navbar .nav-toggle` is the honest selector: the toggle that lives in the
+  navbar, which is the only one that is a static flex item needing a
+  containing block. scripts/e2e-corner-controls.test.mjs now checks the
+  overlay's close button on a route where it actually exists — the earlier
+  version skipped it, because it looked for it on `/` where it is absent.
+*/
+#navbar .nav-toggle {
+  position: relative;
+}
+
+/*
+  ─── AND STOP iOS TREATING THE TAP AS A POSSIBLE GESTURE ───────────────────
+
+  The page is deliberately zoomable — the viewport is
+  `width=device-width, initial-scale=1, viewport-fit=cover` with no
+  `maximum-scale` and no `user-scalable=no`, which is correct and must stay
+  that way; pinch-zoom is an accessibility requirement.
+
+  The cost is that iOS keeps double-tap-to-zoom armed over every element, so a
+  tap is not committed until the engine is satisfied a second one is not
+  coming. On a control jammed into the corner — where a downward swipe is also
+  a Control Centre gesture — that ambiguity is what turns a press into a
+  coin-flip. `touch-action` was set NOWHERE on this site, so every one of
+  these buttons has been paying it.
+
+  `manipulation` opts these three controls out of double-tap-zoom and nothing
+  else: panning and pinch-zoom still work, on the page and on the buttons.
+
+  NOT `touch-action: none`: that kills touch scrolling outright, and once
+  turned a scroll glitch into a trap. `manipulation` is a different value
+  with none of that behaviour.
+*/
+.nav-toggle,
+.close-fullscreen-btn,
+.modal-close {
+  touch-action: manipulation;
+}
+
+/*
+  The base rule above expands every one of these controls 16px to the LEFT at
+  all sizes. For the navbar toggle that now means 16px across the search
+  button, which in portrait killed the right third of it. Same collision as
+  the landscape one below, smaller. Capped at the gap in both orientations.
+*/
+#navbar .nav-toggle::before {
+  /*
+    The gap MINUS a 4px buffer, not the whole gap. Expanding by exactly the
+    gap puts the band's left edge on the search button's right edge, and
+    fractional layout positions then decide who owns that boundary column: a
+    hit-test grid measured 9% of the search button going to the toggle at
+    852x393 purely on sub-pixel rounding. The buffer is the no-man's land
+    that makes the answer independent of rounding.
+  */
+  left: calc(-1 * var(--nav-control-gap) + 4px);
+}
+
+.nav-search-btn::before,
+.nav-toggle::before,
+.close-fullscreen-btn::before,
+.modal-close::before {
+  content: '';
+  position: absolute;
+  /* Down and inward only — never toward the screen edges. */
+  top: 0;
+  bottom: -14px;
+  right: 0;
+  left: -16px;
+  /* Hit area only — never paints, never affects layout. Left in normal paint
+     order deliberately: a click on the pseudo-element targets the button that
+     originates it, so the button still receives the event. */
+  background: none;
+  pointer-events: auto;
+}
+
+/*
+  ─── LANDSCAPE: THE TOUCH REGION SITS BELOW THE GLYPH ──────────────────────
+
+  Device report, iPhone 17 Pro Max, iOS Safari, landscape, with more than one
+  tab open, WITH the 14px expansion above already shipped:
+
+    "the user has to tap just beneath each icon for it to actually press …
+     if I actually tap the icon, it doesn't work. I keep having to tap just
+     under it … you did improve it a little bit"
+
+  That is the measurement this needed. The button is PAINTED where you see it
+  and HIT-TESTED lower down — Safari's landscape tab bar collapses and expands
+  as the page scrolls, resizing the web view, and the fixed element's touch
+  region is left behind by roughly the amount the view moved. "Improved a
+  little" is the 14px expansion covering the top of that offset and running
+  out; the rest of the offset is still below where the finger can reach the
+  button.
+
+  So in landscape the reachable band is pushed down far enough to contain both
+  the painted glyph AND the displaced region beneath it:
+
+    · the control's own box grows to 56px tall. The three 24px lines stay
+      centred, so the icon looks identical — only the box around it grows.
+    · the invisible expansion below it stays at 14px.
+
+  Reachable band, from the top of the icon: 56 + 14 = 70px, against 58px
+  before and 44px originally — and, critically, the glyph now sits in the
+  UPPER part of a tall box, so a tap aimed at the icon and displaced downward
+  still lands inside the control instead of falling out the bottom of it.
+
+  THE BAND MUST NOT LEAVE THE NAVBAR — this is the constraint that sizes it.
+  A first attempt used a 34px expansion, reaching 27px past the bottom of the
+  bar. scripts/e2e-corner-controls.test.mjs measured that band swallowing
+  `a.cat` — a category tile — on the homepage: an invisible target stealing a
+  real control's taps, with nothing on screen to explain it. Strictly worse
+  than the bug being fixed. The bar's own bottom padding was opened up instead
+  so the whole band lives inside the opaque bar, where the only thing beneath
+  it is the bar itself. That test walks the region on five routes and fails if
+  anything actionable is ever caught inside it.
+*/
+@media (orientation: landscape) and (max-height: 500px) {
+  /*
+    SIX PIXELS, AND THAT IS THE WHOLE BUDGET.
+
+    The landscape bar is ~55px tall with the toggle at top 5 and 44px high, so
+    there are exactly 6px of bar beneath it. The band must stop there: at 14px
+    it reached 8px past the bar and the steal-check measured it swallowing
+    `a.cat`, a category tile, on the homepage.
+
+    Growing the bar to buy more room is what broke the hero — see the note in
+    landscape.css. The vertical budget here is genuinely capped by the design,
+    so the extra area is taken to the LEFT instead, across the empty middle of
+    the bar where nothing else is interactive.
+  */
+  #navbar .nav-toggle::before {
+    bottom: -6px;
+    /*
+      THE SPACE TO THE LEFT IS NO LONGER EMPTY.
+
+      This was `-48px`, and the note above says why: "the extra area is taken
+      to the LEFT instead, across the empty middle of the bar where nothing
+      else is interactive." That was true when it was written. It stopped being
+      true when the search button was added directly to the left of this
+      toggle.
+
+      A 48px band starting 4px from a 44px button covers that button
+      completely, and `.nav-toggle` carries a higher z-index, so it won every
+      tap. Reported from a device: the magnifying glass could not be pressed in
+      landscape at all. Measured: `elementFromPoint` at the dead centre of the
+      search button returned BUTTON.nav-toggle.
+
+      So the toggle now expands left only as far as the gap between the two
+      controls, never across its neighbour, and the search button takes the
+      empty bar beyond it with a region of its own below. Both controls end up
+      with a forgiving target instead of one swallowing the other.
+    */
+    left: calc(-1 * var(--nav-control-gap) + 4px);
+  }
+
+  /*
+    The search button gets the leftward budget the toggle gave up. The bar to
+    ITS left really is empty, which is the condition the original note set.
+    Same 6px downward cap for the same reason: page content sits directly
+    beneath the closed bar.
+  */
+  #navbar .nav-search-btn::before {
+    bottom: -6px;
+    left: -48px;
+  }
+
+  /*
+    WHEN THE MENU IS OPEN THE BUDGET DISAPPEARS — take it.
+
+    The 6px above exists only because page content sits directly beneath the
+    closed bar, and a deeper band was measured stealing taps from a category
+    tile. Once the menu is OPEN, `.nav-container` covers the entire viewport,
+    so there is nothing underneath to steal from and the X can have the same
+    generous area the category overlay's close button gets. Antigravity's
+    audit spotted this asymmetry; it is a real one.
+
+    scripts/e2e-corner-controls.test.mjs measures the open state separately,
+    so the steal-check still governs the closed one.
+  */
+  #navbar.menu-open .nav-toggle::before {
+    bottom: -48px;
+    /*
+      Still capped at the gap horizontally, and by the same amount, for the
+      same reason as above: the search button is beside it in both states.
+      Only the VERTICAL budget changes when the menu opens, because that is
+      the axis with nothing underneath it.
+    */
+    left: calc(-1 * var(--nav-control-gap) + 4px);
+  }
+
+  /* The overlay close buttons sit over their own full-screen overlays, where
+     nothing is beneath them, so they keep the deeper band. */
+  .close-fullscreen-btn::before,
+  .modal-close::before {
+    bottom: -14px;
+  }
+}

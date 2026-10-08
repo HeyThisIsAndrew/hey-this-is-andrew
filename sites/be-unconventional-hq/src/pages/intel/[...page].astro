@@ -1,0 +1,69 @@
+---
+/**
+ * /intel  — the article section index (and /intel/2, /intel/3 …).
+ *
+ * This file's only job is to decide WHICH articles appear. The page's actual
+ * shape lives in src/layouts/IntelLayout.astro, so /intel and the category
+ * pages can't drift apart.
+ *
+ * ─── THE FILENAME ─────────────────────────────────────────────────────────
+ * `[...page].astro` is Astro's "rest" route. Combined with paginate() below
+ * it produces /intel, /intel/2, /intel/3 … from one file.
+ *
+ * ─── RENAMING THE SECTION ─────────────────────────────────────────────────
+ * "Intel" appears nowhere in this file as text. To rename it, change
+ * ARTICLE_SECTION in src/data/sections.js and rename this `intel/` folder.
+ */
+import IntelLayout from '../../layouts/IntelLayout.astro';
+import { site } from '../../data/site.js';
+import { ARTICLE_SECTION, MAGAZINE_SIZE } from '../../data/sections.js';
+import { MESSAGES } from '../../data/content.js';
+import { getArticleFeedItems } from '../../lib/articles';
+import { getVideoItems } from '../../lib/feed-items';
+import type { GetStaticPathsOptions } from 'astro';
+
+/**
+ * getStaticPaths tells Astro every URL this file should build.
+ *
+ * ⚠️ IMPORTANT GOTCHA: this function runs in its own isolated scope. It can
+ * use `import`s from the top of the file, but it CANNOT see constants or
+ * helper functions declared in the frontmatter below it. That is why
+ * MAGAZINE_SIZE is imported from src/data/sections.js instead of being a
+ * `const` in this file — it caught us twice while building this section.
+ */
+export async function getStaticPaths({ paginate }: GetStaticPathsOptions) {
+  const allArticles = getArticleFeedItems();
+
+  // The magazine spread takes the newest MAGAZINE_SIZE articles, so the
+  // paginated archive starts after them — otherwise page 1 would show the
+  // same articles twice, once in the spread and again in the grid.
+  const archiveArticles = allArticles.slice(MAGAZINE_SIZE);
+
+  // pageSize 12 matches the Feed, so paging feels the same across the site.
+  return paginate(archiveArticles, { pageSize: 12 });
+}
+
+const { page } = Astro.props;
+
+// The magazine and video strip are an opening statement — page 1 only.
+const isFirstPage = page.currentPage === 1;
+
+const magazineArticles = isFirstPage ? getArticleFeedItems().slice(0, MAGAZINE_SIZE) : [];
+const videos = isFirstPage ? (await getVideoItems()).slice(0, 4) : [];
+
+const pageSuffix = page.currentPage > 1 ? ` - Page ${page.currentPage}` : '';
+---
+
+<IntelLayout
+  title={`${ARTICLE_SECTION.name}${pageSuffix} | ${site.name}`}
+  description={ARTICLE_SECTION.description}
+  headingLabel={`All ${ARTICLE_SECTION.name} articles`}
+  page={page}
+  activeCategory={null}
+  magazineArticles={magazineArticles}
+  videos={videos}
+  archiveHeading={isFirstPage
+    ? `More From ${ARTICLE_SECTION.titlePrimary} ${ARTICLE_SECTION.titleSecondary}`
+    : `${ARTICLE_SECTION.titlePrimary} ${ARTICLE_SECTION.titleSecondary} — Page ${page.currentPage}`}
+  emptyMessage={MESSAGES.noArticles}
+/>

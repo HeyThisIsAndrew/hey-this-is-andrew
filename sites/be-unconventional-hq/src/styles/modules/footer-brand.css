@@ -1,0 +1,100 @@
+/* Footer brand column
+
+   The three-line text lockup (tagline / wordmark / strapline) that used to sit
+   beside the logo was removed — it repeated the hero tagline and the brand
+   name already carried by the copyright line. Its styles went with it.
+
+   Original lockup note
+
+   The brand column is now just the logo. It is vertically centred against the
+   Explore and Follow columns so the three read as equal weight — previously
+   the text lockup sat top-aligned while the other two columns started lower,
+   which is what made the row look unevenly distributed. */
+.mobile-footer-brand-wrapper {
+  display: flex;
+  flex-direction: column;
+  /* Centred on BOTH axes inside its grid cell.
+
+     `align-items: center` is the horizontal centring — it was `flex-start`,
+     which is why the logo sat jammed against the left edge of the footer
+     while the Explore and Follow columns were centred in theirs.
+     `justify-content: center` + `height: 100%` handle the vertical. */
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* The brand cell itself must fill its grid track, or `height: 100%` above has
+   nothing to measure against and the vertical centring silently does nothing. */
+.footer-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+@media (max-width: 820px) {
+  .footer-brand {
+    display: flex !important;
+    justify-content: center !important; /* Center the unit on the page */
+    width: 100%;
+    margin-bottom: 3rem;
+  }
+
+  .mobile-footer-brand-wrapper {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important; /* Center everything horizontally */
+    justify-content: center !important;
+    text-align: center !important;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .footer-logo {
+    display: block;
+    position: static;
+    margin: 0 auto;
+  }
+}
+
+/* ── Logo size per breakpoint ───────────────────────────────────────────────
+
+   All three rules set the SAME custom property. The actual width/height live
+   once, in footer.css — see the note there. Order matters: the landscape rule
+   is last so it wins over the width-based one on a phone held sideways.
+*/
+
+/*
+   Phones and tablets, portrait.
+
+   This was 96px, which is where the "logo is way too small on mobile" report
+   came from: the 300px desktop rule stopped applying at 820px and a fixed
+   96px took over, so the brand column shrank to a thumbnail while Explore and
+   Follow kept their full height. 200px reads as the same weight as the other
+   two stacked columns without crowding them.
+*/
+@media (max-width: 820px) {
+  .site-footer {
+    --footer-logo-size: 220px;
+  }
+}
+
+/*
+   Phones held sideways.
+
+   A landscape phone is ~844px wide, so it misses the rule above and picks up
+   the full 300px desktop size — in a viewport only ~390px TALL, which is what
+   made it look oversized. Keyed on height rather than width, because that is
+   the dimension actually under pressure here.
+
+   Deliberately still larger than nothing and smaller than portrait: the brand
+   column keeps its presence, and because `.footer-logo` is capped at
+   `max-width: 100%`, this can never widen the track and disturb the Explore
+   or Follow columns beside it.
+*/
+@media (orientation: landscape) and (max-height: 500px) {
+  .site-footer {
+    --footer-logo-size: 170px;
+  }
+}

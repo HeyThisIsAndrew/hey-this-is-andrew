@@ -1,0 +1,72 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   HERO CTA, NAVBAR REVEAL TIMING, CINEMATIC EASE
+
+   What is left of splash.css after the homepage splash intro was removed
+   (V4: the homepage renders HeroAccordion, and Hero.astro is deleted). Only
+   the rules that still match something on the built site were kept; every
+   rule that needed `html.splash-armed` / `.splash-lifting` (classes nothing
+   sets any more) went with the intro, as did the unused `.cat-stagger`.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+:root {
+  /* An ease-in-out quart. Shared by the navbar reveal below and the feed's
+     row entrance (`section-rows-in`, global-base.css). */
+  --ease-cinematic: cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+/* The navbar's show/hide transition, on every page. */
+#navbar {
+  transition:
+    opacity 400ms ease 350ms,
+    transform 500ms var(--ease-cinematic) 300ms,
+    visibility 0s;
+}
+
+/* ── The CTA ───────────────────────────────────────────────────────────────
+   Every interactive surface on this site is a sharp-cornered rectangle, so
+   the CTA is too, with a text label and a chevron. */
+.hero-cta {
+  position: relative;
+  /* Keeps the inner glow inside the button. */
+  overflow: hidden;
+  /* Own stacking context so the glow layer cannot interact with anything
+     painted outside the button. */
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+/*
+   THE GLOW, contained by construction: an INSET shadow on a pseudo-element
+   that exactly covers the button, inside `overflow: hidden`. An outer
+   box-shadow is drawn outside the border box and would bleed into whatever
+   sits behind the button.
+
+   It used to pulse only while the splash intro was showing, and sat at a
+   steady 0.28 everywhere else; with the intro gone the steady state is the
+   only one.
+*/
+.hero-cta::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 22px 2px rgba(239, 68, 68, 0.6),
+    inset 0 0 6px 0 rgba(239, 68, 68, 0.45);
+  opacity: 0.28;
+}
+
+
+.hero-cta:active {
+  transform: scale(calc(var(--hero-cta-scale, 1) - 0.02));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #navbar {
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+  }
+}

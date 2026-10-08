@@ -6,7 +6,8 @@
  * expanding in-place to show the full archive from the former /latest/ page.
  */
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
-import ExpandSection from '@andrew/ui/ExpandSection.astro';
+import Accordion from '@andrew/ui/Accordion.astro';
+import AccordionRow from '@andrew/ui/AccordionRow.astro';
 import FilterTabs from '@andrew/ui/FilterTabs.astro';
 import LatestFeed from './LatestFeed.astro';
 import { getNetworkFeed } from '../lib/network';
@@ -39,13 +40,21 @@ const restItems = allItems.slice(3);
     <div id="latest-home-list">
       <LatestFeed items={previewItems} id="latest-preview" />
       
-      <ExpandSection id="latest-expander" expandLabel={`Show all (${restItems.length})`} collapseLabel="Show less">
-        <LatestFeed items={restItems} id="latest-rest" />
-        <p class="latest-links">
-          <a href={SUBSTACK_URL} target="_blank" rel="noopener">Read everything on Substack</a>
-          <a href={`${base}/rss.xml`}>RSS feed for the writing</a>
-        </p>
-      </ExpandSection>
+      
+      <div class="latest-accordion-wrapper" style="margin-top: 2rem;">
+        <Accordion>
+          <AccordionRow id="latest-archive" kicker="Archive" title={`All Latest (${restItems.length})`}>
+            <div style="padding-top: 1.5rem;">
+              <LatestFeed items={restItems} id="latest-rest" />
+              <p class="latest-links">
+                <a href={SUBSTACK_URL} target="_blank" rel="noopener">Read everything on Substack</a>
+                <a href={`${base}/rss.xml`}>RSS feed for the writing</a>
+              </p>
+            </div>
+          </AccordionRow>
+        </Accordion>
+      </div>
+
     </div>
   </div>
 </section>

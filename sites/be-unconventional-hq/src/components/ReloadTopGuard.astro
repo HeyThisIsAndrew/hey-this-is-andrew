@@ -1,0 +1,82 @@
+---
+/**
+ * ReloadTopGuard: a refresh of the homepage lands at the TOP.
+ *
+ * Mounted from src/pages/index.astro, EARLY: it is an inline script so it runs
+ * during parse, before the browser's own scroll restore can paint.
+ *
+ * scripts/reload-top-guard.test.mjs pins its instant jump and its guard;
+ * scripts/e2e-reload-scroll.test.mjs measures both on phone and tablet.
+ */
+---
+
+<script is:inline>
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+
+    /*
+      JUMP, never animate. `html { scroll-behavior: smooth }` is global, so a
+      bare `scrollTo(0, 0)` would glide up from the restored offset. This is
+      the inline copy of `jumpTo()` in src/lib/scroll-to.ts (the forced recalc
+      is what makes the `auto` override apply); it is duplicated because an
+      `is:inline` script cannot import, and it must run during parse.
+    */
+    function jumpToTop() {
+      const root = document.documentElement;
+      const previousBehavior = root.style.scrollBehavior;
+      root.style.scrollBehavior = 'auto';
+      void root.offsetHeight; // forces the recalc; without it scrollTo still sees `smooth`
+      window.scrollTo(0, 0);
+      root.style.scrollBehavior = previousBehavior;
+    }
+
+    const navEntries = performance.getEntriesByType ? performance.getEntriesByType('navigation') : [];
+
+    /** @type {any} */
+    const p = window.performance;
+    const legacyNav = p ? p.navigation : null;
+    const isReload = (navEntries.length > 0 && navEntries[0].type === 'reload') ||
+                     (legacyNav && legacyNav.type === 1);
+
+    if (isReload) {
+      jumpToTop();
+      requestAnimationFrame(jumpToTop);
+      // Safari can restore after the first paint.
+      window.addEventListener('pageshow', jumpToTop, { once: true });
+
+      /*
+        HOLD THE TOP UNTIL THE READER ASKS TO LEAVE IT. iOS Safari restores
+        the old offset despite `manual`, once, at a moment that moves with
+        load timing, so one-shot resets can be beaten. While this guard is up
+        any non-zero offset is corrected in the frame it appears. The first
+        real input (touch, pointer, wheel, key) releases it, so a reader who
+        scrolls straight away is never fought, and it is gone after GUARD_MS
+        regardless.
+
+        No hard scroll lock (`position: fixed` + `overflow: hidden`) on top of
+        this: one was tried, and it ate the first swipe after a refresh on a
+        Mac trackpad and on iPhone Safari, because a swipe is latched to a
+        scroller when it begins.
+      */
+      const GUARD_MS = 3000;
+      const GESTURES = ['touchstart', 'pointerdown', 'wheel', 'keydown'];
+
+      const onStrayScroll = () => {
+        if (window.scrollY === 0) return;
+        jumpToTop();
+      };
+
+      const releaseTopGuard = () => {
+        clearTimeout(guardTimer);
+        window.removeEventListener('scroll', onStrayScroll);
+        GESTURES.forEach((type) => window.removeEventListener(type, releaseTopGuard));
+      };
+
+      const guardTimer = setTimeout(releaseTopGuard, GUARD_MS);
+      window.addEventListener('scroll', onStrayScroll, { passive: true });
+      GESTURES.forEach((type) =>
+        window.addEventListener(type, releaseTopGuard, { passive: true, once: true })
+      );
+    }
+</script>

@@ -1,0 +1,175 @@
+---
+// ARCHITECTURAL LEDGER: STATIC CHILD COMPONENT
+// This component is designed to be a "dumb," static block element. It MUST NOT
+// contain any internal `sticky`, `absolute`, or `fixed` positioning classes.
+// All complex layout physics (like making the sidebar scroll with the page)
+// are deferred to and handled by its parent wrapper in the page layout
+// (e.g., `src/pages/events.astro`). This strict separation of concerns
+// ensures this component is reusable and prevents conflicting or unpredictable
+// scroll behaviors.
+import { formatEventDateRange } from "../lib/events";
+
+export interface Props {
+  events: any[];
+}
+const { events } = Astro.props;
+
+// Get top 3 upcoming events for the sidebar
+const topEvents = events.slice(0, 3);
+---
+
+<div class="mini-calendar-wrapper animate-on-scroll">
+  
+
+  <div class="calendar-events-list">
+    {topEvents.length > 0 ? topEvents.map(event => {
+      if (!event.startDate) return null;
+      // year:false -> "Jul 22–26"; also renders cross-month ranges correctly
+      // ("Jul 30 – Aug 2") instead of the old "Jul 30–2".
+      const dateLabel = formatEventDateRange(event.startDate, event.endDate, { year: false });
+
+      return (
+        <a href={`/events/${event.slug.current}`} class="mini-event-row">
+          <span class="mini-event-name">{event.title}</span>
+          <span class="mini-event-dates"><span class="mini-dot" aria-hidden="true">&bull;</span> {dateLabel}</span>
+        </a>
+      );
+    }) : (
+      <p class="mini-empty">No upcoming events this month.</p>
+    )}
+  </div>
+
+  <button class="open-full-calendar-btn" id="open-calendar-btn">
+    Calendar
+  </button>
+</div>
+
+<style>
+  .mini-calendar-wrapper {
+    background: rgba(15, 15, 15, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1.5rem;
+    /*
+      ─── DEPTH, SO IT SITS ON THE PAGE RATHER THAN IN IT ────────────────────
+
+      A translucent panel on a near-black page reads as a slightly lighter
+      rectangle and nothing more: the 1px border was the only thing separating
+      it from the background, and beside the events list — which has its own
+      hover lift and glow — it looked like part of the backdrop.
+
+      Two shadows doing two jobs, which is why it is not one. The wide, soft,
+      negative-spread one is the cast shadow that lifts the card off the page,
+      the same idiom as `.hero` in modules/hero.css. The tight second one sits
+      right under the edge and is what actually reads as a lip, because a cast
+      shadow that broad has no detectable start.
+    */
+    box-shadow: var(--shadow-tile);
+  }
+
+  .mini-cal-topbar {
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 2rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .mini-cal-header-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #888;
+  }
+
+  .calendar-events-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+    margin-bottom: 2rem;
+  }
+
+  /* One line per event: "San Diego Comic Con 2026 • Jul 23–27". The name is the
+     emphasis (white → red with a draw-on underline); the dates trail after a
+     dot in muted grey. A background-size underline animates even if the name
+     wraps to a second line, unlike a scaleX pseudo-element. */
+  .mini-event-row {
+    display: block;
+    text-decoration: none;
+    line-height: 1.4;
+  }
+
+  .mini-event-name {
+    font-family: var(--font-display, 'Syne Variable', sans-serif);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-white, #f0f0f0);
+    background-image: linear-gradient(
+      var(--color-accent, #cc0000),
+      var(--color-accent, #cc0000)
+    );
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0% 2px;
+    padding-bottom: 2px;
+    transition: color 0.3s ease, background-size 0.3s ease;
+  }
+  .mini-event-dates {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  .mini-dot {
+    color: #666;
+    margin: 0 0.3rem;
+  }
+  /*
+    THE READABLE RED, NOT THE DECORATIVE ONE.
+
+    This was `--color-accent` (#cc0000), which is 3.21:1 on the dark surface
+    and fails WCAG AA's 4.5:1 for text. CLAUDE.md states the rule outright:
+    #cc0000 is a border and glow colour only, never text or an icon.
+    `--color-accent-text` (#ef4444) is the same red at 5.02:1.
+
+    Automated tools cannot catch this: Lighthouse and axe measure colour AT
+    REST, not on hover or focus, which is why this survived a 100/100
+    accessibility score. `:focus-visible` matters most here — it is the state
+    a keyboard user sees on every single row they move through.
+  */
+  .mini-event-row:hover .mini-event-name,
+  .mini-event-row:focus-visible .mini-event-name {
+    color: var(--color-accent-text, #ef4444);
+    background-size: 100% 2px;
+  }
+
+  .mini-empty {
+    color: #888;
+    font-size: 0.9rem;
+  }
+
+  .open-full-calendar-btn {
+    width: 100%;
+    padding: 1rem;
+    background: transparent;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .open-full-calendar-btn:hover,
+  .open-full-calendar-btn:focus-visible {
+    background: rgba(204, 0, 0, 0.1);
+    border-color: var(--color-accent, #cc0000);
+    color: white;
+    box-shadow: 0 0 20px rgba(204, 0, 0, 0.5);
+  }
+</style>

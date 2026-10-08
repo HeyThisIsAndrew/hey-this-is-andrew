@@ -1,0 +1,70 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   GLOBAL UTILITIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.btn-underline {
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+/* Base trigger classes to expand the underline */
+.group:hover .btn-underline,
+a.btn-underline:hover::after,
+button.btn-underline:hover::after,
+.content-card:hover .btn-underline,
+.video-card-home:hover .btn-underline {
+  transform: scaleX(1);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   NOTHING STAYS INVISIBLE BECAUSE A SCRIPT DID NOT ARRIVE
+
+   `.animate-on-scroll` and `.reveal` ship content at `opacity: 0` and rely on
+   JavaScript (the shared IntersectionObserver in Layout.astro) to reveal it.
+   A nice entrance, and a single point of failure in front of real content.
+
+   REPORTED, WITH A PHOTOGRAPH: the homepage on an iPhone with the heading
+   "EXPLORE THE HQ / WHAT WE COVER" rendered and the entire section beneath
+   it black. Then: "I couldn't even tap the nav bar." It came right on its
+   own after a while, and again after the phone was charged, which is the
+   tell — the markup and the CSS were fine and the module script simply had
+   not executed yet. Low Power Mode throttles the CPU, and the build was
+   minutes old, so nothing was warm in either the CDN or the device cache.
+
+   MEASURED with JavaScript disabled, before this rule, on the built site:
+   every route had content stuck invisible (/feed .reveal x12, /about
+   .animate-on-scroll x9, ...). Phones came off lighter only because hero.css
+   carries a blunt `opacity: 1 !important` override for both classes inside
+   its phone media query.
+
+   TWO GATES, because there are two different failures:
+
+   `html:not(.js)` — the script never ran at all. Layout.astro adds `.js`
+   from an `is:inline` head script, so it is set before the body is parsed
+   and cannot itself fail to download. Same pattern as `.nav-identity-wrapper`
+   in nav-identity.css.
+
+   `.reveal-failsafe` — the script is coming but has not arrived. This is the reported case, and the `.js` gate does nothing
+   for it: `.js` was set, the module was not. A watchdog in that same inline
+   script gives each system a few seconds to sign in and un-gates whichever
+   has not. The cost when it fires early on a genuinely slow connection is
+   that the entrance animation does not play. That is the correct trade
+   against a black screen.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+html:not(.js) .animate-on-scroll,
+html:not(.js) .reveal,
+html.reveal-failsafe .animate-on-scroll,
+html.reveal-failsafe .reveal {
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+  animation: none !important;
+  transition: none !important;
+}

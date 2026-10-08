@@ -1,0 +1,355 @@
+---
+import brandMarkImg from '../assets/logo-mark.webp';
+import { getImage } from 'astro:assets';
+import { parseEventDate, formatEventDateRange, getEventTypeLabel } from '../lib/events';
+import { parseVideoId } from '../lib/platforms/youtube';
+import { buildImageSet } from '../lib/local-content';
+
+/*
+  ─── `wide` ────────────────────────────────────────────────────────────────
+
+  This card is a horizontal row, and it was built for a 3-up grid: /events and
+  /events/archive both hand it a `.event-grid` track around 420-450px, where
+  a stacked meta / title / CTA fills the body edge to edge.
+
+  A hub's "Upcoming Events" list is not that. A hub typically has ONE upcoming
+  event, so in the same 3-up grid it rendered a single row card in the left
+  third with two empty tracks beside it. Filling the width instead leaves the
+  opposite problem: a 130px image and a left-hugging text stack with a thousand
+  pixels of nothing after it.
+
+  So `wide` re-anchors the row for full-bleed: meta and title stay left, the
+  CTA moves to the far right, and the card is pinned at both ends. It also
+  swaps the meta's year for the actual date range, which is the fact that
+  matters when the event has not happened yet ("Oct 8-11", not "2026").
+
+  Opt-in on purpose. The two archive grids pass nothing and are untouched.
+*/
+const { event, index = 0, wide = false } = Astro.props;
+const brandMarkImgOptimized = await getImage({ src: brandMarkImg, format: 'webp' });
+const trailerId = parseVideoId(event.trailerUrl);
+
+/*
+  ─── THE EYEBROW SAYS WHAT THE EVENT IS ────────────────────────────────────
+
+  This was the literal string "Event" on every card, which is a placeholder
+  wearing the clothes of metadata: the store has carried an `eventType` on all
+  nineteen events since they were classified, and the hero tag on the event's
+  own page has been reading it the whole time. A premiere said EVENT here and
+  PREMIERE one click later.
+
+  `getEventTypeLabel` is the same resolver those pages use, and it already
+  falls back to 'Event' for an unset type. So a card with no type on it renders
+  exactly the string it used to.
+*/
+const typeLabel = getEventTypeLabel(event);
+
+/* Upcoming events are announced by WHEN. Past ones, which is every other
+   caller, are filed by year. */
+const metaDate = wide
+  ? formatEventDateRange(event.startDate, event.endDate)
+  : (parseEventDate(event.startDate)?.year ?? 'Recent');
+
+const hero = buildImageSet(event.heroImage, { widths: [320, 480, 640, 800], aspect: 16 / 9 });
+const logo = buildImageSet(event.logo, { widths: [96, 160, 240] });
+
+
+const imageSrc = logo?.src ?? hero?.src ?? (trailerId ? `https://img.youtube.com/vi/${trailerId}/hqdefault.jpg` : brandMarkImgOptimized.src);
+const imageSrcset = logo?.srcset ?? hero?.srcset ?? undefined;
+---
+
+<a
+  href={`/events/${event.slug.current}`}
+  class:list={['content-card', 'past-event-card', 'group', 'animate-on-scroll', 'no-underline', { 'past-event-card--wide': wide }]}
+  style={`--index: ${index};`}
+>
+  <div class="past-event-media">
+    <img
+      src={imageSrc}
+      srcset={imageSrcset}
+      sizes="120px"
+      alt={event.title}
+      loading="lazy"
+      decoding="async"
+      class="past-event-img"
+    />
+  </div>
+
+  <div class="past-event-body">
+    {/*
+      Meta and title are ONE block, deliberately.
+
+      Without this wrapper the wide row's `justify-content: space-between` had
+      three children to distribute, so the title landed dead centre with a gulf
+      on either side of it. That is the orphaned-card problem again, moved
+      inside the card: the most important words on the row, anchored to
+      nothing. Grouped, the row has two ends — identity on the left, action on
+      the right — and the title sits against the logo where it belongs.
+
+      Inert in the narrow layout. Both are flex containers, so no margin
+      collapses and the stacked spacing is byte-for-byte what it was.
+    */}
+    <div class="past-event-text">
+    {/*
+      ─── ONE LINE OF METADATA, NOT THREE FLEX ITEMS ────────────────────
+
+      This was a flex row of three spans. A flex item is a BOX, and a box
+      that wraps internally keeps the width of its longest line — so at
+      393px "Convention & Expo" broke to "CONVENTION &" / "EXPO", the box
+      stayed 112px wide, and the bullet and year began after that box and
+      centred against its 36px height. They landed beside the short second
+      line with a gap in front of them, reading as though they belonged to
+      nothing.
+
+      It is text, so it flows as text now. The bullet and the year are one
+      nowrap unit, which is what stops the other bad break: a line ending
+      on a dangling separator.
+    */}
+    <div class="past-event-meta">
+      <span>{typeLabel}</span>
+      <span class="past-event-meta-date">
+        <span aria-hidden="true">&bull;</span> {metaDate}
+      </span>
+    </div>
+
+    <h3 class="past-event-title">{event.title}</h3>
+    </div>
+
+    {/*
+      "View Coverage" is a promise, and on an UPCOMING event it is one nobody
+      has made yet. The hub list is the only place this card shows events that
+      have not happened, and whether they get covered is not decided when the
+      card renders. Past events are the opposite case: the coverage is the
+      reason the archive card exists, so it keeps the words it earned.
+
+      "Event Details" is already the site's phrase for this, on the hub hero's
+      own button.
+    */}
+    <span class="watch-now-btn">
+      {wide ? 'Event Details' : 'View Coverage'} <span class="content-card-arrow" aria-hidden="true">&rarr;</span>
+      <span class="btn-underline"></span>
+    </span>
+  </div>
+</a>
+
+<style>
+  .past-event-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    /*
+      ─── THE MARK IS INSET, NOT FLUSH ───────────────────────────────────
+
+      This was `padding: 0` with the note "edge to edge", which the media
+      plate's own `background: #0a0a0a` was presumably meant to justify: a
+      dark panel running into the card's border. On a #111 card that panel is
+      invisible, so what actually reached the page was somebody's logo jammed
+      against a hairline with nothing between them.
+
+      The inline start now matches the body's own padding, so the mark is
+      inset from the left border by the same distance the CTA is inset from
+      the right one. The block edges stay at 0 and the plate still fills the
+      card's full height.
+    */
+    padding: 0 0 0 1.5rem;
+    gap: 0;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0; /* Sharp corners on the card */
+    overflow: hidden;
+    text-decoration: none;
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .past-event-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--color-accent);
+    box-shadow: 0 8px 40px rgba(204, 0, 0, 0.15);
+  }
+
+  .past-event-card:hover .past-event-title {
+    color: var(--color-white);
+  }
+
+  .past-event-card:hover .watch-now-btn {
+    color: var(--color-accent-text);
+  }
+
+  .past-event-card:hover .btn-underline {
+    width: 100%;
+  }
+
+  .past-event-media {
+    flex: 0 0 130px; 
+    height: 130px;
+    padding: 1rem; 
+    background: #0a0a0a; 
+    border-radius: 0; 
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Typographic Fallback styling */
+  .fallback-monogram {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1a1a1a, #0a0a0a);
+    color: rgba(255, 255, 255, 0.4);
+    font-family: var(--font-display, 'Syne Variable', sans-serif);
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  @media (max-width: 560px) {
+    /* A 326px card cannot spare 1.5rem on top of a 90px plate and still leave
+       the title a readable measure. */
+    .past-event-card,
+    .past-event-card--wide {
+      padding-left: 1rem;
+    }
+    .past-event-media {
+      flex: 0 0 90px;
+      height: 90px;
+      padding: 0.5rem;
+    }
+    .past-event-title {
+      font-size: 1.1rem;
+    }
+    .fallback-monogram {
+      font-size: 1.8rem;
+    }
+  }
+
+  .past-event-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.5s ease;
+  }
+
+  .past-event-card:hover .past-event-img {
+    transform: scale(1.05);
+  }
+
+  .past-event-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1rem 1.5rem;
+    flex: 1;
+  }
+
+  .past-event-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .past-event-meta {
+    color: #a1a1aa;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+    /*
+      Block, not flex. The three parts are a single line of metadata and
+      should wrap like one — see the note on the markup for what the flex
+      row did to a label too long for the card.
+    */
+    display: block;
+    line-height: 1.5;
+  }
+
+  /*
+    The separator belongs to the date, never to the end of a line.
+
+    The gap is a margin, not the whitespace between the two spans: Astro
+    collapses that away at build time, and the pair rendered as
+    "Convention• 2026". 0.4rem is what the flex `gap` used to contribute.
+  */
+  .past-event-meta-date {
+    white-space: nowrap;
+    margin-left: 0.4rem;
+  }
+
+  .past-event-title {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-white);
+    line-height: 1.2;
+    margin: 0 0 0.6rem 0;
+  }
+
+  /* Was `style="margin-top: 0.6rem"` on the element. An inline style cannot be
+     overridden by a class, and the wide row needs this gap gone. */
+  .past-event-card .watch-now-btn {
+    margin-top: 0.6rem;
+  }
+
+  /*
+    ─── THE WIDE ROW ────────────────────────────────────────────────────────
+
+    One card across the full content width, so it is anchored at BOTH ends:
+    the text stack stays left against the image, the CTA sits hard right. The
+    gap between them is the row, not dead space at the end of it.
+  */
+  /* The wide row's body carries 1.75rem, so its mark is inset to match. */
+  .past-event-card--wide {
+    padding-left: 1.75rem;
+  }
+
+  .past-event-card--wide .past-event-body {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    padding: 1.25rem 1.75rem;
+  }
+
+  .past-event-card--wide .past-event-title {
+    margin-bottom: 0;
+  }
+
+  /* Left block hugs the logo and takes what it needs; the CTA keeps its own
+     width and the slack falls between them, which is where slack should go. */
+  .past-event-card--wide .past-event-text {
+    flex: 0 1 auto;
+  }
+
+  .past-event-card--wide .watch-now-btn {
+    margin-top: 0;
+    flex-shrink: 0;
+  }
+
+  /*
+    Below the grid's own breakpoint the row runs out of width for two anchors,
+    so it goes back to the stack it already knows how to be. Left aligned, not
+    centred: the image is still on the left edge of the card, and centred text
+    beside a left-aligned image reads as a mistake.
+  */
+  @media (max-width: 720px) {
+    .past-event-card--wide .past-event-body {
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 0;
+      padding: 1rem 1.25rem;
+    }
+    .past-event-card--wide .past-event-title {
+      margin-bottom: 0.6rem;
+    }
+    .past-event-card--wide .watch-now-btn {
+      margin-top: 0;
+    }
+  }
+</style>

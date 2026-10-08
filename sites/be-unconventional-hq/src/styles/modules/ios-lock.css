@@ -1,0 +1,44 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BRUTE-FORCE iOS SAFARI LOCK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Lock the scroll container (html) to the viewport. */
+html.menu-open,
+html.modal-open {
+  position: fixed !important;
+  width: 100% !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+/* The body is offset with an inline `top: -[scrollY]px` to hold the scroll
+   position. It must NOT be clamped to 100dvh: if the user scrolled further
+   than one screen height, a 100dvh body shifted up by scrollY lands entirely
+   above the viewport, leaving the page blank. Leave its height to content. */
+html.menu-open body,
+html.modal-open body {
+  position: fixed !important;
+  width: 100% !important;
+  overflow: hidden !important;
+}
+
+/*
+   SCROLLBAR GUTTER COMPENSATION
+
+   Pinning the body removes the document scrollbar. On a desktop browser with
+   classic (space-consuming) scrollbars the page then gets ~15px wider and
+   everything visibly slides sideways the instant a modal opens.
+
+   src/lib/scroll-lock.ts measures that width before locking and pads it back
+   onto the body. But the navbar is `position: fixed`, so it is laid out
+   against the viewport and inherits none of the body's padding — it would
+   still jump on its own. The same measurement is published as
+   `--scrollbar-gutter` on <html> for exactly this case.
+
+   Zero on every touch device and on macOS, where scrollbars are overlaid and
+   take up no layout space, so this is a no-op there.
+*/
+html.menu-open #navbar,
+html.modal-open #navbar {
+  padding-right: var(--scrollbar-gutter, 0px);
+}

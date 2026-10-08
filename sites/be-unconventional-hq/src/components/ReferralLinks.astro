@@ -1,0 +1,116 @@
+---
+/**
+ * ReferralLinks — the "Support The HQ" block.
+ *
+ * ─── WHERE THE CONTENT COMES FROM ─────────────────────────────────────────
+ * src/data/referrals.js. This component holds NO urls, NO partner names and
+ * NO blurbs — add a partner there and it shows up here automatically. That is
+ * the point: the list is going to keep growing, and it must never need to be
+ * edited in two places.
+ *
+ * ─── WHERE IT IS USED ─────────────────────────────────────────────────────
+ * The article side rail today (ArticleSupportRail.astro). It is a standalone
+ * component so the same block can go on a /support page or anywhere else
+ * without any of it being retyped.
+ *
+ * ─── THE DISCLOSURE ───────────────────────────────────────────────────────
+ * Rendered ABOVE the links, always, from REFERRAL_DISCLOSURE. Affiliate
+ * relationships legally require disclosure (FTC guidance), and "near and
+ * clear" means before the links, not in a footnote under them. Do not make it
+ * conditional and do not move it.
+ *
+ * ─── ACCESSIBILITY ────────────────────────────────────────────────────────
+ * The icons are decorative — every one sits next to a text label saying the
+ * same thing — so they carry aria-hidden and the link's accessible name comes
+ * from its text. See the rules at the top of src/data/icons.js.
+ *
+ * ─── HOW TO RESTYLE IT ────────────────────────────────────────────────────
+ * `.referral-*` in src/styles/modules/referrals.css.
+ */
+import {
+  getReferralGroups,
+  referralRel,
+  REFERRAL_DISCLOSURE,
+  REFERRAL_HEADING,
+} from '../data/referrals.js';
+import { BRAND_ICONS } from '../data/icons.js';
+import { Image } from 'astro:assets';
+
+interface Props {
+  /** Heading text. Defaults to the shared one. */
+  heading?: string;
+  /** Heading id, so a parent can point aria-labelledby at it. */
+  headingId?: string;
+  /**
+   * `compact` drops the group notes — for narrow contexts like the article
+   * rail, where a line of context under every heading is more furniture than
+   * help. Everything else is identical, so the two never drift apart.
+   */
+  compact?: boolean;
+}
+
+const {
+  heading = REFERRAL_HEADING,
+  headingId = 'referral-heading',
+  compact = false,
+} = Astro.props;
+
+const groups = getReferralGroups();
+---
+
+{
+  /* No live partners at all → render nothing rather than an empty heading. */
+  groups.length > 0 && (
+    <div class:list={['referral-block', { 'is-compact': compact }]}>
+      <p class="referral-head" id={headingId}>
+        {heading}
+      </p>
+
+      {/* The disclosure. Above the links, plainly worded, always present. */}
+      <p class="referral-disclosure">{REFERRAL_DISCLOSURE}</p>
+
+      {groups.map((group) => (
+        <section class="referral-group" aria-label={group.title}>
+          <p class="referral-group-title">{group.title}</p>
+          {!compact && group.note && <p class="referral-group-note">{group.note}</p>}
+
+          <ul class="referral-list">
+            {group.items.map((item) => (
+              <li>
+                <a
+                  class="referral-item"
+                  href={item.href}
+                  target="_blank"
+                  rel={referralRel(item)}
+                >
+                  {/*
+                    Decorative icon. `set:html` is safe: the string comes from
+                    src/data/icons.js, which is authored in this repo — it is
+                    never user input and never comes from a feed.
+                  */}
+                  {item.image ? (
+                    <span class="referral-icon referral-icon-img" aria-hidden="true">
+                      <Image src={item.image} alt="" class="object-contain" widths={[68, 102]} sizes="34px" />
+                    </span>
+                  ) : (
+                    <span class="referral-icon" aria-hidden="true" set:html={item.icon ? (BRAND_ICONS[item.icon as keyof typeof BRAND_ICONS] ?? BRAND_ICONS.storefront) : BRAND_ICONS.storefront} />
+                  )}
+
+                  <span class="referral-copy">
+                    <span class="referral-label">
+                      {item.label}
+                      {/* Only shown when the reader actually gets something —
+                          see the `offer` note in referrals.js. */}
+                      {item.offer && <span class="referral-offer">{item.offer}</span>}
+                    </span>
+                    <span class="referral-blurb">{item.blurb}</span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  )
+}

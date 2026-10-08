@@ -1,0 +1,664 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   LINKS HUB SYSTEM
+   Refactored for High-Quality UX & Interactions
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.links-hub {
+  min-height: 100vh;
+  /* Establishes a stacking context so the logo glow's z-index: -1 lands
+     ABOVE this element's own background but BELOW every in-flow tile inside
+     it. Without a context here the glow resolves against the root and paints
+     underneath this opaque background instead, which makes it invisible. */
+  isolation: isolate;
+  background-color: var(--color-black);
+  /*
+    Two corner washes, both anchored ON a corner (0% or 100%), both fading to
+    transparent well inside the element.
+
+    Anchoring on the corner is the whole trick. The top glow used to sit at
+    `50% -20%` — centred and pushed off the top edge — so what you saw was the
+    lower band of a circle whose centre was outside the box: a wide arc across
+    the top, not a corner glow. The bottom-left one has always been anchored
+    properly, which is why it reads as a soft round pool of light, and it is
+    the reference for the top-right one below.
+
+    Keep the falloff percentage (40–45%) comfortably below 100%: the gradient
+    must reach full transparency INSIDE the element, or the box edge shows as
+    a hard straight line. Same rule as <BrandGlow />.
+  */
+  background-image:
+    /* Top-right — the hero corner. Same shape as the bottom-left, a little
+       stronger because it is the one you land on. */
+    radial-gradient(
+      circle at 100% 0%,
+      rgba(204, 0, 0, 0.13) 0%,
+      rgba(204, 0, 0, 0.04) 22%,
+      transparent 45%
+    ),
+    /* Bottom-left — the quiet counterweight. Unchanged. */
+    radial-gradient(
+      circle at 0% 100%,
+      rgba(204, 0, 0, 0.05) 0%,
+      transparent 40%
+    );
+  padding: 4rem 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.links-container {
+  width: 100%;
+  max-width: 580px;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   LINKS HERO / PROFILE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.links-profile-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Wraps the button and the glow. position: relative makes it the containing
+   block for the glow; it deliberately sets no z-index, so it does not become
+   a stacking context and the glow can still sit below the tiles. */
+.links-footer-logo {
+  position: relative;
+}
+
+.links-logo-trigger {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  width: 340px;
+  height: auto;
+  margin: -2.5rem auto -2.5rem auto;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: block;
+}
+
+.links-logo-trigger:hover {
+  transform: scale(1.05);
+}
+
+.links-logo-trigger:active {
+  transform: scale(0.98);
+}
+
+
+.links-main-logo {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  /* Positioned so it paints above the neighbouring tiles even where the
+     button's negative margins overlap them. */
+  position: relative;
+  z-index: 2;
+  /* No filter: drop-shadow here - hard rule 6, it is a known iOS Safari
+     rendering bug on <img>. The glow below carries the depth instead. */
+  pointer-events: none;
+  display: block;
+}
+
+/* Sized to the logo artwork rather than its canvas: logo.webp is a 2000x2000
+   square whose opaque bounds are 1957x1333, i.e. 332x226 once the image is
+   drawn at 340px wide, centred, with transparent bands top and bottom. An
+   ellipse matched to the artwork reads as a halo around the mark instead of a
+   rectangle of light around the whole file. */
+.links-logo-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* Tracks the logo instead of sitting at a fixed size: the button shrinks to
+     272px on a 320px screen, where a flat halo would be wider than the mark it
+     is meant to sit behind. aspect-ratio keeps the ellipse in proportion as
+     the width clamps down. */
+  width: min(400px, 100%);
+  aspect-ratio: 400 / 240;
+  height: auto;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(204, 0, 0, 0.5) 0%,
+    rgba(204, 0, 0, 0.16) 45%,
+    rgba(204, 0, 0, 0) 72%
+  );
+  filter: blur(16px);
+  /* Hidden at rest; the glow is a hover affordance, not decoration.
+     The lit value was calibrated by measurement rather than by eye: rendered
+     against the page and diffed per-pixel, 0.22 moved the red channel by only
+     16/255 (~6%), below the threshold of noticeability on most screens.
+     Response is not linear because the gradient's own alpha caps it - 0.22,
+     0.35, 0.5, 0.65 and 0.8 measure 16, 17, 22, 35 and 62 respectively. */
+  opacity: 0;
+  border-radius: 50%;
+  /* Negative, so it paints above .links-hub's background and below the
+     backgrounds of every in-flow tile above and below it. */
+  z-index: -1;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+/* Keyed off the button, not the section. The section is a full-width flex row,
+   so hovering the empty space beside the logo would otherwise light the glow.
+   The glow is a following sibling of the button, so a plain ~ combinator does
+   the job without needing :has().
+
+   Deliberately NOT written as `@media (hover: hover) { ...:hover... }`. That
+   form fails closed: anything that misreports its input capability loses the
+   effect entirely, and plenty does - headless Chrome reports (hover: none)
+   with no pointer type at all, and it is not alone. Suppressing on the
+   explicit negative instead fails open, so the only devices that lose the
+   glow are the ones that positively declare they cannot hover, which is the
+   case we actually want to exclude: on touch, :hover latches after a tap and
+   would leave the glow stuck on until the next tap elsewhere.
+
+   Keyboard users get the same affordance via :focus-visible, never suppressed. */
+.links-logo-trigger:hover ~ .links-logo-glow,
+.links-logo-trigger:focus-visible ~ .links-logo-glow {
+  opacity: 0.85;
+}
+
+@media (hover: none) {
+  .links-logo-trigger:hover ~ .links-logo-glow {
+    opacity: 0;
+  }
+
+  .links-logo-trigger:focus-visible ~ .links-logo-glow {
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .links-logo-glow {
+    transition: none;
+  }
+}
+
+/* Brand Identity Stack */
+.links-brand-link {
+  text-decoration: none;
+  display: block;
+  width: fit-content;
+}
+
+.links-brand-stack {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.links-kicker {
+  color: var(--color-accent-text);
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 1.1rem;
+}
+
+.links-title-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 0.85;
+  text-transform: uppercase;
+  font-family: var(--font-display);
+  margin-bottom: 1.2rem;
+  transition: text-shadow 0.4s ease;
+}
+
+.links-brand-link:hover .links-title-stack {
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.links-title-stack span {
+  display: block;
+}
+
+.links-word-be {
+  font-size: clamp(1.1rem, calc(0.55rem + 1.5vw), 1.35rem);
+  font-weight: 600;
+  color: var(--color-white-muted);
+  transform: translateX(-15%);
+  transition: color 0.4s ease;
+}
+
+.links-brand-link:hover .links-word-be {
+  color: var(--color-white);
+}
+
+.links-word-unconventional {
+  font-size: clamp(1.5rem, calc(0.75rem + 3vw), 1.8rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--color-white);
+  z-index: 2;
+  text-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+.links-word-hq {
+  font-size: clamp(1.8rem, calc(0.9rem + 2vw), 2.25rem);
+  font-weight: 800;
+  color: var(--color-accent-text);
+  text-shadow: 0 0 25px rgba(204, 0, 0, 0.5);
+  transform: translate(25%, -0.6rem);
+  transition: text-shadow 0.4s ease;
+}
+
+.links-brand-link:hover .links-word-hq {
+  text-shadow: 0 0 15px rgba(204, 0, 0, 0.7);
+}
+
+.links-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: clamp(0.45rem, 2.5vw, 0.7rem);
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+  width: 100%;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   QR MODAL SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.qr-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  visibility: hidden;
+
+  /* PHANTOM OVERLAY GUARD — see styles/modules/a11y.css for the rule.
+     `visibility: hidden` alone does NOT stop iOS Safari routing touches to a
+     composited, viewport-covering fixed layer. This element sits at z-index
+     300, above the navbar, on every page that mounts it — so while it was
+     tap-transparent on Chromium it was swallowing taps on iPad, which is what
+     made the whole navbar feel dead. */
+  pointer-events: none;
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  padding: 1.5rem;
+}
+
+.qr-modal-overlay.is-active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.qr-modal-content {
+  background: linear-gradient(
+    135deg,
+    rgba(20, 20, 20, 0.9),
+    rgba(10, 10, 10, 0.95)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 3rem 2rem;
+  width: 100%;
+  max-width: 400px;
+  position: relative;
+  transform: scale(0.9) translateY(20px);
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.qr-modal-overlay.is-active .qr-modal-content {
+  transform: scale(1) translateY(0);
+}
+
+/* Matches the close control every other modal on the site uses - the calendar
+   (.close-btn in SpanningCalendarModal) and the video modal (.modal-close).
+   The shared behaviour is a bare glyph on a
+   transparent background that turns accent-red and rotates 90deg on hover.
+   This one had a filled pill instead: a visible grey disc at rest that went
+   solid red on hover, which is the only close button on the site that did.
+   background is !important for the same reason the other two set it - UA
+   button styling and some mobile browsers reintroduce a background otherwise. */
+.qr-modal-close {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background: transparent !important;
+  border: none;
+  box-shadow: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 0;
+  transition:
+    color 0.2s ease,
+    transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+
+.qr-modal-close:hover {
+  color: var(--color-accent-text);
+  transform: rotate(90deg);
+}
+
+.qr-modal-close:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.qr-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.qr-image-wrapper {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  margin-bottom: 1.5rem;
+  background: white;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.qr-code-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.qr-brand-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  text-transform: uppercase;
+  font-family: var(--font-display);
+  margin-bottom: 1.5rem;
+}
+
+.qr-collabs-link {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--color-white);
+  text-decoration: none;
+  letter-spacing: -0.04em;
+  transition: color 0.3s ease, transform 0.3s ease;
+  display: inline-block;
+}
+
+.qr-collabs-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.2, 1);
+}
+
+.qr-collabs-link:hover {
+  color: var(--color-accent-text);
+  transform: scale(1.05);
+}
+
+.qr-collabs-link:hover::after {
+  transform: scaleX(1);
+}
+
+.qr-subtext {
+  font-size: 0.75rem;
+  color: var(--color-white-muted);
+  letter-spacing: 0.05em;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   NAVIGATION & BENTO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.links-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.links-card {
+  background: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-decoration: none;
+  color: var(--color-white);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.2, 1);
+}
+
+.links-card:hover {
+  background: rgba(204, 0, 0, 0.1);
+  border-color: var(--color-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(204, 0, 0, 0.15);
+}
+
+.links-label {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+.links-arrow {
+  opacity: 0.5;
+  transition: transform 0.3s ease;
+}
+
+.links-card:hover .links-arrow {
+  transform: translateX(4px);
+  opacity: 1;
+}
+
+/* Socials */
+.links-socials-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.links-social-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-surface);
+  color: var(--color-white-muted);
+  border-radius: 0;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.links-social-icon:hover {
+  background: transparent;
+  border-color: var(--color-accent);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(204, 0, 0, 0.4);
+  transform: translateY(-3px);
+}
+
+.links-social-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+@media (max-width: 768px) {
+  .links-socials-row {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 240px;
+    margin-inline: auto;
+    gap: 1.25rem;
+    justify-items: center;
+  }
+}
+
+/* Bento Grid */
+.links-section-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--color-white-muted);
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.links-bento-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.links-bento-item {
+  background: var(--color-surface);
+  overflow: hidden;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.links-bento-item:hover {
+  border-color: var(--color-accent);
+  transform: scale(1.02);
+  box-shadow: 0 10px 30px rgba(204, 0, 0, 0.1);
+}
+
+.links-bento-image {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+}
+
+.links-bento-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s ease;
+}
+
+.links-bento-item:hover .links-bento-image img {
+  transform: scale(1.1);
+}
+
+.links-bento-badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  font-size: 0.5rem;
+  font-weight: 800;
+  background: var(--color-accent);
+  color: white;
+  padding: 0.2rem 0.5rem;
+  letter-spacing: 0.05em;
+  z-index: 2;
+}
+
+.links-bento-content {
+  padding: 1.25rem;
+}
+
+.links-bento-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-white);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   MOBILE ADAPTATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+@media (max-width: 768px) {
+  .links-brand-stack {
+    transform: none;
+  }
+
+  .links-word-be {
+    font-size: 1.1rem;
+  }
+
+  .links-word-unconventional {
+    font-size: clamp(1rem, calc(0.5rem + 3vw), 1.8rem);
+    width: 100%;
+    text-align: center;
+  }
+
+  .links-word-hq {
+    font-size: 1.8rem;
+    transform: translate(25%, -0.4rem);
+  }
+
+  .links-bento-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Override PageTitle scaling strictly inside the Links Hub */
+html body .links-hub .title-secondary-scale .word-unconventional {
+  font-size: clamp(1.5rem, calc(0.75rem + 3vw), 1.8rem);
+}
+
+html body .links-hub .title-secondary-scale .page-title-secondary {
+  font-size: clamp(1.1rem, calc(0.55rem + 2vw), 1.3rem);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   COPYRIGHT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.links-copyright {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 1.5rem;
+  margin-top: -1.5rem; /* pull up slightly against the 3rem gap */
+  text-align: center;
+  width: 100%;
+}
+
+.links-copyright p {
+  color: var(--color-white-muted);
+  font-size: 0.75rem;
+}

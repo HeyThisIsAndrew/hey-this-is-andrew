@@ -1,0 +1,610 @@
+@import 'tailwindcss';
+
+
+
+:root {
+  --color-black: #0a0a0a;
+  --color-surface: #111111;
+  --color-surface-2: #1a1a1a;
+  --color-white: #f0f0f0;
+  --color-white-muted: #888888;
+
+  /*
+    ─── THE TILE SHADOW ────────────────────────────────────────────────────
+
+    One value, read by every panel that should sit ON the page rather than in
+    it: the calendar tile, the Support The HQ rows, the What We Cover
+    category cards and the Highlights tiles. It started as a literal on the
+    calendar alone and was asked for on the rest, which is the moment it
+    stops being a one-off and becomes a token.
+
+    TWO SHADOWS DOING TWO JOBS, which is why it is not one. The wide, soft,
+    negative-spread one is the cast shadow that lifts the card off the page.
+    The tight second one sits right under the edge and is what actually reads
+    as a lip — a cast shadow this broad has no detectable start, so on its own
+    it reads as a vague darkening rather than as a raised edge.
+
+    Negative spread on both: it keeps the shadow inside the element's own
+    footprint horizontally, so tiles sitting in a tight grid do not bleed onto
+    each other.
+  */
+  --shadow-tile:
+    0 24px 48px -16px rgba(0, 0, 0, 0.9),
+    0 2px 6px -2px rgba(0, 0, 0, 0.8);
+
+  /* `--section-spacing-y` used to sit here. Its only consumer was
+     `.categories-section`, which styled markup that no longer exists, so the
+     token went with the rule. The two below replace it. */
+  /*
+    SECTION RHYTHM IS VIEWPORT-DRIVEN, NOT REM-DRIVEN.
+
+    `html { font-size: 80% }` below is a deliberate type-density decision for
+    tablet and desktop, and it should stay one. But every section margin on
+    the site was written in `rem`, so that one decision was silently also
+    deciding the vertical rhythm, and deciding it backwards: `5rem` resolves
+    to 80px on a 375px phone and 64px on a 1440px monitor. Section breaks got
+    TIGHTER exactly where there is more room to breathe.
+
+    These two tokens are px + vw so they are immune to the type scaling.
+    Type density and section rhythm are now separate decisions, which is what
+    they always were conceptually.
+
+      --space-section         64px -> 96px   (between major sections)
+      --space-section-header  40px -> 64px   (a header to its own content)
+  */
+  --space-section: clamp(64px, calc(40px + 3vw), 96px);
+  --space-section-header: clamp(40px, calc(24px + 2vw), 64px);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  min-width: 320px;
+  scroll-behavior: smooth;
+  scroll-padding-top: 112px;
+  background-color: var(--color-black);
+  overscroll-behavior: none;
+}
+
+/* Prevent smooth scrolling from hijacking View Transitions, which causes a jarring slide effect */
+html[data-astro-transition] {
+  scroll-behavior: auto !important;
+}
+
+/* 
+   Disable the browser's default View Transition slide animation.
+   When navigating to a new page, Astro forces the scroll position to 0. 
+   By default, the View Transition API attempts to animate this scroll difference 
+   by sliding the entire `::view-transition-group(root)` up or down.
+*/
+::view-transition-group(root) {
+  animation-duration: 0s !important;
+}
+
+/*
+  ─── DIRECTIONAL PAGE TRANSITIONS ──────────────────────────────────────────
+
+  The nav reads left to right — Feed, Intel, Events, Featured, About — so a
+  move rightward along it slides the new page in from the right, and a move
+  leftward slides it in from the left. The page now has a direction, which is
+  the thing a fade cannot tell you.
+
+  ─── WHY THE NAME IS SET HERE AND NOT IN THE MARKUP ────────────────────────
+  `view-transition-name` is assigned in CSS rather than with Astro's
+  `transition:name="page-content"` directive, because
+  scripts/feed-ui-regression.test.mjs asserts Layout.astro must NOT carry that
+  directive — it breaks the feed's own in-page swap encapsulation. Assigning it
+  from a stylesheet gets the animation without the directive.
+
+  Navbar and Footer already carry their own `transition:name` with
+  `transition:animate="none"`, so they stay locked in place while the content
+  between them slides. That is what makes this read as a panel moving rather
+  than the whole window.
+
+  The easing is `--ease-cinematic` (hero-cta.css), an ease-in-out quart. The
+  duration is short on purpose: this runs on every page you move through.
+*/
+#page-content {
+  view-transition-name: page-main;
+}
+
+::view-transition-old(page-main),
+::view-transition-new(page-main) {
+  /* When filtering, heights change drastically. Preventing the old/new snapshots
+     from stretching to match the transitioning group box stops the 'stretch' effect. */
+  height: 100%;
+  width: 100%;
+  object-fit: none;
+  object-position: top center;
+}
+
+::view-transition-group(page-main) {
+  animation: none !important;
+}
+
+@keyframes page-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes page-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes page-slide-out-left {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(-15%); opacity: 0; }
+}
+@keyframes page-slide-in-right {
+  from { transform: translateX(15%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes page-slide-out-right {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(15%); opacity: 0; }
+}
+@keyframes page-slide-in-left {
+  from { transform: translateX(-15%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes page-dive-out-down {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(5%); opacity: 0; }
+}
+@keyframes page-dive-in-down {
+  from { transform: translateY(-5%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes page-dive-out-up {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-5%); opacity: 0; }
+}
+@keyframes page-dive-in-up {
+  from { transform: translateY(5%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* SLIDE FORWARD (e.g. Feed -> Intel) */
+html[data-page-transition='slide-forward']::view-transition-old(page-main) {
+  animation: page-slide-out-left 350ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+html[data-page-transition='slide-forward']::view-transition-new(page-main) {
+  animation: page-slide-in-right 350ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* SLIDE BACKWARD (e.g. Intel -> Feed) */
+html[data-page-transition='slide-backward']::view-transition-old(page-main) {
+  animation: page-slide-out-right 350ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+html[data-page-transition='slide-backward']::view-transition-new(page-main) {
+  animation: page-slide-in-left 350ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* DIVE DOWN (e.g. Landing on an anchor) */
+html[data-page-transition='dive-down']::view-transition-old(page-main) {
+  animation: page-dive-out-up 350ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+html[data-page-transition='dive-down']::view-transition-new(page-main) {
+  animation: page-dive-in-up 350ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* DIVE UP (e.g. Leaving an anchor) */
+html[data-page-transition='dive-up']::view-transition-old(page-main) {
+  animation: page-dive-out-down 350ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+html[data-page-transition='dive-up']::view-transition-new(page-main) {
+  animation: page-dive-in-down 350ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/*
+  ─── PAGING A LIST MOVES THE LIST ──────────────────────────────────────────
+
+  /events -> /events/2 is a real navigation, so it drove the page transition and
+  slid the whole document sideways to change a grid of tiles halfway down it.
+
+  The paginated grid carries its own `view-transition-name: section-rows`, which
+  the browser captures separately from `page-main`. Here `page-main` is held
+  completely still and only the rows move: a short lift and fade, which is the
+  gesture the content is actually making.
+
+  `::view-transition-group(page-main)` has to be stopped too. Suppressing the
+  old/new animations alone still leaves the group's default cross-fade, which
+  reintroduces the full-page flash this exists to avoid.
+*/
+html[data-page-transition='page-rows']::view-transition-group(page-main) {
+  animation-duration: 0s !important;
+}
+
+html[data-page-transition='page-rows']::view-transition-old(page-main),
+html[data-page-transition='page-rows']::view-transition-new(page-main) {
+  animation: none !important;
+}
+
+/*
+  ─── THE LIST FADES IN PLACE. IT IS NOT A VIEW TRANSITION ──────────────────
+
+  The paginated list used to carry `view-transition-name: section-rows` so that
+  only it animated. That was worse: a view transition positions its snapshots
+  against the VIEWPORT, not the element's place in the document, and Astro
+  resets scroll on navigation — so tiles captured 700px down the page were
+  replayed at the top of the screen, over the hero.
+
+  Nothing is lifted out of flow now. `page-rows` keeps the scroll position
+  (Layout.astro) and the incoming list plays this on load, exactly where it
+  already sits. An animation on the real element cannot be drawn anywhere else.
+*/
+html[data-page-transition='page-rows'] [data-rows-target] {
+  animation: section-rows-in 260ms var(--ease-cinematic) both;
+}
+
+/* 6%, and shorter than a page move. A list advancing is the smaller of the two
+   gestures and should read that way. */
+@keyframes section-rows-in {
+  from { transform: translateY(6%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-page-transition='page-rows'] [data-rows-target] {
+    animation: none !important;
+  }
+}
+
+/*
+  ─── NO PAGE ANIMATION ON A TOUCH DEVICE ────────────────────────────────────
+
+  The 350ms above is a FIXED cost. It does not get cheaper on a faster phone,
+  and it sits in front of the reader on every single navigation — on a handset,
+  where taps are the whole interaction model, that reads as the site being slow
+  rather than as the site being cinematic. Desktop keeps it.
+
+  `pointer: coarse`, not a width query and not user-agent sniffing: the
+  question is "is this a finger" and that is exactly what the media feature
+  answers. A narrow desktop window keeps the animation; a large tablet loses
+  it, which is the right call for both.
+
+  NOT `prefers-reduced-motion`, which already has its own block further down.
+  That setting is opt-in, almost nobody sets it, and it means something
+  different — "I have a vestibular reason to avoid motion", not "I am on a
+  phone". Conflating the two would have left the default mobile experience
+  untouched, which is the experience that was reported as slow.
+
+  ─── WHAT THIS DOES AND DOES NOT REMOVE ─────────────────────────────────────
+
+  It removes the 350ms wait. It does NOT remove the view transition itself:
+  ClientRouter still calls `startViewTransition()`, so the browser still
+  captures a snapshot of the outgoing page before swapping. On /feed that is a
+  1948-element, 619KB document, and the capture is not free. Measured on this
+  machine the router's own overhead is 10-60ms with no long tasks, so the
+  snapshot is not believed to be the problem — but it is the next thing to look
+  at if a real handset still feels slow after this, and the fix for THAT is to
+  stop ClientRouter intercepting on mobile, which is a bigger change and is not
+  being made on speculation.
+
+  `animation: none` rather than a 0s duration, so the transition finishes on
+  the next frame instead of running a zero-length one.
+*/
+@media (pointer: coarse) {
+  ::view-transition-old(page-main),
+  ::view-transition-new(page-main) {
+    animation: none !important;
+  }
+}
+
+/* An in-page action — a filter, a spotlight swap, a hash on the page you are
+   already on — should crossfade smoothly without changing size or morphing. */
+html[data-page-transition='none']::view-transition-old(page-main) {
+  animation: page-fade-out 250ms ease-in-out both;
+}
+html[data-page-transition='none']::view-transition-new(page-main) {
+  animation: page-fade-in 250ms ease-in-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(page-main),
+  ::view-transition-new(page-main) {
+    animation: none !important;
+  }
+}
+
+
+/*
+   Scale the entire layout down by 12.5% on tablet and desktop to achieve a 
+   sleek, dense editorial look without making text unreadable.
+*/
+@media (min-width: 768px) {
+  html {
+    font-size: 80%; /* Scales 1rem from 16px to 12.8px (effectively ~75% zoom relative to defaults) */
+  }
+}
+
+/*
+  ─── AND BACK UP AGAIN ON A BIG MONITOR ────────────────────────────────────
+
+  80% is the right density on a laptop and the wrong one on a 4K display. The
+  whole site is authored in rem, so that one number decides every type size,
+  every padding and every measure — and at 12.8px per rem the page is built for
+  a 1536px window no matter how much glass it is shown on.
+
+  Measured on /intel at 3840 before this: the rail headlines set at 12.8px, the
+  feature's standfirst measure (42rem) came out 538px inside a 1320px column,
+  leaving 782px of the centre column empty, and the copy block had 412px of
+  vertical air it had nothing to put in. Reported as "this is too small look at
+  all the dead space this is a 4K monitor".
+
+  Stepping the root back up scales ALL of it together — type, gutters, gaps and
+  measures — instead of each component needing its own breakpoint. The steps
+  line up with `--page-max` in modules/layout.css, so the container and its
+  contents grow at the same widths.
+
+  Deliberately NOT affected: anything already in px. `--page-max` and
+  `--feed-card` are px, so the feed's card widths stay exactly as measured and
+  the `sizes` attributes that mirror them stay honest. Growing the root here
+  must never change a card's width, or the browser starts fetching the wrong
+  rendition again.
+*/
+@media (min-width: 1920px) {
+  html { font-size: 90%; }
+}
+
+@media (min-width: 2560px) {
+  html { font-size: 100%; }
+}
+
+/*
+  4K and up. 110% was too timid: every rem-based pad, gap and type size on the
+  site stayed near its laptop value on a 3840px screen, so the What We Cover
+  tiles read as postage stamps in the middle of the glass. 115% scales the
+  whole rem system at once, which is why it is here and not spread across the
+  components.
+*/
+@media (min-width: 3400px) {
+  html { font-size: 115%; }
+}
+
+/*
+  ─── THE SAME PANEL, HALF AS WIDE ─────────────────────────────────────────
+
+  The ladder above steps on the WINDOW, and a 1920px window is a 1920px
+  window whether it is a whole 1080p monitor or half of a 4K one. On the 4K
+  it took the 90% rung, so the site rendered at 14.4px on pixels half the
+  physical size of the ones that rung was chosen for.
+
+  `[data-screen-4k]` is set inline in Layout.astro from
+  `screen.width`, which reports the PANEL rather than the window, and is the
+  only thing available that can tell the two apart.
+
+  115%, the same as the full-screen rung, because the point is that the
+  physical size should not change when the window does. It lands the layout
+  at an effective 1477px at a 1920px window -- within 3% of the 1512px laptop
+  this design is signed off on -- and it leaves the lockup alone, because the
+  `.word-*` clamps are driven by vw and stay proportional to the window.
+
+  The 1600px floor keeps it away from a genuinely small window on a big
+  monitor, where someone has chosen a narrow column and should get one.
+
+  The attribute selector outranks the bare `html` rules above it, so this
+  wins wherever it applies regardless of source order.
+*/
+@media (min-width: 1600px) {
+  :root[data-screen-4k] { font-size: 115%; }
+}
+
+/*
+   Smooth scrolling is MOTION, and someone who has asked their OS to reduce
+   motion has asked for it to stop.
+
+   This was a genuine gap: `scroll-behavior: smooth` above applied to every
+   anchor jump, every scrollTo and every skip link on the site regardless of
+   the setting. WCAG 2.3.3 (Animation from Interactions) covers exactly this —
+   motion triggered by an interaction should be avoidable.
+
+*/
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  min-width: 320px;
+  background-color: var(--color-black);
+  color: var(--color-white);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+
+  /*
+    REQUIRED by <BrandGlow />. Do not remove.
+
+    The glow is a fixed layer at `z-index: -1`, so that the footer's opaque
+    surface covers it rather than the glow washing over the footer. But a
+    negative z-index resolves against the nearest STACKING CONTEXT, and
+    without this line that context is the document root — where the paint
+    order is:
+
+        1. the root's background
+        2. negative-z-index descendants   ← the glow
+        3. in-flow block backgrounds      ← body's opaque black
+        …
+
+    …so body's own black background painted straight over it and the glow
+    disappeared from the whole site.
+
+    `isolation: isolate` makes body a stacking context of its own. The glow's
+    -1 now resolves inside it: above body's background (step 1 here) and below
+    everything in the flow (nav, main, footer). Same fix, same reason, as the
+    documented one on `.links-hub` in src/styles/links.css.
+  */
+  isolation: isolate;
+}
+
+#app-wrapper {
+  overflow-x: clip;
+}
+
+/*
+ * Shared sticky-footer layout. The footer is a normal flow element, but the
+ * wrapper grows to the viewport when a route has little content (notably
+ * /about at very low browser zoom). The page-content region absorbs that
+ * remaining space, keeping the footer flush with the viewport bottom.
+ */
+#app-wrapper {
+  min-height: 100vh;
+  /* `svh` (stable) rather than `dvh` (re-resolves as the iOS address bar
+     moves during scroll). This also matches the `min-h-[100svh]` utility
+     already on the element in Layout.astro, which this higher-specificity
+     id rule was silently overriding. */
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+#page-content {
+  flex: 1 0 auto;
+}
+
+::selection {
+  background-color: var(--color-accent);
+  color: var(--color-white);
+}
+
+/* Visually-hidden helper for screen-reader-only content (e.g. structural
+   headings above card grids). Global so pages stop re-declaring it. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 
+ * Global Play Button for Video Tiles
+ * Standardizes the circular play button across all video components
+ * (YouTubeEmbed, ContentCard, CinematicGallery).
+ */
+.play-button-wrapper {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/*
+ * CRITICAL: This is the standardized play button component for the entire site.
+ * DO NOT diverge from this structure or add square/circular pill containers.
+ * The default state must be a simple triangle with NO visible container.
+ * The hover state must exclusively use CSS filters (drop-shadow) on the SVG.
+ */
+.cinematic-play-button {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.2, 1);
+}
+
+.cinematic-play-button svg {
+  width: 48px;
+  height: 48px;
+  color: rgba(255, 255, 255, 0.9);
+  opacity: 0.35;
+  transition: color 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .cinematic-play-button {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .cinematic-play-button svg {
+    width: 36px;
+    height: 36px;
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+/* Global hover and active states when a parent element with data-play-hover is interacted with */
+@media (hover: hover) and (pointer: fine) {
+  [data-play-hover]:hover .cinematic-play-button {
+    background: transparent !important;
+    box-shadow: none !important;
+    transform: scale(1.1);
+  }
+
+  [data-play-hover]:hover .cinematic-play-button svg {
+    color: #ffffff;
+    opacity: 1;
+    filter: drop-shadow(0 0 17px rgba(204, 0, 0, 1)) drop-shadow(0 0 33px rgba(204, 0, 0, 0.9));
+  }
+}
+
+[data-play-hover]:active .cinematic-play-button {
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: scale(0.95);
+  transition-duration: 0.1s;
+}
+
+[data-play-hover]:active .cinematic-play-button svg {
+  color: #ffffff;
+  opacity: 1;
+  filter: drop-shadow(0 0 17px rgba(204, 0, 0, 1)) drop-shadow(0 0 33px rgba(204, 0, 0, 0.9));
+}
+
+
+
+/*
+  ─── THE YOUTUBE MARK ON EVERY "WATCH ON YOUTUBE" LINK ─────────────────────
+
+  Every link that sends a reader to YouTube starts with the same mark the
+  footer uses (SOCIAL_ICONS.YouTube, src/data/icons.js), so the destination
+  reads before the words do and every player's door looks like one door.
+  They used to differ: an external-arrow glyph on the hub stage and the
+  homepage Featured box, a trailing arrow on the live billboard, and nothing
+  at all on the /feed hero, the card modal and the homepage hero (Andrew).
+
+  Global, because six components render one of these links; a rule copied
+  into each is how they drifted. The link lays itself out around the mark
+  (`:has`), and each link's own `[hidden]` / display rules are more specific,
+  so hiding one still hides it. The global QA sweep (rule 10) fails the build
+  on a "Watch on YouTube" link without the mark.
+*/
+.yt-mark {
+  display: inline-flex;
+  flex: none;
+  /* Never under 15px: that is the /feed hero's SUBSCRIBE mark beside it,
+     and on its 7.9px button text 1.45em alone came out 11.5px. */
+  width: max(1.45em, 15px);
+  height: max(1.45em, 15px);
+}
+.yt-mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+a:has(> .yt-mark) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55em;
+}

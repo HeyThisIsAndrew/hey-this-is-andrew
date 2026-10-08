@@ -1,0 +1,58 @@
+---
+/**
+ * ArticleAuthorBlock — the byline on an article page.
+ *
+ * ─── WHY IT IS MORE THAN A NAME ───────────────────────────────────────────
+ * Google's quality guidance weighs Experience, Expertise, Authoritativeness
+ * and Trust ("E-E-A-T"). A bare "by Andrew" signals none of those. A named
+ * author with a role and a one-line credential does, and is also what press
+ * accreditation boards look for when they check whether a site is a
+ * publication or a personal blog.
+ *
+ * The same values feed the `author` node of the article's JSON-LD, so the
+ * human-readable and machine-readable claims cannot disagree.
+ *
+ * ─── WHERE TO EDIT IT ─────────────────────────────────────────────────────
+ * DEFAULT_BYLINE in src/data/sections.js. When a contributors system exists,
+ * this component takes an `author` prop and the default becomes a fallback.
+ */
+import { Image } from 'astro:assets';
+import authorImage from '../assets/andrew-headshot.webp';
+import { DEFAULT_BYLINE } from '../data/sections.js';
+
+interface Props {
+  /** Reserved for a future contributors system. Defaults to the founder. */
+  author?: { name: string; role: string; bio?: string };
+}
+
+const { author = DEFAULT_BYLINE } = Astro.props;
+---
+
+{/*
+  No `rel="author"`. `rel` is only valid on <a>, <link> and <area> — Astro's
+  typed HTML attributes reject it on a <div>, and Google retired the
+  rel=author signal years ago. Authorship for this page is expressed properly
+  in the Person node of the article's JSON-LD (src/pages/intel/[slug].astro),
+  which is what actually gets read.
+*/}
+<div class="article-byline">
+  <div class="article-byline-avatar-wrapper">
+    <Image
+      src={authorImage}
+      alt="Andrew Baxter"
+      width={160}
+      height={160}
+      class="article-byline-avatar"
+      loading="lazy"
+      decoding="async"
+      aria-hidden="true"
+    />
+  </div>
+  <div class="article-byline-copy">
+    <p class="article-byline-name">
+      By <a href="/author/andrew-baxter" class="author-link"><span class="author">{author.name}</span></a>
+    </p>
+    <p class="article-byline-role">{author.role}</p>
+    {author.bio && <p class="article-byline-bio">{author.bio}</p>}
+  </div>
+</div>

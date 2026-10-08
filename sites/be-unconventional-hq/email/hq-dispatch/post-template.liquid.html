@@ -1,0 +1,162 @@
+{% comment %}
+  THE HQ DISPATCH: Kit RSS "Post Template".
+
+  Where it goes: in a Kit RSS broadcast (digest mode, weekly), select the
+  Post content block, open its Post Template tab, switch to HTML and paste
+  this file. Kit renders it into {{ message_content }} of template.html.
+
+  First post in the feed = FEATURED (a box with a large 16:9 image).
+  Posts 2 to 6        = LATEST FROM THE HQ (one box per story, 16:9
+                        thumbnail beside the text, stacked on a phone).
+  In single mode Kit passes one post, so only FEATURED renders.
+
+  Every story sits in the site's box: #111111 (--color-surface) with a 1px
+  #1d1d1d hairline (the site's rgba(255,255,255,0.05), flattened because
+  Outlook ignores rgba), and a red border on hover where hover exists.
+  Section headings are the site's PageTitle lockup: red kicker, heavy
+  uppercase title, and a red "HQ" tucked under it.
+
+  Kit variables used (all documented by Kit):
+    posts, post.title, post.url, post.summary, post.content,
+    post.categories
+  The label reads "<first category> | <second category>", so the feed
+  sends the content type first and the section second ("Review", "TV"
+  renders REVIEW | TV). A "Video" category turns the button into Watch now.
+  Kit has NO documented image variable, so the image is read out of
+  post.content: the feed must put a 1200x675 JPEG <img> as the FIRST
+  element of content:encoded. The contract is in scripts/hq-dispatch.md.
+
+  Every style is inline on purpose: some Gmail accounts strip <style>, and
+  the classes only add phone tweaks on top of a layout that already works
+  without them.
+{% endcomment %}
+{% for post in posts limit: 6 %}
+  {% assign dx_img = '' %}
+  {% assign dx_parts = post.content | split: 'src="' %}
+  {% if dx_parts.size > 1 %}{% assign dx_img = dx_parts[1] | split: '"' | first %}{% endif %}
+  {% assign dx_cat = post.categories | first %}
+  {% if dx_cat == blank %}{% assign dx_cat = 'From the HQ' %}{% elsif post.categories.size > 1 %}{% assign dx_cat = dx_cat | append: ' | ' | append: post.categories[1] %}{% endif %}
+  {% assign dx_alt = post.title | strip_html | replace: '"', '&quot;' %}
+  {% if post.categories contains 'Video' %}{% assign dx_cta = 'Watch now' %}{% else %}{% assign dx_cta = 'Read the story' %}{% endif %}
+
+  {% if forloop.first %}
+  <!-- ============ FEATURED ============ -->
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;">
+    <tr>
+      <td align="center" style="padding:8px 0 24px 0; text-align:center;">
+        <h2 style="margin:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; text-align:center;">
+          <span class="dx-red" style="display:block; font-size:12px; line-height:16px; font-weight:600; letter-spacing:0.3em; text-transform:uppercase; color:#ef4444; padding-bottom:8px;">This week</span>
+          <span class="dx-title dx-white" style="display:block; font-size:30px; line-height:34px; font-weight:900; letter-spacing:0.03em; text-transform:uppercase; color:#f0f0f0;">Featured</span>
+        </h2>
+      </td>
+    </tr>
+  </table>
+  <table role="presentation" class="dx-surface dx-card" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#111111" style="width:100%; background-color:#111111; border:1px solid #1d1d1d;">
+    {% if dx_img != '' %}
+    <tr>
+      <td style="padding:0; font-size:0; line-height:0;">
+        <a href="{{ post.url }}" style="display:block; text-decoration:none;">
+          <img src="{{ dx_img }}" width="550" height="309" alt="{{ dx_alt }}" class="dx-img dx-169" style="display:block; width:100%; max-width:550px; height:auto; border:0; outline:none; background-color:#1a1a1a; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:14px; line-height:20px; color:#a3a3a3;">
+        </a>
+      </td>
+    </tr>
+    <!-- Brand rule under the art, the site's red line. -->
+    <tr>
+      <td class="dx-red-bg" height="2" bgcolor="#cc0000" style="height:2px; line-height:2px; font-size:0; background-color:#cc0000;">&nbsp;</td>
+    </tr>
+    {% endif %}
+    <tr>
+      <td class="dx-pad" style="padding:26px 28px 30px 28px;">
+        <p class="dx-red" style="margin:0 0 12px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:11px; line-height:16px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:#ef4444;">{{ dx_cat }}</p>
+        <h3 style="margin:0 0 14px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:27px; line-height:33px; font-weight:800; letter-spacing:-0.01em; color:#f0f0f0;">
+          <a href="{{ post.url }}" class="dx-hl dx-white dx-feature-hl" style="color:#f0f0f0; text-decoration:none; font-size:27px; line-height:33px;"><span class="dx-gm-screen"><span class="dx-gm-diff">{{ post.title }}</span></span></a>
+        </h3>
+        {% if post.summary != blank %}
+        <p class="dx-body" style="margin:0 0 26px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:16px; line-height:27px; color:#a3a3a3;">{{ post.summary | strip_html | truncatewords: 38 }}</p>
+        {% endif %}
+        <!-- The site's primary button (.cta-button-primary): a #cc0000
+             outline around white uppercase type. Hover fills it red. 48px
+             tall; full width on a phone. -->
+        <table role="presentation" class="dx-btn-wrap" cellspacing="0" cellpadding="0" border="0">
+          <tr>
+            <td class="dx-btn-td" style="border:1px solid #cc0000; mso-padding-alt:14px 40px;">
+              <a href="{{ post.url }}" class="dx-btn" style="display:inline-block; padding:14px 40px; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:12px; line-height:18px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:#f0f0f0; text-decoration:none; white-space:nowrap;"><span class="dx-gm-screen"><span class="dx-gm-diff">{{ dx_cta }}</span></span></a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  {% else %}
+  {% if forloop.index == 2 %}
+  <!-- ============ LATEST FROM THE HQ ============ -->
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;">
+    <tr>
+      <td align="center" style="padding:48px 0 24px 0; text-align:center;">
+        <h2 style="margin:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; text-align:center;">
+          <span class="dx-red" style="display:block; font-size:12px; line-height:16px; font-weight:600; letter-spacing:0.3em; text-transform:uppercase; color:#ef4444; padding-bottom:8px;">The dispatch</span>
+          <span class="dx-title dx-white" style="display:block; font-size:30px; line-height:34px; font-weight:900; letter-spacing:0.03em; text-transform:uppercase; color:#f0f0f0;">Latest from the</span>
+          <span class="dx-title-hq dx-red-lg" style="display:block; padding-left:150px; font-size:26px; line-height:26px; font-weight:900; letter-spacing:0.03em; text-transform:uppercase; color:#cc0000; text-shadow:0 0 18px rgba(204,0,0,0.55);">HQ</span>
+        </h2>
+      </td>
+    </tr>
+  </table>
+  {% endif %}
+  <!-- One box per story. Hybrid columns: the thumbnail (192x108, 16:9) and
+       the text sit side by side at 600px and wrap to a stack on a phone,
+       even in Gmail builds that ignore the media query. Outlook gets the
+       ghost table. Side by side, the thumbnail is centred VERTICALLY on the
+       text (vertical-align:middle on both columns, valign="middle" for
+       Outlook): pinned to the top, it left a dead band under the art
+       whenever the headline ran to three lines (owner's call). -->
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;">
+    <tr>
+      <td style="padding:0 0 16px 0;">
+        <table role="presentation" class="dx-surface dx-card" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#111111" style="width:100%; background-color:#111111; border:1px solid #1d1d1d;">
+          <tr>
+            <td class="dx-pad" style="padding:16px; font-size:0; line-height:0;">
+              <!--[if mso]><table role="presentation" width="516" cellspacing="0" cellpadding="0" border="0"><tr><![endif]-->
+              {% if dx_img != '' %}
+              <!--[if mso]><td width="210" valign="middle"><![endif]-->
+              <div class="dx-col dx-thumb" style="display:inline-block; width:100%; max-width:210px; vertical-align:middle;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                  <tr>
+                    <td class="dx-thumb-pad" style="padding:0 18px 0 0;">
+                      <a href="{{ post.url }}" style="display:block; text-decoration:none;">
+                        <img src="{{ dx_img }}" width="192" height="108" alt="{{ dx_alt }}" class="dx-img dx-169" style="display:block; width:100%; max-width:192px; height:auto; border:0; outline:none; background-color:#1a1a1a; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:12px; line-height:16px; color:#a3a3a3;">
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+              <!--[if mso]></td><td width="306" valign="middle"><![endif]-->
+              <div class="dx-col" style="display:inline-block; width:100%; max-width:306px; vertical-align:middle;">
+              {% else %}
+              <!--[if mso]><td width="516" valign="middle"><![endif]-->
+              <div class="dx-col" style="display:inline-block; width:100%; max-width:516px; vertical-align:middle;">
+              {% endif %}
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                  <tr>
+                    <td style="padding:0; text-align:left;">
+                      <p class="dx-red" style="margin:0 0 8px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:11px; line-height:16px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:#ef4444;">{{ dx_cat }}</p>
+                      <h3 style="margin:0 0 6px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:18px; line-height:24px; font-weight:800; color:#f0f0f0;">
+                        <a href="{{ post.url }}" class="dx-hl dx-white" style="color:#f0f0f0; text-decoration:none;"><span class="dx-gm-screen"><span class="dx-gm-diff">{{ post.title }}</span></span></a>
+                      </h3>
+                      {% if post.summary != blank %}
+                      <p class="dx-body" style="margin:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:14px; line-height:22px; color:#a3a3a3;">{{ post.summary | strip_html | truncatewords: 22 }}</p>
+                      {% endif %}
+                      <a href="{{ post.url }}" class="dx-cta" style="display:inline-block; padding:13px 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:11px; line-height:18px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:#f0f0f0; text-decoration:none;">{{ dx_cta }} &rsaquo;</a>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+              <!--[if mso]></td></tr></table><![endif]-->
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+  {% endif %}
+{% endfor %}

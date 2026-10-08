@@ -1,0 +1,177 @@
+---
+/**
+ * Shared shell for every paginated content surface — the three feed routes
+ * (`/feed`, `/feed/videos`, `/feed/articles`), the category pages
+ * (`/category/[category]`) and the article section (`/intel`).
+ *
+ * The category route lived at `/feed/[category]` until 87c450d moved it. This
+ * comment said so for a week after it stopped being true, which is part of why
+ * nobody noticed the old paths were 404ing — see
+ * scripts/gsc-coverage-2026-08-26.md.
+ *
+ * The feed routes were near-identical copies of one another — same page
+ * chrome, same heading, same filter bar, same `.feed-page` / `.container`
+ * style block — differing only in their title, description and which loader
+ * fed the grid. `/intel` would have forked them a fifth time, so the chrome
+ * lives here once and the routes supply only what actually varies.
+ *
+ * Two slots:
+ *   default   — the grid. `/feed/[category]` renders a plain grid while the
+ *               others render the client-filtered <FeedGrid />.
+ *   "filters" — the filter bar. Defaults to the feed's <QuadrantFilter />;
+ *               /intel supplies its own category links instead.
+ */
+import Layout from './Layout.astro';
+import PageTitle from '../components/PageTitle.astro';
+import QuadrantFilter from '../components/QuadrantFilter.astro';
+
+
+interface Props {
+  preconnect?: string[];
+  title: string;
+  description: string;
+  /** sr-only <h2> so card <h3>s don't skip a level (axe: heading-order). */
+  headingLabel: string;
+  page: { url: { prev?: string; next?: string } };
+  /** QuadrantFilter's nav mode — on for the top-level feeds, off for category pages. */
+  isNavMode?: boolean;
+  /** Extra utility classes for <main>, e.g. the category page's bottom padding. */
+  mainClass?: string;
+  /** Visible page heading. Defaults to the Feed's wording. */
+  kicker?: string;
+  titlePrimary?: string;
+  titleSecondary?: string;
+  /** Image to preload in the <head> for LCP optimization */
+  preloadImage?: string | null;
+  preloadImageSrcset?: string | null;
+  preloadImageSizes?: string | null;
+  /**
+   * Keep this page out of the index. Set by IntelLayout when a section has no
+   * articles at all: the page still has to EXIST, because the category filter
+   * row always shows every category and a button that 404s is worse than one
+   * that leads to an honest empty state. But an empty page is not something to
+   * invite Google to index, and Search Console correctly calls it a soft 404.
+   * See the matching sitemap exclusion in astro.config.mjs.
+   */
+  noindex?: boolean;
+  /**
+   * Drop the big <PageTitle> lockup. /intel sets it: its magazine spread is
+   * the opening statement, so a full-height title above it was a screen of
+   * furniture before any content.
+   *
+   * It does NOT drop the page's heading — only its typography. Same call
+   * /events made when it was asked for the same thing: the <h1> stays as
+   * .sr-only, because deleting it leaves the page with no heading at all,
+   * which is an empty document outline for a screen reader and a missing-h1
+   * finding for the SEO audit. See the note in src/pages/events/[...page].astro.
+   *
+   * The prototype this came from dropped the element outright, so /intel —
+   * the section whose entire point is search visibility — shipped with no h1
+   * and a document outline that started at h2.
+   */
+  hideHero?: boolean;
+  hasSpotlightHero?: boolean;
+  /**
+   * Whether to render the filter row above the content.
+   *
+   * Default TRUE, because most of this layout's consumers need it and a prop
+   * that silently removes navigation should have to be asked for. The three
+   * /feed routes pass false: their horizontal rows already segment the feed by
+   * type and by brand, so the ARTICLE/VIDEO and FILM/TV/GAMES/EVENTS buttons
+   * were a second, flatter way to do the same job sitting directly on top of
+   * the first.
+   *
+   * This is a PROP rather than a deletion from the default slot below, because
+   * /category/<slug> renders that default and genuinely depends on it: it is
+   * the only control those pages have for switching type or category. /intel
+   * passes its own <IntelFilters /> into the same slot and is likewise
+   * unaffected.
+   */
+  showFilters?: boolean;
+}
+
+const {
+  title,
+  description,
+  headingLabel,
+  page,
+  isNavMode = false,
+  mainClass = '',
+  kicker = 'Explore The HQ',
+  titlePrimary = 'The',
+  titleSecondary = 'Feed',
+  preloadImage = null,
+  preloadImageSrcset = null,
+  preloadImageSizes = null,
+  preconnect = [],
+  noindex = false,
+  hideHero = false,
+  hasSpotlightHero = false,
+  showFilters = true,
+} = Astro.props;
+---
+
+<Layout title={title} description={description} prevUrl={page.url.prev} nextUrl={page.url.next} preloadImage={preloadImage} preloadImageSrcset={preloadImageSrcset} preloadImageSizes={preloadImageSizes} noindex={noindex} preconnect={preconnect}>
+  <main class:list={['feed-page', { 'has-spotlight-hero': hasSpotlightHero }, 'flex-1', 'flex', 'flex-col', 'w-full', mainClass]}>
+    <slot name="hero" />
+    <div class="container-page flex-1 flex flex-col">
+      {!hideHero && (
+        <header class={hasSpotlightHero ? "sr-only" : "section-header"} data-nav-anchor>
+          <PageTitle as="h1" kicker={kicker} primary={titlePrimary} secondary={titleSecondary} />
+        </header>
+      )}
+      {hideHero && <h1 class="sr-only">{titlePrimary} {titleSecondary}</h1>}
+
+      {showFilters && (
+        <slot name="filters">
+          <QuadrantFilter showTypes={true} isNavMode={isNavMode} />
+        </slot>
+      )}
+
+      {/* Structural, and sr-only in BOTH paths: with the lockup shown the h1
+          is <PageTitle> above, with it hidden the h1 is the line above this. */}
+      <h2 class="sr-only">{headingLabel}</h2>
+
+      <div class="flex-1 flex flex-col">
+        <slot />
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<style>
+  /*
+    THE TOP PADDING CLEARS THE FIXED SITE HEADER, and only a full-bleed hero
+    may remove it.
+
+    The site nav is `position: fixed`, so a page whose first element starts at
+    y=0 renders that element UNDERNEATH it. Every FeedLayout consumer except
+    the three /feed routes opens on the filter row, which is why this padding
+    exists. It was removed outright so FeedSpotlightHero could run to the top
+    of the viewport, and that took /intel and /category/* with it: their
+    filter buttons were still in the DOM, correct and clickable in theory, but
+    covered by the header at y=12px. Reported as "the filter buttons are gone".
+
+    So the removal is scoped to the pages that actually asked for it. A page
+    passing `hasSpotlightHero` is declaring it renders its own full-bleed
+    element into the `hero` slot and will handle the header itself; anything
+    else keeps the offset.
+  */
+  .feed-page {
+    padding: 120px 0 2rem;
+  }
+
+  .feed-page.has-spotlight-hero {
+    padding: 0;
+  }
+
+  @media (max-width: 768px) {
+    .feed-page {
+      padding: 80px 0 0;
+    }
+
+    .feed-page.has-spotlight-hero {
+      padding: 0;
+    }
+  }
+</style>

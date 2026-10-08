@@ -1,0 +1,256 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   REFERRAL / SUPPORT LINKS
+
+   Styles for <ReferralLinks />. Content lives in src/data/referrals.js and
+   the icons in src/data/icons.js — nothing here knows a partner's name.
+
+   These rules are in a stylesheet rather than the component's scoped <style>
+   on purpose. Astro scoped styles only apply to elements declared in the same
+   file, so the moment any of this markup moves into another component the
+   styling silently stops applying — which has already cost this project two
+   layout bugs. Shared building blocks get shared stylesheets.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.referral-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.referral-head {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-white);
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  margin: 0;
+}
+
+/* The disclosure. Quiet, but never hidden — it sits above the links and is
+   readable. Do not reduce this below 0.68rem or lighten it further. */
+.referral-disclosure {
+  font-size: 0.7rem;
+  line-height: 1.6;
+  color: var(--color-white-muted);
+  margin: 0;
+}
+
+.referral-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.referral-group-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-accent-text);
+  margin: 0;
+}
+
+.referral-group-note {
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--color-white-muted);
+  margin: 0;
+}
+
+.referral-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* One partner. A row, so the icon and the copy stay aligned however many
+   lines the blurb runs to. */
+.referral-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.7rem 0.75rem;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.015);
+  /* Sits on the page rather than in it. See --shadow-tile in global-base.css
+     for why it is two shadows and not one. */
+  box-shadow: var(--shadow-tile);
+  transition:
+    border-color 0.3s ease,
+    background-color 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .referral-item:hover {
+    border-color: rgba(204, 0, 0, 0.55);
+    background: rgba(204, 0, 0, 0.06);
+    /* The brand glow is layered ON the depth, not instead of it: `box-shadow`
+       is a single property, so naming only the glow here would flatten the
+       tile back onto the page at the exact moment it is being pointed at. */
+    box-shadow: var(--shadow-tile), 0 0 24px -6px rgba(204, 0, 0, 0.35);
+    transform: translateX(2px);
+  }
+
+  .referral-item:hover .referral-icon {
+    color: var(--color-accent-text);
+  }
+
+  .referral-item:hover .referral-label {
+    color: var(--color-white);
+  }
+}
+
+/*
+  ─── PRESS FEEDBACK, BECAUSE HOVER IS NOT AVAILABLE ON A TOUCHSCREEN ───────
+
+  The hover block above is correctly gated behind `(hover: hover) and
+  (pointer: fine)`: without that, a tap on a phone leaves the row stuck in its
+  hover state until you touch something else. But nothing replaced it there,
+  so tapping a partner row did nothing visible until the next page began to
+  load. Reported as "the tiles lack a hover state or an interaction when I
+  click them", on an iPhone and an iPad.
+
+  `:active` is deliberately OUTSIDE that media query. It is the branch a
+  touchscreen actually gets, and on a pointer device it doubles as the
+  mouse-down state.
+
+  It translates rather than scales: these rows are full-width, and scaling a
+  full-width row moves both its edges, which reads as the layout shifting.
+  `translateX` matches the direction the hover state already moves in.
+*/
+.referral-item:active {
+  border-color: rgba(204, 0, 0, 0.7);
+  background: rgba(204, 0, 0, 0.1);
+  transform: translateX(2px);
+}
+
+.referral-item:active .referral-icon {
+  color: var(--color-accent-text);
+}
+
+.referral-item:active .referral-label {
+  color: var(--color-white);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .referral-item {
+    transition: border-color 0.3s ease, background-color 0.3s ease;
+  }
+  .referral-item:active {
+    transform: none;
+  }
+}
+
+.referral-item:focus-visible {
+  outline: 2px solid var(--color-white);
+  outline-offset: 2px;
+}
+
+/*
+  Fixed box so every row's copy starts at the same x, whatever the glyph.
+
+  ─── WHY THE BOX GREW ─────────────────────────────────────────────────────
+
+  It was 26px holding a 17px mark, and the partner logos were illegible on a
+  large display: the site scales `html` to 80% from 768px up, so the type
+  around these shrinks on a big screen while the icons, sized in px, stayed
+  put — small to begin with and smaller in proportion to everything else.
+  34px with more of it used is enough to read a logo and still nothing like a
+  thumbnail. If it goes further the row stops being a list and starts being
+  a card grid.
+*/
+.referral-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  color: var(--color-white-muted);
+  transition: color 0.3s ease;
+}
+
+/* Sizing lives here, not on the SVG — see the rules at the top of
+   src/data/icons.js for why the icons carry no width/height of their own. */
+.referral-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.referral-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.referral-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.92);
+  transition: color 0.3s ease;
+}
+
+/* The concrete incentive — "$15 renewal credit". Accent-tinted so it reads as
+   a real offer rather than more body copy. */
+.referral-offer {
+  font-family: var(--font-body);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-text);
+  border: 1px solid rgba(204, 0, 0, 0.45);
+  padding: 0.1rem 0.35rem;
+  white-space: nowrap;
+}
+
+.referral-blurb {
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--color-white-muted);
+}
+
+/* Compact: the article rail. Tighter rhythm, no group notes (the component
+   omits them), everything else identical. */
+.referral-block.is-compact {
+  gap: 1.15rem;
+}
+
+.referral-block.is-compact .referral-item {
+  padding: 0.7rem 0.7rem;
+}
+
+.referral-block.is-compact .referral-label {
+  font-size: 0.75rem;
+}
+
+/*
+  A PARTNER LOGO GETS MORE OF THE BOX THAN A GLYPH DOES, ON PURPOSE.
+
+  The SVGs are single-colour brand marks that read at any size. Mint Mobile's
+  mark and the DaVinci Resolve wheel are full-colour artwork with real
+  internal detail, and detail is what disappears first. Matching them at 21px
+  would be equal in MEASUREMENT and unequal in legibility, which is the wrong
+  kind of consistency: 28px is optical sizing, and the fixed 34px box keeps
+  every row's copy starting at the same x regardless.
+*/
+.referral-icon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}

@@ -1,0 +1,604 @@
+---
+/**
+ * The event hero, as its own component.
+ *
+ * ─── WHY THIS EXISTS ────────────────────────────────────────────────────────
+ * /events rendered its featured event through `FeaturedEvent.astro`, which is a
+ * CARD: a cover-cropped image with the copy sitting on top of it. Beside the
+ * real hero on /events/<slug> the difference was not subtle. Measured on NYCC
+ * at 1512px:
+ *
+ *   index     no backdrop plate, no eyebrow chips, no logo lockup, and the
+ *             key art blown up edge to edge under `object-fit: cover`, which
+ *             is the "too zoomed in" report — a 16/9 asset stretched to fill a
+ *             1512x520 box has nowhere to go but in.
+ *   detail    blurred backdrop plate, CONVENTION / NEW YORK, NY / OCT 8-11
+ *             chips, the event's own mark as the heading.
+ *
+ * The index also printed "UPCOMING" twice: the status pill renders a visible
+ * label and an sr-only one, which is right on a card in a list and redundant
+ * when the chips already say what and when.
+ *
+ * ─── WHY A NEW COMPONENT RATHER THAN REUSING EventFeatured ─────────────────
+ * `EventFeatured` is not a hero, it is the whole /events/<slug> PAGE: hero,
+ * table of contents, coverage grid, filters, details section, Instagram rail.
+ * Its coverage blocks are gated on `unifiedContent.length`, so passing an empty
+ * array quiets them, but the rest of the page body still renders. Putting that
+ * on the index would nest an event page inside a listing.
+ *
+ * So the hero shell is here, and the markup and CSS are lifted from the working
+ * one rather than re-derived, comments included, so the two cannot drift on
+ * anything that matters visually.
+ *
+ * DELIBERATELY NOT INCLUDED: the trailer stage. The index is a listing and the
+ * one event it features does not need a player. /events/<slug> is untouched
+ * by this file.
+ *
+ * FOLLOW-UP, stated plainly: `EventFeatured` still carries its own copy of
+ * these rules. Unifying them means extracting the hero out of a 3,000-line
+ * component that owns a protected iframe, which is worth doing on its own.
+ */
+import { urlFor, cappedWidths } from '../lib/local-content';
+import { formatEventDateRange, formatLocation, getEventTypeLabel } from '../lib/events';
+import logoImage from '../assets/logo-mark.webp';
+import { getImage } from 'astro:assets';
+
+interface Props {
+  event: any;
+  /** Where the primary CTA goes. The index sends readers to the event page. */
+  href?: string;
+  ctaLabel?: string;
+}
+
+const { event, href, ctaLabel = 'Explore coverage' } = Astro.props;
+
+const slug = typeof event?.slug === 'string' ? event.slug : event?.slug?.current ?? '';
+const ctaHref = href ?? `/events/${slug}`;
+
+const eventTypeLabel = getEventTypeLabel(event);
+const eventDateLabel = formatEventDateRange(event.startDate, event.endDate);
+const locationLabel = formatLocation(event.location);
+
+const brandColor =
+  (typeof event.brandColor === 'string' ? event.brandColor : event.brandColor?.hex) || '#CC0000';
+
+function hexToRgbTriple(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return '204, 0, 0';
+  const int = parseInt(m[1], 16);
+  return `${(int >> 16) & 255}, ${(int >> 8) & 255}, ${int & 255}`;
+}
+const brandRgb = hexToRgbTriple(brandColor);
+
+/* Same ladder and the same `100vw` claim the detail hero makes. */
+/*
+  CAPPED AT THE ASSET, NOT A FLAT CEILING. This was a hard `[600, 900, 1200,
+  2400]`, which got it wrong at both ends of the library: 15 of the 37 hero
+  assets are 1920 wide, so the top rung asked Sanity to upsample them to 2400
+  and return a bigger, blurrier file (the exact failure buildImageSet's note
+  in local-content.ts is about), while the two that are genuinely 3840 could
+  never be asked for more than 2400 and rendered soft on a 4K screen.
+
+  `cappedWidths` drops anything above the asset's own width and puts that width
+  on top, so 1920 art tops out at 1920, 2560 art at 2560, and 3840 art now gets
+  the full rung. New art at a higher resolution earns its rung by existing;
+  nothing here has to be edited again.
+*/
+const HERO_WIDTHS = cappedWidths(event.heroImage, [600, 900, 1200, 2400, 3840]);
+const heroAt = (w: number) => (event.heroImage ? urlFor(event.heroImage).width(w).auto('format').url() : '');
+const heroBackdropMobileUrl = heroAt(800);
+const heroBackdropSrcset = event.heroImage ? HERO_WIDTHS.map((w) => `${heroAt(w)} ${w}w`).join(', ') : '';
+const heroBackdrop = event.heroImage;
+const fallbackGradient = `linear-gradient(135deg, rgba(${brandRgb}, 0.28) 0%, #0a0a0a 62%, #111 100%)`;
+
+/* `heroLogo` first, then `logo`: the event hero has three mark slots and each
+   override touches exactly one, so a series like PAX does not render the same
+   shared wordmark in all of them. See CLAUDE.md. */
+const markRef = event.heroLogo || event.logo;
+const markUrl = markRef ? urlFor(markRef).height(320).auto('format').url() : '';
+/* Sized, not the 414 KB original — see the note in ContentCard. */
+const fallbackLogoSrc = (await getImage({ src: logoImage, height: 360, format: 'webp', quality: 70 })).src;
+const resolvedLogoSrc = markUrl || fallbackLogoSrc;
+---
+
+<section class="event-hero event-hero--index" style={`--brand: ${brandColor}; --brand-rgb: ${brandRgb};`}>
+  {/* Two layers: the wrapper owns clipping and stays static; the inner layer
+      owns the image and the slow push. Animating one element caused edge
+      slivers (issue #22). */}
+  <div class="event-hero-bg-wrapper">
+    {heroBackdrop ? (
+            <img
+        src={heroBackdropMobileUrl}
+        srcset={heroBackdropSrcset}
+        sizes="100vw"
+        alt=""
+        class="event-hero-bg-animated hero-backdrop-plate"
+        loading="eager"
+        fetchpriority="high"
+      />
+    ) : (
+      <div class="event-hero-bg-animated" style={`background-image: ${fallbackGradient};`}></div>
+    )}
+  </div>
+
+  <div class="hub-stage-wash" aria-hidden="true"></div>
+
+  {/* The darkening scrim is its OWN layer rather than a background on the copy
+      wrapper below. The wrapper sits in this hero's content box, which is
+      deliberately the page's text column and not the full-bleed edge, so a
+      background painted on it would have stopped 33px short of the screen on
+      both sides. `inset: 0` resolves against the PADDING box, which is the
+      full bleed. */}
+  <div class="event-hero-scrim" aria-hidden="true"></div>
+
+  {/* This hero promotes ONE event, and readers tapped its art expecting to
+      open it; only the CTA worked. The whole hero links where the CTA does.
+      A mouse and touch target only (aria-hidden, out of the tab order): the
+      CTA stays the keyboard and screen-reader path, one stop. The copy above
+      it lets taps through (see .event-hero--index .event-hero-overlay), so a
+      tap on the logo or the tagline lands here too; the CTA keeps its own. */}
+  <a href={ctaHref} class="event-hero-link" tabindex="-1" aria-hidden="true"></a>
+
+  <div class="event-hero-overlay flex flex-col justify-center">
+      <div class="event-hero-content hero-copy">
+        {/* The metadata the detail hero uses: what it is, where, and when.
+            Replaces a status pill that said UPCOMING twice and a plain text
+            line that said the same dates in a smaller voice. */}
+        <div class="hero-eyebrow">
+          <span class="hero-meta-tag hero-meta-tag--type">{eventTypeLabel}</span>
+          {locationLabel && <span class="hero-meta-tag">{locationLabel}</span>}
+          {event.startDate && (
+            <time datetime={event.startDate} class="hero-meta-tag hero-meta-tag--date">
+              {eventDateLabel}
+            </time>
+          )}
+        </div>
+
+        {/* The mark IS the heading. Naming the image and wrapping it in the
+            heading puts the answer where the question is: the alt paints in
+            the mark's own position if the image never arrives. */}
+        <div class="hero-identity">
+          <h2 class="hero-title-lockup">
+            <span class="hero-logo-wrap">
+              <img
+                src={resolvedLogoSrc}
+                alt={event.title}
+                class="hero-logo"
+                data-fallback-logo={fallbackLogoSrc}
+              />
+            </span>
+          </h2>
+
+          {event.description && <p class="hero-tagline">{event.description}</p>}
+
+          <div class="hero-cta-row">
+            <a href={ctaHref} class="hero-cta hero-cta--primary">
+              <span>{ctaLabel}</span>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+  </div>
+</section>
+
+<style>
+  /*
+    ─── LIFTED FROM EventFeatured.astro, NOT RE-DERIVED ──────────────────────
+
+    These rules and their comments are the ones the working /events/<slug> hero
+    uses. Copied so the two heroes agree on the treatment that matters: the
+    blurred plate, the slow push, the wash, the chip row and the lockup.
+
+    If you retune one, retune the other, and see the FOLLOW-UP note at the top
+    of this file for why they are not yet one file.
+  */
+  .event-hero-bg-wrapper {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    z-index: 0;
+  }
+
+  .event-hero-bg-animated {
+    position: absolute;
+    inset: 0;
+    /* Cover the whole hero (behind the copy AND the trailer). It re-crops when
+       the description expands — an accepted trade for full coverage. */
+    object-fit: cover;
+    /*
+      CENTRED. It was `center 22%`, biased high for key art that carries its
+      subject near the top. Behind 9px of blur nobody can tell what the subject
+      is, and the bias simply cropped differently on every asset: the 2.35:1
+      banners lost their bottom edge while the 16:9 stills lost nothing. One
+      position for every image is the point.
+    */
+    object-position: center;
+    width: 100%;
+    height: 100%;
+    /* translateZ(0) promotes this layer to its own compositor layer. Without
+       it, the overlay's backdrop-filter blur stops the animated transform from
+       repainting (issue #22 root cause) — keep it in the base AND in every
+       keyframe so the promotion never lapses mid-animation. */
+    transform: translateZ(0);
+    /* Tuned after visual QA: the original 1.05/50s (~0.1%/s) sat below the
+       perception floor and read as static. 1.08/30s is ambient but alive —
+       don't retune blind; verify any change with the 2s/1.5x debug values
+       (see d1db593). */
+    animation: cinematic-hero-zoom 30s ease-in-out infinite alternate;
+  }
+
+  /* DEFINED HERE, not inherited. Astro scopes this <style>, and @keyframes are
+     resolved per stylesheet — EventFeatured's copy is invisible to this file,
+     so referencing the name without this block means the push silently never
+     runs. Same 1.08 -> 1 as every other hero; scale never drops below 1, so the
+     image always covers the wrapper and no edge is ever exposed. */
+  @keyframes cinematic-hero-zoom {
+    from {
+      transform: scale(1.08) translateZ(0);
+    }
+    to {
+      transform: scale(1) translateZ(0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .event-hero-bg-animated {
+      animation: none;
+    }
+  }
+
+  /*
+    ─── ONE COPY OF THE PICTURE. ONLY EVER ONE ───────────────────────────────
+
+    `cover` on a hero this wide is a crop: measured at 3840x2160 the box is
+    ~3840x665 against 16/9 key art, so 33% of the picture's height was on
+    screen. Reported as "way too zoomed in".
+
+    The first fix for that was two copies of the file — one contained in front,
+    one covering behind to fill the gutters. It put the same artwork on screen
+    twice at two scales, which is exactly what this project had already removed
+    once and written down: "two copies at two scales put the same shapes on
+    screen twice slightly out of register". Reported again, correctly, as the
+    hero looking duplicated. The second copy is gone and is not coming back.
+
+    So: ONE image, contained, and the space it does not fill is the page's own
+    dark, shaped by a horizontal vignette on `.event-hero-scrim`. The picture
+    dissolves into the field rather than ending on a letterbox edge.
+
+    The vignette is on the SCRIM, not a mask on the image, because which edges
+    the art leaves bare depends on the shape of the box: a wide desktop hero
+    leaves gutters at the sides, a phone leaves them top and bottom. An overlay
+    does not need to know which — where the art reaches the edge it reads as an
+    ordinary cinematic vignette instead.
+
+    CROPPING IS STILL WRONG HERE, whatever the aspect. CLAUDE.md: L.A. Comic
+    Con is 2.35:1 and SXSW is 2.70:1, and both set the event's NAME across the
+    full width of the artwork, so cover removes the first and last letters of
+    its own title.
+  */
+  .hero-backdrop-plate {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    /* Light, and lighter than it was. The picture is meant to be legible now,
+       not destroyed — the scrim below does the work of keeping type readable. */
+    filter: blur(2px) saturate(1.08) brightness(1.04);
+    -webkit-filter: blur(2px) saturate(1.08) brightness(1.04);
+  }
+
+  .event-hero-link {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+  .event-hero-overlay {
+    position: relative;
+    z-index: 1;
+    /*
+      Was 70vh, which read as dominant: the hero took most of the screen with
+      the coverage below it barely announcing itself. 62 is enough to establish
+      the hub without burying what the page is actually for.
+
+      `lvh`, not `vh`. On iOS `vh` is the LARGEST viewport, which the page also
+      uses before the URL bar retracts — the unit this project already pins for
+      exactly this reason (scripts/viewport-units.test.mjs).
+    */
+    /* Removed massive empty space */
+    /* min-height: 62lvh; */
+    /* The scrim and its blur moved to `.event-hero-scrim` — see the note in the
+       markup. This element now only positions the copy. */
+    display: flex;
+    align-items: center;
+    padding-top: clamp(6rem, 4.5rem + 6vw, 8.5rem);
+    padding-bottom: clamp(2.5rem, 2rem + 2.5vw, 4rem);
+  }
+
+
+  .event-hero-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      /*
+        ─── THE HORIZONTAL VIGNETTE ────────────────────────────────────────
+
+        The contained artwork does not fill an ultra-wide hero, and what is
+        beside it must not read as letterbox bars. This fades the page's own
+        dark inward from both edges so the picture dissolves into the field
+        instead of ending on an edge — and it replaces the second copy of the
+        artwork that used to fill that space, which read as a duplicate.
+
+        It is also what the copy sits on: the lockup is at the left, where
+        this is at its most opaque, so legibility comes from the same
+        declaration as the framing rather than a second scrim over the type.
+
+        Clear through the middle, which is where a 16/9 picture lands in a box
+        this wide. On a phone the box is TALLER than the art, so the art
+        reaches both side edges and this reads as an ordinary vignette.
+      */
+      linear-gradient(
+        to right,
+        #0a0a0a 0%,
+        rgba(10, 10, 10, 0.92) 10%,
+        rgba(10, 10, 10, 0.45) 24%,
+        transparent 38%,
+        transparent 64%,
+        rgba(10, 10, 10, 0.45) 78%,
+        rgba(10, 10, 10, 0.92) 92%,
+        #0a0a0a 100%
+      ),
+      linear-gradient(
+        to top,
+        rgba(0, 0, 0, 0.97) 0%,
+        rgba(0, 0, 0, 0.55) 55%,
+        rgba(0, 0, 0, 0.35) 100%
+      );
+    /* Subtle blur of the background image behind the overlay (the copy is not a
+       child of this layer, so it stays sharp) — softens the busy hero art for
+       title legibility. */
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+  }
+
+  .event-hero-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    max-width: 900px;
+  }
+
+  .hero-eyebrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 1.4rem;
+  }
+
+  .hero-meta-tag {
+    display: inline-block;
+    padding: 0.4rem 0.8rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    line-height: 1.2;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.62);
+    white-space: nowrap;
+  }
+
+  /*
+    LIFTED WITH THE REST, and missed the first time: without these the three
+    chips are identical and the red accent that marks WHAT the event is never
+    appears. Same two rules as EventFeatured.astro.
+  */
+  .hero-meta-tag--type {
+    border-left: 2px solid rgba(var(--brand-rgb, 204, 0, 0), 0.9);
+    color: rgba(255, 255, 255, 0.86);
+  }
+
+  /*
+    The date is the widest of the three, so it is the one allowed to wrap
+    rather than force a horizontal scroll on a 320px screen. It is already
+    compact — formatEventDateRange() collapses "Sep 12, 2026–Sep 13, 2026"
+    to "Sep 12–13, 2026" — and the slightly tighter tracking keeps it from
+    dominating the row it shares.
+  */
+  .hero-meta-tag--date {
+    letter-spacing: 0.14em;
+    white-space: normal;
+  }
+
+  .hero-identity {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.55rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .hero-title-lockup {
+    display: block;
+    margin: 0;
+    padding: 0;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    letter-spacing: inherit;
+  }
+
+  .hero-logo-wrap {
+    display: block;
+    margin: 0.2rem 0 1.4rem;
+    filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.9));
+  }
+
+
+  .hero-logo {
+    /* Responsive + width-capped so wide logos (e.g. Comic-Con) never overflow
+       the column or force the banner taller than the viewport on mobile. */
+    max-height: clamp(84px, 46px + 12vw, 180px);
+    max-width: min(100%, 420px);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    margin-bottom: 1.5rem;
+    /* Removed filter: drop-shadow due to known iOS Safari rendering bugs 
+       causing the image to completely fail to load/display as broken on mobile */
+  }
+
+  .hero-tagline {
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.58);
+    line-height: 1.7;
+    max-width: 52ch;
+    margin-top: 1.6rem;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.9);
+  }
+
+  /*
+    ─── INDEX-ONLY: FULL BLEED OUT OF .container-page ────────────────────────
+
+    /events renders this inside `.container-page` (1536px cap, 25.6px gutter),
+    so without this the hero stopped short of the screen on both sides while
+    every other hero on the site runs edge to edge. Same escape the feed rails
+    use: `50%` is half this element's containing block and `50vw` half the
+    viewport, so the negative margin is exactly the distance to the viewport
+    edge at any width.
+
+    Known and accepted, as on the rails: `vw` includes the scrollbar, so this
+    overshoots by about half a scrollbar a side. `body` is `overflow-x: clip`.
+  */
+  .event-hero--index {
+    margin-inline: calc(50% - 50vw);
+    /*
+      ─── AND THE EXACT SAME DISTANCE PUT BACK AS PADDING ────────────────────
+
+      This pair is the repo's full-bleed idiom (the feed rails use it). Both
+      percentages resolve against the SAME containing block — `.container-page`
+      on /events — so whatever the negative margin takes off the outside, the
+      padding puts back on the inside, and the content box lands exactly on the
+      page's own text column. At every width, with no second max-width to keep
+      in step and no arithmetic that has to know what `--page-max` is.
+
+      It also absorbs the one flaw in a `vw` break-out: `vw` counts the
+      scrollbar and the layout viewport does not, so the margin overshoots by
+      about half a scrollbar a side. Because the padding overshoots by exactly
+      the same amount in the other direction, the copy does not care. Measured
+      with a nested `.container-page` instead: the copy started at 18.1px while
+      every heading below the hero started at 25.6px. With this: both 25.6.
+
+      The overshoot is still there on the ART, which is the intent, and `body`
+      is `overflow-x: clip` so it is clipped rather than scrollable.
+
+      Every background layer is absolutely positioned with `inset: 0`, which
+      resolves against the PADDING box, so they all stay full bleed.
+    */
+    padding-inline: calc(50vw - 50%);
+    min-height: clamp(420px, 52vh, 620px);
+    display: flex;
+    position: relative;
+    isolation: isolate;
+    background-color: #111;
+  }
+
+  /*
+    `.event-hero-overlay` is this hero's only in-flow child and the hero is a
+    ROW flex box, so without this it shrink-wrapped to its own content: measured
+    494px wide inside a 1512px hero. Found by reading computed width, not by
+    reading the markup.
+  */
+  .event-hero--index .event-hero-overlay {
+    pointer-events: none;
+    flex: 1;
+    min-width: 0;
+  }
+
+  /*
+    The overlay is a COLUMN flex box with `align-items: center`, which in a
+    column sizes AND positions children on the cross axis — the width. Left
+    alone, the copy shrink-wrapped to its longest line and then sat in the
+    middle of the hero: measured 527px from the viewport edge against a page
+    column that starts at 25.6px. `stretch` fills the column instead, and
+    `.event-hero-content`'s own `max-width: 900px` clamps it back from the
+    cross-start, so the copy begins on the column and still wraps at 900px.
+  */
+  .event-hero--index .event-hero-content {
+    align-self: stretch;
+  }
+
+  /*
+    ─── TWO LINES, AS THE CARD THIS REPLACES ALSO DID ────────────────────────
+
+    `.hero-tagline` is styled for a SHORT line: 0.95rem, uppercase, 0.22em of
+    tracking. `event.description` is a paragraph, and unclamped it set to NINE
+    lines on a phone, making the hero 726px of an 844px viewport with nothing
+    below it visible. The card this component replaces clamped to 2 (`.fe-desc`
+    in FeaturedEvent.astro) and dropping that was a regression I introduced,
+    not a decision.
+
+    The detail hero does not render a tagline for this event at all — the full
+    description is its ABOUT section. This is a listing, so the hook stays;
+    only its length is bounded. Measured at 390px wide: the hero went from
+    726px to 519px, and "Upcoming Events" is back on the first screen.
+  */
+  .event-hero--index .hero-tagline {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .event-hero--index .hero-cta-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 1.25rem;
+  }
+
+  .event-hero--index .hero-cta {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-white, #f0f0f0);
+    text-decoration: none;
+    transition: border-color 0.25s ease, background 0.25s ease, transform 0.25s ease;
+  }
+
+  .event-hero--index .hero-cta:hover,
+  .event-hero--index .hero-cta:focus-visible {
+    border-color: rgba(var(--brand-rgb, 204, 0, 0), 0.9);
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .event-hero--index .hero-cta:focus-visible {
+    outline: 2px solid var(--color-accent-text, #ef4444);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .event-hero--index .hero-cta {
+      transition: none;
+    }
+  }
+</style>

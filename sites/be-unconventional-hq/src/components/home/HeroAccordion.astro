@@ -1,0 +1,609 @@
+---
+/**
+ * Homepage hero: the five-panel editorial accordion.
+ *
+ * FILM, TV, GAMES, EVENTS, LATEST — one expanded, the rest compressed to a
+ * strip: blurred art, a vertical label, and the category's chalk tile
+ * illustration at the foot (Andrew's call, from the reference mockup; the
+ * art is not cropped for a strip, so it is blurred rather than shown).
+ *
+ * ─── RENDERED OPEN ON THE SERVER ──────────────────────────────────────────
+ * Panel 0's `is-open` and `aria-expanded="true"` are in the HTML. The script
+ * only moves them. This is hard rule 10 again in a new place: the open panel's
+ * art is the page's LCP element, and if its visibility waited on the bundle,
+ * the page would paint blank without JS and late with it.
+ *
+ * ─── ONE MARKUP, RESTYLED ─────────────────────────────────────────────────
+ * Desktop is a row of flex panels; below 768px the same elements stack into a
+ * vertical accordion (hard rule 7: no per-breakpoint duplicate markup).
+ *
+ * ─── ROTATION ─────────────────────────────────────────────────────────────
+ * 7s per panel on a requestAnimationFrame clock that only advances while
+ * running, so a pause resumes with the time that was left. Paused by hover,
+ * focus inside, and a touch in progress; the toggle pauses it outright; the
+ * first manual panel choice stops it for good (the toggle can restart it).
+ * Off by default below 768px, and never with prefers-reduced-motion.
+ */
+import { getImage } from 'astro:assets';
+import ChalkIcon from './ChalkIcon.astro';
+import { HERO_SIZES, HERO_CLOSED_SIZES, newUntil } from '../../lib/homepage-feed';
+import { categories } from '../../data/categories.js';
+import logoMark from '../../assets/logo-mark.webp';
+import type { HeroPanel } from '../../lib/homepage-feed';
+import { SOCIAL_ICONS } from '../../data/icons.js';
+
+interface Props {
+  panels: HeroPanel[];
+}
+
+const { panels } = Astro.props;
+
+/*
+  Each strip's mark is the SAME chalk illustration as its "What We Cover"
+  tile (src/data/categories.js), so the hero and the tiles speak one visual
+  language. LATEST has no tile, so it carries the BE Unconventional mark.
+  Resized at build (see artFor): the tile PNGs are 420px and logo-mark.webp is 414 KB.
+*/
+const tileArt = Object.fromEntries(categories.map((c) => [c.slug, c.image]));
+const artFor = async (key: string) => {
+  const src = key === 'latest' ? logoMark : tileArt[key];
+  if (!src) return null;
+  /* Built for a 2x screen. The strip shows a tile ~220px wide once its
+     crop and scale are counted, so 240 was soft on every Retina display;
+     420 is the tile PNGs' full size (asking for more only upsamples). The
+     BE mark is a 1981px source, so it gets a true 2x of its ~170px box.
+     Phones show the tile at ~76px (the mark ~96px), so the 240 rung serves
+     them; the full-size file was a third of the hero's own bytes there.
+     Quality 80, not 90: PageSpeed flagged the BE mark's 240 rung (14 KiB) as
+     compressible by 9.7 KiB, and these are chalk marks drawn under a strip's
+     label, not photographs. */
+  const want = key === 'latest' ? 480 : 420;
+  const width = Math.min(want, src.width);
+  const rungs = [...new Set([Math.min(240, width), width])];
+  const imgs = await Promise.all(rungs.map((w) => getImage({ src, width: w, format: 'webp', quality: 80 })));
+  return {
+    src: imgs[imgs.length - 1].src,
+    srcset: imgs.map((img, i) => `${img.src} ${rungs[i]}w`).join(', '),
+    width,
+    height: Math.round((width * src.height) / src.width),
+  };
+};
+const art = Object.fromEntries(await Promise.all(panels.map(async (p) => [p.key, await artFor(p.key)])));
+---
+
+{panels.length > 0 && (
+  <section class="hero-acc" aria-labelledby="hero-acc-title" data-hero-acc>
+    <h2 id="hero-acc-title" class="sr-only">Top stories</h2>
+
+    <div class="hero-acc-track">
+      {panels.map((panel, index) => {
+        const { story } = panel;
+        const open = index === 0;
+        const panelId = `hero-panel-${panel.key}`;
+        const isVideo = story.type === 'video';
+        return (
+          <article
+            class:list={['acc-panel', { 'is-open': open, 'acc-panel--article': !isVideo }]}
+            data-acc-panel
+            data-key={panel.key}
+          >
+            <div class="acc-media" aria-hidden="true" data-video-wrapper={isVideo ? story.videoId : undefined}>
+              {story.image && (
+                <img
+                  src={story.image}
+                  srcset={story.imageSrcset || undefined}
+                  sizes={story.imageSrcset ? (open ? HERO_SIZES : HERO_CLOSED_SIZES) : undefined}
+                  alt=""
+                  width="1280"
+                  height="720"
+                  loading={open ? 'eager' : 'lazy'}
+                  fetchpriority={open ? 'high' : 'low'}
+                  decoding="async"
+                />
+              )}
+              {isVideo && (
+                <button
+                  type="button"
+                  class="acc-play-overlay"
+                  data-play-hover="true"
+                  data-play-video={story.videoId}
+                  aria-label="Play video"
+                  tabindex="-1"
+                >
+                  {/* Phones only (home.css): the site's one play button, the
+                      same markup every card uses (global-base.css): a bare
+                      triangle, dim at rest, white with the red glow on hover
+                      or tap. On a phone it replaces the Watch button. */}
+                  <span class="play-button-wrapper" aria-hidden="true">
+                    <span class="cinematic-play-button">
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M8 5v14l11-7z" /></svg>
+                    </span>
+                  </span>
+                </button>
+              )}
+            </div>
+
+            <div class="acc-body">
+              <button
+                type="button"
+                class="acc-trigger"
+                id={`${panelId}-trigger`}
+                aria-expanded={open ? 'true' : 'false'}
+                aria-controls={panelId}
+                data-acc-trigger
+              >
+                {art[panel.key] ? (
+                  <span class:list={['acc-art', { 'acc-art--logo': panel.key === 'latest' }]} aria-hidden="true">
+                    <img
+                      src={art[panel.key].src}
+                      srcset={art[panel.key].srcset}
+                      sizes={panel.key === 'latest' ? '(max-width: 767px) 100px, 170px' : '(max-width: 767px) 80px, 170px'}
+                      alt=""
+                      width={art[panel.key].width}
+                      height={art[panel.key].height}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </span>
+                ) : (
+                  <ChalkIcon name={panel.key} size={30} class="acc-icon" />
+                )}
+                <span class="acc-label">{panel.label}</span>
+                {/* NEW for 24 hours after the story goes live, on any panel.
+                    Rendered hidden with its deadline; the script below shows
+                    it only while that is still ahead, because this page is
+                    built once and then served for days. */}
+                {newUntil(story.publishDate) && (
+                  <span class="acc-new" data-new-until={newUntil(story.publishDate)} hidden>New</span>
+                )}
+              </button>
+
+              {/* A SIBLING of .acc-content, not inside it: the copy block runs a
+                  transform animation on open, and a transformed ancestor would
+                  become the chips' containing block, dragging them along with
+                  the copy instead of pinning them to the panel's corner. */}
+              {/* The feed hero's metadata row (FeedSpotlightHero .hero-meta-tag):
+                  one plate per fact, WHOSE it is then WHAT it is, from the
+                  same getDisplayTagSlots() pair (SONY PICTURES | REACTION).
+                  It used to read the panel's category and "Video" (FILM |
+                  VIDEO), which the row label and the play button already say.
+                  A story with no brand falls back to its category, and that
+                  chip alone is aria-hidden: the trigger above names it. */}
+              <p class="acc-chips">
+                {story.brand ? (
+                  <span class="acc-chip acc-chip--brand">{story.brand}</span>
+                ) : (
+                  <span class="acc-chip acc-chip--brand" aria-hidden="true">{panel.label}</span>
+                )}
+                {story.kicker && <span class="acc-chip">{story.kicker}</span>}
+                {story.displayDate && <span class="acc-chip">{story.displayDate}</span>}
+              </p>
+
+              <div class="acc-content" id={panelId} role="region" aria-labelledby={`${panelId}-trigger`}>
+                {/* A FIXED-height box, bottom-aligned: every panel's copy block is
+                    the same height whatever the headline's length, so the
+                    metadata chips above never move between panels (Andrew). */}
+                <div class="acc-title-box">
+                  <h3 class="acc-headline">
+                    {/* A video goes to /feed?play=<id>, which arrives with it
+                        promoted into the feed's own player, cued and one tap
+                        from playing: no modal (Andrew). An article is its
+                        ordinary link. */}
+                    <a
+                      href={isVideo && story.videoId ? `/feed?play=${encodeURIComponent(story.videoId)}` : story.url}
+                      {...(!isVideo && story.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                    >
+                      {story.headline}
+                    </a>
+                  </h3>
+                </div>
+                {/* Always rendered, even empty: its fixed two-line height is part
+                    of what keeps the chips in one place. */}
+                <p class="acc-deck">{story.deck}</p>
+                {/* A video's CTA plays it here, in the panel (the headline still
+                    deep-links to /feed). An article's is a label the headline's
+                    stretched link already covers, so it is not a second control:
+                    it used to be a <button> with no handler, which did nothing. */}
+                {isVideo ? (
+                  <button type="button" class="acc-cta cta-button-primary" data-play-video={story.videoId}>
+                    {`Watch${story.duration ? ` · ${story.duration}` : ''}`}
+                  </button>
+                ) : (
+                  <span class="acc-cta cta-button-primary" aria-hidden="true">
+                    {`Read${story.readTime ? ` · ${story.readTime}` : ''}`}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div class="acc-progress" aria-hidden="true"><span class="acc-progress-fill"></span></div>
+
+            {/* The inline player's door (hard rule 11): a "Watch on YouTube"
+                link for the video this panel plays, rendered for every video
+                panel and shown for as long as the player is up, never gated
+                on detecting a failure. The note under it is the enhancement:
+                it explains an onError, it does not rescue. A direct child of
+                the panel, so it stacks above the player. */}
+            {isVideo && story.videoId && (
+              <div class="acc-player-bar">
+                <button type="button" class="acc-player-close" data-close-video>Close video</button>
+                <p class="acc-embed-note" data-embed-note hidden>This video can't play here.</p>
+                <a
+                  class="hero-acc-watch-on-youtube"
+                  href={`https://www.youtube.com/watch?v=${encodeURIComponent(story.videoId)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span class="yt-mark" aria-hidden="true" set:html={SOCIAL_ICONS.YouTube} /><span>Watch on YouTube</span>
+                </a>
+              </div>
+            )}
+          </article>
+        );
+      })}
+    </div>
+
+    <button type="button" class="acc-toggle" data-acc-toggle aria-label="Pause rotation" hidden>
+      <ChalkIcon name="pause" size={18} class="acc-toggle-pause" />
+      <ChalkIcon name="play" size={18} class="acc-toggle-play" />
+    </button>
+  </section>
+)}
+
+<script>
+  import { getYouTubeEmbedUrl } from '../../lib/youtube-url';
+  import { playWhenReady } from '../../lib/youtube-start';
+  import { HERO_SIZES } from '../../lib/homepage-feed';
+
+  const DURATION = 7000;
+  /* Phones in either orientation: rotation is off by default (the toggle
+     starts it). The landscape query matches home.css's stacked layout. */
+  const MOBILE = '(max-width: 767px), (orientation: landscape) and (max-height: 520px)';
+  const REDUCED = '(prefers-reduced-motion: reduce)';
+
+  let teardown: (() => void) | null = null;
+
+  function init() {
+    teardown?.();
+    teardown = null;
+
+    const root = document.querySelector<HTMLElement>('[data-hero-acc]');
+    if (!root) return;
+    const panels = Array.from(root.querySelectorAll<HTMLElement>('[data-acc-panel]'));
+    const triggers = panels.map((p) => p.querySelector<HTMLButtonElement>('[data-acc-trigger]')!);
+    const toggle = root.querySelector<HTMLButtonElement>('[data-acc-toggle]');
+    if (panels.length === 0 || triggers.some((t) => !t)) return;
+
+    const reduced = window.matchMedia(REDUCED);
+    const mobile = window.matchMedia(MOBILE);
+
+    let current = Math.max(0, panels.findIndex((p) => p.classList.contains('is-open')));
+    let elapsed = 0;
+    let last = 0;
+    let raf = 0;
+    /* Why rotation is not running, as independent reasons. */
+    const holds = { hover: false, focus: false, touch: false };
+    let userPaused = mobile.matches; // off by default on phones
+    let stopped = false; // a manual choice stops it for good (until Play)
+
+    const canRotate = () => panels.length > 1 && !reduced.matches;
+    const running = () => canRotate() && !stopped && !userPaused && !holds.hover && !holds.focus && !holds.touch;
+
+    function setFill(ratio: number) {
+      const fill = panels[current]?.querySelector<HTMLElement>('.acc-progress-fill');
+      if (fill) fill.style.transform = `scaleX(${Math.min(1, Math.max(0, ratio))})`;
+    }
+
+    /* A closed panel's art is rendered at HERO_CLOSED_SIZES (the small rung,
+       because it shows blurred); an opened one needs the full ladder. The
+       browser keeps painting the small image until the larger one arrives. */
+    function sharpen(panel: HTMLElement) {
+      const img = panel.querySelector<HTMLImageElement>('.acc-media img');
+      if (img?.srcset && img.sizes !== HERO_SIZES) img.sizes = HERO_SIZES;
+    }
+
+    function open(index: number, { focus = false } = {}) {
+      const next = (index + panels.length) % panels.length;
+      if (next !== current) {
+        setFill(0);
+        panels[current].classList.remove('is-open');
+        triggers[current].setAttribute('aria-expanded', 'false');
+        
+        stopVideo();
+        current = next;
+        panels[current].classList.add('is-open');
+        sharpen(panels[current]);
+        triggers[current].setAttribute('aria-expanded', 'true');
+      }
+      elapsed = 0;
+      setFill(0);
+      if (focus) triggers[current].focus();
+    }
+
+    /*
+      The clock only ticks while it has something to do. It used to request a
+      frame forever, rotating or not and on screen or not, so every second
+      the page was open it paid for ~60 wake-ups doing nothing. Now a frame is
+      requested only while the rotation is running AND the hero is visible;
+      anything that could start it again calls kick(). `last` restarts, so a
+      pause still resumes with the time that was left.
+    */
+    let onScreen = true;
+    function kick() {
+      if (raf || !running() || !onScreen) return;
+      last = 0;
+      raf = requestAnimationFrame(frame);
+    }
+
+    function frame(now: number) {
+      if (!running() || !onScreen) {
+        raf = 0;
+        return;
+      }
+      if (!last) last = now;
+      /* Capped: rAF does not run in a hidden tab, so the first frame back
+         would otherwise count the whole time away and flip the panel the
+         instant the reader returns. */
+      const dt = Math.min(now - last, 100);
+      last = now;
+      if (running()) {
+        elapsed += dt;
+        if (elapsed >= DURATION) open(current + 1);
+        setFill(elapsed / DURATION);
+      }
+      raf = requestAnimationFrame(frame);
+    }
+
+    function syncToggle() {
+      if (!toggle) return;
+      toggle.hidden = !canRotate();
+      const paused = stopped || userPaused;
+      toggle.classList.toggle('is-paused', paused);
+      toggle.setAttribute('aria-label', paused ? 'Play rotation' : 'Pause rotation');
+      kick();
+    }
+
+    const onClick = (e: Event) => {
+      const i = triggers.indexOf(e.currentTarget as HTMLButtonElement);
+      if (i < 0) return;
+      stopped = true;
+      open(i);
+      syncToggle();
+    };
+
+    /* Arrows move between panel headers (APG accordion), Home/End jump.
+       Left/Up and Right/Down both work, since the layout is a row on desktop
+       and a column on a phone. Moving focus also opens the panel, so the
+       keyboard gets the same one-step reveal a pointer does. */
+    const onKey = (e: KeyboardEvent) => {
+      const i = triggers.indexOf(e.currentTarget as HTMLButtonElement);
+      let target = -1;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') target = i + 1;
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') target = i - 1;
+      else if (e.key === 'Home') target = 0;
+      else if (e.key === 'End') target = panels.length - 1;
+      else return;
+      e.preventDefault();
+      stopped = true;
+      open(target, { focus: true });
+      syncToggle();
+    };
+
+    const onToggle = () => {
+      if (stopped || userPaused) {
+        stopped = false;
+        userPaused = false;
+        /*
+          Play means play NOW. The hover and focus holds (the pause-on-
+          interaction the rotation owes a reader, WCAG 2.2.2) are both true
+          at the moment of this click: the pointer is on this button and the
+          button has focus. Left in place, the toggle read "Pause rotation"
+          while nothing moved, and because focus stays here after a click,
+          the rotation never resumed at all (reported: click a tile, press
+          play, the progress bar does not resume). They are re-armed by the
+          next mouseenter or focusin, so the pause still works for anyone
+          who arrives later.
+        */
+        holds.hover = false;
+        holds.focus = false;
+      } else {
+        userPaused = true;
+      }
+      syncToggle();
+    };
+
+    const hold = (key: keyof typeof holds, value: boolean) => () => {
+      holds[key] = value;
+      kick();
+    };
+    const onEnter = hold('hover', true);
+    const onLeave = hold('hover', false);
+    const onFocusIn = hold('focus', true);
+    const onFocusOut = (e: FocusEvent) => {
+      if (!root.contains(e.relatedTarget as Node | null)) holds.focus = false;
+      kick();
+    };
+    const visibility = new IntersectionObserver(([entry]) => {
+      onScreen = entry.isIntersecting;
+      kick();
+    });
+    visibility.observe(root);
+    const onTouchStart = hold('touch', true);
+    const onTouchEnd = hold('touch', false);
+    const onMedia = () => {
+      if (mobile.matches) userPaused = true;
+      syncToggle();
+    };
+
+    /*
+      ─── THE INLINE PLAYER ──────────────────────────────────────────────────
+      One frame at a time, in the open panel. The rules it keeps:
+        - youtube-nocookie with enablejsapi (getYouTubeEmbedUrl), and NO
+          autoplay=1: it starts by the jsapi playVideo command, as the /feed
+          stage does (hard rule 11). The click is still the one click.
+        - embed-pause.ts pauses it on a hidden tab; nothing here does (rule 12).
+        - Hard rule 3: the panel and the track clip, and a clipping ancestor
+          renders a YouTube frame as a black box on iOS Safari, so both drop
+          their clip while it plays (`is-playing`). Nothing animates then:
+          a panel change stops the player first.
+    */
+    let playerFrame: HTMLIFrameElement | null = null;
+
+    let cancelStart: (() => void) | null = null;
+
+    function stopVideo() {
+      cancelStart?.();
+      cancelStart = null;
+      if (!playerFrame) return;
+      const panel = playerFrame.closest<HTMLElement>('[data-acc-panel]');
+      const media = playerFrame.parentElement;
+      playerFrame.remove();
+      playerFrame = null;
+      media?.setAttribute('aria-hidden', 'true');
+      panel?.classList.remove('is-playing', 'is-video-shown');
+      panel?.querySelector<HTMLElement>('[data-embed-note]')?.setAttribute('hidden', '');
+      root!.classList.remove('is-playing');
+    }
+
+    const onPlay = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      stopped = true;
+      syncToggle();
+
+      const btn = e.currentTarget as HTMLElement;
+      const videoId = btn.dataset.playVideo;
+      const panel = btn.closest<HTMLElement>('[data-acc-panel]');
+      const media = panel?.querySelector<HTMLElement>('.acc-media');
+      if (!videoId || !panel || !media) return;
+      /* A second click must not stack a second player (two audio tracks). */
+      if (playerFrame && playerFrame.parentElement === media) return;
+      stopVideo();
+
+      const iframe = document.createElement('iframe');
+      iframe.className = 'acc-video-iframe';
+      iframe.title = 'YouTube video player';
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen';
+      iframe.allowFullscreen = true;
+      iframe.src = getYouTubeEmbedUrl(videoId, true);
+      /* Started by src/lib/youtube-start.ts: it waits for the player to say
+         it is ready before asking it to play (asking on `load` was too early,
+         and was the double press). The frame stays transparent until then,
+         over the story's art, instead of flashing a black box. */
+      cancelStart = playWhenReady(iframe, {
+        onReady: () => panel.classList.add('is-video-shown'),
+      });
+
+      media.removeAttribute('aria-hidden');
+      media.appendChild(iframe);
+      playerFrame = iframe;
+      panel.classList.add('is-playing');
+      root.classList.add('is-playing');
+      panel.querySelector<HTMLElement>('[data-close-video]')?.focus({ preventScroll: true });
+    };
+
+    const onClose = () => {
+      const panel = playerFrame?.closest<HTMLElement>('[data-acc-panel]');
+      stopVideo();
+      panel?.querySelector<HTMLElement>('[data-play-video].acc-cta')?.focus({ preventScroll: true });
+    };
+
+    /* The note is shown only on the player's own onError, from its own frame. */
+    const onMessage = (event: MessageEvent) => {
+      if (!playerFrame) return;
+      if (event.origin !== 'https://www.youtube-nocookie.com') return;
+      if (event.source !== playerFrame.contentWindow) return;
+      let payload: any;
+      try {
+        payload = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+      } catch {
+        return;
+      }
+      if (payload && payload.event === 'onError') {
+        playerFrame.closest('[data-acc-panel]')?.querySelector<HTMLElement>('[data-embed-note]')?.removeAttribute('hidden');
+      }
+    };
+
+    const playBtns = root.querySelectorAll<HTMLElement>('[data-play-video]');
+    const closeBtns = root.querySelectorAll<HTMLButtonElement>('[data-close-video]');
+
+    triggers.forEach((t) => {
+      t.addEventListener('click', onClick);
+      t.addEventListener('keydown', onKey);
+    });
+    playBtns.forEach((btn) => btn.addEventListener('click', onPlay));
+    closeBtns.forEach((btn) => btn.addEventListener('click', onClose));
+    window.addEventListener('message', onMessage);
+    toggle?.addEventListener('click', onToggle);
+    root.addEventListener('mouseenter', onEnter);
+    root.addEventListener('mouseleave', onLeave);
+    root.addEventListener('focusin', onFocusIn);
+    root.addEventListener('focusout', onFocusOut);
+    root.addEventListener('touchstart', onTouchStart, { passive: true });
+    root.addEventListener('touchend', onTouchEnd, { passive: true });
+    root.addEventListener('touchcancel', onTouchEnd, { passive: true });
+    reduced.addEventListener('change', onMedia);
+    mobile.addEventListener('change', onMedia);
+
+    syncToggle();
+
+    /* Desktop shows every strip and rotates through them, so once the page
+       has loaded (the LCP image is long done) and gone idle, fetch the full
+       art for all of them: a click or a rotation never opens onto a soft
+       image. Phones sharpen only the panel the reader opens. */
+    let idle = 0;
+    let idleTimer = 0;
+    const sharpenAll = () => {
+      if (!mobile.matches) panels.forEach(sharpen);
+    };
+    const whenIdle = () => {
+      /* Older Safari has no requestIdleCallback. */
+      if (typeof window.requestIdleCallback === 'function') idle = window.requestIdleCallback(sharpenAll, { timeout: 3000 });
+      else idleTimer = setTimeout(sharpenAll, 1000) as unknown as number;
+    };
+    if (document.readyState === 'complete') whenIdle();
+    else window.addEventListener('load', whenIdle, { once: true });
+
+    teardown = () => {
+      window.removeEventListener('load', whenIdle);
+      if (idle) window.cancelIdleCallback(idle);
+      clearTimeout(idleTimer);
+      cancelAnimationFrame(raf);
+      raf = 0;
+      visibility.disconnect();
+      triggers.forEach((t) => {
+        t.removeEventListener('click', onClick);
+        t.removeEventListener('keydown', onKey);
+      });
+      playBtns.forEach((btn) => btn.removeEventListener('click', onPlay));
+      closeBtns.forEach((btn) => btn.removeEventListener('click', onClose));
+      window.removeEventListener('message', onMessage);
+      stopVideo();
+      toggle?.removeEventListener('click', onToggle);
+      root.removeEventListener('mouseenter', onEnter);
+      root.removeEventListener('mouseleave', onLeave);
+      root.removeEventListener('focusin', onFocusIn);
+      root.removeEventListener('focusout', onFocusOut);
+      root.removeEventListener('touchstart', onTouchStart);
+      root.removeEventListener('touchend', onTouchEnd);
+      root.removeEventListener('touchcancel', onTouchEnd);
+      reduced.removeEventListener('change', onMedia);
+      mobile.removeEventListener('change', onMedia);
+    };
+  }
+
+  /* NEW tags: shown only while their 24 hours are still running. */
+  function showFreshTags() {
+    const now = Date.now();
+    document.querySelectorAll<HTMLElement>('[data-hero-acc] [data-new-until]').forEach((tag) => {
+      tag.hidden = !(Number(tag.dataset.newUntil) > now);
+    });
+  }
+
+  document.addEventListener('astro:page-load', showFreshTags);
+  document.addEventListener('astro:page-load', init);
+  document.addEventListener('astro:before-swap', () => {
+    teardown?.();
+    teardown = null;
+  });
+</script>

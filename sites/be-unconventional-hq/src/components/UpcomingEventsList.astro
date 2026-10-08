@@ -1,0 +1,827 @@
+---
+import { formatLocation } from '../lib/events';
+
+const { events = [] } = Astro.props;
+
+const currentYear = new Date().getFullYear();
+
+// Group events by year
+const groupedEvents = events.reduce((acc: any, event: any) => {
+  let year = currentYear;
+  if (event?.startDate) {
+    // Use UTC to prevent off-by-one errors from local timezone
+    const d = new Date(event.startDate + 'T00:00:00Z');
+    if (!isNaN(d.getTime())) {
+      year = d.getUTCFullYear();
+    }
+  }
+  
+  if (!acc[year]) acc[year] = [];
+  acc[year].push(event);
+  return acc;
+}, {});
+
+const sortedYears = Object.keys(groupedEvents).sort((a, b) => Number(a) - Number(b));
+---
+
+{/*
+  ─── A SCROLL, NOT A SECOND DOCUMENT ────────────────────────────────────────
+
+  This list used to be paginated: the thirteenth upcoming event was at
+  /events/2, so reaching it cost a route navigation, a page transition and a
+  scroll restore. It is a scroll container now and every upcoming event is on
+  the page.
+
+  ─── THE RAIL ───────────────────────────────────────────────────────────────
+
+  The controls were a pair of buttons floated above the list's top-right
+  corner, and at the widths that matter they sat on top of the "UPCOMING
+  EVENTS" heading and the first row. They are a vertical rail now, standing in
+  its own gutter beside the list where there is nothing to collide with: UP at
+  the top, the year index in the middle, DOWN at the bottom.
+
+  The middle button is there because the arrows answer the wrong question on a
+  list that spans years. Nudging 400px at a time to reach 2027 is the paging
+  this change was supposed to remove; the index jumps straight to a year.
+
+  None of it is the mechanism. The container scrolls with a wheel, a trackpad,
+  a touch drag and — because of `tabindex="0"` — the arrow keys, all of which
+  work whether or not the script below ever runs. `role` and the label exist
+  because a focusable scrolling box with no name is announced as nothing.
+*/}
+<div class="uel-scroller" data-uel-scroller>
+  <div class="uel-rail" data-uel-controls hidden>
+    <button type="button" class="uel-rail-btn" data-uel-up aria-label="Scroll up through upcoming events">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+        <path d="M18 15l-6-6-6 6" />
+      </svg>
+    </button>
+
+    <div class="uel-index-wrap">
+      <button
+        type="button"
+        class="uel-rail-btn uel-index-btn"
+        data-uel-index
+        aria-expanded="false"
+        aria-controls="uel-index-panel"
+        aria-label="Jump to a year"
+      >
+        {/* Three rules of descending length: a contents list, at 16px. */}
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
+          <path d="M5 7h14M5 12h10M5 17h6" />
+        </svg>
+      </button>
+
+      {/*
+        Opens INWARD, over the list. The rail stands in the column's right-hand
+        gutter, so a panel opening outward would run off the edge of the
+        content column and, at md, under the sidebar.
+      */}
+      <div class="uel-index-panel" id="uel-index-panel" data-uel-index-panel hidden>
+        <p class="uel-index-head">Jump to</p>
+        <ul class="uel-index-list" role="list">
+          {sortedYears.map((yearStr) => (
+            <li>
+              <button type="button" class="uel-index-year" data-uel-year={yearStr}>
+                {yearStr}
+                <span class="uel-index-count">{groupedEvents[yearStr].length}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+
+    <button type="button" class="uel-rail-btn" data-uel-down aria-label="Scroll down through upcoming events">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    </button>
+  </div>
+
+  <div
+    class="uel-viewport"
+    data-uel-viewport
+    tabindex="0"
+    role="group"
+    aria-label="Upcoming events"
+  >
+<div class="uel-container">
+  {sortedYears.map((yearStr) => {
+    const yearNum = Number(yearStr);
+    const showHeader = yearNum !== currentYear;
+    const yearEvents = groupedEvents[yearStr];
+
+    return (
+      <div class="uel-year-group" data-uel-year-group={yearStr}>
+        {showHeader && (
+          <div class="intel-break-head w-full animate-on-scroll" style="margin-top: 3rem; margin-bottom: 2rem;">
+            <h2 class="intel-break-title">{yearNum}</h2>
+          </div>
+        )}
+        <ul class="uel-list" role="list">
+          {yearEvents.map((event: any) => {
+            const slug = event?.slug?.current ?? '';
+            const locationLabel = formatLocation(event?.location);
+            
+            let month = '';
+            let day = '';
+            if (event?.startDate) {
+              const d = new Date(event.startDate + 'T00:00:00Z');
+              if (!isNaN(d.getTime())) {
+                month = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }).toUpperCase();
+                day = d.toLocaleDateString('en-US', { day: 'numeric', timeZone: 'UTC' });
+              }
+            }
+
+            return (
+              <li class="uel-item">
+                <a href={`/events/${slug}`} class="uel-link">
+                  <div class="uel-date-badge">
+                    <span class="uel-badge-month">{month}</span>
+                    <span class="uel-badge-day">{day}</span>
+                  </div>
+
+                  <div class="uel-body">
+                    <h3 class="uel-title">{event.title}</h3>
+                    {locationLabel && <span class="uel-location-pill">{locationLabel}</span>}
+                  </div>
+
+                  <span class="uel-arrow" aria-hidden="true">&rarr;</span>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
+  })}
+</div>
+  </div>
+</div>
+
+<style>
+  .uel-scroller {
+    position: relative;
+    /* The column the rail stands in: exactly the rail's own 44px. The space
+       between it and the list is the grid's `column-gap`, below. */
+    --uel-rail-gutter: 44px;
+  }
+
+  /*
+    ─── THE VIEWPORT, AND WHY IT IS NOT A FIXED 800px ────────────────────────
+
+    `min()` against `vh` as well as a pixel cap: a fixed 800px box is most of a
+    laptop screen and effectively the WHOLE of a short one, at which point the
+    inner scrollbar and the page's own are the same gesture in the same place
+    and the reader cannot tell which one they are driving.
+
+    `scroll-behavior: smooth` is set HERE rather than inherited. The global
+    `html { scroll-behavior: smooth }` does not reach a nested scroll container,
+    and the buttons below call scrollBy() without naming a behaviour so that
+    this one declaration is the single place it is decided — including for the
+    reduced-motion override underneath.
+  */
+  .uel-viewport {
+    max-height: min(800px, 68vh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+    scroll-snap-type: y proximity;
+    /*
+      ─── ROOM FOR THE HOVER LIFT AT THE SCROLL EDGES ────────────────────────
+
+      `.uel-link:hover` lifts `translateY(-4px)` and throws a 40px glow. A
+      scroll container clips at its own edges, so the row resting against the
+      top of the box had its lift and the top of its red border cut off —
+      reported as the top tile being cut off on hover. The bottom row had the
+      same problem in the other direction, less visibly because the glow is
+      cast downward.
+
+      TWO declarations, and both are needed. `padding-block` gives the lift
+      somewhere to go. `scroll-padding-block` is what makes a SNAPPED row come
+      to rest inside that padding rather than flush against the scrollport
+      edge, which is where snapping would otherwise put it and where the
+      padding would not help at all.
+
+      12px against a 4px lift: enough for the movement and the first part of
+      the glow, and not enough to read as a gap.
+    */
+    padding-block: 0.75rem;
+    scroll-padding-block: 0.75rem;
+
+    /*
+      ─── FEATHERED AT WHICHEVER EDGE HAS MORE BEHIND IT ─────────────────────
+
+      The same idiom the feed rails use (`--fade-start` / `--fade-end` in
+      FeedGrid.astro), turned through ninety degrees. The custom properties
+      default to `0px`, so with no script the list has hard edges and nothing
+      is permanently faded — which is the correct no-JS state, since without a
+      scroll position there is nothing to reason about.
+
+      PER EDGE, not both at once. A fade at the top while the list is already
+      scrolled to the top would dim the first row for no reason, and would eat
+      the top border of a row hovered there — the bug fixed directly above
+      this. `sync()` turns each one on only when there is content past that
+      edge.
+    */
+    --uel-fade: clamp(20px, 3vh, 56px);
+    --fade-top: 0px;
+    --fade-bottom: 0px;
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 var(--fade-top),
+      #000 calc(100% - var(--fade-bottom)),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 var(--fade-top),
+      #000 calc(100% - var(--fade-bottom)),
+      transparent 100%
+    );
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    /* The same, for the ring and glow on the inline edge. */
+    padding-right: 0.35rem;
+  }
+
+  /*
+    PROXIMITY, NOT MANDATORY. With `mandatory` the browser must always come to
+    rest on a snap point, and this list interleaves year headings between the
+    rows — so a short flick near a heading is yanked to a row, and a reader
+    trying to stop and read "2027" cannot. `proximity` tidies a scroll that
+    ends near a row and leaves every other one alone, which is the part worth
+    having.
+  */
+  .uel-item,
+  .uel-year-group > .intel-break-head {
+    scroll-snap-align: start;
+  }
+
+  .uel-viewport:focus-visible {
+    outline: 2px solid var(--color-accent-text, #ef4444);
+    outline-offset: 4px;
+  }
+
+  /* The scrollbar is part of the furniture here, not a system artefact. */
+  .uel-viewport {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  }
+  .uel-viewport::-webkit-scrollbar {
+    width: 6px;
+  }
+  .uel-viewport::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 3px;
+  }
+  .uel-viewport::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /*
+    ─── THE RAIL STANDS IN ITS OWN GUTTER ────────────────────────────────────
+
+    The controls used to float above the list's top-right corner, where they
+    overlapped the "UPCOMING EVENTS" heading and the first row. Docking them
+    inside the list is no better: the right-hand edge of every row already
+    carries its own arrow, and the left carries the date badge.
+
+    So the scroller is a two-column grid and the rail stands in the second
+    column. The rows are narrower by exactly that column and nothing overlaps
+    anything.
+
+    ─── WHY A GRID, AND WHY 44px + A GAP ────────────────────────────────────
+    Reported on a 14" MacBook Pro and a 4K monitor: the rail collided with the
+    list's scrollbar. The strip used to be `3.75rem` of padding with the 44px
+    rail absolutely positioned inside it, and rem scales with the site's root
+    size while the rail does not: at 1512px the strip was 48px, leaving 4px
+    between the rail and an 11px classic scrollbar (a Mac with a mouse, or
+    "Show scroll bars: Always"). Now the column is the rail's own width and
+    the separation is a `column-gap` that cannot fall below 16px.
+
+    BOTH CHILDREN ARE PINNED TO ROW 1. The rail comes first in the markup, and
+    grid auto-placement will not move backwards along a row: placed in column
+    2, it pushed the list into a SECOND row underneath it, leaving a 142px
+    empty block above the list at every desktop width.
+
+    `hidden` in the markup, revealed by script ONLY when the content actually
+    overflows: a rail that cannot move anything is furniture that lies about
+    what the page can do.
+  */
+  .uel-scroller {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--uel-rail-gutter);
+    column-gap: max(1rem, 16px);
+    align-items: stretch;
+  }
+  .uel-viewport {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .uel-rail {
+    grid-row: 1;
+    grid-column: 2;
+    /*
+      CENTRED on the list, not pinned to its top. Top-aligned it sat level with
+      the year heading and the first row rather than with the list it drives,
+      and the distance your hand travels to reach it depended on how far down
+      you already were. Centred, the three controls are equidistant from both
+      ends of the box at every height it takes.
+    */
+    align-self: center;
+    justify-self: end;
+    width: 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    z-index: 3;
+  }
+  .uel-rail[hidden] {
+    display: none;
+  }
+
+  .uel-rail-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* 44px, the minimum comfortable touch target. */
+    width: 44px;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.72);
+    cursor: pointer;
+    padding: 0;
+    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+  }
+  .uel-rail-btn:hover:not(:disabled),
+  .uel-rail-btn:focus-visible:not(:disabled) {
+    border-color: rgba(var(--brand-rgb, 204, 0, 0), 0.9);
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--color-white, #f0f0f0);
+  }
+  .uel-rail-btn:focus-visible {
+    outline: 2px solid var(--color-accent-text, #ef4444);
+    outline-offset: 3px;
+  }
+  /* Disabled at the ends rather than hidden: a control that disappears when you
+     reach an edge moves the other one under the cursor. */
+  .uel-rail-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+
+  /*
+    ─── THE YEAR INDEX ───────────────────────────────────────────────────────
+
+    The arrows answer the wrong question on a list that spans years: nudging
+    400px at a time to reach 2027 is the paging this was meant to replace.
+  */
+  .uel-index-wrap {
+    position: relative;
+    display: flex;
+  }
+  .uel-index-btn[aria-expanded='true'] {
+    border-color: rgba(var(--brand-rgb, 204, 0, 0), 0.9);
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--color-white, #f0f0f0);
+  }
+
+  .uel-index-panel {
+    position: absolute;
+    top: 0;
+    /* Opens INWARD. The rail is in the column's right-hand gutter, so a panel
+       opening outward runs off the content column and, at md, under the
+       sidebar. */
+    right: calc(100% + 0.5rem);
+    min-width: 8.5rem;
+    padding: 0.75rem;
+    background: #0d0d0d;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.9);
+  }
+  .uel-index-panel[hidden] {
+    display: none;
+  }
+
+  .uel-index-head {
+    margin: 0 0 0.5rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.45);
+  }
+
+  .uel-index-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .uel-index-year {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+    background: none;
+    border: none;
+    border-left: 2px solid transparent;
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.72);
+    cursor: pointer;
+    text-align: left;
+    transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  }
+  .uel-index-year:hover,
+  .uel-index-year:focus-visible {
+    background: rgba(255, 255, 255, 0.05);
+    border-left-color: rgba(var(--brand-rgb, 204, 0, 0), 0.9);
+    color: var(--color-white, #f0f0f0);
+  }
+  .uel-index-year:focus-visible {
+    outline: 2px solid var(--color-accent-text, #ef4444);
+    outline-offset: -2px;
+  }
+  /* The year the viewport is currently showing. */
+  .uel-index-year[aria-current='true'] {
+    border-left-color: rgba(var(--brand-rgb, 204, 0, 0), 0.9);
+    color: var(--color-white, #f0f0f0);
+  }
+
+  .uel-index-count {
+    font-size: 0.66rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.4);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /*
+    ─── NO NESTED SCROLL ON A PHONE ──────────────────────────────────────────
+
+    Below the breakpoint where the sidebar joins (768px, matching the page's own
+    md: split) the container stops scrolling and the page simply grows. A
+    scroll box inside a scrolling document on a touch screen is a trap: the
+    drag that was meant to move the page moves the list instead, and at the
+    list's end the gesture stops rather than handing back. The arrows go with
+    it, since there is nothing left for them to drive.
+  */
+  @media (max-width: 767px) {
+    /* One column: the rail is hidden here, so its column and gap would only
+       take 60px off every row. */
+    .uel-scroller {
+      display: block;
+    }
+    .uel-viewport {
+      max-height: none;
+      overflow-y: visible;
+      scroll-snap-type: none;
+      /* Nothing clips here, so the lift needs no allowance and the spacing
+         stays exactly as it was before the scroller existed. */
+      padding-block: 0;
+      scroll-padding-block: 0;
+      /* Nothing scrolls here, so there is no edge to feather and a mask would
+         only dim the first and last rows permanently. */
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+    .uel-rail {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .uel-viewport {
+      scroll-behavior: auto;
+      scroll-snap-type: none;
+    }
+    .uel-rail-btn,
+    .uel-index-year {
+      transition: none;
+    }
+  }
+
+  .uel-container {
+    display: flex;
+    flex-direction: column;
+  }
+  .uel-year-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .uel-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .uel-link {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    min-height: 80px; 
+    padding: 1.2rem 1.5rem;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-decoration: none;
+    color: #fff;
+    transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .uel-link:hover,
+  .uel-link:focus-visible {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: var(--color-accent, #cc0000);
+    box-shadow: 0 8px 40px rgba(204, 0, 0, 0.15);
+    transform: translateY(-4px);
+    outline: none;
+  }
+
+  .uel-date-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 85px;
+    flex-shrink: 0;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    padding-right: 1.5rem;
+  }
+
+  .uel-badge-month {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--color-accent-text, #ef4444);
+    margin-bottom: 0.1rem;
+  }
+
+  .uel-badge-day {
+    font-family: var(--font-display, 'Syne Variable', sans-serif);
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #fff;
+  }
+
+  .uel-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+
+  .uel-title {
+    font-family: var(--font-display, 'Syne Variable', sans-serif);
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.2;
+    transition: color 0.3s ease;
+  }
+
+  .uel-link:hover .uel-title {
+    color: #fff;
+  }
+
+  .uel-location-pill {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #999;
+    background: rgba(255,255,255,0.05);
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+  }
+
+  .uel-arrow {
+    flex-shrink: 0;
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.3);
+    transition: color 0.3s ease, transform 0.3s ease;
+  }
+  
+  .uel-link:hover .uel-arrow,
+  .uel-link:focus-visible .uel-arrow {
+    transform: translateX(4px);
+    color: var(--color-accent-text, #ef4444);
+  }
+
+  @media (max-width: 560px) {
+    .uel-link {
+      gap: 1rem;
+      padding: 1rem;
+    }
+    .uel-date-badge {
+      padding-right: 1rem;
+      width: 70px;
+    }
+    .uel-title {
+      font-size: 1.1rem;
+    }
+    .uel-badge-day {
+      font-size: 1.6rem;
+    }
+    .uel-arrow {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  /*
+    ─── THE RAIL IS PROGRESSIVE ENHANCEMENT ────────────────────────────────────
+
+    The container scrolls without any of this: wheel, trackpad, touch drag and
+    the arrow keys all work off the CSS alone. What this adds is a rail for a
+    reader using none of those, and the only state it owns is whether the rail
+    is shown, whether each arrow is disabled, whether the year panel is open,
+    and which year is current.
+
+    The rail starts `hidden` in the markup and is revealed only if the content
+    actually overflows, so a short list never grows controls that cannot move
+    anything. `ResizeObserver` because that answer changes with the viewport,
+    and because the rows carry `animate-on-scroll` — their height is not final
+    at first paint.
+
+    Bound per page-load and torn down on swap: Astro's ClientRouter keeps this
+    module alive across a navigation, so without the teardown a second visit
+    leaves the first visit's observers pointed at detached nodes.
+  */
+  const STEP = 400;
+  let teardown: Array<() => void> = [];
+
+  function initUpcomingScroller() {
+    teardown.forEach((fn) => fn());
+    teardown = [];
+
+    document.querySelectorAll<HTMLElement>('[data-uel-scroller]').forEach((scroller) => {
+      const viewport = scroller.querySelector<HTMLElement>('[data-uel-viewport]');
+      const rail = scroller.querySelector<HTMLElement>('[data-uel-controls]');
+      const up = scroller.querySelector<HTMLButtonElement>('[data-uel-up]');
+      const down = scroller.querySelector<HTMLButtonElement>('[data-uel-down]');
+      const indexBtn = scroller.querySelector<HTMLButtonElement>('[data-uel-index]');
+      const panel = scroller.querySelector<HTMLElement>('[data-uel-index-panel]');
+      if (!viewport || !rail || !up || !down || !indexBtn || !panel) return;
+
+      const groups = Array.from(
+        viewport.querySelectorAll<HTMLElement>('[data-uel-year-group]'),
+      );
+      const yearBtns = Array.from(
+        panel.querySelectorAll<HTMLButtonElement>('[data-uel-year]'),
+      );
+
+      const closePanel = () => {
+        panel.hidden = true;
+        indexBtn.setAttribute('aria-expanded', 'false');
+      };
+      const openPanel = () => {
+        panel.hidden = false;
+        indexBtn.setAttribute('aria-expanded', 'true');
+        yearBtns[0]?.focus();
+      };
+
+      const sync = () => {
+        /*
+          `scrollHeight > clientHeight + 1`: below the md breakpoint the CSS
+          removes the max-height, so the box does not scroll and the rail must
+          stay away. The 1px is the same fractional-rounding allowance the
+          floating nav needs at the bottom of a document.
+        */
+        const scrollable = viewport.scrollHeight > viewport.clientHeight + 1;
+        rail.hidden = !scrollable;
+        if (!scrollable) {
+          viewport.style.setProperty('--fade-top', '0px');
+          viewport.style.setProperty('--fade-bottom', '0px');
+          closePanel();
+          return;
+        }
+
+        const max = viewport.scrollHeight - viewport.clientHeight;
+        const atTop = viewport.scrollTop <= 1;
+        const atEnd = viewport.scrollTop >= max - 1;
+        up.disabled = atTop;
+        down.disabled = atEnd;
+
+        /* The feather, one edge at a time. See the mask note in the stylesheet
+           — the same shape as the feed rails' --fade-start / --fade-end. */
+        viewport.style.setProperty('--fade-top', atTop ? '0px' : 'var(--uel-fade)');
+        viewport.style.setProperty('--fade-bottom', atEnd ? '0px' : 'var(--uel-fade)');
+
+        /*
+          WHICH YEAR IS ON SCREEN: the last group whose top has passed the
+          viewport's own top, which is the same "last one begun" rule the
+          contents rail uses down the page. Measured against the CONTAINER, not
+          the window, since this box scrolls independently of it.
+        */
+        const edge = viewport.getBoundingClientRect().top + 4;
+        let current = groups[0];
+        for (const g of groups) {
+          if (g.getBoundingClientRect().top <= edge) current = g;
+        }
+        const currentYear = current?.dataset.uelYearGroup ?? '';
+        yearBtns.forEach((b) => {
+          if (b.dataset.uelYear === currentYear) b.setAttribute('aria-current', 'true');
+          else b.removeAttribute('aria-current');
+        });
+      };
+
+      /* No `behavior` here on purpose: the stylesheet owns it, which is what
+         lets the reduced-motion query turn it off in one place. */
+      const step = (delta: number) => () => viewport.scrollBy({ top: delta });
+      const onUp = step(-STEP);
+      const onDown = step(STEP);
+
+      const onIndex = () => {
+        if (panel.hidden) openPanel();
+        else closePanel();
+      };
+
+      const onYear = (event: Event) => {
+        const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-uel-year]');
+        if (!btn) return;
+        const group = groups.find((g) => g.dataset.uelYearGroup === btn.dataset.uelYear);
+        if (!group) return;
+        /*
+          scrollTop arithmetic, NOT scrollIntoView(). The latter scrolls every
+          ancestor that can scroll, so jumping to 2027 inside this box also
+          moved the PAGE to bring the box into view — which is the jump this
+          rail exists to avoid.
+        */
+        viewport.scrollTo({
+          top: group.offsetTop - viewport.offsetTop,
+          behavior: 'smooth',
+        });
+        closePanel();
+        indexBtn.focus();
+      };
+
+      const onKeydown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape' && !panel.hidden) {
+          closePanel();
+          indexBtn.focus();
+        }
+      };
+      const onDocClick = (event: MouseEvent) => {
+        if (panel.hidden) return;
+        const target = event.target as Node;
+        if (!panel.contains(target) && !indexBtn.contains(target)) closePanel();
+      };
+
+      up.addEventListener('click', onUp);
+      down.addEventListener('click', onDown);
+      indexBtn.addEventListener('click', onIndex);
+      panel.addEventListener('click', onYear);
+      document.addEventListener('keydown', onKeydown);
+      document.addEventListener('click', onDocClick);
+      viewport.addEventListener('scroll', sync, { passive: true });
+
+      const ro = new ResizeObserver(sync);
+      ro.observe(viewport);
+      const list = viewport.firstElementChild;
+      if (list) ro.observe(list);
+
+      sync();
+
+      teardown.push(() => {
+        up.removeEventListener('click', onUp);
+        down.removeEventListener('click', onDown);
+        indexBtn.removeEventListener('click', onIndex);
+        panel.removeEventListener('click', onYear);
+        document.removeEventListener('keydown', onKeydown);
+        document.removeEventListener('click', onDocClick);
+        viewport.removeEventListener('scroll', sync);
+        ro.disconnect();
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', initUpcomingScroller);
+  document.addEventListener('astro:before-swap', () => {
+    teardown.forEach((fn) => fn());
+    teardown = [];
+  });
+</script>

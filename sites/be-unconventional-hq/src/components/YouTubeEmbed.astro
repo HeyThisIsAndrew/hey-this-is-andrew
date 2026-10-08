@@ -1,0 +1,271 @@
+---
+/**
+ * A client-side Web Component that upgrades <youtube-embed> tags emitted by
+ * the HTML sanitizer into a video tile matching the site's ContentCard style.
+ *
+ * PLAYS IN PLACE. A press swaps the tile for YouTube's own player, controls
+ * and all, started in that one press through playWhenReady(). It used to open
+ * the site-wide video modal, which the owner is retiring on desktop in favour
+ * of videos that play where they sit (2026-10).
+ *
+ * The frame is a CHILD OF THE HOST, never of `.content-card-media`: that box
+ * clips (overflow: hidden) for the hover lift, and a clipping ancestor turns
+ * a YouTube iframe into a black box on iOS Safari (CLAUDE.md hard rule 3).
+ * The "Watch on YouTube" link below it is rendered always (hard rule 11).
+ */
+---
+<script>
+  import { getYouTubeEmbedUrl } from '../lib/youtube-url';
+  import { playWhenReady } from '../lib/youtube-start';
+  import { SOCIAL_ICONS } from '../data/icons.js';
+
+  class YouTubeEmbed extends HTMLElement {
+    connectedCallback() {
+      if (this.dataset.initialized) return;
+      this.dataset.initialized = 'true';
+
+      const videoId = this.getAttribute('video-id');
+      if (!videoId) return;
+
+      this.setAttribute('role', 'button');
+      this.setAttribute('tabindex', '0');
+      this.setAttribute('aria-label', 'Play video');
+      this.setAttribute('data-play-hover', 'true');
+
+      // The visual facade matching ContentCard media styles
+      this.innerHTML = `
+        <div class="content-card-media" style="width:100%;height:100%;">
+          <img
+            class="content-card-img"
+            src="https://wsrv.nl/?url=i.ytimg.com/vi/${videoId}/maxresdefault.jpg&w=900&output=webp&q=85"
+            alt="YouTube Video"
+            loading="lazy"
+            decoding="async"
+          />
+          <div class="youtube-tile-overlay">
+            <div class="play-button-wrapper" aria-hidden="true">
+              <div class="cinematic-play-button">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      /* The way out, present from the start and never gated on detecting a
+         failure (hard rule 11). youtube.com, not nocookie: it leaves the site
+         for the one place a refused video will play. */
+      const footer = document.createElement('div');
+      footer.className = 'yt-embed-footer';
+      footer.innerHTML = `
+        <p class="yt-embed-note" hidden>
+          YouTube will not play this video in an embedded player. Age restricted
+          and private videos have to be watched on YouTube itself.
+        </p>
+        <a class="yt-embed-watch" href="https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}" target="_blank" rel="noopener noreferrer"><span class="yt-mark" aria-hidden="true">${SOCIAL_ICONS.YouTube}</span><span>Watch on YouTube</span></a>
+      `;
+      this.after(footer);
+
+      const start = (e: Event) => {
+        if (this.classList.contains('is-player')) return;
+        e.preventDefault();
+        this.play(videoId, footer);
+      };
+      this.addEventListener('click', start);
+      this.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') start(e);
+      });
+    }
+
+    play(videoId: string, footer: HTMLElement) {
+      this.classList.add('is-player');
+      /* It is a player now, not a button: YouTube's own controls take over. */
+      this.removeAttribute('role');
+      this.removeAttribute('tabindex');
+      this.removeAttribute('aria-label');
+      this.removeAttribute('data-play-hover');
+
+      const frame = document.createElement('iframe');
+      frame.className = 'yt-embed-frame';
+      frame.title = 'YouTube video player';
+      frame.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');
+      frame.allowFullscreen = true;
+      frame.src = getYouTubeEmbedUrl(videoId, true);
+      this.appendChild(frame);
+
+      /* Shown once the player is ready, so its blank document never flashes
+         over the artwork. Started by command, never by autoplay=1 (hard
+         rule 11); where iOS refuses an unmuted start, YouTube's own play
+         button is one more tap. */
+      playWhenReady(frame, { onReady: () => this.classList.add('is-ready') });
+      frame.focus();
+
+      const note = footer.querySelector<HTMLElement>('.yt-embed-note');
+      window.addEventListener('message', (event: MessageEvent) => {
+        if (event.origin !== 'https://www.youtube-nocookie.com') return;
+        if (event.source !== frame.contentWindow) return;
+        let payload: any;
+        try {
+          payload = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        } catch {
+          return;
+        }
+        if (payload && payload.event === 'onError' && note) note.hidden = false;
+      });
+    }
+  }
+
+  if (!customElements.get('youtube-embed')) {
+    customElements.define('youtube-embed', YouTubeEmbed);
+  }
+</script>
+
+<style is:global>
+  /*
+    TWO BOXES, ON PURPOSE — same split as .ig-carousel-tile / .ig-tile-frame
+    in CinematicGallery.astro, and for the same bug.
+
+    The host element is the hover target and STAYS STILL. `.content-card-media`
+    is the visual: border, background, clipping and the lift.
+
+    Both used to be this one element, and hovering near its edge flickered
+    violently: :hover lifted it 6px, moving it out from under the cursor,
+    dropping :hover, putting it back — a loop at frame rate. Because `cursor`,
+    `border-color` and `box-shadow` all live on the hovered element, the
+    cursor, the outline and the red glow all strobed together. The thin bright
+    edge came from the same place: a scaling image clipped by a box that was
+    itself mid-transform, so the clip and the content disagreed by a subpixel
+    each frame.
+
+    Keep the transform OFF the host. Anything that moves belongs on the media.
+  */
+  youtube-embed {
+    display: block;
+    width: 100%;
+    margin: 3rem 0;
+    aspect-ratio: 16 / 9;
+    position: relative;
+    cursor: pointer;
+  }
+
+  youtube-embed .content-card-media {
+    position: absolute;
+    inset: 0;
+    background-color: var(--color-surface, #111);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0;
+    overflow: hidden;
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  /* Gated to real pointers: on iOS a tap leaves :hover stuck on the tapped
+     element, which would leave an embed permanently lit after being played. */
+  @media (hover: hover) and (pointer: fine) {
+    youtube-embed:hover .content-card-media {
+      transform: translateY(-6px);
+      border-color: var(--color-accent, #cc0000);
+      box-shadow: 0 10px 30px rgba(204, 0, 0, 0.15);
+    }
+
+    youtube-embed:hover .content-card-img {
+      transform: scale(1.05);
+    }
+  }
+
+  /* The host is role="button" tabindex="0" but had no focus indicator at all
+     — same defect class as issue #91. */
+  youtube-embed:focus-visible {
+    outline: 2px solid var(--color-accent, #cc0000);
+    outline-offset: 3px;
+  }
+
+  /* ─── PLAYING IN PLACE ───────────────────────────────────────────────── */
+  youtube-embed.is-player {
+    cursor: auto;
+  }
+
+  youtube-embed .yt-embed-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    z-index: 1;
+    background: transparent;
+    color-scheme: dark;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  youtube-embed.is-ready .yt-embed-frame {
+    opacity: 1;
+  }
+
+  /* The tile stops reacting once it is a player: no lift under the frame. */
+  youtube-embed.is-player .content-card-media {
+    transform: none !important;
+  }
+
+  /* Pulled up into the host's bottom margin, so the article keeps its rhythm. */
+  .yt-embed-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    margin: -2.25rem 0 3rem;
+  }
+
+  .article-body .yt-embed-watch,
+  .yt-embed-watch {
+    font-size: 0.8rem;
+    color: var(--color-white-muted);
+    text-decoration: none;
+  }
+
+  .article-body .yt-embed-watch:hover,
+  .yt-embed-watch:hover {
+    color: var(--color-white);
+  }
+
+  .yt-embed-note {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--color-white-muted);
+  }
+
+  youtube-embed .content-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s ease;
+  }
+
+  .youtube-tile-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      rgba(9, 9, 11, 0.8) 0%,
+      rgba(9, 9, 11, 0.2) 50%,
+      transparent 100%
+    );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    transition: background 0.3s ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    youtube-embed:hover .youtube-tile-overlay {
+      background: linear-gradient(
+        to top,
+        rgba(9, 9, 11, 0.9) 0%,
+        rgba(9, 9, 11, 0.4) 50%,
+        transparent 100%
+      );
+    }
+  }
+</style>

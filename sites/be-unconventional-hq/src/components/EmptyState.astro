@@ -1,0 +1,82 @@
+---
+/**
+ * EmptyState — the "nothing matched" block, used by the Feed and by /intel.
+ *
+ * ─── WHY THIS EXISTS ──────────────────────────────────────────────────────
+ * This design (crossed-circle icon, uppercase heading, a button back out)
+ * was written out four separate times: twice inside FeedGrid, once on the
+ * category feed route, and once on /intel — each with its own spacing typed
+ * inline. They had already drifted apart. Now there is one component, so the
+ * Feed and the article section cannot show different "empty" screens.
+ *
+ * ─── HOW TO USE IT ────────────────────────────────────────────────────────
+ *     <EmptyState message="No items found for this filter." />
+ *
+ *     // With a way out (preferred — a dead end with no exit is a bad screen):
+ *     <EmptyState
+ *       message="No items found for this filter."
+ *       actionLabel="Clear Filters"
+ *       actionHref="/intel"
+ *     />
+ *
+ *     // As a <button> instead of a link, for JS-driven clearing:
+ *     <EmptyState message="…" actionLabel="Clear Filters" actionClass="clear-filters-btn" />
+ *
+ * ─── HOW TO RESTYLE IT ────────────────────────────────────────────────────
+ * The classes below are Tailwind utilities, matching what the Feed already
+ * used, so the look is unchanged from before this was extracted.
+ */
+
+interface Props {
+  /** The sentence shown to the reader. Rendered uppercase by the styling. */
+  message: string;
+  /** Button text. Without it, no button renders. */
+  actionLabel?: string;
+  /** Where the button goes. Omit to render a <button> instead of an <a>. */
+  actionHref?: string;
+  /** Extra classes for the button — e.g. the hook FeedGrid's script binds to. */
+  actionClass?: string;
+}
+
+const { message, actionLabel, actionHref, actionClass = '' } = Astro.props;
+
+// A link when we know where to send them, a button when the page will handle
+// the click in JavaScript (the Feed's client-side "clear filters").
+const ActionTag = actionHref ? 'a' : 'button';
+---
+
+<div
+  class="col-span-full flex flex-col items-center justify-center text-center py-16 md:py-32 text-white/70 gap-8"
+  style="min-height: 40vh;"
+>
+  {/* Decorative only — the heading below carries the meaning. */}
+  <svg
+    class="w-16 h-16 text-white/20"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    aria-hidden="true"
+  >
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="1.5"
+      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+    />
+  </svg>
+
+  <h3 class="text-2xl font-display font-bold tracking-widest uppercase mt-4">{message}</h3>
+
+  {
+    actionLabel && (
+      <ActionTag
+        href={actionHref}
+        class={`cta-button-primary mt-2 ${actionClass}`.trim()}
+        style="padding: 0.75rem 2.5rem; font-size: 1rem;"
+      >
+        {actionLabel}
+      </ActionTag>
+    )
+  }
+</div>

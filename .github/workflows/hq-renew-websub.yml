@@ -1,0 +1,29 @@
+name: Renew WebSub Subscription
+
+on:
+  schedule:
+    # Run every 3 days at 00:00 UTC
+    - cron: '0 0 */3 * *'
+  workflow_dispatch: # Allow manual trigger for testing
+
+jobs:
+  renew:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Subscribe to YouTube WebSub Hub
+        # `--fail-with-body` + `--show-error`: without a failing flag, curl
+        # exits 0 on an HTTP 400 and this job goes green while the
+        # subscription silently lapses — which is invisible until videos stop
+        # arriving. --fail-with-body is preferred over plain -f because the
+        # hub explains the rejection in the response body, and -f discards it.
+        # --retry covers the hub being briefly unavailable, which is not a
+        # reason to page anyone.
+        run: |
+          curl --fail-with-body --show-error --silent \
+          --retry 3 --retry-delay 5 --retry-all-errors \
+          -X POST https://pubsubhubbub.appspot.com/subscribe \
+          -d "hub.callback=https://beunconventionalhq.com/api/youtube-webhook" \
+          -d "hub.topic=https://www.youtube.com/xml/feeds/videos.xml?channel_id=${{ secrets.YOUTUBE_CHANNEL_ID }}" \
+          -d "hub.verify=async" \
+          -d "hub.mode=subscribe" \
+          -d "hub.secret=${{ secrets.WEBSUB_SECRET }}"

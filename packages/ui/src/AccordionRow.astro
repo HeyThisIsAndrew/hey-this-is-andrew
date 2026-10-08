@@ -1,0 +1,195 @@
+---
+// packages/ui/src/AccordionRow.astro
+interface Props {
+  id: string;
+  kicker: string;
+  title: string;
+  progressCount?: number;
+  progressTotal?: number;
+}
+const { id, kicker, title, progressCount, progressTotal } = Astro.props;
+const hasProgress = progressCount !== undefined && progressTotal !== undefined;
+const progressPercent = hasProgress ? Math.round((progressCount / progressTotal) * 100) : 0;
+---
+<div class="accordion-row" id={id}>
+  <h2 class="accordion-heading">
+    <button
+      type="button"
+      class="accordion-header"
+      data-accordion-header
+      aria-expanded="false"
+      aria-controls={`${id}-content`}
+    >
+      <span class="accordion-header-bg" aria-hidden="true"></span>
+      <div class="accordion-header-content">
+        <div class="accordion-header-text">
+          <span class="accordion-kicker font-mono">{kicker}</span>
+          <span class="accordion-title">{title}</span>
+        </div>
+        {hasProgress && (
+          <div class="accordion-progress-meta">
+            <div class="accordion-progress-header">
+              <span class="accordion-progress-label font-mono">Verified Execution Tracker</span>
+              <span class="accordion-progress-stat font-mono">{progressCount} of {progressTotal} Completed ({progressPercent}%)</span>
+            </div>
+            <div class="accordion-progress-bar-bg">
+              <div class="accordion-progress-fill" style={`width: ${progressPercent}%;`}></div>
+            </div>
+          </div>
+        )}
+        <span class="accordion-chevron" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M19 9l-7 7-7-7" />
+          </svg>
+        </span>
+      </div>
+    </button>
+  </h2>
+  <div id={`${id}-content`} class="accordion-body" role="region" aria-labelledby={id}>
+    <div class="accordion-body-inner">
+      <slot />
+    </div>
+  </div>
+</div>
+
+<style>
+  .accordion-row {
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+  }
+  .accordion-heading {
+    margin: 0;
+    padding: 0;
+  }
+  .accordion-header {
+    width: 100%;
+    display: block;
+    position: relative;
+    background: transparent;
+    border: none;
+    text-align: left;
+    padding: 2rem 1.5rem;
+    cursor: pointer;
+    color: var(--text);
+  }
+  .accordion-header-bg {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.02);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 0;
+  }
+  .accordion-header:hover .accordion-header-bg {
+    opacity: 1;
+  }
+  .accordion-header-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+  .accordion-header-text {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .accordion-kicker {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .accordion-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    line-height: 1.1;
+  }
+  .accordion-progress-meta {
+    flex: 0 0 auto;
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .accordion-progress-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .accordion-progress-label {
+    color: var(--muted);
+  }
+  .accordion-progress-stat {
+    color: #f5f5f5;
+  }
+  .accordion-progress-bar-bg {
+    width: 100%;
+    height: 3px;
+    background: rgba(255,255,255,0.1);
+    position: relative;
+    overflow: hidden;
+  }
+  .accordion-progress-fill {
+    height: 100%;
+    background: #f5f5f5;
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .accordion-chevron {
+    flex: 0 0 auto;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    color: var(--muted);
+  }
+  .accordion-header[aria-expanded="true"] .accordion-chevron {
+    transform: rotate(180deg);
+  }
+  
+  .accordion-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .accordion-row.is-expanded .accordion-body {
+    grid-template-rows: 1fr;
+  }
+  .accordion-body-inner {
+    overflow: hidden;
+    padding: 0 1.5rem;
+  }
+  .accordion-row.is-expanded .accordion-body-inner {
+    padding-bottom: 2.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .accordion-header {
+      padding: 1.5rem 1rem;
+    }
+    .accordion-header-content {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1.5rem;
+    }
+    .accordion-progress-meta {
+      width: 100%;
+    }
+    .accordion-chevron {
+      position: absolute;
+      top: 0;
+      right: 0;
+    }
+    .accordion-body-inner {
+      padding: 0 1rem;
+    }
+  }
+</style>

@@ -1,0 +1,42 @@
+---
+/**
+ * /feed/articles — the article-only feed.
+ *
+ * Not paginated, matching /feed and /feed/videos (see the note in
+ * src/pages/feed/index.astro).
+ *
+ * This route never actually emitted a second page — there are fewer articles
+ * than the old pageSize of 12 — so nothing is being forwarded for it. It is
+ * collapsed anyway so all three feed routes are the same shape: left as the
+ * only paginated one, it would quietly start generating ghost pages again the
+ * moment a thirteenth article synced from Substack.
+ *
+ * Note this route builds NO rows: every row in <FeedGrid /> matches on `hubs`
+ * or `youtubeTags`, which are YouTube taxonomy, and articles carry neither. It
+ * renders the flat grid instead, which is why FeedGrid's grid-hiding rule is
+ * gated on `data-has-rows`.
+ */
+import FeedLayout from '../../../layouts/FeedLayout.astro';
+import FeedSpotlightHero from '../../../components/FeedSpotlightHero.astro';
+import { META, pageTitle } from '../../../data/content.js';
+import { getArticleItems } from '../../../lib/feed-items';
+import FeedGrid from '../../../components/FeedGrid.astro';
+
+const allItems = getArticleItems();
+const page = { data: allItems, currentPage: 1, url: { prev: undefined, next: undefined } };
+
+const title = pageTitle(META.feedArticles.title);
+const description = META.feedArticles.description;
+---
+
+<FeedLayout hasSpotlightHero={true}
+  showFilters={false}
+  title={title}
+  description={description}
+  headingLabel="All articles"
+  page={page}
+  isNavMode={true}
+>
+  <FeedSpotlightHero slot="hero" />
+  <FeedGrid page={page} allItems={allItems} />
+</FeedLayout>

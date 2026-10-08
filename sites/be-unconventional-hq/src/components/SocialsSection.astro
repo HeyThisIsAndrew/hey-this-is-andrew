@@ -1,0 +1,70 @@
+---
+import { SECTIONS } from '../data/content.js';
+import { site } from '../data/site.js';
+import { SOCIAL_ICONS } from '../data/icons.js';
+import PageTitle from './PageTitle.astro';
+
+/* Platform marks come from the shared icon library — src/data/icons.js. */
+const socialIcons = SOCIAL_ICONS;
+
+const contactSocials = [
+  { name: 'YouTube', handle: '@BeUnconventionalHQ', url: site.socials.youtube },
+  {
+    name: 'Instagram',
+    handle: '@beunconventionalhq',
+    url: site.socials.instagram,
+  },
+  { name: 'TikTok', handle: '@beunconventional', url: site.socials.tiktok },
+  { name: 'Threads', handle: '@beunconventionalhq', url: site.socials.threads },
+  { name: 'Letterboxd', handle: '@beunconhq', url: site.socials.letterboxd },
+  { name: 'Substack', handle: 'Be Unconventional', url: site.socials.substack },
+];
+---
+
+<section class="contact-socials-section">
+  <header class="section-header animate-on-scroll" style="margin-bottom: 2rem;">
+    <PageTitle
+      {...SECTIONS.socials}
+      scale="secondary"
+    />
+  </header>
+
+  {/*
+    THE LABEL BELONGS TO THE LINK, NOT THE BOX INSIDE IT.
+
+    These are icon-only links, so the accessible name has to come from an
+    attribute. `aria-label` used to sit on the inner <div>, and ARIA
+    PROHIBITS aria-label on a generic element — it is specified to be
+    ignored.
+
+    Chrome ignores the prohibition and passes the name up, which is why all
+    six measured correctly (`role=link NAME="YouTube"`) and why Lighthouse
+    scores /about at 100. So this was never broken in practice. It was
+    working by accident, and another browser or screen reader is entitled to
+    do what the spec says instead — at which point six links announce as
+    "link" with no name at all.
+
+    The label now sits on the <a>, where it is valid, and the icon wrapper is
+    aria-hidden so the SVG cannot announce itself a second time.
+  */}
+  <div class="contact-socials-grid">
+    {
+      contactSocials.map((social, index) => (
+        <a
+          href={social.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="contact-social-card animate-on-scroll"
+          data-delay={index * 100}
+          aria-label={social.name}
+        >
+          <div
+            class="contact-social-icon-wrapper"
+            set:html={socialIcons[social.name as keyof typeof socialIcons]}
+            aria-hidden="true"
+          />
+        </a>
+      ))
+    }
+  </div>
+</section>

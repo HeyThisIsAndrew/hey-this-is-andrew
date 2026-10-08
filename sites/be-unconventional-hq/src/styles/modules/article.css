@@ -1,0 +1,969 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ARTICLE READER (/intel/<slug>)
+
+   Hand-written rather than Tailwind Typography: the plugin is not installed
+   and no `prose` class is used anywhere in this repo, so adopting it would
+   mean a new dependency plus a pile of overrides to drag its light-mode
+   defaults onto this site's dark cinematic palette. These rules use the
+   existing tokens (--font-display, --color-accent, --color-white-muted)
+   so the reader reads as the same publication as the rest of the site.
+
+   Scoped under .article-body so nothing here leaks into other pages.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.article-page {
+  padding-top: 120px;
+  padding-bottom: 4rem;
+}
+
+@media (max-width: 768px) {
+  .article-page {
+    padding-top: 80px;
+  }
+}
+
+/* Reading column. 53rem is 678px against the 80% html scale, which is
+   Substack's reading column to within a few pixels, and about 68ch at the
+   20px body size. It was 44rem (563px) and read as a thin strip beside the
+   same article on Substack. The site's 1536px container is still far too
+   wide to read at. */
+.article-column {
+  width: 100%;
+  max-width: 53rem;
+  margin-inline: auto;
+}
+
+/* ── Masthead ───────────────────────────────────────────────────────────── */
+
+.article-header {
+  margin-bottom: 3rem;
+}
+
+.article-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-accent-text);
+  margin-bottom: 1.25rem;
+}
+
+.article-eyebrow .dot {
+  color: var(--color-white-muted);
+}
+
+.article-eyebrow time {
+  color: var(--color-white-muted);
+}
+
+.article-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, calc(1.125rem + 2.625vw), 3rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--color-white);
+  margin-bottom: 1.5rem;
+  overflow-wrap: break-word;
+}
+
+.article-standfirst {
+  font-size: 1.35rem; /* Compensate for 80% html scale (1.35 * 12.8 = 17.2px) */
+  line-height: 1.7;
+  color: var(--color-white-muted);
+  margin-bottom: 2rem;
+}
+
+.article-byline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.85rem;
+  color: var(--color-white-muted);
+}
+
+.article-byline .author {
+  color: var(--color-white);
+  font-weight: 600;
+}
+
+/* Sits inside .article-header, between the headline and the standfirst, so it
+   is spaced as masthead furniture rather than carrying the old 3rem gap that
+   separated it from the body below. */
+.article-hero {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-block: 1.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ── Anchor landing offset ──────────────────────────────────────────────────
+
+   Reported as "clicking a Contents entry does not scroll to the section". It
+   did scroll — the heading landed at viewport top 0, underneath the 83px
+   `position: fixed` navbar, so the reader saw body copy with the heading they
+   had just clicked hidden behind the chrome. Measured before fixing:
+   `rect.top` 0 against a navbar of 83.
+
+   scroll-margin-top is the one-property fix for this: it offsets where an
+   anchor target comes to rest without moving the element itself. 7rem matches
+   `.article-rail`'s sticky `top`, so a heading lands on the same line as the
+   rail beside it.
+
+   Applied to the ids buildToc() injects and to the two landmark anchors the
+   Contents rail falls back to. */
+.article-body h2[id],
+.article-body h3[id],
+.article-body h4[id],
+#article-top,
+#article-related {
+  scroll-margin-top: 7rem;
+}
+
+/* The navbar is shorter here, and the reading column has less headroom to
+   spare — matches .article-page's own reduced padding-top at this width. */
+@media (max-width: 768px) {
+  .article-body h2[id],
+  .article-body h3[id],
+  .article-body h4[id],
+  #article-top,
+  #article-related {
+    scroll-margin-top: 5.5rem;
+  }
+}
+
+/* ── Body copy ──────────────────────────────────────────────────────────── */
+
+.article-body {
+  font-family: var(--font-body);
+  /* 20px on a phone, where html is NOT scaled. The desktop override
+     below brings the scaled size back to the same 20px. */
+  font-size: 1.25rem;
+  line-height: 1.8;
+  color: rgba(240, 240, 240, 0.92);
+  /* Substack embeds (tweets, YouTube links) sometimes leave a raw URL as the
+     only visible text once the sanitizer strips the embed itself — one long
+     unbroken token that would otherwise overflow the 53rem reading column. */
+  overflow-wrap: break-word;
+}
+
+/*
+  BODY COPY IS 20px EVERYWHERE, NOT 16px ON THE ROOMIEST SCREENS.
+
+  `html` drops to 80% above 768px, so the rule above resolved to 20px on a
+  phone and only 16px on a desktop, which is the screen with the most room for
+  it. Read beside the same article on Substack, set at 20px, ours looked thin.
+  1.5625 * 12.8 = 20px, so both ends now agree.
+
+  Scoped rather than changed in place: below 768px the scale is 100% and the
+  size is already right, and this must not push a phone to 25px.
+*/
+@media (min-width: 768px) {
+  .article-body {
+    font-size: 1.5625rem;
+  }
+}
+
+.article-body > * + * {
+  margin-top: 1.5rem;
+}
+
+.article-body h2,
+.article-body h3,
+.article-body h4 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--color-white);
+  margin-top: 3rem;
+  margin-bottom: 1rem;
+}
+
+.article-body h2 {
+  font-size: 1.75rem;
+}
+.article-body h3 {
+  font-size: 1.375rem;
+}
+.article-body h4 {
+  font-size: 1.125rem;
+  letter-spacing: 0.02em;
+}
+
+.article-body a {
+  color: var(--color-white);
+  text-decoration: underline;
+  text-decoration-color: var(--color-accent);
+  text-underline-offset: 3px;
+  transition: color 0.25s ease;
+}
+
+.article-body a:hover {
+  color: var(--color-accent-text);
+}
+
+.article-body strong {
+  color: var(--color-white);
+  font-weight: 700;
+}
+
+.article-body ul,
+.article-body ol {
+  padding-left: 1.5rem;
+}
+
+.article-body li + li {
+  margin-top: 0.5rem;
+}
+
+.article-body ul {
+  list-style: disc;
+}
+.article-body ol {
+  list-style: decimal;
+}
+
+/*
+  A PULL QUOTE IS THE LOUDEST LINE ON THE PAGE, NOT THE QUIETEST.
+
+  This was `font-size: 1.15rem`, and rem is the trap: `html` drops to 80%
+  above 768px, so that resolved to 14.7px on the very screens where body copy
+  is 20px. The one thing meant to stand out was set SMALLER than everything
+  around it, and the author had been reaching for an H4 instead just to get
+  some weight, which then turned each aside into a table-of-contents entry.
+
+  `em` instead of `rem`, so it is measured against `.article-body` rather than
+  the document. The body is already normalised to 20px at every width, so 1.2em
+  is 24px everywhere with no breakpoint of its own.
+*/
+.article-body blockquote {
+  border-left: 3px solid var(--color-accent);
+  padding: 0.35rem 0 0.35rem 1.75rem;
+  margin: 2.25rem 0;
+  font-size: 1.2em;
+  line-height: 1.45;
+  letter-spacing: -0.005em;
+  color: var(--color-white);
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* A quote is one thought. Its own paragraphs should not read as separate
+   blocks the way body paragraphs do. */
+.article-body blockquote p {
+  margin: 0;
+}
+.article-body blockquote p + p {
+  margin-top: 0.75em;
+}
+
+/* ── Pull quote ────────────────────────────────────────────────────────────
+
+   A pull quote is not a block quotation. It is a line lifted OUT of this
+   article and set large for emphasis, so the sentence it repeats is always
+   sitting a few lines below it. The blockquote treatment above says "someone
+   else said this", which is the wrong claim and, next to the duplicate
+   sentence, reads as a mistake.
+
+   Hairline rules above and below instead of the accent bar: they bracket the
+   line as a deliberate interruption in the column rather than attributing it.
+   See liftPullQuotes() in src/lib/articles-transform.ts for how the class
+   survives sanitization, which is the only class on the site that does.
+*/
+.article-body blockquote.pullquote {
+  border-left: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 1.5rem 1rem;
+  margin: 2.5rem 0;
+  text-align: center;
+  font-size: 1.28em;
+  line-height: 1.4;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--color-white);
+}
+
+/* Substack wraps the line in <strong>, which is its own way of making a pull
+   quote look heavy. The rules and the size already do that here, and letting
+   `.article-body strong` win would push it to 700 and fight the italic. */
+.article-body blockquote.pullquote strong {
+  font-weight: inherit;
+}
+
+@media (max-width: 640px) {
+  .article-body blockquote.pullquote {
+    padding: 1.15rem 0;
+    font-size: 1.15em;
+  }
+}
+
+.article-body img {
+  width: 100%;
+  height: auto;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.article-body figure {
+  margin-block: 2.5rem;
+}
+
+/* A body image that opens the lightbox (labelImageLinks() in
+   src/lib/article-images-transform.ts). A bare button wrapper: the image
+   inside looks exactly as it did inside Substack's link. */
+.article-body .article-image-zoom {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: zoom-in;
+}
+
+.article-body .article-image-zoom img {
+  display: block;
+}
+
+.article-body .article-image-zoom:focus-visible {
+  outline: 2px solid var(--color-accent-text);
+  outline-offset: 3px;
+}
+
+.article-body figcaption {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--color-white-muted);
+  text-align: center;
+}
+
+.article-body pre {
+  background: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 1.25rem;
+  overflow-x: auto;
+  font-size: 0.9rem;
+}
+
+.article-body code {
+  font-size: 0.9em;
+  background: var(--color-surface-2);
+  padding: 0.15em 0.4em;
+}
+
+.article-body pre code {
+  background: none;
+  padding: 0;
+}
+
+.article-body hr {
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-block: 3rem;
+}
+
+/* ── Attribution + footer ───────────────────────────────────────────────── */
+
+.article-attribution {
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.9rem;
+  color: var(--color-white-muted);
+  line-height: 1.7;
+}
+
+.article-attribution a {
+  color: var(--color-white);
+  text-decoration: underline;
+  text-decoration-color: var(--color-accent);
+  text-underline-offset: 3px;
+}
+
+.article-attribution a:hover {
+  color: var(--color-accent-text);
+}
+
+/* .article-back replaced by .article-actions below — the old bare margin-top
+   is what allowed the button to overlap the subscribe band. */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THREE-COLUMN ARTICLE LAYOUT
+
+   ┌───────────┬──────────────────────┬───────────┐
+   │ CONTENTS  │  reading column      │ SUPPORT   │
+   │ (sticky)  │  ~53rem              │ (sticky)  │
+   └───────────┴──────────────────────┴───────────┘
+
+   The centre column keeps its 53rem cap — that is the readable measure and it
+   does not change just because there is now space either side. The rails take
+   the leftover width.
+
+   Below 1200px both rails are removed and the reading column becomes the page.
+   They are `display: none`, not merely hidden, so their content is not read
+   out to screen readers as an empty region on mobile.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/*
+   Named grid areas rather than relying on source-order auto-placement.
+
+   Why this matters: ArticleToc.astro renders NOTHING (not even an empty
+   <aside>) when an article has fewer than 3 headings — most Substack recaps
+   and reviews have none. Without an explicit area assignment, losing that
+   first DOM child shifts every item that follows it one track to the left:
+   the reading column lands in the 15rem TOC track (crushing the title into
+   a column so narrow it breaks mid-word) and the support rail balloons into
+   the wide centre track, leaving a dead gap beside it. Assigning each piece
+   its own named area makes placement independent of which siblings exist.
+*/
+.article-layout {
+  display: grid;
+  /*
+    ─── THE LEFT TRACK SHRANK WHEN THE CONTENTS LEFT IT ──────────────────────
+
+    It was 14rem because it held the table of contents, which is now
+    <FloatingPageNav />, pinned to the viewport's left edge. What is left in
+    that rail is "Stay Updated", one button and a line of type, and 14rem of
+    column for it was a hole beside the reading measure.
+
+    11rem fits what is actually there and hands the 3rem to the middle track,
+    which is where the words are. The right rail is untouched: it carries the
+    hub card, the editorial desk and Support The HQ, and all three need it.
+
+    space-between still pushes the rails to the outer edges of the container,
+    so the extra width is reading measure rather than margin.
+  */
+  grid-template-columns: 11rem minmax(0, 56rem) 19rem;
+  grid-template-areas: "toc column support";
+  justify-content: space-between;
+  gap: 2rem; /* Fallback gap if screen gets tight right before the 1200px breakpoint */
+  align-items: start;
+  width: 100%;
+  margin-bottom: 6rem; /* Prevents sticky rails from touching the Subscribe CTA */
+}
+
+.article-layout > .article-rail-left {
+  grid-area: toc;
+  z-index: 10;
+}
+
+/* The reading column sits centred within its (wider) middle track. */
+.article-layout > .article-column {
+  grid-area: column;
+  justify-self: center;
+}
+
+.article-layout > .article-rail-right {
+  grid-area: support;
+}
+
+/*
+  ─── BELOW 1200px: THE TOC GOES, THE SUPPORT RAIL STACKS ───────────────────
+
+  Both rails used to be hidden here, which meant a phone or tablet reader saw
+  no hub card, no editorial desk and no Support The HQ block at all. The event
+  templates already solved this for themselves, so an event page stacked its
+  rail under the column on a phone and an article page simply dropped it.
+
+  Only the SUPPORT rail comes back, and it comes back after the column:
+
+    - The TOC stays hidden. A jump-link list belongs beside the text or
+      nowhere; rendered inline it is furniture the reader scrolls past on a
+      page they are already scrolling. (That exact thing shipped once on the
+      event templates.)
+    - "More From Intel" stays hidden with it, because the article column
+      already renders "Suggested Reading" below the body at every width.
+      Without this the same related articles print twice, back to back.
+    - The rail loses `position: sticky`. A sticky element in a single-column
+      flow pins itself to the viewport as you scroll past, which reads as a
+      rendering fault rather than a feature.
+*/
+@media (max-width: 1200px) {
+  .desktop-only-toc {
+    display: none;
+  }
+
+  .article-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "column"
+      "support"
+      "toc";
+  }
+
+  .article-layout > .article-rail-left {
+    display: block;
+    position: static;
+  }
+
+  .article-layout > .article-rail-right {
+    display: block;
+    position: static;
+  }
+
+  .article-rail-right .article-rail-more {
+    display: none;
+  }
+
+  /*
+    ─── THE GAP THAT WAS A GUTTER ──────────────────────────────────────────
+
+    Same trap events.css documents, arrived at the same way. Measured at
+    390px between the last line of "Suggested Reading" and the hub card
+    heading, before this:
+
+      32px   the layout's own 2rem gap, which is a horizontal GUTTER when
+             the three tracks stand side by side and becomes vertical space
+             the moment they stack
+      56px   a 3.5rem top margin on the rail
+      56px   the hub card's own 3.5rem, which exists to separate it from a
+             sibling ABOVE it inside the rail. Stacked, and with "More From
+             Intel" hidden, it has no sibling above it: the two margins were
+             paying for the same emptiness.
+      ----
+      144px
+
+    The row gap now carries the separation on its own, and the first block in
+    the rail gives up its margin. 112px, which is what the event templates
+    landed on after the same measurement. `.article-rail-more + *` covers the
+    hidden-sibling case: display:none does not stop :first-child matching it,
+    so the hub card is never the first CHILD even when it is the first thing
+    you can see.
+  */
+  .article-layout {
+    row-gap: 3.5rem;
+  }
+
+  .article-rail-right .article-rail-sticky > :first-child,
+  .article-rail-right .article-rail-more + * {
+    margin-top: 0;
+  }
+
+  /*
+    AND THE LEFT RAIL PAYS ONCE TOO. Stacked, the 3.5rem row-gap above already
+    separates this from the support rail, and the TOC it was written to clear
+    is `display: none` at this width — so the 4rem was 120px of nothing at
+    390px, on top of a gap that was already there. The same double-spend the
+    right rail's rules above exist to stop, in the other rail.
+
+    No `:first-child` here, deliberately: the hidden TOC is still the first
+    CHILD, so that selector would miss this block entirely. Below 1200px the
+    TOC is hidden on every article, so nothing in this rail ever has something
+    above it to clear.
+  */
+  .article-rail-left .article-rail-stay {
+    margin-top: 0;
+  }
+}
+
+.article-rail {
+  /* `top` clears the fixed navbar so a sticky rail never slides under it. */
+  position: sticky;
+  top: 7rem;
+  align-self: start;
+  /* Removed max-height and overflow-y to prevent internal scrollbars */
+  overflow-x: visible;
+  padding-right: 4px;
+}
+
+/*
+  ─── "STAY UPDATED" AND ITS ONE JOB ───────────────────────────────────────
+
+  4rem separates this block from the Table of Contents ABOVE IT in the same
+  rail. That is the only thing the margin is for, so it is spent only when the
+  TOC is actually there to separate from.
+
+  It shipped as an inline `style="margin-top: 4rem"`, which an inline style
+  can only be beaten with `!important`, which is how a rule with no scope and
+  no override ended up reaching every rail on the site. A class costs nothing
+  and both exceptions below are then ordinary specificity.
+*/
+.article-rail-stay {
+  margin-top: 4rem;
+}
+
+/*
+  ─── NOTHING IS ABOVE IT IN THIS RAIL ANY MORE ────────────────────────────
+
+  `.article-rail-stay` spends 4rem to clear the table of contents above it. The
+  contents are <FloatingPageNav /> now, pinned to the viewport, so in the LEFT
+  rail this block is always the first child and always has nothing to clear.
+
+  The rule is kept rather than deleted, and kept with its `:first-child`, so the
+  4rem comes back on its own the day anything is put above it again. The base
+  `.article-rail-stay` rule still serves the right rail, where the margin is
+  doing real work.
+*/
+.article-rail-left .article-rail-sticky > .article-rail-stay:first-child {
+  margin-top: 0;
+}
+
+/*
+  ─── THE RAILS SCALE WITH THE VIEWPORT, IN ONE PLACE ───────────────────────
+
+  `html` is set to 80% from 768px up, a deliberate density decision, so 0.7rem
+  resolves to about 9px. That reads fine on a laptop and is genuinely too small
+  on a large monitor, where the rails are the smallest type on the page and hit
+  the floor first.
+
+  The event templates used to fix this for themselves with `!important`
+  font-size bumps at 2560px and 3840px, which is how "On This Page" ended up a
+  different size from the identical "Contents" rail on an article. The scaling
+  belongs HERE, on the shared rules, so both templates move together and
+  neither needs an override.
+
+  FLUID, NOT STEPPED. A 4K panel reports its CSS width according to the
+  operating system's scaling, so a breakpoint at 2560 or 3840 may never fire on
+  the display that needs it. The clamp grows continuously with the viewport
+  instead, and is tuned to sit exactly on its floor at 1512px, so nothing at or
+  below a laptop width changes:
+
+      1512px -> 8.96px (unchanged)   1920px -> 9.7px
+      2560px -> 10.8px               3840px -> 13.0px
+*/
+.article-rail-head {
+  font-family: var(--font-display);
+  font-size: clamp(0.7rem, 0.495rem + 0.174vw, 1.05rem);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-white);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ── Contents (left rail) ───────────────────────────────────────────────── */
+
+.article-toc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.article-toc-item.is-sub {
+  padding-left: 0.9rem;
+}
+
+.article-toc-list a {
+  display: block;
+  /* Same curve as `.article-rail-head` above, one step larger: on its floor at
+     1512px, ~11.3px at 1920, ~12.5px at 2560, ~15px at 3840. */
+  font-size: clamp(0.82rem, 0.592rem + 0.193vw, 1.2rem);
+  line-height: 1.45;
+  color: var(--color-white-muted);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  padding-left: 0.75rem;
+  transition:
+    color 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.article-toc-list a:hover {
+  color: var(--color-white);
+}
+
+/* The section currently on screen, set by the rail's IntersectionObserver. */
+.article-toc-list a.active {
+  color: var(--color-white);
+  border-left-color: var(--color-accent);
+}
+.article-related-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Spacing between the two rail blocks. `More From` leads, so the support
+   block is the one that gets the separation above it. */
+.article-rail-support {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ── Suggested reading (in-column, below the article) ───────────────────── */
+
+.article-related {
+  margin-top: 3.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.article-related .intel-break-title {
+  margin-bottom: 1.25rem;
+}
+
+.article-related-item {
+  display: block;
+  padding: 0.85rem 0;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.article-related-meta {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-white-muted);
+  margin-bottom: 0.3rem;
+}
+
+.article-related-title {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--color-white);
+  transition: color 0.25s ease;
+}
+
+.article-related-item:hover .article-related-title {
+  color: var(--color-accent-text);
+}
+
+/* ── Taxonomy tags in the eyebrow ───────────────────────────────────────── */
+
+.article-eyebrow {
+  flex-wrap: wrap;
+}
+
+/* No border. Boxing these made them read as buttons; they are metadata, so
+   they sit as plain text separated by the bullet like the date does. */
+.article-tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  line-height: 1.4;
+}
+
+/*
+  ─── THIS IS A LABEL. IT IS NOT, AND NEVER BECAME, A LINK. ─────────────────
+
+  It renders the article's brand and kind — "MARVEL | REVIEW" — from
+  getDisplayTags(), which derives them from the post's tags. They are
+  descriptions, not destinations: there is no /marvel page for the first half
+  to point at, and the SUBJECT does have a link already, in the breadcrumb
+  above (Home / Intel / Film).
+
+  Three link-flavoured rules had been left on it after it stopped being an
+  <a>, and one of them was a reported bug:
+
+    .article-tag-category:hover { color: var(--color-white) }
+
+  A hover state on a non-interactive element is invisible on a mouse — you
+  never rest the pointer there — and unmissable on a phone, because iOS
+  applies :hover on tap and LEAVES IT APPLIED until you tap somewhere else.
+  Reported as "why does it change colour when I tap it", with two
+  screenshots. Measured on the built page: rgb(239,68,68) at rest,
+  rgb(240,240,240) after hover, on a <span> whose closest('a') is null.
+
+  Gone with it: `text-decoration: none`, which has nothing to remove on a
+  span, and `.article-tag-type`, which no markup on this site has ever used.
+  a11y.css also stopped giving `.article-tag` an expanded tap target — that
+  affordance is for things you can tap, and on static text an invisible hit
+  area can only take taps from its neighbours.
+
+  If a tag ever does become a link, it needs all four back, not just the
+  colour.
+*/
+.article-tag-category {
+  color: var(--color-accent-text);
+}
+
+.article-score {
+  margin-left: auto;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--color-white);
+  letter-spacing: 0.05em;
+}
+
+/* ── Byline ─────────────────────────────────────────────────────────────── */
+
+.article-byline {
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
+.article-byline-avatar-wrapper {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.article-byline-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.article-byline-copy {
+  min-width: 0;
+}
+
+.article-byline-name {
+  font-size: 0.9rem;
+  color: var(--color-white-muted);
+  margin: 0;
+}
+
+.article-byline-role {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-accent-text);
+  margin: 0.15rem 0 0 0;
+}
+
+.article-byline-bio {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--color-white-muted);
+  margin: 0.5rem 0 0 0;
+  max-width: 46ch;
+}
+
+/* ── End-of-article actions ─────────────────────────────────────────────── */
+
+/*
+   The overlap fix.
+
+   This row used to be a single button with a bare `margin-top`, which let it
+   collide with the subscribe band underneath. A grid with its own bottom
+   margin cannot overlap what follows it, however long the article is.
+*/
+.article-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-top: 3rem;
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 560px) {
+  .article-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.article-actions .cta-button-primary {
+  text-align: center;
+  padding-inline: 1.5rem;
+}
+
+/* Breadcrumbs */
+.article-breadcrumbs {
+  margin-bottom: 2.5rem;
+  font-family: var(--font-sans);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.article-breadcrumbs ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.article-breadcrumbs li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--color-white-muted, #888);
+}
+
+.article-breadcrumbs li:not(:last-child)::after {
+  content: "/";
+  color: var(--color-border, #333);
+}
+
+.article-breadcrumbs a {
+  color: var(--color-white-muted, #888);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.article-breadcrumbs a:hover {
+  color: var(--color-white, #fff);
+}
+
+/* ── The byline name is a link, and has to look like it responds ───────────
+
+   Two things were wrong with the first version of this.
+
+   1. IT DID NOTHING. The rules below were correct and simply never took
+      effect, because the anchor wraps `<span class="author">` and
+      `.article-byline .author` (above) sets an explicit `color`. A colour on
+      the CHILD beats a colour inherited from the parent, so hovering changed
+      the anchor's computed colour and the reader saw nothing. The hover state
+      therefore has to name the span, not just the link.
+
+   2. IT USED THE WRONG RED. `--color-accent` (#cc0000) is 3.21:1 on the
+      surface colour — it is the border and glow red, never a text or icon
+      colour, which CLAUDE.md states plainly. `--color-accent-text` (#ef4444)
+      is 5.02:1 and clears AA, and is the red every other legible red on the
+      site already uses.
+
+   NO UNDERLINE, deliberately, and against the house pattern for links. The
+   name sits directly above the "FOUNDER & EDITOR" role line, and an
+   underline lands on top of it. Colour alone is the whole feedback here.
+
+   `:focus-visible` carries the same treatment: a link that only responds to a
+   mouse is unusable by keyboard, and every audited page currently scores 100
+   on accessibility. */
+.article-byline-name .author-link {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.article-byline-name .author-link:hover .author,
+.article-byline-name .author-link:focus-visible .author,
+.article-byline-name .author-link:active .author {
+  color: var(--color-accent-text, #ef4444);
+}
+
+/* The "By" text is outside the span but inside the link, so it moves with it
+   rather than being left behind mid-hover. */
+.article-byline-name .author-link:hover,
+.article-byline-name .author-link:focus-visible,
+.article-byline-name .author-link:active {
+  color: var(--color-accent-text, #ef4444);
+}
+
+.article-byline-name .author-link:focus-visible {
+  outline: 2px solid var(--color-accent-text, #ef4444);
+  outline-offset: 3px;
+  border-radius: 2px;
+}

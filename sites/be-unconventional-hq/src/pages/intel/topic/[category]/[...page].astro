@@ -1,0 +1,90 @@
+---
+/**
+ * /intel/topic/<category>  — the article section filtered to one category.
+ *
+ * Like /intel, this file only decides WHICH articles appear; the page shape
+ * comes from IntelLayout, so filtering reshapes the same magazine rather than
+ * dropping to a different-looking page.
+ *
+ * ─── WHY `/topic/` IS IN THE URL ──────────────────────────────────────────
+ * Articles live at /intel/<slug>. If categories lived at /intel/<category>,
+ * an article slugged "film" would collide with the Film category page and one
+ * would shadow the other. The extra /topic/ segment makes that impossible.
+ *
+ * ─── HOW THE CATEGORY LIST IS BUILT ───────────────────────────────────────
+ * getArticleCategories() returns only categories that actually have articles,
+ * so we never generate an empty category page or show a filter button that
+ * leads nowhere.
+ */
+import IntelLayout from '../../../../layouts/IntelLayout.astro';
+import { site } from '../../../../data/site.js';
+import { ARTICLE_SECTION, MAGAZINE_SIZE } from '../../../../data/sections.js';
+import { MESSAGES } from '../../../../data/content.js';
+import { CATEGORIES, tagMatchesCategory } from '../../../../data/constants.js';
+import { getArticleFeedItems } from '../../../../lib/articles';
+import { getVideoItems } from '../../../../lib/feed-items';
+import type { GetStaticPathsOptions } from 'astro';
+
+/**
+ * Builds /intel/topic/film, /intel/topic/tv, … plus their extra pages.
+ *
+ * ⚠️ Same gotcha as /intel: this runs in an isolated scope and can only see
+ * imports, never frontmatter constants — hence MAGAZINE_SIZE is imported.
+ */
+export async function getStaticPaths({ paginate }: GetStaticPathsOptions) {
+  const allArticles = getArticleFeedItems();
+
+  /*
+    Build a page for EVERY canonical category, not just the ones that
+    currently have articles. The filter row always shows all four buttons
+    (to match the Feed), so every button must lead somewhere real — an empty
+    category renders the same "no items found / clear filters" screen the
+    Feed shows, rather than a 404.
+
+    'General' is the fallback bucket for unmapped posts and isn't browsable,
+    so it's excluded here exactly as it is in the filter row.
+
+    flatMap because each category produces SEVERAL routes (page 1, 2, 3 …)
+    and we need one flat list of them all.
+  */
+  return CATEGORIES.filter((c) => c !== 'General').flatMap((category) => {
+    const slug = category.toLowerCase();
+    const inCategory = allArticles.filter((article) => {
+      const itemTags = Array.isArray(article.tags) ? article.tags : [article.category || 'general'];
+      return itemTags.some((t: any) => tagMatchesCategory(slug, t));
+    });
+
+    return paginate(inCategory.slice(MAGAZINE_SIZE), {
+      // `params` fills the [category] slot in this file's path.
+      params: { category: category.toLowerCase() },
+      // `props` passes extra data to the page below. The magazine articles are
+      // computed here because getStaticPaths already has the filtered list.
+      props: {
+        categoryLabel: category,
+        magazine: inCategory.slice(0, MAGAZINE_SIZE),
+      },
+      pageSize: 12,
+    });
+  });
+}
+
+const { page, categoryLabel, magazine } = Astro.props;
+
+const isFirstPage = page.currentPage === 1;
+const magazineArticles = isFirstPage ? magazine : [];
+const videos = isFirstPage ? (await getVideoItems()).slice(0, 4) : [];
+
+const pageSuffix = page.currentPage > 1 ? ` - Page ${page.currentPage}` : '';
+---
+
+<IntelLayout
+  title={`${categoryLabel} ${ARTICLE_SECTION.name}${pageSuffix} | ${site.name}`}
+  description={`${categoryLabel} reporting and analysis from ${site.name}.`}
+  headingLabel={`All ${categoryLabel} articles`}
+  page={page}
+  activeCategory={categoryLabel}
+  magazineArticles={magazineArticles}
+  videos={videos}
+  archiveHeading={`More ${categoryLabel}`}
+  emptyMessage={MESSAGES.noFilterMatch}
+/>

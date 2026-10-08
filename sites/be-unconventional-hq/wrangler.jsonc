@@ -1,0 +1,81 @@
+// This file is merged into the auto-generated wrangler.json during the build.
+// Use it to add or override configuration for your Cloudflare Worker.
+{
+  // Every internal link site-wide points to the no-trailing-slash form
+  // (/feed, /events/${slug}, ...). Cloudflare's default asset handling
+  // (auto-trailing-slash) 307-redirects those to add a slash before
+  // serving, which real users pay on every nav click (Lighthouse flagged
+  // ~610ms via the "redirects" audit). drop-trailing-slash makes the
+  // no-slash form canonical instead, matching what's actually linked.
+  // See public/_routes.json for the /nlsh/* Worker exclusion this reads
+  // alongside — Google tag gateway (a Cloudflare zone feature) rewrites
+  // client requests for www.googletagmanager.com into a first-party path on
+  // this zone (observed in production as /nlsh/...) so ad blockers see a
+  // same-origin request. Nothing in this app requests /nlsh/ directly —
+  // Layout.astro still points at googletagmanager.com — Cloudflare's edge
+  // does the rewrite. The gateway is meant to intercept that rewritten
+  // request AT THE EDGE, before this Worker ever sees it. But Workers Static
+  // Assets intercepts every path by default, so /nlsh/* was reaching Astro
+  // instead, which has no route for it and answered with its 404 HTML page —
+  // that's the "MIME type text/html is not executable" console error: the
+  // browser wanted the gateway's JS and got an error page.
+  //
+  // _routes.json's exclude only controls whether OUR Worker runs for that
+  // path; it hands the request back to Cloudflare's own edge routing, which
+  // is where the gateway's interception is supposed to happen — it cannot
+  // itself verify the gateway is enabled and correctly provisioned on the
+  // zone. If /nlsh/ still 404s after this deploys, the gateway is not active
+  // on the zone (Cloudflare dashboard, not an app code problem).
+  //
+  // "/nlsh/" is the path prefix this publication's own console errors showed,
+  // not a documented stable constant — if Cloudflare ever rotates the
+  // generated prefix, public/_routes.json's pattern needs to match whatever
+  // path actually appears in production requests.
+  "assets": {
+    "html_handling": "drop-trailing-slash"
+  },
+  // ─── THIS FILE IS THE SOURCE OF TRUTH FOR PUBLIC_TURNSTILE_SITE_KEY ──────
+  //
+  // Editing that key as a plain-text variable in the Cloudflare dashboard does
+  // NOTHING, and it is worth understanding why before anyone tries it again.
+  //
+  // PUBLIC_TURNSTILE_SITE_KEY is declared `context: 'client'` in the
+  // astro:env schema (astro.config.mjs). Client variables are inlined at BUILD
+  // time, and this site is static output, so the key is written into the
+  // prerendered HTML of every page carrying the newsletter form. A Worker
+  // binding is a RUNTIME value: it cannot reach back into HTML that was
+  // already built. On top of that, @astrojs/cloudflare copies these vars into
+  // dist/server/wrangler.json, which is the config `npm run deploy` deploys
+  // with, so a dashboard edit to a var named here is overwritten by the next
+  // deploy anyway.
+  //
+  // TURNSTILE_SECRET_KEY is the opposite and must never appear here: it is a
+  // server secret, read at runtime through `cloudflare:workers`, so the
+  // dashboard IS where it lives.
+  //
+  // The two therefore rotate in different places, and rotating only one leaves
+  // the browser holding a token from widget A while the server verifies it
+  // against widget B's secret. siteverify answers `invalid-input-response` and
+  // every submission fails. Change the site key HERE, rebuild, redeploy, and
+  // change the secret in the dashboard, in the same sitting.
+  "vars": {
+    // "Newsletter Subscribe (Invisible)" widget. Its Managed predecessor was
+    // 0x4AAAAAAD6D_U7FgRw-3m_G; see #190 for why the mode changed.
+    "PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAElijhmIA5xTA1CM",
+    "PUBLIC_GTM_ID": "GTM-PDDF3D6K"
+  },
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
+
+  "kv_namespaces": [
+    { "binding": "SESSION", "id": "c50225e13ddf4dbbaa6711c7b275bc21" },
+    { "binding": "KV", "id": "39a5bcb599264b7b8cfffcd6c867bf16" }
+  ],
+  "previews": {
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
+
+    "kv_namespaces": [
+      { "binding": "SESSION", "id": "c50225e13ddf4dbbaa6711c7b275bc21" },
+      { "binding": "KV", "id": "39a5bcb599264b7b8cfffcd6c867bf16" }
+    ]
+  }
+}

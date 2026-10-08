@@ -1,0 +1,253 @@
+---
+/**
+ * IntelLayout — the whole shape of an article-section page, in one place.
+ *
+ * ─── WHY THIS EXISTS ──────────────────────────────────────────────────────
+ * /intel and /intel/topic/<category> render the same page: filter bar,
+ * magazine spread, video strip, archive grid, pagination. They differ only in
+ * their title, which articles they show, and which filter is highlighted.
+ * Written as two route files they were ~90% identical — the exact fork that
+ * made the four /feed routes so painful before EPIC-000.
+ *
+ * So the page lives here, and each route becomes about 30 lines that just say
+ * *which* articles to show.
+ *
+ * ─── THE PAGE, TOP TO BOTTOM ──────────────────────────────────────────────
+ *   1. FeedLayout        page chrome — nav, big title, footer
+ *   2. IntelFilters      ALL / FILM / TV / GAMES / EVENTS
+ *   3. IntelMagazine     3-column spread (page 1 only)
+ *      ...or EmptyState  when there are no articles at all, in the SAME slot
+ *   4. ad rotator        channel CTA + one slide per live referral link
+ *   5. video strip       "Latest From The Channel" (page 1 of /intel only)
+ *   6. CardGrid          the paginated archive
+ *   7. Pagination        numbered pages
+ *
+ * ─── WHY THE MAGAZINE ONLY APPEARS ON PAGE 1 ──────────────────────────────
+ * The spread is an opening statement. Repeating it on page 2, 3, 4 would push
+ * the actual archive further down every time and show the same newest
+ * articles again on each page. So pages 2+ are a plain, fast archive grid.
+ *
+ * ─── HOW PAGINATION IS SPLIT ──────────────────────────────────────────────
+ * The magazine uses the newest MAGAZINE_SIZE articles (see
+ * src/data/sections.js). The paginated archive therefore starts AFTER those,
+ * so page 1 never shows the same article twice — once in the spread and again
+ * in the grid below. The routes do that slicing in getStaticPaths.
+ */
+import FeedLayout from './FeedLayout.astro';
+import IntelFilters from '../components/IntelFilters.astro';
+import IntelMagazine from '../components/IntelMagazine.astro';
+import SectionHeading from '../components/SectionHeading.astro';
+import CardGrid from '../components/CardGrid.astro';
+import ContentCard from '../components/ContentCard.astro';
+import Pagination from '../components/Pagination.astro';
+import EmptyState from '../components/EmptyState.astro';
+import GooglePreferredSourceDeeplink from '@puralex/astro-google-preferred-source/components/GooglePreferredSourceDeeplink.astro';
+import { ARTICLE_SECTION } from '../data/sections.js';
+import { LABELS } from '../data/content.js';
+import { getCardImageSources } from '../lib/card-images.js';
+import CommercialRotator from '../components/CommercialRotator.astro';
+import { INTEL_FEATURE_SIZES } from '../lib/intel-sizes';
+
+
+interface Props {
+  /** Browser tab / SEO title. */
+  title: string;
+  /** Meta description. */
+  description: string;
+  /** sr-only heading naming the page's content, for screen readers. */
+  headingLabel: string;
+  /** Astro's pagination object for the archive grid. */
+  page: any;
+  /** Which filter button is highlighted. null = "ALL". */
+  activeCategory: string | null;
+  /** Articles for the magazine spread. Empty on pages 2+. */
+  magazineArticles: any[];
+  /** Videos for the break strip. Empty to hide the strip entirely. */
+  videos?: any[];
+  /** Heading above the archive grid, e.g. "More From The Intel". */
+  archiveHeading: string;
+  /** Shown when there is genuinely nothing on the page. */
+  emptyMessage: string;
+  /** Image to preload in the <head> for LCP optimization */
+  preloadImage?: string | null;
+}
+
+const {
+  title,
+  description,
+  headingLabel,
+  page,
+  activeCategory,
+  magazineArticles = [],
+  videos = [],
+  archiveHeading,
+  emptyMessage,
+  preloadImage = null,
+} = Astro.props;
+
+const hasMagazine = magazineArticles.length > 0;
+const hasArchive = page.data.length > 0;
+const hasVideos = videos.length > 0;
+const firstMagSources = hasMagazine && magazineArticles[0]?.image ? getCardImageSources(magazineArticles[0].image) : null;
+const defaultPreloadImage = preloadImage || (firstMagSources ? firstMagSources.src : null);
+const defaultPreloadSrcset = firstMagSources ? firstMagSources.srcset : null;
+const defaultPreloadSizes = firstMagSources?.srcset ? INTEL_FEATURE_SIZES : null;
+
+
+// Nothing at all to show — not even one article in the spread.
+/*
+  An article section with nothing in it.
+
+  The page still renders, and it must: IntelFilters shows every canonical
+  category whether or not it has articles, so removing the page would make a
+  visible button 404. An honest "no items found" screen is the better answer
+  for a reader.
+
+  It is NOT the better answer for Google. /intel/topic/events had zero
+  articles, no robots directive, and a place in our own sitemap — so we were
+  actively inviting Google to crawl an empty page, and Search Console returned
+  "Soft 404: URL is not available to Google" on 2026-08-28. That is not a
+  penalty, but it is us advertising a destination with nothing at it, which is
+  the same rule scripts/seo-routing.test.mjs already enforces for redirects.
+
+  So: exists for humans, noindex for crawlers, and dropped from the sitemap in
+  astro.config.mjs. All three conditions lift by themselves the moment the
+  category has its first article.
+*/
+const isEmpty = !hasMagazine && !hasArchive;
+---
+
+<FeedLayout
+  noindex={isEmpty}
+  hideHero={true}
+  title={title}
+  description={description}
+  headingLabel={headingLabel}
+  page={page}
+  preloadImage={defaultPreloadImage} preloadImageSrcset={defaultPreloadSrcset} preloadImageSizes={defaultPreloadSizes}
+  kicker={ARTICLE_SECTION.kicker}
+  titlePrimary={ARTICLE_SECTION.titlePrimary}
+  titleSecondary={ARTICLE_SECTION.titleSecondary}
+  mainClass="pb-16 md:pb-24"
+>
+  {/* Render the category filters at the top of the page */}
+  <IntelFilters slot="filters" active={activeCategory} />
+
+  {hasMagazine && <IntelMagazine articles={magazineArticles} />}
+
+  {/*
+    THE EMPTY STATE GOES WHERE THE MAGAZINE WOULD HAVE BEEN, and that position
+    is the whole point of it.
+
+    It used to render after the video strip and the archive section, which put
+    it below the fold: filtering to a category with no articles yet gave you a
+    filter row, an ad banner, four videos, and then a screen of nothing before
+    the words "no items found" appeared. Reported as "I had to scroll down to
+    see that". The message answering "where did the articles go?" has to be
+    where the articles would have been.
+
+    `isEmpty` is `!hasMagazine && !hasArchive`, so this and the spread above can
+    never both render. That is what makes this a swap rather than an insertion.
+
+    Keep it ABOVE the rotator. Below it, the ad is the first thing a visitor
+    meets on a page that has told them nothing yet.
+  */}
+  {
+    isEmpty && (
+      /* Same wording and same way out as the Feed: "Clear Filters" returns
+         to the unfiltered section. */
+      <EmptyState
+        message={emptyMessage}
+        actionLabel={activeCategory ? LABELS.clearFilters : undefined}
+        actionHref={activeCategory ? ARTICLE_SECTION.path : undefined}
+      />
+    )
+  }
+
+  {/*
+    BANNER ROTATOR — the channel CTA plus one slide per live referral link.
+
+    ─── EVERY SLIDE IS A LINK, SO ONLY ONE MAY BE REACHABLE ──────────────────
+    The slides are stacked in one grid cell and the hidden ones are turned away
+    in 3D, which hides them from the eye and from nothing else: an invisible
+    <a> is still in the tab order and still read out. So a hidden slide is
+    `inert` (unfocusable AND out of the accessibility tree) and the markup
+    ships that way, which is also the correct no-JS state — with no script
+    there is no rotation, so the YouTube slide is the only one that exists.
+    The script flips it on every advance.
+
+    ─── ONE CLOCK ────────────────────────────────────────────────────────────
+    The perimeter outline is not a picture of the timer, it IS the timer: the
+    script advances on its `animationend`. That is why hover-to-pause cannot
+    drift — see the script below.
+  */}
+  {/*
+    The commercial rotator. Extracted to src/components/CommercialRotator.astro
+    so the Feed can mount the same banner instead of carrying a second copy of
+    its markup, animation CSS and rotation script.
+
+    Its position in this page is load-bearing and asserted by
+    scripts/ad-rotator-copy.test.mjs: after the magazine (or the empty state
+    that replaces it) and before the video strip, so a reader meets content
+    before they meet an ad.
+  */}
+  <CommercialRotator />
+
+
+  {
+    hasVideos && (
+      /* aria-labelledby points at the heading's id so screen readers announce
+         this region by name rather than as an anonymous "section". */
+      <section class="intel-break pt-16" aria-labelledby="intel-video-head">
+        {/*
+          The link is /feed#all-videos, NOT /feed/videos.
+
+          That route renders with `showFilters={false}` and no pagination, so a
+          reader who followed this link landed on a video-only page with no
+          control on it that could widen the view again — the only way back to
+          the whole feed was the global navbar. It read as a dead end.
+
+          The main feed already carries an "All Videos" row, so the hash takes
+          the reader to the same content inside the page they can browse from.
+          FeedGrid scrolls to it on arrival.
+        */}
+        <SectionHeading
+          title="Latest From The Channel"
+          id="intel-video-head"
+          linkLabel={LABELS.viewAllVideos}
+          linkHref="/feed#all-videos"
+        />
+        <CardGrid columns="video">
+          {videos.map((video: any, index: number) => (
+            <ContentCard item={video} index={index} />
+          ))}
+        </CardGrid>
+      </section>
+    )
+  }
+
+  {
+    hasArchive && (
+      <section class="intel-archive pt-16 mt-16" aria-labelledby="intel-archive-head">
+        <SectionHeading title={archiveHeading} id="intel-archive-head" />
+        <CardGrid>
+          {page.data.map((item: any, index: number) => (
+            <ContentCard item={item} index={index} />
+          ))}
+        </CardGrid>
+      </section>
+    )
+  }
+
+  {
+    hasArchive && (
+      /* mt-auto pushes pagination to the bottom when the page is short, so it
+         never floats mid-screen above a large gap. */
+      <div class="intel-pagination mt-auto w-full flex flex-col items-center gap-6">
+        <GooglePreferredSourceDeeplink url="beunconventionalhq.com" variant="glow" theme="dark" label="Follow on Google Search" />
+        <Pagination page={page} />
+      </div>
+    )
+  }
+</FeedLayout>
+

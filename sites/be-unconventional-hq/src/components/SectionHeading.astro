@@ -1,0 +1,70 @@
+---
+/**
+ * SectionHeading — the small ruled heading that opens a band of content
+ * ("Latest From The Channel", "More From The Intel"), with an optional link
+ * on the right.
+ *
+ * ─── WHY THIS EXISTS ──────────────────────────────────────────────────────
+ * This header/rule/link arrangement was written out three times across the
+ * /intel routes. It is a distinct, reusable piece of page furniture, so it
+ * gets to be a component.
+ *
+ * Note this is NOT the same thing as <PageTitle />. PageTitle is the big
+ * stacked display title at the top of a page (the "THE INTEL" wordmark).
+ * SectionHeading is the modest label that divides sections further down.
+ *
+ * ─── HOW TO USE IT ────────────────────────────────────────────────────────
+ *     <SectionHeading title="More From The Intel" id="archive-head" />
+ *
+ *     // With a link on the right:
+ *     <SectionHeading
+ *       title="Latest From The Channel"
+ *       id="video-head"
+ *       linkLabel="All Videos"
+ *       linkHref="/feed/videos"
+ *     />
+ *
+ * ─── ACCESSIBILITY ────────────────────────────────────────────────────────
+ * Pass `id`, then point the surrounding <section> at it with
+ * `aria-labelledby={id}`. That is what tells a screen reader which heading
+ * names that region. `level` exists because heading order must not skip —
+ * inside a page whose title is the <h1>, these should stay <h2>.
+ *
+ * ─── HOW TO RESTYLE IT ────────────────────────────────────────────────────
+ * `.intel-break-head`, `.intel-break-title` and `.intel-break-link` in
+ * src/styles/modules/intel.css.
+ */
+
+interface Props {
+  /** The heading text. */
+  title: string;
+  /** DOM id, so a section can reference it with aria-labelledby. */
+  id?: string;
+  /** Optional right-hand link text. Needs linkHref too, or it won't render. */
+  linkLabel?: string;
+  /** Optional right-hand link destination. */
+  linkHref?: string;
+  /** Heading level. Default h2 — only change this to keep the outline valid. */
+  level?: 'h2' | 'h3';
+}
+
+const { title, id, linkLabel, linkHref, level = 'h2' } = Astro.props;
+
+// Astro renders a capitalised variable as a component, so this lets the
+// heading level be chosen at the call site.
+const Heading = level;
+
+const hasLink = Boolean(linkLabel && linkHref);
+---
+
+<div class="intel-break-head">
+  <Heading class="intel-break-title" id={id}>{title}</Heading>
+
+  {
+    hasLink && (
+      <a class="intel-break-link" href={linkHref}>
+        {linkLabel} <span aria-hidden="true">&rarr;</span>
+      </a>
+    )
+  }
+</div>

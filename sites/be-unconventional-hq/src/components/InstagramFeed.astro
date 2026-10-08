@@ -1,0 +1,118 @@
+---
+import { getGalleryPosts } from '../lib/instagram.js';
+import { GLOBAL_CAROUSEL_MIN_TILES, HUB_CAROUSEL_MIN_TILES } from '../lib/instagram-topic';
+import CinematicGallery from './CinematicGallery.astro';
+import { SOCIAL_ICONS } from '../data/icons.js';
+import { site } from '../data/site.js';
+
+export interface Props {
+  /** Most tiles to render. */
+  limit?: number;
+  /**
+   * Hub keywords a post must match to qualify for this page — pass
+   * `getHubTopicKeywords(doc)` for a Featured brand or an Event. Omit it for
+   * the global "Latest on Instagram" rail on the homepage.
+   *
+   * An empty array is NOT the same as omitting it: it qualifies nothing, so a
+   * hub whose keywords have not been filled in renders no carousel instead of
+   * falling back to unrelated posts.
+   */
+  topicKeywords?: string[];
+  /**
+   * Fewest qualifying tiles that may be rendered — below this, nothing is.
+   * Defaults by surface: a hub carousel must fill the widest row
+   * (HUB_CAROUSEL_MIN_TILES), the global rail need not. Callers should not
+   * need to pass this; see the derivation in lib/instagram-topic.ts.
+   */
+  minItems?: number;
+}
+
+const {
+  limit = 10,
+  topicKeywords,
+  minItems = topicKeywords === undefined ? GLOBAL_CAROUSEL_MIN_TILES : HUB_CAROUSEL_MIN_TILES,
+} = Astro.props;
+
+/*
+  Qualification order matters, and it is the whole point of this component.
+
+  Availability is not qualification: the carousel renders only when there are
+  enough tiles that BELONG to this page, never merely because the Instagram
+  feed is non-empty. So the feed is topic-filtered first, and the minimum is
+  counted on what survives — the tiles that will actually be rendered — not on
+  the raw feed. Nothing tops the row up from the global feed when a hub falls
+  short; there is deliberately no fallback path.
+
+  `getGalleryPosts` returns ONE tile per post, so `items` counts posts rather
+  than media. An album contributes its cover and nothing else: unpacking it
+  meant a single ten-image post could fill the entire ten-tile row and push
+  every other post off the rail, which is the wrong unit for "is there enough
+  here to show". A hub that only cleared its minimum by unpacking one album
+  now renders nothing, which is the honest answer.
+*/
+const feed = getGalleryPosts(topicKeywords) || [];
+// Drop malformed entries BEFORE the limit, so `limit` yields up to N usable
+// tiles instead of N entries that might include unrenderable ones.
+const validItems = Array.isArray(feed) ? feed.filter((item) => item && item.displayUrl) : [];
+const items = validItems.slice(0, limit);
+const shouldRender = items.length >= minItems;
+---
+
+{shouldRender && (
+  <section class="instagram-feed-section container" aria-labelledby="instagram-feed-heading">
+    {/* A page may supply its own header in the `header` slot (the homepage
+        does, to use its section header system). It must carry
+        id="instagram-feed-heading", which the section is labelled by. */}
+    {Astro.slots.has('header') ? (
+      <slot name="header" />
+    ) : (
+      <div class="instagram-feed-header">
+        <h2 id="instagram-feed-heading" class="intel-break-title">Latest on Instagram</h2>
+      </div>
+    )}
+
+    <CinematicGallery items={items} profileUrl={site.socials.instagram} />
+
+    <div class="latest-view-all animate-on-scroll">
+      <a href={site.socials.instagram} target="_blank" rel="noopener noreferrer" class="view-all-link ig-view-all">
+        FOLLOW ON <span class="ig-icon" set:html={SOCIAL_ICONS.Instagram}></span>
+      </a>
+    </div>
+  </section>
+)}
+
+<style>
+  .instagram-feed-section {
+    margin: 0 auto 6rem; /* Top margin is 0 (spacing from previous section), bottom is exactly 6rem */
+  }
+
+  .instagram-feed-header {
+    margin-bottom: 1rem;
+  }
+
+  .ig-view-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap; /* prevent breaking on mobile */
+  }
+
+  @media (max-width: 560px) {
+    .instagram-feed-header {
+      display: none;
+    }
+    
+    .ig-view-all {
+      white-space: normal;
+    }
+  }
+
+  .ig-icon {
+    display: inline-flex;
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+    /* Center it slightly better with the text */
+    transform: translateY(-1px);
+  }
+</style>

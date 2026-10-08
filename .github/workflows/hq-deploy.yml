@@ -1,0 +1,174 @@
+# ─── PRODUCTION DEPLOY: GitHub builds it, deploys it, and PROVES it went live ──
+#
+# WHY THIS EXISTS. Production used to depend entirely on Cloudflare Workers
+# Builds picking up each push. On 2026-09-24 its queue stuck: the build for the
+# homepage merge sat "queued" with no runner, the live site stayed on a
+# pre-merge version, and nothing anywhere said so until the owner noticed by
+# eye. A manual `pnpm --filter beunconventionalhq deploy` from a laptop fixed it. This workflow is that
+# manual deploy, automated, plus the check that was missing.
+#
+# WHAT IT DOES
+#   1. Builds `main` exactly as a laptop deploy does (pnpm install --frozen-lockfile + pnpm --filter beunconventionalhq build),
+#      stamping the commit into the page (<meta name="build-sha">, Layout.astro).
+#   2. Deploys it with wrangler (the same `pnpm --filter beunconventionalhq deploy` config).
+#   3. Fetches the Worker (its workers.dev address, see WORKER_URL) until it
+#      serves that commit, and FAILS if it never does. A failed run emails the repo owner, so a deploy
+#      that silently did not land can no longer go unnoticed.
+#   It skips steps 1-3 when production already serves the current `main`.
+#
+# WHEN IT RUNS
+#   - every push to main (a merge, or a push from a laptop);
+#   - after each content-sync workflow finishes. Those push with GITHUB_TOKEN,
+#     and a GITHUB_TOKEN push does NOT trigger `on: push` workflows, so
+#     `workflow_run` is the only way their commits reach production from here;
+#   - daily at 07:05 UTC (the Shorts shelf rotates by build date; this replaces
+#     daily-rebuild.yml, which poked the retired Cloudflare PAGES project);
+#   - by hand (Actions → Deploy production → Run workflow). `force: true`
+#     deploys even when production already matches.
+#
+# WHY NO TESTS HERE. Code changes are gated by CI (ci.yml) before they merge.
+# Content syncs are not code, and the global QA sweep would block publishing
+# on, say, an em dash in a YouTube title. This job only builds and deploys.
+#
+# SETUP (owner, once):
+#   GitHub → repo Settings → Secrets and variables → Actions → New secret
+#     CLOUDFLARE_API_TOKEN = a Cloudflare API token from the template
+#     "Edit Cloudflare Workers" (My Profile → API Tokens → Create Token),
+#     scoped to this account.
+#   Until it exists the workflow logs a notice and exits green, so merging
+#   this before the secret is set changes nothing.
+#   Then, in Cloudflare, turn OFF Workers Builds' automatic production deploys
+#   for the Worker (Settings → Builds): two deployers racing each other could
+#   put an OLDER commit live after a newer one. See scripts/deploy.md.
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+  workflow_run:
+    workflows:
+      - Sync YouTube videos
+      - Sync Instagram feed
+      - Sync Substack articles
+      - Sync Media Kit Stats
+      - Update YouTube Analytics
+    types: [completed]
+    branches: [main]
+  schedule:
+    - cron: '5 7 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Deploy even if production already serves the current main
+        type: boolean
+        default: false
+
+# One deploy at a time. A newer trigger waits for the running deploy, and only
+# the newest waiting one is kept, which is right: every run deploys main's HEAD.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  SITE: https://beunconventionalhq.com
+  # The checks read the Worker's own workers.dev address, NOT the domain. The
+  # domain sits behind Cloudflare's bot protection, which answers every request
+  # from a GitHub runner with a 403 (the first run of this workflow deployed
+  # fine and then failed 20 checks in a row on exactly that). workers.dev is
+  # the same Worker and the same version, without the zone's bot rules.
+  WORKER_URL: https://beunconventionalhq.heythisisandrewb.workers.dev
+  CLOUDFLARE_ACCOUNT_ID: b10b7bc3e6a0fd361ba0956c8aa7d307
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # A content sync that failed pushed nothing new; nothing to deploy for it.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    timeout-minutes: 20
+    steps:
+      - name: Check the deploy token is configured
+        id: token
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN is not set, so this workflow is not deploying yet. See scripts/deploy.md."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Always main's CURRENT head, whatever triggered the run: a sync may have
+      # pushed again, and deploying the newest is the point.
+      - uses: actions/checkout@v4
+        if: steps.token.outputs.ready == 'true'
+        with:
+          ref: main
+
+      - name: Is production already on this commit?
+        id: live
+        if: steps.token.outputs.ready == 'true'
+        run: |
+          SHA=$(git rev-parse HEAD)
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          LIVE=$(curl -fsSL --max-time 20 "$WORKER_URL/?deploy-check=$(date +%s)" | grep -o 'name="build-sha" content="[0-9a-f]*"' | grep -o '[0-9a-f]\{40\}' || true)
+          echo "main:       $SHA"
+          echo "production: ${LIVE:-unknown}"
+          if [ "$LIVE" = "$SHA" ] && [ "${{ inputs.force }}" != "true" ]; then
+            echo "::notice::Production already serves $SHA. Nothing to deploy."
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        if: steps.live.outputs.needed == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        if: steps.live.outputs.needed == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        if: steps.live.outputs.needed == 'true'
+        env:
+          PUBLIC_BUILD_SHA: ${{ steps.live.outputs.sha }}
+        run: pnpm --filter beunconventionalhq build
+
+      - name: Deploy to the Worker
+        if: steps.live.outputs.needed == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm --filter beunconventionalhq deploy
+
+      # The check that was missing: the live Worker must serve THIS commit.
+      - name: Verify the Worker serves this commit
+        if: steps.live.outputs.needed == 'true'
+        env:
+          SHA: ${{ steps.live.outputs.sha }}
+        run: |
+          for attempt in $(seq 1 20); do
+            LIVE=$(curl -fsSL --max-time 20 "$WORKER_URL/?deploy-check=$(date +%s)-$attempt" | grep -o 'name="build-sha" content="[0-9a-f]*"' | grep -o '[0-9a-f]\{40\}' || true)
+            if [ "$LIVE" = "$SHA" ]; then
+              echo "The Worker serves $SHA (attempt $attempt)."
+              # The domain is the same Worker. Report what it answers, but do not
+              # fail on it: a 403 here is bot protection refusing a datacenter IP.
+              CODE=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$SITE/api/live-status.json" || true)
+              echo "$SITE/api/live-status.json answered HTTP $CODE (403 = bot protection; 404 = the domain is NOT on this Worker)."
+              if [ "$CODE" = "404" ]; then
+                echo "::warning::$SITE answers 404 on /api/live-status.json, which means the domain is not served by this Worker. See scripts/deploy.md."
+              fi
+              exit 0
+            fi
+            echo "Attempt $attempt: production serves ${LIVE:-an unstamped build}, waiting for $SHA..."
+            sleep 15
+          done
+          echo "::error::Deployed $SHA, but after 5 minutes the Worker still serves ${LIVE:-an unstamped build or no page at all}. Check the Worker's Deployments in Cloudflare."
+          exit 1

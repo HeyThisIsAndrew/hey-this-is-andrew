@@ -1,0 +1,46 @@
+---
+/**
+ * Intel: a miniature of the /intel magazine spread.
+ *
+ * Not a homepage-only layout. It is the SAME IntelMagazine component /intel
+ * opens with (Andrew: "a miniature version of the magazine style we have on
+ * the intel page"), so a click on a rail tile swaps the centre feature here
+ * exactly as it does there, and a fix to one is a fix to both. `compact`
+ * only lazy-loads its image, drops its title to an <h3> under the header
+ * below, and scales it down (`.intel-magazine--compact`, home.css).
+ *
+ * `data-magazine-scroll-anchor` on the section: a tile click scrolls THIS
+ * into view, heading included, rather than the spread's centre column,
+ * which parked the "INTEL" heading under the navbar.
+ *
+ * IntelMagazine binds by element id, so there must never be two on a page.
+ * /intel and / are separate pages, so there are not.
+ */
+import HomeSectionHeader from './HomeSectionHeader.astro';
+import IntelMagazine from '../IntelMagazine.astro';
+import { ARTICLE_SECTION } from '../../data/sections.js';
+import type { getArticleFeedItems } from '../../lib/articles';
+
+interface Props {
+  /** Newest first, already cleared of anything the hero or Featured shows. */
+  articles: ReturnType<typeof getArticleFeedItems>;
+}
+
+const { articles } = Astro.props;
+---
+
+{articles.length > 0 && (
+  <section class="home-section intel-spread" aria-labelledby="home-intel-title" data-magazine-scroll-anchor>
+    <div class="home-container">
+      <HomeSectionHeader
+        icon="intel"
+        id="home-intel-title"
+        title="Intel"
+        descriptor="EDITORIAL / ANALYSIS / NEWS"
+        href={ARTICLE_SECTION.path}
+        linkLabel="All Intel"
+      />
+      <IntelMagazine articles={articles} compact />
+    </div>
+  </section>
+)}

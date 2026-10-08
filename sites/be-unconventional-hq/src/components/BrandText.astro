@@ -1,0 +1,57 @@
+---
+/**
+ * BrandText — renders a sentence with the brand name kept on ONE line.
+ *
+ * ─── WHY THIS EXISTS ──────────────────────────────────────────────────────
+ * "BE Unconventional HQ" is three words, so normal text wrapping is free to
+ * break it anywhere — and on a phone it did, splitting the subscribe band's
+ * subtitle across lines as "…straight from Be / Unconventional HQ."
+ *
+ * A brand lockup should never be broken like that. It reads as two unrelated
+ * fragments rather than a name, and it is the one string on the page where
+ * the line break is a branding decision, not a typographic one.
+ *
+ * ─── HOW IT WORKS ─────────────────────────────────────────────────────────
+ * The copy stays a single readable sentence in src/data/content.js — nothing
+ * there needs placeholders or splitting. This component finds the brand name
+ * inside whatever string it is given and wraps just that part in a
+ * `white-space: nowrap` span, so the rest of the sentence still wraps
+ * normally and only the name is protected.
+ *
+ * If the string does not contain the brand name, it renders unchanged — so
+ * this is always safe to use, including on caller-supplied overrides.
+ *
+ * ─── USAGE ────────────────────────────────────────────────────────────────
+ *     <BrandText text={MESSAGES.subscribeSubtitle} />
+ */
+import { site } from '../data/site.js';
+
+interface Props {
+  /** The sentence to render. */
+  text: string;
+}
+
+const { text } = Astro.props;
+
+/*
+  Split ONCE, on the first occurrence, keeping the two surrounding fragments.
+  `indexOf` rather than a regex because the brand name is a literal and a
+  regex would need escaping for no benefit.
+*/
+const brand = site.name;
+const at = text.indexOf(brand);
+const before = at === -1 ? text : text.slice(0, at);
+const after = at === -1 ? '' : text.slice(at + brand.length);
+---
+
+{
+  at === -1 ? (
+    text
+  ) : (
+    <>
+      {before}
+      <span class="brand-lockup">{brand}</span>
+      {after}
+    </>
+  )
+}

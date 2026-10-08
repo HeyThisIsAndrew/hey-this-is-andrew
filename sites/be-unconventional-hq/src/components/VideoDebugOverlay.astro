@@ -1,0 +1,267 @@
+---
+/*
+  ─── DEV-ONLY GEOMETRY OVERLAY FOR THE INLINE YOUTUBE PLAYER ───────────────
+
+  Exists because the landscape shift is a WebKit bug that does not reproduce
+  in Chromium, so it can only be measured on the device that has it. This
+  draws the numbers ON the page, big enough to survive a screenshot, so a
+  phone can report what a console cannot be attached to comfortably.
+
+  THE QUESTION IT ANSWERS, and it is the only one that matters first:
+
+    OFFSET dx ~= 0   the <iframe> ELEMENT sits exactly on its box, so our CSS
+                     is fine and the picture is being shifted INSIDE YouTube's
+                     player — a cross-origin problem, fixed player-side.
+    OFFSET dx large  the iframe element itself is displaced, so this is our
+                     CSS and the culprit is one of the ancestors listed in the
+                     TRANSFORMED/CLIPPERS rows.
+
+  It also lists every ancestor that clips (hard rule 3) or that establishes a
+  containing block via transform/filter/perspective/contain — because an
+  absolutely positioned iframe resolves `left/width: 100%` against the nearest
+  such ancestor, and a landscape-only transform somewhere up the tree would
+  move it without anything nearby looking wrong.
+
+  NEVER SHIPS. Layout.astro only renders it under `import.meta.env.DEV`, and
+  it stays inert until the URL asks for it:
+
+      http://<your-mac-ip>:4321/?debug=video
+
+  Press `d` to toggle it once loaded.
+*/
+---
+
+<div id="video-debug-overlay" hidden></div>
+
+<script is:inline>
+  /*
+    Everything below is dead code in a production bundle — Layout.astro does
+    not render this component unless `import.meta.env.DEV`, so the script is
+    never emitted. The query-string gate is a second lock so that merely
+    running `npm run dev` does not paint boxes over normal development.
+  */
+  const WANTED = new URLSearchParams(location.search).get('debug') === 'video';
+
+  const COLORS = {
+    media: '#00e676',   // the box the iframe is supposed to fill
+    iframe: '#ff00ff',  // where the iframe element actually is
+    clip: '#ff5252',    // an ancestor that clips (hard rule 3)
+    ct: '#ffc400',      // an ancestor that establishes a containing block
+  };
+
+  function px(n) {
+    return Math.round(n);
+  }
+
+  /** Ancestors that clip, and ancestors that become the containing block. */
+  function walkAncestors(el) {
+    var clippers = [];
+    var containing = [];
+    let node = el.parentElement;
+
+    while (node && node !== document.documentElement) {
+      const s = getComputedStyle(node);
+      const name =
+        node.tagName.toLowerCase() +
+        (typeof node.className === 'string' && node.className.trim()
+          ? '.' + node.className.trim().split(/\s+/).slice(0, 2).join('.')
+          : '');
+
+      if (/hidden|clip|scroll|auto/.test(s.overflowX + ' ' + s.overflowY)) {
+        clippers.push(`${name} [${s.overflowX}/${s.overflowY}]`);
+      }
+      /*
+        Any of these make an element the containing block for an absolutely
+        positioned descendant, even without `position`. That is the quiet way
+        an iframe ends up measuring against the wrong parent.
+      */
+      if (s.transform !== 'none') containing.push(`${name} transform:${s.transform.slice(0, 28)}`);
+      if (s.filter !== 'none') containing.push(`${name} filter:${s.filter.slice(0, 24)}`);
+      if (s.perspective !== 'none') containing.push(`${name} perspective`);
+      if (s.contain && s.contain !== 'none') containing.push(`${name} contain:${s.contain}`);
+      if (s.willChange && s.willChange !== 'auto') containing.push(`${name} will-change:${s.willChange}`);
+
+      node = node.parentElement;
+    }
+    return { clippers, containing };
+  }
+
+  /** Reads the real safe-area values by probing them through CSS. */
+  function safeAreaInsets() {
+    const probe = document.createElement('div');
+    probe.style.cssText =
+      'position:fixed;left:-9999px;top:0;' +
+      'padding-top:env(safe-area-inset-top);padding-right:env(safe-area-inset-right);' +
+      'padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);';
+    document.body.appendChild(probe);
+    const s = getComputedStyle(probe);
+    const out = `T${parseInt(s.paddingTop)} R${parseInt(s.paddingRight)} B${parseInt(s.paddingBottom)} L${parseInt(s.paddingLeft)}`;
+    probe.remove();
+    return out;
+  }
+
+  function box(color, rect, label, dashed) {
+    const d = document.createElement('div');
+    d.className = 'vdo-box';
+    d.style.cssText = [
+      'position:fixed',
+      `left:${rect.left}px`,
+      `top:${rect.top}px`,
+      `width:${rect.width}px`,
+      `height:${rect.height}px`,
+      `border:2px ${dashed ? 'dashed' : 'solid'} ${color}`,
+      'pointer-events:none',
+      'z-index:2147483646',
+      'box-sizing:border-box',
+    ].join(';');
+
+    const tag = document.createElement('span');
+    tag.textContent = label;
+    tag.style.cssText = [
+      'position:absolute',
+      'top:0',
+      'left:0',
+      `background:${color}`,
+      'color:#000',
+      'font:700 11px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace',
+      'padding:1px 5px',
+      'white-space:nowrap',
+    ].join(';');
+    d.appendChild(tag);
+    return d;
+  }
+
+  function render() {
+    const root = document.getElementById('video-debug-overlay');
+    if (!root) return;
+    root.textContent = '';
+
+    var lines = [];
+    lines.push(
+      `viewport ${window.innerWidth}x${window.innerHeight}  dpr=${window.devicePixelRatio}  ` +
+        `${window.innerWidth > window.innerHeight ? 'LANDSCAPE' : 'PORTRAIT'}`,
+    );
+    lines.push(`safe-area ${safeAreaInsets()}`);
+
+    const boxes = [...document.querySelectorAll('.content-card-media')].filter((b) =>
+      b.querySelector('iframe'),
+    );
+
+    if (boxes.length === 0) {
+      lines.push('');
+      lines.push('NO IFRAME ON THE PAGE YET — let the hero autoplay start,');
+      lines.push('then screenshot. (The overlay refreshes continuously.)');
+    }
+
+    boxes.forEach((mediaBox, i) => {
+      var frame = mediaBox.querySelector('iframe');
+      const b = mediaBox.getBoundingClientRect();
+      const r = frame.getBoundingClientRect();
+      const cs = getComputedStyle(frame);
+      const { clippers, containing } = walkAncestors(frame);
+
+      root.appendChild(box(COLORS.media, b, `MEDIA BOX ${px(b.width)}x${px(b.height)}`));
+      root.appendChild(box(COLORS.iframe, r, `IFRAME ${px(r.width)}x${px(r.height)}`, true));
+
+      const dx = px(r.left - b.left);
+      const dy = px(r.top - b.top);
+
+      lines.push('');
+      lines.push(`── CARD ${i} ─────────────────────────`);
+      lines.push(`media  L${px(b.left)} T${px(b.top)} ${px(b.width)}x${px(b.height)} ar=${(b.width / b.height).toFixed(2)}`);
+      lines.push(`iframe L${px(r.left)} T${px(r.top)} ${px(r.width)}x${px(r.height)} ar=${(r.width / r.height).toFixed(2)}`);
+      lines.push(`>>> OFFSET dx=${dx} dy=${dy}  dW=${px(r.width - b.width)} dH=${px(r.height - b.height)}`);
+      lines.push(`   ${Math.abs(dx) < 2 && Math.abs(dy) < 2
+        ? 'iframe SITS ON its box -> shift is INSIDE YouTube'
+        : 'iframe is DISPLACED -> our CSS, see rows below'}`);
+      lines.push(`attr   w=${frame.getAttribute('width')} h=${frame.getAttribute('height')}`);
+      lines.push(`css    ${cs.position} l:${cs.left} t:${cs.top} w:${cs.width} h:${cs.height}`);
+      lines.push(`       transform:${cs.transform === 'none' ? 'none' : cs.transform.slice(0, 30)}`);
+      lines.push(`clip   ${clippers.length ? clippers.join(' | ') : '(none) OK'}`);
+      lines.push(`cblock ${containing.length ? containing.join(' | ') : '(none)'}`);
+
+      /* Draw the clipping ancestors too, so a screenshot shows WHERE the
+         box being clipped against actually is. */
+      let node = frame.parentElement;
+      while (node && node !== document.documentElement) {
+        const s = getComputedStyle(node);
+        if (/hidden|clip/.test(s.overflowX + ' ' + s.overflowY)) {
+          const rect = node.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            root.appendChild(
+              box(COLORS.clip, rect, `CLIPS: ${node.className.toString().split(/\s+/)[0] || node.tagName}`, true),
+            );
+          }
+        }
+        node = node.parentElement;
+      }
+    });
+
+    const panel = document.createElement('pre');
+    panel.textContent = lines.join('\n');
+    panel.style.cssText = [
+      'position:fixed',
+      'left:6px',
+      'top:6px',
+      'max-width:min(96vw,560px)',
+      'max-height:60vh',
+      'overflow:auto',
+      'margin:0',
+      'padding:8px 10px',
+      'background:rgba(0,0,0,0.88)',
+      'color:#fff',
+      'border:1px solid #00e676',
+      'font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace',
+      'white-space:pre',
+      'z-index:2147483647',
+      'pointer-events:none',
+    ].join(';');
+    root.appendChild(panel);
+  }
+
+  let timer = 0;
+  function start() {
+    const root = document.getElementById('video-debug-overlay');
+    if (!root) return;
+    root.hidden = false;
+    render();
+    /* Polled rather than observed: the whole point is to catch a layout that
+       settles differently from what an observer reports, so re-reading from
+       scratch is the honest way to sample it. */
+    timer = window.setInterval(render, 500);
+  }
+
+  function stop() {
+    const root = document.getElementById('video-debug-overlay');
+    if (!root) return;
+    clearInterval(timer);
+    timer = 0;
+    root.textContent = '';
+    root.hidden = true;
+  }
+
+  function toggle() {
+    timer ? stop() : start();
+  }
+
+  if (WANTED) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', start);
+    } else {
+      start();
+    }
+    document.addEventListener('astro:page-load', () => {
+      if (!timer) start();
+    });
+  }
+
+  /* `d` toggles it even without the query string, for when the phone is
+     already on the page and retyping a URL is awkward. */
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'd' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      var t = e.target;
+      if (t && /input|textarea|select/i.test(t.tagName)) return;
+      toggle();
+    }
+  });
+</script>

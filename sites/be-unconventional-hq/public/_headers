@@ -1,0 +1,171 @@
+# Cloudflare Pages reads this file and applies these HTTP response headers.
+# https://developers.cloudflare.com/pages/configuration/headers/
+#
+# Security headers applied to every route.
+
+/*
+  # Stop browsers from MIME-sniffing a response away from its declared type.
+  X-Content-Type-Options: nosniff
+  # Send origin only on cross-site navigations; full URL stays same-origin.
+  Referrer-Policy: strict-origin-when-cross-origin
+  # Prevent other sites from framing our pages (clickjacking protection).
+  X-Frame-Options: SAMEORIGIN
+  # Disable powerful browser features the site does not use.
+  Permissions-Policy: geolocation=(), camera=(), microphone=()
+  # Force HTTPS for one year (site is HTTPS-only on Cloudflare Pages).
+  Strict-Transport-Security: max-age=31536000
+
+  # ─── AGENT DISCOVERY (#192) ──────────────────────────────────────────────
+  #
+  # RFC 8288 Link headers, so an agent that fetches a page and reads only its
+  # headers still finds the machine-readable surfaces. A HEAD request is
+  # enough; no HTML parsing required.
+  #
+  # ⚠️  THIS LIVES INSIDE THE EXISTING `/*` BLOCK, NOT A SECOND ONE.
+  #
+  # It was originally added as its own `/*` section further down this file,
+  # and that took the entire security block above OFF EVERY PAGE IN
+  # PRODUCTION. Cloudflare applies the LAST matching rule for a path, not the
+  # union of them, so a second `/*` does not add headers — it replaces the
+  # first one wholesale. The site shipped with no CSP, no HSTS, no
+  # X-Frame-Options and no nosniff until it was caught in a Lighthouse run
+  # (Best Practices 73, with all four Trust and Safety audits failing).
+  #
+  # Never declare the same path twice in this file. Add to the existing block.
+  # scripts/headers-integrity.test.mjs fails the build if a duplicate returns.
+  Link: </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json", </llms.txt>; rel="alternate"; type="text/plain", </.well-known/mcp/server-card.json>; rel="service-desc"; type="application/json"
+  # Restrict where content may load from. Allowlist matches the site's real
+  # dependencies: Google Tag Manager/Analytics (scripts + beacons), the Meta /
+  # TikTok / Clarity marketing pixels, YouTube embeds, and https image CDNs
+  # (YouTube thumbs, Substack, Unsplash).
+  # 'unsafe-inline' is required by GTM and the site's inline island scripts.
+  # static.cloudflareinsights.com is Cloudflare Web Analytics, which the
+  # platform injects into the response itself. It was being blocked by this
+  # very policy on every page load, logging a CSP violation to the console and
+  # costing a Lighthouse Best Practices point, while collecting nothing.
+  #
+  # Meta (connect.facebook.net), Clarity (*.clarity.ms) and TikTok
+  # (analytics.tiktok.com) were added after all three were found refused in
+  # production — Meta and Clarity outright by this directive, TikTok by CORS
+  # inside the Partytown worker. See issue #63. Note the CSP was only HALF the
+  # problem: a script fetched by a web worker also needs CORS headers the
+  # pixel vendors do not send, so the Partytown resolveUrl in astro.config.mjs
+  # routes them through /api/proxy. Both changes are required; either alone
+  # leaves the pixels dead.
+  #
+  # img-src is already `'self' data: https:`, which covers every pixel beacon
+  # (Meta's /tr, Clarity's collector) without naming hosts.
+  #
+  # ─── WHY 'unsafe-eval' IS HERE ───────────────────────────────────────────
+  # Partytown requires it, and without it the tag proxying silently fails.
+  #
+  # The @astrojs/partytown integration serialises the `resolveUrl` function
+  # from astro.config.mjs to a STRING (functions cannot survive JSON), and
+  # Partytown rehydrates it inside its worker — this is by design, and the
+  # rehydration is a literal eval. From dist/client/~partytown/partytown-sw.js:
+  #
+  #   T("resolveUrl,resolveSendBeaconRequestParameters,get,set,apply")
+  #     .map((e)=>{ r[e] && (r[e] = new Function("return " + r[e])()) })
+  #
+  # The Partytown sandbox is served from our own origin
+  # (/~partytown/partytown-sandbox-sw.html), so it inherits this policy and its
+  # worker inherits it in turn. With no 'unsafe-eval', that `new Function` is
+  # blocked, `resolveUrl` never becomes callable, and Partytown falls back to
+  # loading each vendor script DIRECTLY cross-origin from the worker — where
+  # the vendors send no CORS headers. That is precisely the production error
+  # observed on TikTok: "Access to fetch at analytics.tiktok.com ... blocked by
+  # CORS policy", reported by /~partytown/partytown-sandbox-sw.html.
+  #
+  # The cost is real but bounded: 'unsafe-inline' is already present above (GTM
+  # and the inline island scripts require it), so script-src was not acting as
+  # a strict XSS barrier before this. If the pixels are ever moved off
+  # Partytown onto the main thread, REMOVE this — it exists only for Partytown.
+  #
+  # THE GOOGLE PREFERRED SOURCE BUTTON NEEDS NOTHING HERE. PR #225 added
+  # news.google.com and accounts.google.com to script-src, frame-src AND
+  # connect-src for it. Measured against the build: both origins appear ZERO
+  # times in the whole site. The component renders a plain <a href> to
+  # https://www.google.com/preferences/source, and CSP governs what a page
+  # LOADS, not where a link navigates. The integration is configured
+  # `injectScript: false` in astro.config.mjs, so its publisher.js is never
+  # added either. If that flag is ever flipped to true, publisher.js is served
+  # FROM news.google.com and script-src will genuinely need it - add it then,
+  # with a build to point at.
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; img-src 'self' data: https:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://challenges.cloudflare.com https://static.cloudflareinsights.com https://connect.facebook.net https://*.facebook.net https://analytics.tiktok.com https://*.tiktok.com https://*.tiktokcdn.com https://*.tiktokw.us https://www.clarity.ms https://*.clarity.ms https://www.youtube.com https://s.ytimg.com; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://www.googletagmanager.com https://challenges.cloudflare.com https://www.facebook.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://static.cloudflareinsights.com https://cloudflareinsights.com https://connect.facebook.net https://*.facebook.com https://analytics.tiktok.com https://*.tiktok.com https://*.tiktokw.us https://www.clarity.ms https://*.clarity.ms https://c.clarity.ms
+
+# The embedded Sanity Studio (/admin, injected by @sanity/astro's
+# studioBasePath) is an internal tool: tell crawlers to keep it out of search
+# results entirely. Header-based because the page markup is generated by the
+# integration, so there's no template to put a <meta> tag in.
+#
+# KNOWN LIMITATION: the site-wide CSP above does not allow connections to
+# *.sanity.io, so the hosted Studio at /admin cannot reach the Sanity API in
+# production. If you want the hosted Studio to work (vs. running `npx sanity
+# dev` locally), /admin needs its own CSP: detach the global one here with
+# "! Content-Security-Policy" and set a Studio-friendly policy including
+# connect-src https://*.sanity.io wss://*.sanity.io — then verify in the
+# browser console, because Cloudflare JOINS duplicate headers (two CSPs
+# enforce as their intersection, which would break it further).
+/admin
+  X-Robots-Tag: noindex, nofollow
+/admin/*
+  X-Robots-Tag: noindex, nofollow
+
+# Prevent Google from indexing the massive raw JSON payload of the search index.
+/api/*
+  X-Robots-Tag: noindex
+
+# RFC 9727 requires this media type, and the file has no extension for
+# Cloudflare to infer one from, so it would otherwise be served as
+# application/octet-stream and a conforming client would ignore it.
+/.well-known/api-catalog
+  Content-Type: application/linkset+json
+
+# Same problem, different files: these have no extension either, and a skill
+# served as octet-stream is a skill nothing will read.
+/.well-known/agent-skills/*
+  Access-Control-Allow-Origin: *
+/auth.md
+  Content-Type: text/markdown; charset=utf-8
+
+# Discovery documents are fetched cross-origin by agents that are not a
+# browser on our site, so they need CORS. They are public by definition; this
+# grants read access to files that are already world-readable.
+/.well-known/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=3600
+
+# Unhashed static files in public/. Everything Astro emits lands under
+# /assets/* with a content hash and gets an immutable year from the Cloudflare
+# adapter, but these keep stable filenames and so were being served with no
+# cache policy at all - including banner.webp, which is the homepage LCP image
+# and the single largest thing a repeat visitor was re-downloading. Lighthouse
+# flags exactly this as "use efficient cache lifetimes".
+#
+# 30 days rather than a year precisely because the paths are NOT hashed: a
+# replaced banner has to reach people in reasonable time. stale-while-revalidate
+# serves the cached copy instantly and refreshes it in the background.
+/banner.webp
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=86400
+/profile.jpg
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=86400
+/og-image.png
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=86400
+/favicon.svg
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=86400
+/favicon.ico
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=86400
+
+# Force an actual download instead of Safari's inline PDF viewer. iOS
+# Safari routinely ignores the HTML `download` attribute specifically for
+# PDFs (a type it can render natively) and opens its built-in viewer page
+# instead - the extra "why did pressing Download take me to another page"
+# step this was reported for. Content-Disposition: attachment is a
+# server-level signal browsers honor far more reliably than the client-
+# side attribute, on Safari included.
+/downloads/be-unconventional-hq-media-kit.pdf
+  Content-Disposition: attachment; filename="Be-Unconventional-HQ-Media-Kit.pdf"
+/downloads/be-unconventional-hq-press-kit.pdf
+  Content-Disposition: attachment; filename="Be-Unconventional-HQ-Press-Kit.pdf"
+/downloads/be-unconventional-hq-logo-pack.zip
+  Content-Disposition: attachment; filename="Be-Unconventional-HQ-Logo-Pack.zip"

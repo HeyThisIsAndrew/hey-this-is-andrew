@@ -1,0 +1,102 @@
+name: Sync Media Kit Stats
+
+on:
+  schedule:
+    - cron: '0 3 * * 0' # Run every Sunday at 3:00 AM UTC
+  workflow_dispatch:
+
+# ── SERIALISED AGAINST THE OTHER CONTENT SYNCS ───────────────────────────────
+# Five workflows commit and push to main. Two of them fired on the same cron
+# minute, so whichever finished second pushed onto a ref that had moved and
+# failed — a red run that had nothing to do with the sync itself.
+#
+# The cron times are now staggered (:00 youtube, :15 instagram, :30 articles),
+# which handles the scheduled case. This shared group handles everything the
+# schedule cannot: a run that overruns its slot, two workflow_dispatch clicks,
+# or a weekly job landing on top of a six-hourly one.
+#
+# ONE group name across all five is the point — concurrency only serialises
+# runs that share a group, and the resource being contended is main itself.
+# cancel-in-progress is false deliberately: these jobs push commits, and
+# cancelling one mid-push is how you get a partial sync, not a fast one.
+concurrency:
+  group: content-sync-push
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check secrets configured
+        id: check
+        env:
+          HAS_YT_KEY: ${{ secrets.YOUTUBE_API_KEY != '' }}
+          HAS_YT_CH: ${{ secrets.YOUTUBE_CHANNEL_ID != '' }}
+          HAS_RAPID: ${{ secrets.RAPIDAPI_KEY != '' }}
+          HAS_META: ${{ secrets.META_ACCESS_TOKEN != '' }}
+          HAS_SANITY: ${{ secrets.SANITY_WRITE_TOKEN != '' }}
+        run: |
+          if [ "$HAS_YT_KEY" != "true" ] || [ "$HAS_YT_CH" != "true" ] || [ "$HAS_RAPID" != "true" ] || [ "$HAS_META" != "true" ] || [ "$HAS_SANITY" != "true" ]; then
+            echo "Missing required API keys — skipping."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.configured == 'true'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.configured == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.check.outputs.configured == 'true'
+        run: pnpm install --frozen-lockfile
+
+      # Puppeteer's own Chrome. `pnpm install --frozen-lockfile` fetches it into ~/.npm/_cacache via
+      # the postinstall, but the browser itself lands in ~/.cache/puppeteer,
+      # which the npm cache does not cover — so it is cached explicitly rather
+      # than re-downloaded on every run. Same steps as ci.yml; this job needs
+      # them because `generate-media-kit-pdf` renders through headless Chrome.
+      - name: Cache Puppeteer browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Chrome for Puppeteer
+        run: npx puppeteer browsers install chrome
+
+      - name: Run sync
+        if: steps.check.outputs.configured == 'true'
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          YOUTUBE_CHANNEL_ID: ${{ secrets.YOUTUBE_CHANNEL_ID }}
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          SANITY_WRITE_TOKEN: ${{ secrets.SANITY_WRITE_TOKEN }}
+        run: pnpm --filter beunconventionalhq sync-media-kit
+
+      - name: Regenerate one-sheet PDFs
+        if: steps.check.outputs.configured == 'true'
+        run: pnpm --filter beunconventionalhq generate-media-kit-pdf
+
+      - name: Commit and push if files changed
+        if: steps.check.outputs.configured == 'true'
+        run: |
+          if git diff --quiet -- src/data/cache/social-stats.json public/downloads/be-unconventional-hq-media-kit.pdf public/downloads/be-unconventional-hq-press-kit.pdf; then
+            echo "No changes to sync."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/data/cache/social-stats.json public/downloads/be-unconventional-hq-media-kit.pdf public/downloads/be-unconventional-hq-press-kit.pdf
+          git commit -m "chore: automated media kit sync" -m "Synced by the sync-media-kit.yml workflow (run ${{ github.run_id }})."
+          git pull origin HEAD --rebase && git push origin HEAD:${{ github.ref }}

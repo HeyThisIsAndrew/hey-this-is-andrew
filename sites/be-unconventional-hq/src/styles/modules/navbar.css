@@ -1,0 +1,312 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   NAVBAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+#navbar {
+  padding: 0.5rem 0;
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  /*
+    The LAYERED bar is the bar, on every page and at every scroll position:
+    the divider and the drop shadow that seat it over the site used to arrive
+    only with `.scrolled`, so every page opened on a flatter bar that
+    "changed" as the wordmark slid in (Andrew). `.scrolled` now means one
+    thing only: the BE UNCONVENTIONAL HQ wordmark is showing
+    (nav-identity.css).
+  */
+  background: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.nav-inner {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100%;
+}
+
+/* Keep the logo and the .nav-toggle (which doubles as the menu's close
+   button) clear of the hardware notch / Dynamic Island. In landscape the
+   inset lands on the LEFT or RIGHT edge, so a top inset alone does nothing
+   and the close button ends up underneath it, unreachable.
+
+   `--nav-inline-pad` restates .container's padding-inline (layout.css) so
+   max() can floor against it: nothing changes on a device with no insets,
+   and the ID selector outranks .container in the cascade regardless of
+   import order. Keep the two clamps in sync. */
+#navbar .nav-inner {
+  --nav-inline-pad: clamp(1.25rem, calc(0.625rem + 2.5vw), 3rem);
+  padding-left: max(var(--nav-inline-pad), env(safe-area-inset-left));
+  padding-right: max(var(--nav-inline-pad), env(safe-area-inset-right));
+}
+.nav-brand-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+#navbar:hover {
+  background: rgba(25, 25, 25, 0.95);
+  box-shadow: 0 4px 40px rgba(204, 0, 0, 0.12);
+}
+
+.nav-logo,
+.footer-logo-wrapper {
+  transition: none !important;
+  display: inline-block;
+}
+.nav-logo img,
+.footer-logo-wrapper img {
+  transition:
+    filter 0.3s ease,
+    transform 0.3s ease !important;
+}
+.nav-logo:hover img,
+.footer-logo-wrapper:hover img {
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.7)) brightness(1.1) !important;
+  transform: scale(1.05) !important;
+}
+
+.nav-logo img {
+  /* The cropped wordmark is ~2.2:1, so this is ~105px x 48px on desktop and
+     ~84px x 38px on a small phone: the words are legible at both. */
+  height: clamp(38px, 2vw + 30px, 48px);
+  width: auto;
+  max-width: 240px;
+  flex-shrink: 0 !important;
+  object-fit: contain;
+  display: block;
+}
+
+#navbar.scrolled .nav-logo {
+  opacity: 0.9;
+  transform: scale(1); /* Maintain size */
+}
+
+#navbar.scrolled .nav-logo:hover {
+  opacity: 1;
+}
+
+#navbar nav ul {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+}
+
+#navbar nav ul li a {
+  color: rgba(245, 245, 245, 0.8);
+  
+  /* NEW STYLING (matching Footer 'Explore' / 'Follow') */
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+
+  /* OLD STYLING FALLBACK (uncomment to revert) */
+  /*
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  */
+
+  text-transform: uppercase;
+  text-decoration: none;
+  position: relative;
+  display: block;
+  padding: 1.5rem 1.25rem;
+  transition:
+    color 0.3s ease,
+    text-shadow 0.3s ease;
+}
+
+#navbar nav ul li a::after {
+  content: '';
+  position: absolute;
+  bottom: 0.75rem;
+  left: 1.25rem;
+  width: calc(100% - 2.5rem);
+  height: 1px;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.2, 1);
+}
+
+#navbar nav ul li a:hover {
+  color: var(--color-accent-text);
+  text-shadow: 0 0 16px rgba(204, 0, 0, 0.6);
+}
+
+#navbar nav ul li a:hover::after {
+  transform: scaleX(1);
+}
+
+/*
+  ─── THE CLICK IS ACKNOWLEDGED IN THE SAME FRAME ────────────────────────────
+
+  There was NO pressed state on a nav link. Measured on a warm, local
+  navigation: click at 0ms, document ready at 34ms, DOM swapped at 67ms, and
+  the underline did not move to the clicked item until 114ms — because
+  `updateActiveNavLinks()` runs on `astro:page-load`, which is the END of the
+  navigation. Until then nothing on screen changed at all.
+
+  That window is not fixed. It is however long the document takes to arrive, so
+  on a real connection with a cold cache it is the whole fetch — several
+  hundred milliseconds of a reader having tapped and seen nothing. Reported as
+  "there must never be a delay on click".
+
+  `:active` is the answer that cannot be late: it is pure paint, applied by the
+  compositor on the same frame as the press, and it does not care about the
+  network, the router, or how much JavaScript is queued behind it. `transition:
+  none` because a transition on the press state would reintroduce exactly the
+  lag this exists to remove.
+
+  `:active` is not enough on its own on a touch screen, where a tap is too
+  brief to register as a press — the script also moves the underline
+  optimistically on pointerdown. See Navbar.astro.
+*/
+#navbar nav ul li a:active {
+  color: var(--color-accent-text);
+  transition: none;
+}
+
+#navbar nav ul li a:active::after {
+  width: calc(100% - 2.5rem);
+  transition: none;
+}
+
+#navbar nav ul li a.active {
+  color: var(--color-accent-text);
+  text-shadow: 0 0 16px rgba(204, 0, 0, 0.45);
+}
+
+#navbar nav ul li a.active::after {
+  width: calc(100% - 2.5rem);
+}
+
+#navbar nav ul li a.cta {
+  color: var(--color-accent-text);
+}
+
+#navbar nav ul li a.cta:hover {
+  color: var(--color-accent-hover);
+  text-shadow: 0 0 20px rgba(204, 0, 0, 0.8);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   THE TWO NAV CONTROLS ON THE RIGHT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/*
+  These rules used to live in a `<style>` block nested INSIDE the desktop
+  search <button>, and the mobile button was styled by a long `style="..."`
+  attribute. Both are moved here, because that arrangement caused a real bug:
+  an inline style cannot be overridden by any stylesheet rule, and the desktop
+  twin had no sizing at all, so it computed 0x0 and was unclickable while the
+  mobile one looked fine. One rule, both copies, one place to change it.
+*/
+@media (min-width: 1025px) {
+  .mobile-only { display: none !important; }
+}
+@media (max-width: 1024px) {
+  .desktop-only { display: none !important; }
+}
+
+/*
+  THE GAP IS LOAD-BEARING, NOT DECORATION. See a11y.css.
+
+  `.nav-toggle` grows an invisible tap region to its LEFT in landscape, into
+  what used to be empty bar. The search button now sits in that space, so the
+  gap between the two is what the toggle's region is allowed to expand into
+  without covering its neighbour. a11y.css reads this value; do not set the
+  spacing there or here alone.
+*/
+:root {
+  /*
+    20px, and the number is derived rather than chosen for looks.
+
+    Both controls need a forgiving tap region and they are now neighbours, so
+    the gap is the budget they share. e2e-corner-controls asserts a minimum
+    effective area of 2800px2 per control. In landscape the vertical budget is
+    capped at 6px (page content sits directly beneath the bar), so a control
+    is 50px tall and needs at least 56px of width:
+
+      (44 + L) * 50 >= 2800   ->   L >= 12px of leftward expansion
+
+    The toggle takes the gap minus a 4px buffer, so the gap must be at least
+    16px. 20px gives the toggle 60x50 = 3000px2 with room to spare, and keeps
+    its PORTRAIT expansion at the same 16px the base rule always gave it, so
+    that measurement does not move either.
+
+    Below 16px the toggle drops under the minimum and the build fails, which
+    is the intended behaviour: shrinking this silently trades away a fix made
+    for a real device report.
+  */
+  --nav-control-gap: 20px;
+}
+
+.mobile-search-wrapper {
+  gap: var(--nav-control-gap);
+}
+
+/*
+  Both copies of the search button. 44x44 matches `.nav-toggle` beside it,
+  which is the house minimum for a touch target; the icon stays 22px and only
+  the target is large.
+*/
+.nav-search-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--color-white);
+  cursor: pointer;
+  /* Its own containing block for the tap region in a11y.css. */
+  position: relative;
+  z-index: 10;
+  touch-action: manipulation;
+}
+
+/*
+  An inline SVG with no width/height and no CSS size collapses to 0x0 and
+  takes its button with it. Sized here so neither copy can drift.
+*/
+.nav-search-btn svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+/*
+  The inherited rule was a bare `:hover { opacity: 1 }` with no base opacity
+  anywhere, so hovering changed nothing at all. Given a resting state it now
+  behaves like the logo beside it, which is the only other icon-ish thing up
+  here: slightly held back at rest, full strength on hover.
+
+  Updated to match the interaction states of the main nav links.
+*/
+.nav-search-btn {
+  /* The site's white is a token. rgba(245,245,245,...) was a near-miss of it. */
+  color: color-mix(in srgb, var(--color-white) 80%, transparent);
+  transition: color 0.3s ease, filter 0.3s ease;
+}
+
+.nav-search-btn:hover,
+.nav-search-btn:focus-visible {
+  color: var(--color-accent-text);
+  filter: drop-shadow(0 0 16px rgba(204, 0, 0, 0.6));
+}

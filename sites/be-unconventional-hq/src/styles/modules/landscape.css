@@ -1,0 +1,140 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   LANDSCAPE ORIENTATION CONTAINMENT
+   Phones rotated sideways report widths above the 768px
+   mobile breakpoint while offering ~320-430px of height.
+   These rules keep the header, logo, and nav links inside
+   short landscape viewports. Import last — overrides both
+   desktop and portrait-mobile rules.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+@media (orientation: landscape) and (max-height: 500px) {
+  /*
+    Compress the fixed header so it doesn't eat the short viewport.
+
+    THIS HEIGHT IS LOAD-BEARING — do not raise it to buy tap clearance.
+    An attempt to move the toggle away from the contested top edge
+    (padding-top 0.4rem -> 1.15rem, padding-bottom 0.4rem -> 1rem, toggle
+    44px -> 56px) took the bar from ~55px to ~85px, and two other rules are
+    measured against that number: `.hero { padding-top: 5.5rem }` below, and
+    `.nav-container { padding-top: calc(env(safe-area-inset-top) + 4.25rem) }`.
+    Both were sized for a ~55px bar, so the taller bar pushed the hero content
+    under the header and the section heading beneath it into view. Reported
+    from a device as "the banner is now covering the nav bar".
+
+    The tap-target work lives entirely in a11y.css instead, where it changes
+    hit areas and not layout.
+  */
+  #navbar {
+    padding-top: max(0.4rem, env(safe-area-inset-top));
+    padding-bottom: 0.4rem;
+  }
+
+  .nav-logo img {
+    height: clamp(28px, 9vh, 40px);
+  }
+
+  .nav-identity-wrapper {
+    display: none !important;
+  }
+
+  /* Fullscreen menu: wrap links horizontally and allow scroll
+     instead of stacking a tall column that clips off-screen.
+     (The scroll plumbing itself now lives on the base .nav-container rule in
+     responsive-mobile.css — all this adds is landscape's header clearance and
+     the horizontal notch insets. Written as longhands on purpose: the
+     `padding` shorthand this replaced reset the base rule's safe-area
+     left/right guards back to a flat 2rem, which is how the close button
+     ended up under the Dynamic Island when the phone is held notch-right.) */
+  .nav-container {
+    padding-top: calc(env(safe-area-inset-top) + 4.25rem);
+    padding-bottom: max(2rem, env(safe-area-inset-bottom));
+    padding-left: max(2rem, env(safe-area-inset-left));
+    padding-right: max(2rem, env(safe-area-inset-right));
+  }
+
+  .nav-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: center;
+    gap: 1.25rem 2.25rem;
+    width: 100%;
+    min-height: 100%;
+  }
+
+  .nav-item a {
+    font-size: clamp(1rem, 5vh, 1.5rem);
+  }
+
+  .hero-title-stack {
+    margin-bottom: 1.25rem;
+  }
+
+  .hero-kicker {
+    margin-bottom: 0.75rem !important;
+  }
+
+  .hero-subtitle {
+    margin-bottom: 1.25rem !important;
+  }
+}
+
+/*
+  ─── OVERLAY CLOSE BUTTONS: SAME EDGE, SAME PROBLEM ────────────────────────
+
+  `.close-fullscreen-btn` (category overlay) and `.modal-close` (video modal)
+  are pinned to the top-right at `max(1rem, inset)` and `max(inset, 10px)`.
+  In landscape that is the strip Safari's collapsing tab bar and iOS's own
+  gestures both contend for — the same reason the navbar's control was
+  reported as unpressable, which is why the report said it happens "for any
+  area where the X button is present".
+
+  `--vv-top` is published by src/lib/viewport-anchor.ts from
+  `visualViewport.offsetTop`, so on the occasions the engine genuinely offsets
+  the visual viewport, these follow it down instead of hiding underneath.
+  It is 0 everywhere else, so this changes nothing on any other device.
+
+  Only the TOP is moved. Pushing them further left would walk the close button
+  into the content it sits over.
+*/
+@media (orientation: landscape) and (max-height: 500px) {
+  .close-fullscreen-btn {
+    top: calc(max(1.75rem, env(safe-area-inset-top, 1.75rem)) + var(--vv-top, 0px));
+  }
+
+  .modal-close {
+    top: calc(max(env(safe-area-inset-top, 28px), 28px) + var(--vv-top, 0px));
+  }
+}
+
+/*
+  ─── CATEGORY OVERLAY IN LANDSCAPE: ROW, NOT COLUMN ────────────────────────
+
+  `.category-fullscreen-overlay .filter-grid` is `flex-direction: column`
+  (filters.css), which is right in portrait and wrong here: four stacked
+  items at 1.5rem gaps are taller than a ~390-440px landscape viewport, so
+  the list overflowed and `.fullscreen-content`'s `overflow-y: auto` turned
+  it into a scroller. Reported from a device: "there's also a scroller for
+  the categories, which should not be present in landscape view. This view
+  should be horizontal, not vertical."
+
+  This is the exact treatment `.nav-list` already gets above for the same
+  reason on the same screens — the two overlays are meant to feel identical,
+  so they wrap the same way. Laid out as a row, the categories fit without
+  scrolling and the close button is the only thing in the corner again.
+*/
+@media (orientation: landscape) and (max-height: 500px) {
+  .category-fullscreen-overlay .filter-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: center;
+    gap: 1.25rem 2.25rem;
+  }
+
+  /* The tall portrait tap padding is what made the column overflow; in a row
+     the horizontal padding is what matters. */
+  .category-fullscreen-overlay .cat-btn {
+    padding: 0.75rem 1.25rem;
+  }
+}

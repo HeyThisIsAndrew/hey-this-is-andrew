@@ -1,0 +1,28 @@
+---
+interface Props {
+  href?: string;
+  type?: 'button' | 'submit' | 'reset';
+  class?: string;
+  [x: string]: any;
+}
+
+const { href, type = 'button', class: className = '', ...rest } = Astro.props;
+const Tag = href ? 'a' : 'button';
+---
+
+{/*
+  No scoped <style> here on purpose. Presentation comes entirely from the
+  global `.cta-button-primary` rule in styles/modules/buttons.css, which the
+  other 17 hand-written call sites already use.
+
+  This component used to re-declare that rule locally. The copy was identical
+  except that it omitted `white-space: nowrap` — and, because it sat later in
+  the cascade at equal specificity, it also suppressed the `@media (max-width:
+  768px)` override in about.css that shrinks every button on mobile
+  (padding 1rem 2rem, font-size 0.75rem). The single <Button /> instance (the
+  404 page) was therefore the only button on the site that stayed desktop-sized
+  on a phone. Re-adding a local copy would reintroduce that bug.
+*/}
+<Tag href={href} type={href ? undefined : type} class={`cta-button-primary ${className}`} {...rest}>
+  <slot />
+</Tag>

@@ -1,0 +1,865 @@
+---
+import { getDisplayTags, getDisplayTagSlots } from '../lib/tags';
+import { editorialPreview } from '../lib/editorial-text';
+
+import { parseVideoId } from '../lib/platforms/youtube';
+import {
+  getCardImageSources,
+  CARD_IMAGE_SIZES,
+  HERO_CARD_IMAGE_SIZES,
+  FEATURED_CARD_IMAGE_SIZES,
+} from '../lib/card-images';
+import { LABELS } from '../data/content.js';
+import { CATEGORY_TAG_ALIASES, categoryTagAliases } from '../data/constants.js';
+import { getFeaturedBrandsLocal, getEventsLocal, urlFor } from '../lib/local-content';
+import { resolveEntity } from '../lib/entity-resolver';
+import logoImage from '../assets/logo-mark.webp';
+import { getImage } from 'astro:assets';
+
+export interface Props {
+  item: any;
+  index: number;
+  /**
+   * 'hero'     the lead card in FeaturedHighlights, with its own treatment
+   * 'featured' a tile on the tentpole shelf: cinematic like the default, but
+   *            560px wide instead of 320, so it needs its own image `sizes`
+   * 'default'  a tile in the card grid or a browse row
+   */
+  variant?: 'default' | 'hero' | 'featured';
+  /**
+   * The image `sizes`, for a surface that lays the variant out at a
+   * different width than its usual home. The homepage's Featured box is the
+   * 'hero' variant at up to 1513px wide, where the variant's own claim tops
+   * out at 850px, so big screens were handed an image half the size.
+   */
+  imageSizes?: string;
+  /**
+   * Whether this card's image is the page's LCP candidate (eager, high
+   * priority). Defaults to the hero variant's first card, which was right
+   * when FeaturedHighlights opened a page; the homepage mounts it far below
+   * the fold, where an eager high-priority image only competes with the real
+   * LCP image for bandwidth, so it passes false.
+   */
+  lcp?: boolean;
+  /**
+   * Which surface this card is on, and therefore what clicking it does.
+   *
+   *   'feed'    promotes the item into <FeedSpotlightHero /> above it
+   *   'hub'     plays it in the hub/event page's own stage
+   *   'default' opens the modal, or follows the link for an article
+   */
+  context?: 'feed' | 'hub' | 'default';
+  /**
+   * Artwork and name for the SHOW this card belongs to, overriding the hub
+   * `resolveEntity()` would otherwise resolve.
+   *
+   * The Lanterns tiles resolve to DC, because that is the hub that owns them,
+   * and promoting one into the spotlight hero therefore filled it with DC's
+   * key art and the DC roundel. On a shelf that has its own banner and its own
+   * logo directly above it, that is the wrong identity: the row says Lanterns
+   * and the hero it drives said DC.
+   *
+   * Only the fields given are replaced. `slug`, `url`, `type` and `color` stay
+   * as resolved, so the Explore CTA still goes to the hub — the show has no
+   * page of its own to send anyone to.
+   */
+  brandOverride?: { logo?: string; hero?: string; title?: string } | null;
+}
+
+const { item, index = 0, variant = 'default', context = 'default', brandOverride = null, imageSizes, lcp } = Astro.props;
+
+// Determine if this is the Largest Contentful Paint (LCP) element
+const isLCP = lcp ?? (variant === 'hero' && index === 0);
+
+if (!item) return;
+
+/*
+  ─── THE CARD PRINTS THE PUBLICATION'S WORDS, NOT THE PLATFORM'S ────────────
+
+  This was `item.preview || item.excerpt || item.description` with a pair of
+  inline hashtag strips after it, and it was wrong in three ways that only
+  showed up when the built page was measured:
+
+    - `preview` is an ARRAY of body paragraphs on an article, so the `||` chain
+      never reached `excerpt`, the Substack subtitle that is already a
+      standfirst. The array then stringified into the attribute below joining
+      paragraphs on a bare comma: "...its own distinct identity.,One of the
+      things I love most...". 49 cards on /feed shipped that.
+    - `description` is a raw YouTube description. 102 of 160 carried affiliate
+      links, gear lists or subscribe CTAs, and `amzn.to` appeared 219 times in
+      the HTML of a single page.
+    - The hashtag strips only caught a cluster at the very start or the very
+      end, and only on a string, so a video opening "#sinnersmovie #ryancoogler
+      🚨 Movie Review 🚨" kept everything after the first non-hashtag token.
+
+  `editorialPreview()` owns all of it now, and FeedSpotlightHero calls the same
+  function, so a tile and the hero it promotes into cannot describe one item
+  with two different sets of words.
+*/
+const excerpt = editorialPreview(item);
+/*
+  ─── THE METADATA PAIR KEEPS ITS SLOTS ──────────────────────────────────────
+
+  `getDisplayTags()` filters out the empty slots, so an item with no brand used
+  to print its editorial type in the brand's position. Rendered as discrete
+  spans instead, each one declaring which slot it is, the separator appearing
+  only between two labels that both exist.
+
+  The text and the " | " between them are unchanged, so a card with both slots
+  filled (36 of the 41 items on /feed) renders exactly as before. The five
+  without a brand stop claiming one.
+*/
+const tagSlots = getDisplayTagSlots(item);
+const finalTags = getDisplayTags(item);
+
+const isVideo = item.contentType === 'video' || item.type === 'video';
+const videoId = isVideo ? parseVideoId(item.link || '') : null;
+const isPlayable = isVideo && !!videoId;
+
+// Determine primary label for the badge
+const baseTags = Array.isArray(item.tags) ? item.tags : (Array.isArray(item.youtubeTags) ? item.youtubeTags : []);
+const itemTags = [...baseTags, item.category || ''];
+const lowerTags = itemTags.map((t: string) => typeof t === 'string' ? t.toLowerCase() : '');
+
+/*
+  `data-categories` is what the Feed's #hash filter reads (see FeedGrid), and
+  it is NOT the same list as the tags above.
+
+  A card's tags are whatever Substack or YouTube supplied, so a games post says
+  "gaming" and will keep saying it. Filtering on the renamed slug alone would
+  have matched nothing. Expanding through the alias map means the card answers
+  to every spelling of its own category, which also keeps any #gaming link
+  already shared or bookmarked working after the rename.
+*/
+const filterKeys = new Set(lowerTags.filter(Boolean));
+for (const slug of Object.keys(CATEGORY_TAG_ALIASES)) {
+  const aliases = categoryTagAliases(slug);
+  if (aliases.some((alias: string) => filterKeys.has(alias))) {
+    aliases.forEach((alias: string) => filterKeys.add(alias));
+  }
+}
+const filterAttr = [...filterKeys].join(',');
+
+let primaryLabel = item.category || '';
+if (!primaryLabel || primaryLabel.toLowerCase() === 'general') {
+  if (lowerTags.includes('gaming') || lowerTags.includes('games')) primaryLabel = 'Games';
+  else if (lowerTags.includes('film') || lowerTags.includes('movies')) primaryLabel = 'Film';
+  else if (lowerTags.includes('tv') || lowerTags.includes('television')) primaryLabel = 'TV';
+  else if (lowerTags.includes('event') || lowerTags.includes('events')) primaryLabel = 'Event';
+  else primaryLabel = isVideo ? 'Video' : 'Article';
+}
+
+// Render anchor or div depending on type. We use 'video-card-home' for both
+// so they share the exact hover effects from home-cards.css.
+// Articles used to live only on Substack, so every non-video card opened in a
+// new tab. Now that an article can resolve to a page on this site, decide from
+// the href itself: absolute URLs leave the site and keep target/rel, relative
+// ones are internal navigation and must not. Video behaviour is unchanged.
+/*
+  The cover to show, plus the renditions to offer for it — or empty strings if
+  there genuinely isn't one, which is what makes the `cardImage ?` branch below
+  pick the branded fallback panel instead of an <img>.
+
+  Both the normalising and the sizing live in src/lib/card-images.ts, so they
+  are covered by scripts/card-images.test.mjs rather than eyeballed. That
+  matters more than it sounds: this started as two inline string replaces, and
+  one of them was dead on real data — Substack widths were only ever REPLACED,
+  and 6 of the 11 proxied URLs in articles.json carry no width at all, so those
+  cards silently kept loading the full 2048x1152 upload.
+
+  Still trimmed in there, and still for the original reason: several records
+  carry `image: ''` or a string of spaces rather than omitting the field, and
+  `''` is falsy while `' '` is not — an untrimmed whitespace value would reach
+  <img src> and paint exactly the broken box the fallback exists to avoid.
+*/
+const { src: cardImage, srcset: cardImageSrcset } = getCardImageSources(
+  item.image ?? item.thumbnail,
+);
+
+const cardHref = item.link || '#';
+const isExternalLink = /^https?:\/\//i.test(cardHref);
+const externalLinkProps = isExternalLink
+  ? { target: '_blank', rel: 'noopener noreferrer' }
+  : {};
+
+// Feed context changes the action to spotlight swapping rather than normal links or modals
+/*
+  ─── WHAT A CLICK MEANS DEPENDS ON THE HERO ABOVE IT ────────────────────────
+
+  A hub or event page already has a stage that plays video, driven by
+  `data-hub-play`. A card there should feed THAT, not open the site-wide modal:
+  a popup over a page whose whole top half is a player reads as the page losing
+  its place — the same reasoning the stage's own rail carries in its markup.
+
+  Articles on those pages stay ordinary links, because the stage cannot show an
+  article.
+*/
+const isHubContext = context === 'hub';
+const hubPlayId = isHubContext ? (isPlayable ? videoId : item.link) : null;
+
+const dataAction = context === 'feed'
+  ? (isPlayable ? 'spotlight-video' : 'spotlight-article')
+  : isHubContext
+    ? undefined
+    : (isPlayable ? (variant === 'hero' ? 'inline-video' : 'open-video') : undefined);
+
+/*
+  The card's hub, carried to the Feed hero so a swap can repaint the logo and
+  the Explore button without looking anything up again.
+
+  This used to search featuredBrands ONLY and match on an exact title-to-tag
+  comparison, so every convention resolved to nothing: L.A. Comic Con, SDCC and
+  NYCC are `_type: 'event'` documents and were never in the list being searched.
+  `resolveEntity()` searches both types and knows the three ways an item can
+  name its hub. See src/lib/entity-resolver.ts.
+
+  `url` is part of the payload because the destination differs by type —
+  /featured/<slug> for a brand, /events/<slug> for an event — and the client has
+  no way to tell which it is holding otherwise.
+*/
+const entity = resolveEntity(item, {
+  brands: getFeaturedBrandsLocal(),
+  events: getEventsLocal(),
+  urlFor,
+});
+
+const brandData = entity
+  ? JSON.stringify({
+      slug: entity.slug,
+      url: entity.url,
+      type: entity.type,
+      /*
+        The show's identity wins over the hub's where one is supplied, and only
+        for the three things that are actually about the show: what it is
+        called and what it looks like. The destination stays the hub's, because
+        that is the page that exists.
+      */
+      title: brandOverride?.title || entity.title,
+      logo: brandOverride?.logo || entity.logo || undefined,
+      hero: brandOverride?.hero || entity.hero || undefined,
+      color: entity.color,
+    })
+  : undefined;
+
+/* A playable card on a hub page is a control, not a link: it drives the stage
+   in place rather than navigating. */
+const CardWrapper = isPlayable || context === 'feed' ? 'div' : 'a';
+
+/*
+  ─── THE FEED'S TILES ARE A DIFFERENT OBJECT ────────────────────────────────
+
+  Everywhere else on the site a card is an editorial card: a boxed panel with a
+  surface colour, a border and a "WATCH NOW" link at the bottom. In the Feed's
+  horizontal rows that reads as a blog roll laid on its side — on a streaming
+  shelf the artwork IS the object and the whole tile is the target.
+
+  A MODIFIER, not a second component: same markup, same data, same behaviour.
+  `context="feed"` is already how this component knows it is in a row, so the
+  cinematic treatment rides on it and /intel, /category and the hub pages are
+  untouched by construction.
+*/
+/*
+  Every card except the magazine hero is a slate now.
+
+  It shipped scoped to `context === 'feed'` so the Feed could be tried without
+  touching anything else, and that trial is over: the boxed card with 1.5rem of
+  padding and a "WATCH NOW" footer stayed on /intel, /category, the hub pages,
+  the event pages and the homepage, so the site had two card languages
+  depending on which route you were standing on.
+
+  `variant !== 'hero'` is the one exception. FeaturedHighlights renders its lead
+  item at `variant="hero"` with its own scale, excerpt and treatment, and that
+  card is a different object — it is the page's headline, not one tile among
+  several — so it keeps the styling written for it.
+*/
+const isCinematic = variant !== 'hero';
+
+/*
+  A `sizes` is a CLAIM ABOUT THE CSS, so each variant needs its own. Getting it
+  from a ternary is how the featured shelf ended up describing itself with the
+  320px grid's numbers while rendering 560px wide, and fetching a 360px
+  rendition into it. A map makes a new variant declare its width or fail to
+  compile rather than silently inherit the wrong one.
+*/
+const CARD_SIZES_FOR_VARIANT: Record<NonNullable<Props['variant']>, string> = {
+  hero: HERO_CARD_IMAGE_SIZES,
+  featured: FEATURED_CARD_IMAGE_SIZES,
+  default: CARD_IMAGE_SIZES,
+};
+
+/*
+  ─── THE EDITORIAL OVERRIDE TRAVELS WITH THE CARD ──────────────────────────
+
+  `data-brand` is only emitted when `resolveEntity()` finds a hub, and the
+  whole point of `customHeroLogo` is the case where there ISN'T one -- Coyote
+  vs. Acme is distributed by Ketchup Entertainment, which has no brand
+  document. So the card carried nothing, and clicking it swapped the hero to
+  the BE Unconventional crown while the SERVER-rendered hero for the same item
+  showed the Ketchup mark. Same item, two different logos depending on whether
+  you arrived or clicked.
+
+  Carried separately from `data-brand` rather than folded into it, because it
+  has to survive `entity` being null, which is exactly when it matters.
+*/
+const heroLogoOverride = (item as any).customHeroLogo
+  ? urlFor((item as any).customHeroLogo).height(320).auto('format').url()
+  : null;
+const heroLabelOverride = (item as any).customHeroBrandLabel || null;
+
+const baseProps = {
+  class: `reveal video-card-home content-card w-full variant-${variant}${isCinematic ? ' content-card--cinematic' : ''}`,
+  'data-categories': filterAttr,
+  'data-type': isVideo ? 'video' : 'article',
+  'data-delay': index * 100,
+  'data-action': dataAction,
+  'data-image': cardImage,
+  'data-title': item.title,
+  'data-preview': excerpt,
+  'data-brand': brandData,
+  'data-hero-logo': heroLogoOverride || undefined,
+  'data-hero-brand-label': heroLabelOverride || undefined,
+  /*
+    The card's own display slots, carried so the Feed hero can show them when a
+    card is promoted into it. Recomputing them in the swap handler would mean a
+    second copy of the brand/type dictionaries in client JS; passing what the
+    card already resolved means the hero cannot disagree with the card it came
+    from. Absent when the item matched nothing, and the hero falls back to
+    VIDEO/ARTICLE in that case.
+  */
+  /* Per SLOT, not a joined string: the hero styles the brand chip with the
+     brand accent, and a joined string cannot tell it which chip that is. */
+  'data-tag-brand': tagSlots.brand || undefined,
+  'data-tag-type': tagSlots.type || undefined,
+  'data-tag-extra': tagSlots.extra || undefined,
+  /* Picked up by the hub/event stage's delegated play handler. */
+  'data-hub-play': hubPlayId ?? undefined,
+};
+
+/*
+  ─── A HERO CARD IS A PLAYER WITH TWO CONTROLS, NOT ONE BUTTON ─────────────
+  FeaturedHighlights plays a hero card inline, and its "Watch now" must be a
+  real link to YouTube: the player's way out (CLAUDE.md hard rule 11), and
+  the thing a reader clicking a label that carries the YouTube mark expects.
+  A link cannot live inside a role="button" (axe nested-interactive), so on
+  a hero video card the CARD is not the button: its play mark is a real
+  <button> (keyboard; mouse clicks still land on the card as before, the mark
+  has pointer-events: none) and "Watch now" is the <a>. Both sit inside the
+  card element FeaturedHighlights binds, so its click handler is unchanged
+  apart from letting the link navigate.
+*/
+const isHeroPlayer = variant === 'hero' && isPlayable;
+
+const wrapperProps = (isPlayable || context === 'feed' || context === 'hub')
+  ? {
+      ...baseProps,
+      'data-video-id': videoId,
+      'data-href': cardHref, // store href for manual navigation if they click something inside the spotlight later
+      ...(isHeroPlayer ? {} : { role: 'button' as const, tabindex: 0 }),
+      /*
+        NO `aria-label` HERE — it is what broke `label-content-name-mismatch`.
+
+        `role="button"` takes its name from its content, and WCAG 2.5.3
+        (Label in Name) requires the accessible name to CONTAIN the visible
+        text. An `aria-label` of "Play video: <title>" replaced a name built
+        from the card's own words — the kicker, headline, tag row, excerpt
+        and "Watch Now" — with a much shorter string that does not contain
+        them, so speech input users saying what they can read ("watch now")
+        could not address the control.
+
+        Dropping it lets the name come from the content, which contains the
+        visible text by construction. The "Play video" framing is kept as an
+        sr-only span inside the card instead: it joins the accessible name
+        without adding visible text for the name to have to contain.
+      */
+    }
+  : {
+      ...baseProps,
+      href: cardHref,
+      ...externalLinkProps,
+    };
+
+/*
+  THE WATERMARK MUST GO THROUGH getImage(), NOT `logoImage.src`.
+
+  This shipped as `<img src={logoImage.src}>` and 404'd on every single video
+  card in the production build. `@astrojs/cloudflare` turns on compile-time
+  image optimization, so the build emits only the TRANSFORMED renditions
+  (`logo-mark.<hash>_<variant>.webp`); the untransformed path that
+  `logoImage.src` resolves to — `/assets/logo-mark.<hash>.webp` — is never
+  written. It looks correct in dev, where the dev server serves the original
+  on demand, and only breaks once built.
+
+  That one 404 was the whole black-thumbnail bug, and it is worth spelling
+  out why a decorative overlay could do that much damage: this <img> is a
+  SIBLING of the cover inside `.content-card-media`, the fail-safe in
+  Layout.astro marks the shared CONTAINER, and home-cards.css then hides
+  every `> img` in it. So a broken watermark took the perfectly good
+  thumbnail down with it, on every card, deterministically.
+
+  Layout.astro already reaches for the same asset the right way (see
+  `fallbackMark`). Requested at 72px because the mark renders at 24px tall in
+  the standard card and 36px in the hero — 2x the widest of those, rather
+  than the 414 KB original.
+*/
+const watermark = await getImage({
+  src: logoImage,
+  /* 144, not 72: the hero card shows it 36px tall, and the homepage audit
+     measured it at up to 72px, so 72 was 1x on any Retina screen. */
+  height: 144,
+  format: 'webp',
+  quality: 80,
+});
+
+/*
+  VideoObject JSON-LD, per Google's video indexing guidelines.
+
+  `Record<string, unknown>` rather than an inferred object literal: `duration`
+  is appended conditionally below, and TypeScript will not let you add a key
+  that the inferred shape does not have (ts(2339)).
+
+  THE DESCRIPTION IS THE CLEANED EXCERPT, TRUNCATED - NOT `item.description`.
+  A raw YouTube description on this channel runs 2-3 KB of chapter lists,
+  affiliate links and hashtag blocks. Emitted verbatim on every card, that put
+  18 KB of JSON-LD into the homepage's 351 KB of HTML, about 5% of the document,
+  to say nothing a summary does not. `excerpt` is the same text already
+  stripped of markup and hashtag clusters further up this file, so this reuses
+  that work rather than cleaning the string a second time.
+*/
+const SCHEMA_DESCRIPTION_MAX = 300;
+let videoSchemaJson: Record<string, unknown> | null = null;
+if (isVideo && item.youtubeId) {
+  /*
+    Falls back to the title because `description` is REQUIRED on a VideoObject:
+    nine of the shorts in videos.json carry no description at all, and an empty
+    string is worse than a short one - it makes the whole block invalid rather
+    than merely thin.
+  */
+  const schemaDescription = (excerpt.length > SCHEMA_DESCRIPTION_MAX
+    ? `${excerpt.slice(0, SCHEMA_DESCRIPTION_MAX).trimEnd()}...`
+    : excerpt) || item.title;
+  /*
+    Google wants a full ISO 8601 instant here, not a bare calendar date.
+
+    Every video in videos.json currently carries `publishedAt` as a real
+    timestamp ("2026-08-07T01:25:44Z"), so the padding branch below fires for
+    NONE of them and the emitted uploadDate is the raw value. Checked: 23
+    distinct uploadDate values in the built output, all ending in Z, none
+    bearing the noon stamp. It is here for the `item.date` fallback, which is a
+    YYYY-MM-DD calendar string wherever it is used.
+
+    Noon UTC rather than midnight, deliberately: a bare date padded to
+    T00:00:00Z lands on the previous day for every reader west of Greenwich,
+    which is hard rule 1 (CLAUDE.md) arriving by a different door.
+  */
+  const rawUploadDate = item.publishedAt || item.date;
+  const uploadDate = !rawUploadDate
+    ? undefined
+    : String(rawUploadDate).includes('T')
+      ? rawUploadDate
+      : `${rawUploadDate}T12:00:00Z`;
+
+  videoSchemaJson = {
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    "name": item.title,
+    "description": schemaDescription,
+    "thumbnailUrl": [item.thumbnailUrl || item.thumbnail || cardImage],
+    "uploadDate": uploadDate,
+    "contentUrl": `https://www.youtube.com/watch?v=${item.youtubeId}`,
+    "embedUrl": `https://www.youtube.com/embed/${item.youtubeId}`,
+    // schema.org types familyFriendly as Boolean, not the string "yes".
+    "familyFriendly": true
+  };
+  // Convert duration to ISO 8601 duration format (e.g., PT120S)
+  if (item.durationSeconds) {
+    videoSchemaJson.duration = `PT${Math.round(item.durationSeconds)}S`;
+  }
+}
+---
+
+<CardWrapper {...wrapperProps} data-play-hover={isVideo ? 'true' : undefined}>
+  {videoSchemaJson && (
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(videoSchemaJson).replace(/</g, '\\u003c')} />
+  )}
+  {/*
+    Supplies the action verb the removed `aria-label` used to carry. It is
+    part of the accessible name (name-from-content walks hidden-from-sight
+    text) but not part of the visible text, which is exactly the asymmetry
+    Label in Name needs: the name becomes "Play video: <everything visible>",
+    which still contains every word a reader can see.
+  */}
+  {isPlayable && !isHeroPlayer && <span class="sr-only">Play video:</span>}
+  {/*
+    Every style here is a class, not an inline `style` attribute.
+
+    That matters for more than tidiness: inline styles beat any class rule, so
+    while the thumbnail and copy were inlined it was impossible to give this
+    card a different layout at a different breakpoint without `!important`.
+    Moving them to classes is what allows the compact mobile card below
+    (.content-card at <=560px becomes a horizontal row).
+
+    All of it lives in styles/modules/home-cards.css under `.content-card`.
+  */}
+  {/*
+    ─── NO IMAGE MEANS NO <img> ───────────────────────────────────────────
+    This used to render `<img src={item.image || item.thumbnail}>`
+    unconditionally. When an item has neither — several do — that evaluates to
+    an EMPTY STRING, and an empty `src` resolves to the current page URL: the
+    browser fetches the HTML document, fails to decode it as an image, and
+    paints a broken-image glyph with the alt text sprawling across the
+    thumbnail. That is the "card rendering as a completely empty box".
+
+    It also breaks hard rule 4 in CLAUDE.md ("never assign an empty src"),
+    which was written about iframes but applies for exactly the same reason.
+
+    So the image is only rendered when there is genuinely one to show;
+    otherwise the card gets the same branded fallback panel the article
+    thumbnails use, and reads as deliberate.
+  */}
+  <div class="content-card-media">
+    {isCinematic && (
+      /* The format, stated once, on the artwork. It replaces the CTA row the
+         tile no longer has, and sits over the image because that is the only
+         surface a borderless tile still owns. aria-hidden: the card's own
+         accessible name already says what it is. */
+      <span class="content-card-format" aria-hidden="true">{isVideo ? 'VIDEO' : 'ARTICLE'}</span>
+    )}
+    {cardImage ? (
+      <img
+        class="content-card-img"
+        src={cardImage}
+        srcset={cardImageSrcset || undefined}
+        sizes={cardImageSrcset ? (imageSizes ?? CARD_SIZES_FOR_VARIANT[variant]) : undefined}
+        alt={item.title}
+        loading={isLCP ? 'eager' : 'lazy'}
+        fetchpriority={isLCP ? 'high' : 'auto'}
+        decoding={isLCP ? 'sync' : 'async'}
+      />
+    ) : (
+      <div class="article-thumb-fallback" data-fallback="true">
+        <span class="article-thumb-fallback-title">{item.title}</span>
+      </div>
+    )}
+
+    {/*
+      The shadow belongs to the WRAPPER, not the <img> — hard rule 6
+      ("no `filter: drop-shadow` on an <img>", for known iOS Safari rendering
+      bugs). It matters more than usual here because this element is a
+      compositing sibling of a cross-origin iframe, which is the exact
+      neighbourhood of the WebKit bug the clip release above is fixing. The
+      <img> keeps the class and the opacity, so the player script's
+      `.video-watermark-logo` lookups are unchanged.
+    */}
+    {isVideo && (
+      <span class="video-watermark" aria-hidden="true">
+        <img 
+          src={watermark.src} 
+          width={Math.round(watermark.attributes.width / 2)}
+          height={Math.round(watermark.attributes.height / 2)}
+          alt="" 
+          class="video-watermark-logo" 
+          aria-hidden="true" 
+          loading="lazy"
+          decoding="async"
+        />
+      </span>
+    )}
+
+    {isVideo && (isHeroPlayer ? (
+      <button type="button" class="play-button-wrapper play-button-wrapper--control" aria-label={`Play video here: ${item.title}`}>
+        <span class="cinematic-play-button" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </span>
+      </button>
+    ) : (
+      <div class="play-button-wrapper" aria-hidden="true">
+        <div class="cinematic-play-button">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </div>
+      </div>
+    ))}
+  </div>
+
+  <div class="content-card-body">
+    {/*
+      ─── METADATA, THEN TITLE, THEN DESCRIPTION ───────────────────────────────
+
+      One order, everywhere, top to bottom. The tag line is the card's eyebrow:
+      it says what KIND of thing this is before the title says which thing, the
+      same way the hero's eyebrow does and the same way the section headings
+      read. It was rendering underneath the title.
+
+      This is a DOM reorder, not a visual one. `order:` or `flex-direction:
+      column-reverse` would have looked identical and left the reading order and
+      the tab order wrong, which is what a screen reader and a keyboard follow.
+    */}
+    <div class="content-card-title-wrapper">
+      {/*
+        Every variant, the hero included. The hero used to lay this line over
+        its artwork (`.content-card-hero-tags`), where it collided with the
+        player's captions and the watermark once a video played; it reads in
+        the body now, metadata -> title -> description -> link, like every
+        other tile (Andrew).
+      */}
+      {finalTags.length > 0 && (
+        <div class="content-card-dynamic-tags">
+          {tagSlots.brand && <span data-slot="brand">{tagSlots.brand}</span>}
+          {tagSlots.brand && tagSlots.type && <span class="tag-slot-sep" aria-hidden="true">{"\u00a0|\u00a0"}</span>}
+          {tagSlots.type && <span data-slot="type">{tagSlots.type}</span>}
+          {(tagSlots.brand || tagSlots.type) && tagSlots.extra && <span class="tag-slot-sep" aria-hidden="true">{"\u00a0|\u00a0"}</span>}
+          {tagSlots.extra && <span data-slot="extra">{tagSlots.extra}</span>}
+        </div>
+      )}
+      <h3 class="content-card-title">{item.title}</h3>
+    </div>
+
+    {variant === 'hero' && excerpt && (
+      <p class="content-card-excerpt">{excerpt}</p>
+    )}
+    
+    {/*
+      The explicit CTA is omitted on a feed tile. The entire card is already the
+      control there — it is a <div role="button"> that promotes the item into
+      the hero — so a second "WATCH NOW" inside it was a target within a target,
+      and the one thing a reader could click that did not look clickable.
+
+      It stays everywhere else, where the card is a link in a grid and the words
+      are the affordance.
+    */}
+    {!isCinematic && isHeroPlayer && (
+    <a
+      class="watch-now-btn"
+      style="margin-top: auto;"
+      href={`https://www.youtube.com/watch?v=${encodeURIComponent(videoId!)}`}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {LABELS.watchNow}<span class="sr-only"> on YouTube</span>
+      <svg class="youtube-icon" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true">
+        <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
+      </svg>
+      <span class="btn-underline" />
+    </a>
+    )}
+    {!isCinematic && !isHeroPlayer && (
+    <span class="watch-now-btn" style="margin-top: auto;">
+      {isVideo ? LABELS.watchNow : LABELS.readNow}
+      {isVideo ? (
+        <svg class="youtube-icon" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+          <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
+        </svg>
+      ) : (
+        <span class="content-card-arrow" aria-hidden="true">&rarr;</span>
+      )}
+      <span class="btn-underline" />
+    </span>
+    )}
+  </div>
+</CardWrapper>
+
+<style>
+  /* The hero card's play mark as a real <button> (see isHeroPlayer): it keeps
+     the .play-button-wrapper geometry and loses the UA button chrome. The
+     focus ring is inset so the media's own clip does not cut it off. */
+  .play-button-wrapper--control {
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  .play-button-wrapper--control:focus-visible {
+    outline: 2px solid var(--color-accent-text, #ef4444);
+    outline-offset: -4px;
+  }
+
+  .content-card-excerpt {
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.75);
+    margin: 0.5rem 0 1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Lock heights to prevent layout jumping when switching active items */
+  :global(.content-card-excerpt) {
+    color: #A3A3A3;
+    height: 4.5em; /* Exactly 3 lines at 1.5 line-height */
+  }
+
+  .variant-hero :global(.content-card-media) {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--bg-surface-elevated, #1a1a1a);
+  }
+
+  .variant-hero :global(.content-card-media)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 30%;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 1; /* Below play button (z-index 2), above iframe (z-index 0) */
+  }
+  
+  /* Hide vignette when video plays */
+  :global(.content-card-media.is-playing-inline)::after {
+    opacity: 0 !important;
+    transition: opacity 0.1s ease !important;
+  }
+
+  /* Inline video iframe styles - forced via !important to override YouTube JS */
+  :global(.yt-player-target),
+  .variant-hero :global(iframe) {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: translateZ(0) !important;
+    border: none !important;
+    z-index: 0;
+    background: transparent;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+
+  /* Watermark Logo */
+  .video-watermark {
+    position: absolute;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  /* Qualified by its wrapper: the cinematic card's
+     `.content-card-media img { height: 100% }` outranked a bare class, so
+     the mark rendered at the FILE's size, whatever that was. */
+  .video-watermark .video-watermark-logo {
+    display: block;
+    width: auto;
+    height: 24px;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  /* Move to bottom left for Hero cards */
+  :global(.variant-hero) .video-watermark {
+    top: auto;
+    bottom: 2rem;
+    left: 2rem;
+    right: auto;
+  }
+
+  :global(.variant-hero) .video-watermark .video-watermark-logo {
+    height: 36px;
+  }
+
+  /* Only show watermark when video is actively playing inline */
+  :global(.is-playing-inline) .video-watermark-logo {
+    opacity: 0.8;
+  }
+  
+  /* The cover gives way to the preview as soon as it is playing... */
+  :global(.content-card-media.is-playing-inline) img.content-card-img,
+  :global(.content-card-media.is-playing-inline) .article-thumb-fallback {
+    opacity: 0 !important;
+    pointer-events: none;
+    transition: opacity 0.1s ease !important;
+  }
+
+  /*
+    ...but THE PLAY ICON OUTLASTS IT, deliberately.
+
+    It used to fade with the cover, which left a silent, muted video playing
+    over a card with no affordance on it at all — nothing said "click for
+    sound". Keeping it up through the preview is the whole point: it is the
+    one control on screen while the iframe is inert, and it is what the
+    reader clicks to unmute.
+
+    It stands down only once they have actually activated the video, because
+    from that moment YouTube's own controls are live underneath and two
+    stacked play/pause buttons is exactly the overlap being fixed here.
+  */
+  :global(.content-card-media.is-user-activated) .play-button-wrapper {
+    opacity: 0 !important;
+    pointer-events: none;
+    transition: opacity 0.1s ease !important;
+  }
+
+  :global(.content-card-body) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  :global(.content-card-title-wrapper) {
+    font-size: 1.1rem;
+    line-height: 1.4;
+    min-height: 2.8em; /* Accommodate up to 2 lines */
+    height: auto;
+    overflow: visible;
+    margin-bottom: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 0.3rem; /* ensures title pushes tags down safely */
+  }
+
+  @media (max-width: 768px) {
+    :global(.content-card-title-wrapper) {
+      gap: 0.15rem;
+      margin-bottom: 0.3rem;
+    }
+  }
+
+  :global(.content-card-title) {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 1em;
+    line-height: 1.4;
+    height: auto;
+    margin-bottom: 0;
+  }
+
+  :global(.content-card-dynamic-tags) {
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.7);
+    
+    height: auto;
+    min-height: 1.2rem;
+    display: flex;
+    align-items: center; /* Vertically center within the gap */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+
+</style>

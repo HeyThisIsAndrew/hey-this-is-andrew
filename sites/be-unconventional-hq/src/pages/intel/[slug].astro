@@ -1,0 +1,565 @@
+---
+/**
+ * Article reader — /intel/<slug>
+ *
+ * ─── THE LAYOUT ───────────────────────────────────────────────────────────
+ *     ┌───────────┬──────────────────────┬───────────┐
+ *     │ CONTENTS  │  the article         │ SUPPORT   │
+ *     │ (sticky)  │  ~44rem reading col  │ (sticky)  │
+ *     └───────────┴──────────────────────┴───────────┘
+ * Both rails are sticky on desktop and collapse away on tablet/mobile, where
+ * the reading column becomes the whole page.
+ *
+ * ─── WHY THE READING COLUMN IS CAPPED ─────────────────────────────────────
+ * ~68 characters per line is the comfortable measure for body text. The site
+ * container is 1536px, which at this font size would be ~180 characters — the
+ * eye loses its place returning to the start of the next line.
+ *
+ * ─── SCHEMA (why it branches) ─────────────────────────────────────────────
+ * A Review and a news dispatch are different things to a search engine. A
+ * Review can carry a rating and become a rich result; news belongs in
+ * NewsArticle. The `contentType` on each record (see articles-transform.ts)
+ * selects which is emitted. Everything else falls back to Article.
+ *
+ * ─── AUTHOR BLOCK (E-E-A-T) ───────────────────────────────────────────────
+ * Google's quality guidance leans on Experience, Expertise, Authoritativeness
+ * and Trust. A visible, named author with a role and a credential line is the
+ * on-page half of that; the `author` node in the JSON-LD is the machine half.
+ * Both read from DEFAULT_BYLINE in src/data/sections.js.
+ */
+import { PUBLISH_TIME_ZONE } from '../../lib/publish-timezone.js';
+import Layout from '../../layouts/Layout.astro';
+import SubscribeCTA from '../../components/SubscribeCTA.astro';
+import FloatingPageNav from '../../components/FloatingPageNav.astro';
+import ArticleSupportRail from '../../components/ArticleSupportRail.astro';
+import ArticleAuthorBlock from '../../components/ArticleAuthorBlock.astro';
+import SubstackGallery from '../../components/SubstackGallery.astro';
+import YouTubeEmbed from '../../components/YouTubeEmbed.astro';
+import GooglePreferredSourceDeeplink from '@puralex/astro-google-preferred-source/components/GooglePreferredSourceDeeplink.astro';
+import { site } from '../../data/site.js';
+import { LABELS } from '../../data/content.js';
+import {
+  ARTICLE_SECTION,
+  DEFAULT_BYLINE,
+  SOURCE_PUBLICATION,
+} from '../../data/sections.js';
+import {
+  getPublishedArticles,
+  getNextArticle,
+  getRelatedArticles,
+  topicPath,
+  RESERVED_SLUGS,
+} from '../../lib/articles';
+import { getDisplayTags } from '../../lib/tags';
+import { buildToc } from '../../lib/article-toc';
+import { stripArticleOutro } from '../../lib/article-outro';
+import ArticleOutro from '../../components/ArticleOutro.astro';
+import { stripCoverImageFromBody } from '../../lib/article-media';
+import { localArticleImage, localiseBodyImages } from '../../lib/article-images.ts';
+import { parseImageDimensions, labelImageLinks } from '../../lib/article-images-transform.ts';
+import { getCardImageSources, isSubstackFetchUrl } from '../../lib/card-images.ts';
+import { getFeaturedBrandsLocal } from '../../lib/local-content';
+import { findHubForItem } from '../../lib/hub-coverage';
+import logoImage from '../../assets/logo.webp';
+import { getImage } from 'astro:assets';
+
+/*
+  STATIC, NOT ON-DEMAND. `export const prerender = false` was set here and it
+  is why this is written back the way it was.
+
+  Turning these pages on-demand removed every article from the build output,
+  and the sitemap is generated FROM the build output. Measured: 51 sitemap
+  URLs to 42, 19 lastmod stamps to 11, and all 8 /intel/<slug> entries gone.
+  Articles are the site's primary SEO asset and the last week of Search
+  Console work was about getting exactly those URLs discovered.
+
+  Whether /intel should go on-demand is a real question with real upside
+  (it is most of #151), but it is an architectural decision with a sitemap
+  consequence that has to be handled deliberately, not a side effect.
+*/
+export async function getStaticPaths() {
+  return getPublishedArticles()
+    // A slug matching a route segment would shadow that route.
+    .filter((article) => !RESERVED_SLUGS.has(article.slug))
+    .map((article) => ({ params: { slug: article.slug }, props: { article } }));
+}
+
+const { article } = Astro.props;
+
+/*
+  The cover image is rendered as the hero below, so remove the copy of it the
+  author also placed at the top of the post — otherwise the same photo appears
+  twice. See src/lib/article-media.ts for why the two URLs never match exactly
+  and why this only ever showed up on some posts.
+
+  Runs BEFORE buildToc so the contents rail is built from the body that is
+  actually rendered.
+*/
+const dedupedBody = stripCoverImageFromBody(article.bodyHtml, article.image);
+
+/*
+  ─── THE STANDARD OUTRO IS FURNITURE, SO IT LEAVES THE BODY ─────────────────
+
+  "Where Nerd Culture Gets Cinematic" and the BE YOURSELF sign-off are typed
+  into every Substack post, so they arrive inside `bodyHtml` — but they are the
+  same on every article and belong to the site, not to the post. <ArticleOutro />
+  renders them below instead, from a CMS document.
+
+  Runs BEFORE buildToc for the same reason the line above it does: the contents
+  rail is built from the body, so anything still in the body at that point gets
+  a rail entry. Both of the outro's headings were showing up there.
+*/
+const bodyWithoutOutro = stripArticleOutro(dedupedBody);
+
+/*
+  ─── ONLY POSTS THAT ACTUALLY CARRIED IT GET IT BACK ────────────────────────
+
+  The component renders where the strip found something to remove, so a post
+  written before this convention stays exactly as it was published rather than
+  being retro-fitted with a closing section its author never wrote.
+
+  Derived from the strip rather than checked separately: the two can never
+  disagree about whether a post has an outro, because it is the same answer
+  asked once. A post that gains one on its next sync gains the component with
+  it, automatically.
+*/
+const hadOutro = bodyWithoutOutro !== dedupedBody;
+
+/*
+  ─── BODY IMAGES: COMMITTED RENDITIONS, NEVER A LIVE PROXY ──────────────────
+
+  These are rewritten to renditions built ahead of time by
+  scripts/sync-article-images.mjs and committed to public/article-images/.
+
+  THE DISTINCTION THAT MATTERS, because the first attempt at this was reverted.
+  That pass rewrote the same tags to a resizing proxy (wsrv.nl) and it made the
+  page dramatically WORSE on a real phone: gallery images blank, and still
+  blank while sliding through them. Two compounding reasons —
+
+    1. wsrv.nl has a cold cache, so serving one of these meant fetching a ~1 MB
+       4K JPEG from S3, decoding, resizing and re-encoding, per URL AND per
+       srcset width, on first request;
+    2. SubstackGallery's lightbox reassigns `img.src` on every slide with no
+       srcset and nothing preloaded, so each swipe paid that cost again.
+
+  A committed local file has neither problem: it cannot be cold, cannot expire,
+  cannot rate-limit and cannot 403. That is the whole difference.
+
+  Anything the sync has no rendition for — an unreachable host, an article
+  published since the last sync, a substackcdn URL that is already a sized
+  rendition on a warm CDN — is returned byte-identical and renders exactly as
+  it does today. See src/lib/article-images.ts.
+
+  Measured on the three articles in the store: 10 raw S3 uploads totalling
+  22.54 MB, several 3840x2160, rendering into a ~720px column. As committed
+  WebP that is 1.63 MB across every width, and a phone downloads one width.
+*/
+/* Rewrite images to committed renditions, THEN name the anchors Substack wraps
+   around them. Substack ships those links with an alt-less image inside, which
+   leaves them with no accessible name at all — see labelImageLinks(). Applied
+   here rather than at sync time so every article already in the store is fixed
+   by the next build. */
+const bodyWithLocalImages = labelImageLinks(localiseBodyImages(bodyWithoutOutro));
+
+/*
+  ─── THE COVER, IN THREE FALLBACKS ──────────────────────────────────────────
+
+  1. A committed rendition, when the image sync built one.
+  2. Otherwise, if it is a substackcdn fetch URL, Substack's own CDN transform
+     with a width cap and a srcset — the same rewrite every card on the site
+     already gets from getCardImageSources().
+  3. Otherwise the raw URL, untouched.
+
+  Step 2 is the fix for a real defect. localArticleImage() returns null for
+  every substackcdn URL by design (ALREADY_OPTIMISED in
+  ./article-images-transform.ts skips them because Substack's BODY images
+  arrive carrying `w_1456,c_limit`). Cover images come from a different field
+  of the posts API and carry NO width transform at all:
+
+    $s_!Rj68!,f_auto,q_auto:good,fl_progressive:steep
+
+  So the hero fell through to `article.image` and shipped the source at full
+  resolution, with no srcset and no sizes, as the eager above-the-fold LCP
+  element. Six of the eight covers in the store are in that state.
+
+  isSubstackFetchUrl() gates this deliberately: getCardImageSources() sends
+  anything NON-Substack through wsrv.nl, and a cold third-party transcode on
+  the LCP element is exactly what was reverted before (see the header of
+  ../../lib/article-images.ts). The hero must stay on a warm CDN or on the raw
+  URL, never on a proxy.
+*/
+const heroRendition = localArticleImage(article.image);
+const heroCdnSources =
+  !heroRendition && isSubstackFetchUrl(article.image) ? getCardImageSources(article.image) : null;
+const heroImageSources = heroRendition ?? heroCdnSources;
+
+/* The image's REAL ratio, so the reserved box matches what loads. See
+   parseImageDimensions() for the 660px layout shift this removes. The old
+   hardcoded 1456x816 stays as the fallback for a URL with no dimensions in
+   its filename, which is what every cover used before this. */
+const heroDimensions = parseImageDimensions(article.image) ?? { width: 1456, height: 816 };
+
+// Headings get ids so the contents rail can anchor-scroll to them; `html` is
+// the body with those ids injected.
+const { entries: tocEntries, html: bodyHtml } = buildToc(bodyWithLocalImages);
+
+const nextArticle = getNextArticle(article.slug);
+const related = getRelatedArticles(article.slug, article.category, 4);
+
+/*
+  ─── THE HUB THIS PIECE BELONGS TO ─────────────────────────────────────────
+
+  Event pages carry an "Official <X> Hub" card because an event document
+  names its brand outright. An article has no such field: it syncs from
+  Substack, which knows nothing about this site's hubs. So the association is
+  INFERRED from the tag vocabulary the hubs themselves define, scored by how
+  many of a hub's tags the piece carries.
+
+  That scoring matters. The Spider-Man review is tagged for Marvel Studios,
+  the MCU, Marvel AND Sony Pictures; first-match would hand it to whichever
+  hub sorted first in the store. See findHubForItem in lib/hub-coverage.ts.
+
+  Returns null often, and should: a piece about the industry rather than
+  about a brand has no hub, and the card simply does not render.
+*/
+const articleHub = findHubForItem(article, getFeaturedBrandsLocal());
+
+/*
+  Fallback anchors for a post with too few headings to index — see the note in
+  FloatingPageNav.astro. Both ids are rendered below (`#article-top` on the masthead,
+  `#article-related` on the Suggested Reading section), so neither can point at
+  nothing; Suggested Reading is only offered when that section actually renders.
+*/
+const tocLandmarks = [
+  { id: 'article-top', text: 'Top of article', level: 2 },
+  ...(related.length > 0
+    ? [{ id: 'article-related', text: 'Suggested Reading', level: 2 }]
+    : []),
+];
+
+const canonical = new URL(`${ARTICLE_SECTION.path}/${article.slug}`, site.url).toString();
+/* Through getImage(): `logoImage.src` is never emitted under compile-time
+   image optimization, so the JSON-LD pointed a crawler at a 404. */
+const logoUrl = new URL((await getImage({ src: logoImage, width: 512, format: 'webp', quality: 80 })).src, site.url).toString();
+const heroImage = article.image || logoUrl;
+
+const readableDate = new Date(article.isoDate).toLocaleDateString('en-US', {
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+  timeZone: PUBLISH_TIME_ZONE,
+});
+
+/*
+  Schema selection.
+
+  Shared fields first, then the type-specific wrapper. `sameAs` declares the
+  Substack original as the same work published elsewhere WITHOUT conceding
+  canonical status to it — the canonical tag still points here.
+*/
+const publisher = {
+  '@type': 'Organization',
+  name: site.name,
+  logo: { '@type': 'ImageObject', url: logoUrl },
+};
+
+const author = {
+  '@type': 'Person',
+  name: DEFAULT_BYLINE.name,
+  jobTitle: DEFAULT_BYLINE.role,
+  description: DEFAULT_BYLINE.bio,
+  url: new URL('/author/andrew-baxter', site.url).toString(),
+};
+
+const shared = {
+  headline: article.title,
+  description: article.excerpt,
+  image: heroImage,
+  datePublished: article.isoDate,
+  dateModified: article.lastUpdated ?? article.isoDate,
+  author,
+  publisher,
+  mainEntityOfPage: { '@type': 'WebPage', '@id': canonical },
+  articleSection: article.category,
+  sameAs: article.link || undefined,
+};
+
+let articleSchema: Record<string, any>;
+
+if (article.contentType === 'Review') {
+  /*
+    Review schema. `itemReviewed` is required — without it Google rejects the
+    markup. Google requires specific types for itemReviewed (e.g., Movie, TVSeries,
+    VideoGame). We infer the type based on the article's category.
+  */
+  let itemType = 'Thing';
+  if (article.category === 'Film') {
+    itemType = 'Movie';
+  } else if (article.category === 'TV') {
+    itemType = article.title.toLowerCase().includes('episode') ? 'Episode' : 'TVSeries';
+  } else if (article.category === 'Games' || article.category === 'Gaming') {
+    itemType = 'VideoGame';
+  } else {
+    // Google Rich Results requires specific types for Reviews.
+    // 'Thing' is invalid. If we don't know the exact category, 'CreativeWork' or 'Product'
+    // are better fallbacks, though Google prefers even more specific ones.
+    // Since this is an entertainment site, 'MediaObject' or 'Product' can work,
+    // but 'Movie'/'TVSeries' are the most common. We'll default to 'Product' to appease Google's schema parser.
+    itemType = 'Product';
+  }
+
+  articleSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Review',
+    ...shared,
+    itemReviewed: { '@type': itemType, name: article.title },
+    ...(article.score
+      ? {
+          reviewRating: {
+            '@type': 'Rating',
+            ratingValue: article.score.value,
+            bestRating: article.score.best,
+            worstRating: 0,
+          },
+        }
+      : {}),
+  };
+} else if (article.contentType === 'Dispatch' || article.contentType === 'Announcement') {
+  // Time-sensitive reporting → NewsArticle.
+  articleSchema = { '@context': 'https://schema.org', '@type': 'NewsArticle', ...shared };
+} else {
+  // Analysis, Interview and anything unmapped → the general Article type.
+  articleSchema = { '@context': 'https://schema.org', '@type': 'Article', ...shared };
+}
+
+/*
+  ─── BREADCRUMBS, THE MACHINE HALF ──────────────────────────────────────────
+
+  The visible trail above the headline was added without this, and visible
+  breadcrumbs alone produce no breadcrumb rich result — Google reads the trail
+  from BreadcrumbList, not from the <nav>. So the markup was doing the
+  navigation half of the job and none of the search half.
+
+  MIRRORS THE VISIBLE TRAIL EXACTLY: Home > Intel > Category, and stops where
+  the <ol> stops. Structured data that claims a crumb the reader cannot see is
+  a mismatch Google's guidelines call out, so the article's own title is
+  deliberately NOT appended as a fourth item — the rendered trail does not
+  carry one either.
+
+  The category crumb is conditional for the same reason the <li> is: an
+  article with no category renders a two-item trail, and the schema has to
+  agree with whatever actually rendered.
+*/
+const breadcrumbTrail: Array<{ name: string; path: string }> = [
+  { name: 'Home', path: '/' },
+  { name: ARTICLE_SECTION.name, path: ARTICLE_SECTION.path },
+  ...(article.category
+    ? [{ name: article.category, path: topicPath(article.category) }]
+    : []),
+];
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: breadcrumbTrail.map((crumb, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    name: crumb.name,
+    item: new URL(crumb.path, site.url).toString(),
+  })),
+};
+---
+
+<Layout
+  title={`${article.title} | ${site.name}`}
+  description={article.excerpt}
+  image={heroImage}
+  preloadImage={heroImageSources?.src || article.image}
+  preloadImageSrcset={heroImageSources?.srcset || undefined}
+  preloadImageSizes={heroImageSources?.srcset ? "(max-width: 900px) 92vw, 720px" : undefined}
+
+  type="article"
+>
+  <script
+    slot="head"
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify(articleSchema)}
+  />
+  <script
+    slot="head"
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify(breadcrumbSchema)}
+  />
+  <meta property="article:published_time" content={article.isoDate} slot="head" />
+  {article.lastUpdated && <meta property="article:modified_time" content={article.lastUpdated} slot="head" />}
+  <meta property="article:author" content={author.url} slot="head" />
+  <meta property="article:section" content={article.category} slot="head" />
+
+  {/*
+    OUTSIDE THE LAYOUT, deliberately. The nav is `position: fixed`, and a fixed
+    element is trapped by any ancestor with a transform, a filter or a
+    backdrop-filter — the containing-block rule that anchored the feed's PiP
+    window to its hero instead of the viewport. Mounted here it has no such
+    ancestor and cannot acquire one from a change inside the grid.
+  */}
+  <FloatingPageNav entries={tocEntries} landmarks={tocLandmarks} />
+
+  <main class="article-page">
+    <div class="container">
+      {/* Three columns on desktop; the rails drop away below 1200px and the
+          reading column becomes the page. */}
+      <div class="article-layout">
+        {/*
+          The contents left this rail. It is <FloatingPageNav /> below, pinned to
+          the viewport's left edge, so it no longer moves with the page until
+          its sticky catches and no longer holds the top of a column that had
+          one other thing in it. The reading measure took the width back — see
+          .article-layout in article.css.
+        */}
+        <aside class="article-rail article-rail-left" aria-label="Article Utilities">
+          <div class="article-rail-sticky">
+            <div class="article-rail-desk article-rail-stay pb-2">
+              <p class="article-rail-head">Stay Updated</p>
+              <div class="flex justify-start py-2">
+                <GooglePreferredSourceDeeplink url="beunconventionalhq.com" variant="glow" theme="dark" label="Follow on Google Search" />
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <article class="article-column">
+          <nav aria-label="Breadcrumb" class="article-breadcrumbs">
+            <ol>
+              <li><a href="/">Home</a></li>
+              <li><a href="/intel">Intel</a></li>
+              {article.category && <li><a href={topicPath(article.category)}>{article.category}</a></li>}
+            </ol>
+          </nav>
+          
+          <header class="article-header" id="article-top">
+            {/*
+              Two tags, not one: the SUBJECT (Film / TV / Games) and the
+              KIND (Review / Analysis / Dispatch). A reader scanning wants to
+              know both, and the content type is what selects the schema above.
+            */}
+            <div class="article-eyebrow">
+              {getDisplayTags(article).length > 0 && (
+                <span class="article-tag article-tag-category">
+                  {getDisplayTags(article).join(' | ')}
+                </span>
+              )}
+              {getDisplayTags(article).length > 0 && <span class="dot">&bull;</span>}
+              <time datetime={article.isoDate}>{readableDate}</time>
+              {article.score && (
+                <span class="article-score">
+                  {article.score.value}/{article.score.best}
+                </span>
+              )}
+            </div>
+
+            <h1 class="article-title">{article.title}</h1>
+
+            {/*
+              The cover sits between the headline and the standfirst, above the
+              byline — it is part of the masthead, not a figure dropped into the
+              body. (Most outlets run headline → dek → image so the dek reads as
+              one unit with the headline; this order is a deliberate house call.)
+            */}
+            {article.image && (
+              /* A COMMITTED rendition when one exists, otherwise the URL
+                 Substack gave us — never a live proxy. This is the eager,
+                 above-the-fold LCP element, which is precisely where a cold
+                 third-party transcode hurts most: the reader waits on a blank
+                 masthead. A local file cannot be cold, so the objection that
+                 reverted the proxy version does not apply here. The Spider-Man
+                 cover is a 1.17 MB 3840x2160 upload; as a rendition it is
+                 137 KB across every width. */
+              <img
+                class="article-hero"
+                src={heroImageSources?.src || article.image}
+                srcset={heroImageSources?.srcset || undefined}
+                sizes={heroImageSources?.srcset ? '(max-width: 900px) 92vw, 720px' : undefined}
+                alt={`Cover image for ${article.title}`}
+                width={heroDimensions.width}
+                height={heroDimensions.height}
+                loading="eager" fetchpriority="high"
+                decoding="async"
+              />
+            )}
+
+            {article.excerpt && <p class="article-standfirst">{article.excerpt}</p>}
+
+            <ArticleAuthorBlock />
+          </header>
+
+          {/* Sanitized at sync time against a semantic allowlist — no scripts,
+              styles, classes or iframes survive. Heading ids added by buildToc. */}
+          <div class="article-body" set:html={bodyHtml} />
+
+          {/* Site furniture, rendered from the CMS rather than from the post.
+              Outside `.article-body` on purpose: it is not the author's copy,
+              and nothing in it should be indexed by the contents rail. */}
+          {hadOutro && <ArticleOutro />}
+
+          <SubstackGallery />
+          <YouTubeEmbed />
+
+          <footer class="article-attribution">
+            <p>
+              Originally published in{' '}
+              <a href={SOURCE_PUBLICATION.url} target="_blank" rel="noopener noreferrer">
+                {SOURCE_PUBLICATION.name}
+              </a>{' '}
+              on {SOURCE_PUBLICATION.platform}.
+            </p>
+          </footer>
+
+          {/*
+            End-of-article actions.
+
+            These used to be a single button with a bare `margin-top`, which
+            let it collide with the subscribe band below. `.article-actions` is
+            a grid with its own bottom margin, so the two can no longer overlap
+            regardless of how long the article is.
+          */}
+          <nav class="article-actions" aria-label="Continue reading">
+            <a href={ARTICLE_SECTION.path} class="cta-button-primary">
+              &larr; All {ARTICLE_SECTION.name}
+            </a>
+            {nextArticle && (
+              <a href={`${ARTICLE_SECTION.path}/${nextArticle.slug}`} class="cta-button-primary">
+                {LABELS.nextArticle} &rarr;
+              </a>
+            )}
+          </nav>
+
+          {related.length > 0 && (
+            <section class="article-related" id="article-related" aria-labelledby="article-related-head">
+              <h2 class="intel-break-title" id="article-related-head">Suggested Reading</h2>
+              <ul class="article-related-list">
+                {related.map((item) => (
+                  <li>
+                    <a href={`${ARTICLE_SECTION.path}/${item.slug}`} class="article-related-item">
+                      {getDisplayTags(item).length > 0 && (
+                        <span class="article-related-meta">
+                          {getDisplayTags(item).join(' | ')}
+                        </span>
+                      )}
+                      <span class="article-related-title">{item.title}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </article>
+
+        <ArticleSupportRail related={related.slice(0, 2)} brand={articleHub} />
+      </div>
+    </div>
+
+    <SubscribeCTA />
+  </main>
+</Layout>

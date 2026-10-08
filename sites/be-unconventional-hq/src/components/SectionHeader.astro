@@ -1,0 +1,44 @@
+---
+/**
+ * The `.section-header` block that wraps a <PageTitle /> across the site.
+ *
+ * Three variants are in use, so the animation classes are props rather than
+ * hardcoded:
+ *   - `.section-header animate-on-scroll`        (interior pages)
+ *   - `.section-header`                          (static headers)
+ *   - `.section-header reveal animate-on-scroll` (homepage)
+ *
+ * Defaults match the homepage variant this was first extracted from.
+ */
+interface Props {
+  reveal?: boolean;
+  animateOnScroll?: boolean;
+  class?: string;
+  className?: string;
+  style?: string;
+  [key: string]: any;
+}
+
+const {
+  reveal = true,
+  animateOnScroll = true,
+  class: classProp = '',
+  className = '',
+  style = '',
+  ...rest
+} = Astro.props;
+
+const classes = [
+  'section-header',
+  reveal ? 'reveal' : '',
+  animateOnScroll ? 'animate-on-scroll' : '',
+  classProp,
+  className,
+]
+  .filter(Boolean)
+  .join(' ');
+---
+
+<div class={classes} style={style} {...rest}>
+  <slot />
+</div>

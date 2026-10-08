@@ -1,0 +1,408 @@
+
+
+.filter-label {
+  color: var(--color-white);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin-right: 1rem;
+  align-self: center;
+}
+
+.filter-btn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-white-muted);
+  padding: 0.4rem 0.8rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .filter-btn:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+    color: var(--color-white);
+  }
+}
+
+.filter-btn.active {
+  border-color: var(--color-accent);
+  color: var(--color-accent-text);
+  background: rgba(204, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+
+  .filter-label {
+    position: relative;
+    z-index: 2;
+    flex-shrink: 0;
+    background: var(--color-black);
+    padding-right: 12px;
+  }
+
+  .filter-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   QUADRANT BUTTON (shared filter control)
+
+   The Feed's filter button, promoted here from QuadrantFilter.astro's scoped
+   <style> so other surfaces can reuse the exact control instead of
+   re-declaring it. Used by <QuadrantFilter /> (the Feed) and
+   <IntelFilters /> (the article section).
+
+   Nothing else in the codebase defines .quadrant-btn, so lifting it to the
+   global sheet does not change which rule wins anywhere.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.quadrant-btn {
+  padding: 1.25rem 1rem;
+  background: rgba(10, 10, 10, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-white);
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-family: var(--font-display);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  -webkit-tap-highlight-color: transparent;
+  text-decoration: none;
+  display: block;
+  appearance: none;
+  -webkit-appearance: none;
+  border-radius: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .type-btn:hover,
+  .cat-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    outline: 2px solid var(--color-accent, #ef4444);
+    outline-offset: -2px;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+    transform: translateY(-2px);
+  }
+
+  .quadrant-btn:not(.type-btn):not(.cat-btn):hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.type-btn:focus-visible,
+.cat-btn:focus-visible,
+.quadrant-btn:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 4px;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quadrant-btn,
+  .quadrant-btn:hover,
+  .quadrant-btn:focus-visible,
+  .type-btn:hover,
+  .cat-btn:hover,
+  .quadrant-btn:not(.type-btn):not(.cat-btn):hover {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+.quadrant-btn.active {
+  background: rgba(239, 68, 68, 0.1);
+  outline: 2px solid var(--color-accent, #ef4444);
+  outline-offset: -2px;
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+}
+
+/* ── Filter grid (shared by the Feed and /intel) ────────────────────────────
+
+   The row that holds the .quadrant-btn category buttons. Promoted out of
+   QuadrantFilter.astro's scoped <style> so /intel's filter row is the SAME
+   grid, not a lookalike — same auto-fit columns, same 1rem gap, same
+   two-column mobile fallback.
+
+   Change the gap here and both the Feed and Intel move together.
+*/
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .filter-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── Mobile category overlay (shared: Feed + /intel) ────────────────────────
+
+   Promoted out of QuadrantFilter.astro's scoped <style> so <CategoryOverlay />
+   can be used on both surfaces with identical styling. On phones the four
+   category buttons collapse behind one "Categories" button that opens this
+   full-screen menu.
+*/
+/* =========================================================================
+   FULL-SCREEN IMMERSIVE OVERLAY STYLES
+   ========================================================================= */
+/* Same centring contract as the mobile nav overlay (responsive-mobile.css):
+   `flex-start` + auto margins on the content, never `justify-content: center`,
+   so a category list taller than a landscape viewport scrolls instead of
+   overflowing past the unreachable start edge. Top padding clears the
+   absolutely-positioned close button, which sits above this content. */
+/*
+  ─── WHAT ACTUALLY PUTS THE OVERLAY IN FRONT ────────────────────────────────
+
+  Not the z-index below. This overlay lives inside `#page-content`, which
+  carries `view-transition-name: page-main` (global-base.css) so ClientRouter
+  can slide the page: that forms a STACKING CONTEXT, and `#page-content` has no
+  z-index of its own, so it and everything sealed inside it paint beneath the
+  `<header>` at 100.
+
+  That is why the overlay opened UNDERNEATH the navbar, with the logo, the
+  search icon and the hamburger still painted over a full-screen black menu
+  that carries its own close button. Two sets of controls in the same corner,
+  and the X sat directly beneath the hamburger. Reported from a phone.
+
+  Raising the overlay's own z-index does not fix it and was tried: at 10000,
+  `document.elementsFromPoint()` over the logo still returned the header in
+  front of the overlay. A descendant cannot climb out of its ancestor's
+  stacking context, whatever number it gives itself.
+
+  So the CONTEXT is what moves, for exactly as long as this one overlay is
+  open. CategoryOverlay.astro puts the class on <html>; `modal-open` was not
+  reused because the search palette and the video lightbox share it and
+  neither wants the page lifted over the navbar.
+*/
+html.category-overlay-open #page-content {
+  position: relative;
+  z-index: 10000;
+}
+
+.category-fullscreen-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100dvh;
+  background: #000000;
+  /* Above the rest of the page. Getting above the NAVBAR is the block above
+     this rule, not this number. */
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  opacity: 0;
+  visibility: hidden;
+  /*
+    `visibility` is stepped, not delayed, and the two directions differ.
+
+    It used to read `visibility 0.4s ease` in both directions. Transitioning
+    visibility that way means that at the instant `.is-open` is added the
+    computed value is still `hidden`, and a hidden element CANNOT TAKE FOCUS.
+    So the overlay's `closeBtn.focus()` was a silent no-op and a keyboard user
+    opened a full-screen menu with focus left on the page behind it. Measured
+    in Chrome: hidden at the click, visible one frame later.
+
+    Closing keeps the delay (hide only once the fade has finished, so the
+    overlay does not vanish instantly); opening flips it at once. `opacity`
+    still does all the visible work, so the animation is unchanged.
+  */
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s linear 0.4s;
+  padding-top: calc(env(safe-area-inset-top) + 4rem);
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  padding-left: max(1.5rem, env(safe-area-inset-left));
+  padding-right: max(1.5rem, env(safe-area-inset-right));
+  overscroll-behavior: contain;
+
+  /* Same iOS landscape guard as .nav-container (responsive-mobile.css) — a
+     closed full-screen overlay must be structurally incapable of receiving a
+     tap, not merely invisible. */
+  pointer-events: none;
+}
+
+.category-fullscreen-overlay.is-open {
+  pointer-events: auto;
+}
+
+/* The INNER box scrolls, not the overlay.
+
+   Scrolling the overlay itself would make the close button a `position:`
+   pinned child of a scroll container, which is the fragile arrangement on
+   iOS. Keeping the overlay a plain fixed flex box lets the close button stay
+   absolutely positioned against it while the category list takes the
+   overflow. `margin: auto 0` centres the list when it fits and collapses to 0
+   when it does not — the same contract as the nav overlay. */
+.category-fullscreen-overlay .fullscreen-content {
+  width: 100%;
+  margin: auto 0;
+  flex-shrink: 1;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.category-fullscreen-overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+  /* No delay on the way in: focusable in the same tick the class lands. */
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s linear 0s;
+}
+
+/* `absolute` against the overlay, which is itself viewport-fixed and
+   full-bleed — so this is the same corner a `fixed` button would land on,
+   without making it a fixed child of a scrolling ancestor (fragile on iOS).
+   The overflow now lives on .fullscreen-content, so nothing scrolls this
+   button away. */
+.close-fullscreen-btn {
+  position: absolute;
+  top: max(1rem, env(safe-area-inset-top, 1rem));
+  right: max(1rem, env(safe-area-inset-right, 1rem));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 44px;
+  height: 44px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  z-index: 210;
+  padding: 0;
+}
+
+.close-fullscreen-btn .line {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: var(--color-white);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+/* Pre-transformed into an X */
+.close-fullscreen-btn .line:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.close-fullscreen-btn .line:nth-child(2) { opacity: 0; }
+.close-fullscreen-btn .line:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+.category-fullscreen-overlay .filter-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem; /* Matched exactly to #navbar nav ul */
+  width: 100%;
+  max-width: 100%;
+}
+
+.category-fullscreen-overlay .cat-btn {
+  position: relative;
+  display: block;
+  padding: 1.5rem 1.25rem;
+  
+  /* NEW STYLING (matching Footer 'Explore' / 'Follow') */
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+
+  /* OLD STYLING FALLBACK (uncomment to revert) */
+  /*
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  */
+
+  color: rgba(245, 245, 245, 0.8);
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.category-fullscreen-overlay .cat-btn::after {
+  content: '';
+  position: absolute;
+  bottom: 0.75rem;
+  left: 1.25rem;
+  width: calc(100% - 2.5rem);
+  height: 1px;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.2, 1);
+}
+
+.category-fullscreen-overlay .cat-btn:hover,
+.category-fullscreen-overlay .cat-btn.active {
+  color: var(--color-accent-text);
+  text-shadow: 0 0 16px rgba(204, 0, 0, 0.45);
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+  transform: none;
+}
+
+.category-fullscreen-overlay .cat-btn:hover::after,
+.category-fullscreen-overlay .cat-btn.active::after {
+  transform: scaleX(1);
+}
+
+
+body.modal-open {
+  overflow: hidden !important;
+}
+
+/* ── Mobile "Categories" button (shared: Feed + /intel) ─────────────────────
+
+   These live here, NOT in a component's scoped <style>, because the markup
+   they style is in CategoryOverlay.astro while the rules were originally
+   written inside QuadrantFilter.astro. Astro scopes styles to the component
+   that declares the element, so a scoped rule in one file cannot style
+   markup rendered by another — which is exactly how the button ended up
+   visible on desktop.
+
+   Default: hidden. The button only exists below 768px, where the inline
+   category row is too wide to fit.
+*/
+.mobile-category-row {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-category-row {
+    display: flex;
+    width: 100%;
+    margin-bottom: 2rem;
+  }
+
+  .full-width-btn {
+    width: 100%;
+    flex: 1;
+    font-size: 0.9rem;
+    padding: 0.75rem 0.5rem;
+    text-transform: uppercase;
+  }
+}

@@ -1,0 +1,369 @@
+---
+/**
+ * HubCard — the "Official <X> Hub" block: a hub's mark, a line of copy and
+ * one link into its page.
+ *
+ * ─── WHY IT IS A COMPONENT ────────────────────────────────────────────────
+ * It was written out twice, identically, in EventAnnouncement.astro and
+ * EventFeatured.astro, with the heading hardcoded to "Official Franchise
+ * Hub". That called Netflix a franchise on every event it backed, in two
+ * places, and article pages could not have it at all without a third copy.
+ *
+ * The heading now comes from the hub's own `hubCategory` via
+ * getHubKindHeading() — Streamer, Studio, Gaming, Franchise — so adding a
+ * category changes one map, not three templates.
+ *
+ * ─── THE WHOLE CARD IS THE LINK ───────────────────────────────────────────
+ * The mark, the copy and "Explore Hub" are one target rather than a panel
+ * with a small link buried in it. Same ground, blur and hairline as the
+ * blocks it sits beside, and no border-radius, because nothing else in these
+ * columns has one.
+ *
+ * ─── IT RESHAPES TO THE SPACE IT IS GIVEN ─────────────────────────────────
+ * The same card is 239px wide in the desktop rail and 710 to 950px when the
+ * rail stacks under an article on a phone or tablet. It was built for the
+ * narrow case and kept the narrow case's 34px logo cap everywhere, so on a
+ * tablet it was a postage-stamp mark alone in a very wide box.
+ *
+ * A CONTAINER query, not a media query: what matters is how wide THIS CARD
+ * is, not how wide the window is, and the two run in opposite directions
+ * here (a big desktop window puts the card in a narrow rail). Three shapes,
+ * measured against the real widths above:
+ *
+ *   < 300px   stacked, small mark. The desktop rail (239px) and a 320px
+ *             phone (276px).
+ *   >= 300px  mark on the left, copy and call to action on the right.
+ *             A 390px phone gives the card 346px.
+ *   >= 560px  mark left, copy centre, call to action pushed to the far
+ *             right, so a 950px card reads as a banner rather than as a
+ *             narrow card with 700px of nothing beside it.
+ *
+ * ─── WHY THE MARK IS CAPPED IN BOTH AXES ──────────────────────────────────
+ * 16 of the 18 hubs have a SQUARE mark. The exceptions are Marvel (2.21:1)
+ * and Disney+ (1.83:1), which are wide wordmarks. Cap height alone and those
+ * two run away with the row; cap width alone and the square ones shrink to
+ * nothing. Capping both inside a fixed-width mark box means a square mark
+ * fills its box and a wordmark hits the width first and sits shorter, so no
+ * brand dominates and every row lines up.
+ *
+ * ─── COLOUR ───────────────────────────────────────────────────────────────
+ * The hover tint reads `--brand-rgb`. On an event or hub page an ancestor
+ * already publishes that, and this sets it again from the hub's OWN
+ * brandColor so the card is correct anywhere it is used: an article page has
+ * no such ancestor, and without this the Netflix card would glow event-red.
+ */
+import { urlFor } from '../lib/local-content';
+import { getHubKindHeading } from '../lib/hub-labels';
+
+interface Props {
+  /** A featuredBrand document. Render nothing if absent. */
+  brand: any;
+  /** Heading level for the block label. The rails use a <p>; a section may want a real heading. */
+  headingId?: string;
+}
+
+const { brand, headingId } = Astro.props;
+
+/*
+  `brandColor` is an OBJECT on a featuredBrand doc, {hex: '#E23636'}, but was
+  a plain string on older documents. Both are accepted here because both are
+  in the store, and a mistake either way stringifies to "[object Object]" in
+  a style attribute and silently paints nothing.
+*/
+const brandHex =
+  (typeof brand?.brandColor === 'string' ? brand.brandColor : brand?.brandColor?.hex) || '#CC0000';
+
+function hexToRgbTriple(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim());
+  if (!m) return '204, 0, 0';
+  const int = parseInt(m[1], 16);
+  return `${(int >> 16) & 255}, ${(int >> 8) & 255}, ${int & 255}`;
+}
+
+const brandRgb = hexToRgbTriple(brandHex);
+const heading = getHubKindHeading(brand);
+const slug = brand?.slug?.current;
+---
+
+{brand && slug && (
+  <div class="article-rail-related rail-hub" style={`--brand-rgb: ${brandRgb};`}>
+    <p class="article-rail-head" id={headingId}>{heading}</p>
+    <a class="rail-hub-card" href={`/featured/${slug}`}>
+      {brand.logo && (
+        <span class="rail-hub-mark">
+          {/* HARD RULE 6: no filter on the <img>. */}
+          <img
+            src={urlFor(brand.logo).height(320).auto('format').url()}
+            alt=""
+            class="rail-hub-logo"
+            loading="lazy"
+            decoding="async"
+          />
+        </span>
+      )}
+      {/*
+        Spans, not <p> and <div>. An <a> takes flow content happily, but
+        `.rail-hub-body` is a <span>, and a <p> inside a <span> is invalid:
+        the parser closes the span. Everything here stays phrasing content
+        and the block layout comes from CSS.
+      */}
+      <span class="rail-hub-body">
+        {/*
+          The hub's name in words. Hidden until the card is wide enough to
+          need it (see the stylesheet), where the mark is 104px tall and the
+          body was a single 18px line floating beside it.
+
+          It is not redundant with the mark: the <img> is alt="", so the
+          link's accessible name comes entirely from this text. Strip the
+          words out and a screen reader hears "Explore Hub" with no hub.
+        */}
+        <span class="rail-hub-text">
+          <span class="rail-hub-name">{brand.title}</span>
+          <span class="rail-hub-copy">
+            Explore all our coverage, videos, and intel for {brand.title}.
+          </span>
+        </span>
+        <span class="rail-hub-cta">Explore Hub &rarr;</span>
+      </span>
+    </a>
+  </div>
+)}
+
+<style>
+  /*
+    Sized by ITS OWN width, not the window's: in the desktop rail this card is
+    239px wide, and stacked under an article on a tablet it is 950px. A media
+    query gets that exactly backwards.
+  */
+  .rail-hub {
+    margin-top: 3.5rem;
+    container-type: inline-size;
+    container-name: hubcard;
+  }
+
+  .rail-hub-card {
+    display: block;
+    padding: 1.25rem;
+    background: rgba(15, 15, 15, 0.8);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-decoration: none;
+    transition:
+      border-color 0.3s ease,
+      background-color 0.3s ease,
+      transform 0.18s ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .rail-hub-card:hover {
+      border-color: rgba(var(--brand-rgb, 204, 0, 0), 0.55);
+      background: rgba(var(--brand-rgb, 204, 0, 0), 0.06);
+    }
+    .rail-hub-card:hover .rail-hub-cta {
+      color: var(--color-accent-text);
+    }
+  }
+
+  /*
+    ─── PRESS FEEDBACK, BECAUSE HOVER IS NOT AVAILABLE ON A TOUCHSCREEN ─────
+
+    The hover rules above are correctly gated behind `(hover: hover)`, which
+    is what stops a phone leaving a card stuck in its hover state after a tap.
+    But nothing replaced them there, so tapping a card did nothing visible
+    until the next page painted. Reported as "the tiles lack a hover state or
+    an interaction when I click them".
+
+    `:active` is NOT inside the hover media query: it is exactly the branch
+    touch needs. The scale is small on purpose; a card carrying a logo that
+    jumps on touch reads as a glitch rather than as a response.
+  */
+  .rail-hub-card:active {
+    border-color: rgba(var(--brand-rgb, 204, 0, 0), 0.75);
+    background: rgba(var(--brand-rgb, 204, 0, 0), 0.1);
+    transform: scale(0.99);
+  }
+  .rail-hub-card:active .rail-hub-cta {
+    color: var(--color-accent-text);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rail-hub-card {
+      transition: border-color 0.3s ease, background-color 0.3s ease;
+    }
+    .rail-hub-card:active {
+      transform: none;
+    }
+  }
+
+  .rail-hub-card:focus-visible {
+    outline: 2px solid var(--color-white);
+    outline-offset: 2px;
+  }
+
+  /*
+    The mark sits in a box of its own so a square logo and a wide wordmark
+    occupy the same footprint. `object-fit: contain` centres whichever shape
+    inside it. See the header for why both axes are capped.
+  */
+  /*
+    `min-height` matches the logo's own cap, so the box holds its place
+    before the mark arrives.
+
+    The mark is `loading="lazy"` and carries no width/height attributes, so
+    until it loads it measures 0x0. The two wider shapes below already give
+    this box an explicit height and were never affected; the STACKED shape
+    had none, so on every desktop article page the card's top jumped from
+    0 to 34px the moment the logo decoded. Small, but it is layout shift on
+    a page whose whole job is reading.
+  */
+  .rail-hub-mark {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 34px;
+    margin-bottom: 1rem;
+  }
+
+  .rail-hub-logo {
+    display: block;
+    max-height: 34px;
+    max-width: 70%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+  }
+
+  .rail-hub-body,
+  .rail-hub-text {
+    display: block;
+  }
+
+  /*
+    Off by default. The narrow rail and the phone card are already balanced:
+    two lines of copy plus the call to action stand about as tall as the mark
+    beside them. It is the wide banner that needs a second line.
+  */
+  .rail-hub-name {
+    display: none;
+  }
+
+  .rail-hub-copy {
+    display: block;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    color: var(--color-white-muted);
+    margin: 0 0 1rem;
+  }
+
+  .rail-hub-cta {
+    display: inline-block;
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-white);
+    transition: color 0.3s ease;
+    white-space: nowrap;
+  }
+
+  /* ── >= 300px: the mark moves to the left and the copy sits beside it ──── */
+  @container hubcard (min-width: 300px) {
+    .rail-hub-card {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      padding: 1.5rem 1.5rem;
+    }
+
+    .rail-hub-mark {
+      flex: 0 0 96px;
+      width: 96px;
+      height: 88px;
+      justify-content: center;
+      margin-bottom: 0;
+    }
+
+    .rail-hub-logo {
+      max-height: 88px;
+      max-width: 96px;
+    }
+
+    .rail-hub-body {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .rail-hub-copy {
+      font-size: 0.85rem;
+      margin-bottom: 0.85rem;
+    }
+  }
+
+  /* ── >= 560px: a banner. The call to action goes to the far edge ───────── */
+  @container hubcard (min-width: 560px) {
+    .rail-hub-card {
+      gap: 2rem;
+      padding: 1.75rem 2rem;
+    }
+
+    .rail-hub-mark {
+      flex: 0 0 140px;
+      width: 140px;
+      height: 104px;
+    }
+
+    .rail-hub-logo {
+      max-height: 104px;
+      max-width: 140px;
+    }
+
+    /*
+      The copy stops growing so a 950px card does not stretch one sentence
+      across the whole row. What is left over becomes the gap before the call
+      to action, which `margin-left: auto` pushes to the right edge.
+
+      60ch, not 44: at 44 the leftover on a 950px card was about 500px of
+      nothing between the sentence and the button, which reads as a layout
+      bug rather than as an anchored action. 60ch still stops well short of
+      the measure where a line gets hard to track back from.
+    */
+    .rail-hub-body {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      flex: 1 1 auto;
+    }
+
+    /*
+      Name over sentence, as one block, so the body stands as tall as the
+      104px mark instead of hanging as a single line halfway up it.
+    */
+    .rail-hub-text {
+      display: block;
+      max-width: 60ch;
+    }
+
+    .rail-hub-name {
+      display: block;
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      line-height: 1.15;
+      color: var(--color-white);
+      margin-bottom: 0.4rem;
+    }
+
+    .rail-hub-copy {
+      margin-bottom: 0;
+      max-width: none;
+      font-size: 0.95rem;
+    }
+
+    .rail-hub-cta {
+      margin-left: auto;
+    }
+  }
+</style>

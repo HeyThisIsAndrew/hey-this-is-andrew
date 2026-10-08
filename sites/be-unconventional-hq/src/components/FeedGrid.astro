@@ -1,0 +1,1851 @@
+---
+import ContentCard from './ContentCard.astro';
+import FeedRowBanner from './FeedRowBanner.astro';
+import { getImage } from 'astro:assets';
+import { rowArt } from '../lib/row-art';
+import EmptyState from './EmptyState.astro';
+import { LABELS, MESSAGES } from '../data/content.js';
+import { getFeaturedBrandsLocal, getEventsLocal, urlFor } from '../lib/local-content';
+import { resolveEntity, hexToRgbTriple } from '../lib/entity-resolver';
+import { getHubMatchTags, matchVideosByTags } from '../lib/hub-coverage';
+import CommercialRotator from './CommercialRotator.astro';
+import FloatingPageNav from './FloatingPageNav.astro';
+import {
+  buildRails,
+  selectCollections,
+  inSeries,
+  accentFor,
+  seriesSlug,
+  byNewest,
+  HUB_CATEGORY_ORDER,
+  RAIL_LIMIT,
+} from '../lib/feed-rails';
+
+export interface Props {
+  page: any;
+  allItems: any[];
+}
+
+/*
+  `page` is still accepted so the three /feed routes keep one call shape with
+  FeedLayout, which reads it for rel=prev/next. This component no longer uses
+  it: the flat grid that consumed `page.data` is gone, and the rows render from
+  `allItems` — the whole feed, not a page of it.
+*/
+const { allItems = [] } = Astro.props;
+const safeAllItems = Array.isArray(allItems) ? allItems : [];
+
+/*
+  ─── THE ROWS ARE BUILT FROM `hubs`, NOT `franchises` ───────────────────────
+
+  The brief specified `item.franchises?.includes('dc')`. That field exists on
+  the type and on all 215 synced documents, and it is EMPTY on every one of
+  them — `franchises: doc.franchises ?? []` in src/lib/videos.ts is defaulting,
+  not carrying data, because nothing populates it yet. A row built on it renders
+  zero cards, and it does so silently: an empty row looks like "no coverage",
+  not like a wiring bug.
+
+  `hubs` is the populated taxonomy, and its values are full slugs — `dc-comics`
+  and `marvel-comics`, NOT `dc` and `marvel`. Counted from src/data/videos.json:
+  dc-comics 29, warner-bros 29, hbo-max 26, marvel-comics 21, prime-video 9,
+  netflix 6.
+
+  Lanterns is the one match the brief got exactly right: `youtubeTags` carries a
+  lowercase `lanterns` on 26 documents, so `.includes('lanterns')` finds them
+  without any normalising. It is still compared case-insensitively below, since
+  youtubeTags is raw YouTube data and a future upload saying "Lanterns" would
+  otherwise drop out of its own row.
+
+  Adding a row is a line in this array. Rows that match nothing are dropped
+  before render, so an empty one can never ship.
+*/
+const hubBrands = getFeaturedBrandsLocal();
+const hubEvents = getEventsLocal();
+
+/*
+  ─── A HUB ROW HOLDS EVERYTHING ABOUT THAT HUB, NOT JUST THE VIDEOS ────────
+
+  This was `Array.isArray(item.hubs) && item.hubs.includes(slug)` and nothing
+  else, which quietly made every franchise and streamer row video-only.
+
+  `hubs` is written by the YouTube sync and exists only on video records.
+  Articles come from Substack and carry `tags`, so no article could ever
+  satisfy that test — the DC row dropped both DC articles, Netflix dropped
+  both Netflix articles, and so on, with no error and no empty row to notice.
+  A row like "DC" is a TOPIC. Media type is the concern of exactly three rows,
+  all of them in The Latest.
+
+  ─── WHY THE KEYWORDS ARE NOT LISTED HERE ─────────────────────────────────
+
+  The obvious repair is a per-row array of fallback words in this file. It
+  would work today and rot immediately: CLAUDE.md states that there is ONE tag
+  list per hub, `youtubeSyncKeywords` (labelled "Tags" in the CMS), and that it
+  is the list feeding both the sync and the site's own matching. A second copy
+  in a component is the exact drift that note exists to prevent, and it would
+  be invisible to the editor who maintains the first.
+
+  So step 3 reads the hub's own vocabulary through `getHubMatchTags()` and
+  compares with the site's `compactTag` normalisation, the same path
+  /featured/<slug> and /events/<slug> use for their coverage.
+
+  Verified against the store: dc-comics, marvel-comics, hbo-max, netflix and
+  prime-video each pick up 2 articles this way. Note an item can satisfy
+  SEVERAL hubs — the Lanterns article is both DC and HBO Max — which is right,
+  and which `resolveEntity()` could not express on its own since it returns one
+  best hub per item.
+*/
+const slugOfDoc = (doc: any) =>
+  typeof doc?.slug === 'string' ? doc.slug : doc?.slug?.current ?? null;
+
+const allHubDocs = [...hubBrands, ...hubEvents];
+
+/*
+  ─── A TOPIC IS NOT A HUB ──────────────────────────────────────────────────
+
+  Film, TV and Games are the site's Tier-1 topics, and they are stored in two
+  different places depending on where the item came from: the YouTube sync
+  writes `topics: ['film']` on a video, and a Substack article carries
+  `category: 'Film'`. An item only ever has one of them.
+
+  `games` and `gaming` are the same topic under two names — CLAUDE.md records
+  the rename, and both spellings are still in the store (videos say `gaming`,
+  articles say `Games`), so the alias is read here rather than left to whoever
+  writes the next row definition.
+*/
+const TOPIC_ALIASES: Record<string, string[]> = {
+  film: ['film', 'movies'],
+  tv: ['tv', 'television'],
+  games: ['games', 'gaming'],
+  events: ['events', 'event'],
+};
+
+const hasTopic = (item: any, topic: string) => {
+  const wanted = TOPIC_ALIASES[topic] ?? [topic];
+  const topics = Array.isArray(item?.topics) ? item.topics.map((t: any) => String(t).toLowerCase()) : [];
+  if (topics.some((t: string) => wanted.includes(t))) return true;
+  const category = String(item?.category ?? '').toLowerCase();
+  return wanted.includes(category);
+};
+
+const matchesHub = (item: any, slug: string) => {
+  /* 1. The sync's explicit taxonomy — videos. */
+  if (Array.isArray(item?.hubs) && item.hubs.includes(slug)) return true;
+
+  /* 2. An editor naming the hub outright. */
+  if (item?.relatedBrandSlug === slug) return true;
+
+  /* 3. The hub's own tag vocabulary — articles, and any video whose tags name
+     the hub without the sync having written it into `hubs`. */
+  const hub = allHubDocs.find((doc) => slugOfDoc(doc) === slug);
+  if (!hub) return false;
+  return matchVideosByTags([item], getHubMatchTags(hub)).length > 0;
+};
+
+/*
+  The `hasTag()` helper that stood here matched an item against a literal tag
+  name, and its only caller was the hardcoded Lanterns shelf. Collection
+  membership is decided by `inSeries()` in src/lib/feed-rails.ts now, which
+  reads the editor's `series` field first and falls back to the same two tag
+  fields so an article can still join.
+*/
+
+/* --color-accent in the global tokens. The last rung of a collection's accent
+   chain, so one with no accent and no usable hub colour is still lit. */
+const SITE_ACCENT = '#cc0000';
+
+/*
+  ─── COLLECTION ARTWORK, RESOLVED AT BUILD TIME BY CONVENTION ──────────────
+
+  A collection named "The Umbrella Academy" looks for
+  src/assets/rows/the-umbrella-academy-key-art.(jpg|png|webp) and ...-logo.png.
+  Drop the files in and the banner appears; leave them out and the shelf renders
+  its text lockup like any other row. No code change either way, which is the
+  whole point of a convention over a table.
+
+  `eager` because there are at most a handful and the row needs the metadata
+  (width/height) synchronously to render without layout shift. A missing file is
+  not an error by design: a build that failed because an editor had not uploaded
+  artwork yet would be a worse trade than a shelf that renders plain.
+*/
+/* rowArt() lives in src/lib/row-art.ts, shared with the homepage. */
+
+/* seriesSlug() lives in src/lib/feed-rails.ts: the homepage links to these
+   rows by it, so there is one definition of a row's anchor. */
+
+/*
+  `hubHref()` stood here, turning a row id into /featured/<slug> or
+  /events/<slug>. The rails are categories rather than single hubs now, so
+  their explore link goes to the matching accordion row on /featured
+  (`/featured#streaming`), which is built inline where the rails are.
+*/
+
+/*
+  ─── EVERY BRANDED ROW IS LIT IN ITS OWN COLOUR ────────────────────────────
+
+  The accent is READ FROM THE HUB, not listed here: `brandColor` already exists
+  on each featuredBrand (DC #0476F2, Marvel #E23636, Netflix #E50914, Prime
+  Video #00A8E1, HBO Max #002BE7, Star Wars #FFE81F), so the shelf lighting is
+  editor-controlled from the CMS like everything else about a hub.
+
+  WHITE IS SKIPPED. Four brands store #FFFFFF (Sony Pictures, Universal, A24,
+  Apple TV+), and a white wash over a near-black page is not an accent, it is a
+  grey fog across the row with no hue to read as branding. Those rows stay
+  unlit, which is the honest result for a brand whose colour is white.
+
+  The three global rows resolve to no hub at all and so stay clean by
+  construction — nothing to special-case.
+*/
+/*
+  `buildRow()` stood here: it took a hand-written RowDef, resolved the hub's
+  mark and key art for the row's bookends, and read its accent colour. Every
+  one of those jobs now belongs to either `buildRails()` (the taxonomy rails,
+  which need no per-row furniture) or the collection builder below (which needs
+  all of it, and gets it from the series rather than from a literal).
+*/
+
+/*
+  ─── NO TWO ADJACENT TILES MAY SHARE ARTWORK ───────────────────────────────
+
+  The channel reuses one thumbnail across a run of episode reviews, so a
+  chronological Lanterns row put four visually identical green-ring tiles side
+  by side and read as a rendering fault rather than as four different episodes.
+
+  This REORDERS rather than drops: an item whose artwork repeats the previous
+  tile is held back and re-offered after the next distinct one, so nothing
+  leaves the row and the sequence stays as close to newest-first as the
+  artwork allows. Dropping duplicates would have hidden real episodes.
+
+  Falls back to plain order when every remaining item shares one image, which
+  is the only case where the constraint cannot be satisfied at all.
+*/
+function spreadByArtwork(items: any[]): any[] {
+  const art = (item: any) => item?.thumbnail || item?.image || '';
+  const queue = [...items];
+  const out: any[] = [];
+
+  while (queue.length > 0) {
+    const lastArt = out.length > 0 ? art(out[out.length - 1]) : null;
+    const nextIndex = queue.findIndex((item) => art(item) !== lastArt);
+    out.push(...queue.splice(nextIndex === -1 ? 0 : nextIndex, 1));
+  }
+
+  return out;
+}
+
+/*
+  ─── CURATED COLLECTIONS ───────────────────────────────────────────────────
+
+  One shelf per series an editor has flagged, most recently updated first, each
+  with the prestige treatment. This is the Lanterns section generalised: the
+  look is unchanged, and the only thing that moved is how it learns which show
+  it is about.
+
+  `spreadByArtwork` still applies. The channel reuses one thumbnail across a run
+  of episode reviews, so a chronological collection put four visually identical
+  tiles side by side and read as a rendering fault rather than four episodes.
+*/
+const collections = selectCollections(safeAllItems).map((chosen) => {
+  const members = safeAllItems.filter((item) => inSeries(item, chosen.name)).sort(byNewest);
+  const hub = members.reduce<ReturnType<typeof resolveEntity>>(
+    (found, item) => found ?? resolveEntity(item, { brands: hubBrands, events: hubEvents, urlFor }),
+    null,
+  );
+
+  /*
+    ─── THE SHELF IS THEMED FOR THE SHOW, NOT ITS STUDIO ────────────────────
+
+    Three rungs. `seriesAccent` from any member of the collection, so the theme
+    outlives the flagged document; then the hub's own CMS-editable brandColor;
+    then the site accent, so a collection shelf is ALWAYS lit. An unlit row is
+    right for an ordinary rail whose brand is white and wrong under a banner
+    and a lockup, where it leaves a half-finished treatment.
+
+    White is skipped at the second rung for the reason it is skipped everywhere
+    on this page: over a near-black ground it is not an accent, it is grey fog.
+  */
+  const rawHub = (hub as any)?.color;
+  const hubHex = typeof rawHub === 'string' ? rawHub : rawHub?.hex ?? null;
+  const usableHub = hubHex && hubHex.toLowerCase() !== '#ffffff' ? hubHex : null;
+  const accentHex = accentFor(members) || usableHub || SITE_ACCENT;
+
+  const slug = seriesSlug(chosen.name);
+  const art = rowArt(`${slug}-key-art`);
+
+  return {
+    id: slug,
+    name: chosen.name,
+    reason: chosen.reason,
+    items: spreadByArtwork(members).slice(0, RAIL_LIMIT),
+    hub,
+    accentColor: accentHex,
+    accentRgb: hexToRgbTriple(accentHex),
+    bannerArt: art,
+    /* All or nothing: there is deliberately no half state where a logo floats
+       over the page with no art behind it. */
+    bannerLogo: art ? rowArt(`${slug}-logo`) : null,
+    eyebrow: hub ? `FEATURED SERIES \u2022 ${hub.title.toUpperCase()}` : 'FEATURED SERIES',
+  };
+}).filter((c) => c.items.length > 0);
+
+/*
+  ─── A COLLECTION TILE CARRIES THE SHOW, NOT THE HUB ───────────────────────
+
+  These items resolve to their hub, so promoting one into the spotlight hero
+  filled it with the hub's key art and roundel, under a banner showing the
+  show's own logo. The row and the hero it drove disagreed about what you were
+  looking at. Where a collection has artwork of its own, its tiles hand that to
+  the hero instead, sized for a backdrop rather than shipping the 2560px master.
+*/
+const collectionBrands = new Map<string, { title?: string; hero: string; logo?: string }>();
+for (const collection of collections) {
+  if (!collection.bannerArt) continue;
+  collectionBrands.set(collection.id, {
+    title: collection.name,
+    hero: (await getImage({ src: collection.bannerArt, width: 1600 })).src,
+    logo: collection.bannerLogo
+      ? (await getImage({ src: collection.bannerLogo, width: 640 })).src
+      : undefined,
+  });
+}
+
+/*
+  ─── THE RAILS ─────────────────────────────────────────────────────────────
+
+  Derived from `hubCategory`, the same field /featured groups its directory by,
+  so re-categorising a hub in the CMS moves it on both pages and adding one
+  needs no code at all. The matchers stay here: they are the page's existing
+  understanding of what belongs to a hub or a topic, and the rail builder is
+  handed them rather than growing a second copy.
+*/
+const shownInCollections = new Set(collections.flatMap((c) => c.items));
+
+const rails = buildRails(safeAllItems, {
+  hubs: hubBrands,
+  matchesHub,
+  hasTopic,
+  alreadyShown: shownInCollections,
+  hrefForCategory: (category) =>
+    HUB_CATEGORY_ORDER.includes(category as any) ? `/featured#${category}` : null,
+});
+
+const hasRows = collections.length > 0 || rails.length > 0;
+
+/*
+  The floating nav lists the collections and then the rails, which is the page's
+  own order. With the sections flattened there is no second level to represent.
+*/
+const navItems = [
+  ...collections.map((c) => ({ id: c.id, text: c.name, level: 2 })),
+  /*
+    `r.anchor ?? r.id`, the SAME expression the section element uses below. The
+    nav links by `getElementById`, so giving it the rail's internal id while the
+    element carries its public anchor is a link to nothing: the Games entry
+    pointed at `#gaming` against a section with `id="games"` and its handler
+    returned at `if (!id || !heading) return;`, silently. Introduced here by the
+    anchor change itself and caught by reading the rendered hrefs back.
+  */
+  ...rails.map((r) => ({ id: r.anchor ?? r.id, text: r.title, level: 2 })),
+];
+---
+
+<style>
+  /* ─── NETFLIX ROWS ──────────────────────────────────────────────────────── */
+
+  /* There is one view now. The rules that swapped this wrapper between the rows
+     and a hidden results grid went with the grid itself — there is no
+     `is-filtered` state left to enter, and nothing to hide. */
+
+  /* ─── OVERARCHING SECTIONS ──────────────────────────────────────────── */
+
+  /*
+    The rows now sit directly under the hero: the filter row that used to
+    separate them is gone from /feed (FeedLayout's `showFilters`). That row
+    carried `margin: 4rem 0 3rem`, and it took the gap with it, so the first
+    row had nothing holding it off the bottom of the hero. This is the standard
+    editorial spacing, owned by the thing that actually needs it rather than
+    inherited from a neighbour that might be removed again.
+  */
+  #feed-rows {
+    padding-top: 3rem; 
+  }
+  
+  /*
+    ─── WHY THE SEAM MOVED WITH THE WINDOW ───────────────────────────────────
+
+    This pulled the rows up over the hero with `margin-top: -6vh`, and the hero
+    below it used to carry a mask fading its bottom edge out. The mask was
+    removed; the overlap was not, only reduced. What was left is a hard-edged
+    hero with the rows still sliding under it by an amount nobody can predict.
+
+    `vh` is a fraction of the window's HEIGHT. The hero's height is set by its
+    CONTENT: how many lines the headline wraps to, how tall the stage is. Those
+    two numbers have nothing to do with each other, so the overlap was a
+    different fraction of the hero at every window size. Measured on this page:
+
+      1440 x 900    hero 654px   overlap  54px    8.3% of the hero
+      1440 x 1800   hero 654px   overlap 108px   16.5% of the hero
+      3840 x 2160   hero 632px   overlap 130px   20.5% of the hero
+
+    The first two are the SAME page at the same width. Only the window's height
+    changed, and the overlap doubled. At 4K it is worse than either: the hero is
+    actually shorter there, while the overlap is largest, so the two move in
+    opposite directions.
+
+    That is the whole of "it's different at different window sizes", and no
+    amount of retuning the number fixes it — any `vh` value has the same
+    problem. So the overlap is gone. The hero ends where it ends and the banner
+    begins, which is identical at every size because neither measurement
+    depends on the other.
+  */
+  :global(.has-spotlight-hero) #feed-rows {
+    position: relative;
+    z-index: 1; /* Sits under the hero's z-index: 10 */
+    margin-top: 0;
+  }
+
+  /*
+    A full-bleed banner directly under a full-bleed hero reads as one cinematic
+    block, so there is no gap between them to pay for. Without a banner the
+    first row is type on the page ground and still needs its air.
+  */
+  :global(.has-spotlight-hero) #feed-rows[data-hero-banner] {
+    padding-top: 0;
+  }
+
+  @media (max-width: 768px) {
+    #feed-rows {
+      padding-top: 2rem;
+    }
+    :global(.has-spotlight-hero) #feed-rows {
+      margin-top: 0;
+    }
+  }
+
+  /* The rotator brings its own internal padding, so this only owns the gap
+     between it and the shelves either side of it. */
+  .feed-rotator-break {
+    margin-block: 1rem 2.5rem;
+  }
+
+  /*
+    ─── RAILS ────────────────────────────────────────────────────────────────
+
+    A rail is a `.feed-row` with a plain heading. It reuses the row metrics, the
+    rail scrolling, the snapping and the chevrons exactly as they were; the only
+    new rule is the heading size, which steps up from a row title because a rail
+    IS a section now rather than one row inside one.
+
+    ─── WHAT WAS REMOVED HERE ────────────────────────────────────────────────
+
+    Every `.feed-section*` rule: the heads, the titles, the row wrappers and the
+    whole collapsed-section treatment (toggle, chevron, count). They styled six
+    collapsible SECTIONS containing fourteen rows. There are no sections any
+    more, so nothing matched them, and dead CSS on a page in the Lighthouse gate
+    is not free.
+  */
+  .feed-rail {
+    margin-bottom: 3rem;
+  }
+
+  .feed-rail-title {
+    font-size: clamp(1.05rem, 1.7vw, 1.45rem);
+    letter-spacing: 0.06em;
+    color: var(--color-white, #f0f0f0);
+  }
+
+  /*
+    ONE EXPLORE LINK, USED AT THREE DEPTHS — the tentpole shelf, a section
+    heading and a row heading. `.prestige-hub-link` keeps its emerald tint on
+    the lit shelf; everything else reads in the neutral one. Same metrics, same
+    glyph, same hover, so the three never drift apart.
+  */
+  .feed-hub-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+    font-family: var(--font-body);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    text-decoration: none;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.62);
+    transition: color 0.25s ease;
+  }
+
+  .feed-hub-link:hover,
+  .feed-hub-link:focus-visible {
+    color: var(--color-white, #f0f0f0);
+  }
+
+  .feed-hub-link:focus-visible {
+    color: var(--color-white, #f0f0f0);
+  }
+
+  .feed-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+  }
+
+  .feed-row {
+    margin-bottom: 2.75rem;
+  }
+
+  .feed-row-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .feed-row-title {
+    font-family: var(--font-display, sans-serif);
+    font-size: clamp(1rem, 1.6vw, 1.35rem);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-white, #f0f0f0);
+    margin: 0;
+  }
+
+  /*
+    THE RAIL.
+
+    `overflow-x: auto` with mandatory snapping, and the scrollbar hidden on all
+    three engines — WebKit needs a pseudo-element, Firefox needs
+    `scrollbar-width`, old Edge needs `-ms-overflow-style`. Hiding it is only
+    safe because the chevrons exist on desktop and touch scrolls natively.
+
+    `overscroll-behavior-x: contain` stops a rail that has hit its end from
+    handing the gesture to the browser, which on iOS is the back-swipe: without
+    it, flicking the last card sideways navigates away from the feed.
+  */
+  /*
+    ─── THE RAIL RUNS EDGE TO EDGE, THE HEADINGS DO NOT ───────────────────────
+
+    `.container-page` gives this page a 25.6px gutter and a 1536px max-width.
+    The section and row headings want both. The rail wants neither: a card
+    should scroll past the edge of the screen, not stop short of it inside an
+    invisible box.
+
+    `margin-inline: calc(50% - 50vw)` is the break-out. `50%` is half the
+    element's own containing block and `50vw` is half the viewport, so the
+    negative margin is exactly the distance from the container's edge to the
+    viewport's on each side — it works at any width, including above the
+    container's max-width where the gap is much larger than the gutter.
+
+    `padding-inline` then puts that distance straight back as PADDING rather
+    than margin, which is the whole trick: the scrollable area now spans the
+    viewport, but the first card still starts on the same vertical line as the
+    heading above it, and the last one can scroll fully off the right edge.
+
+    KNOWN AND ACCEPTED: `vw` includes the scrollbar, 15px here, so the rail
+    overshoots the layout viewport by 7.5px a side. `body` is `overflow-x:
+    clip` (verified: the document's horizontal overflow is 0), so this is
+    clipped rather than scrollable, and it costs about a tenth of the feather
+    width below. Correcting it would mean publishing the scrollbar width from
+    JS and making a layout rule depend on a script having run.
+  */
+  .feed-row-rail {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    list-style: none;
+    margin-block: 0;
+    margin-inline: calc(50% - 50vw);
+    /*
+      ─── ROOM FOR THE HOVER LIFT ──────────────────────────────────────────
+
+      A scroll container cannot clip one axis and show the other: `overflow-x:
+      auto` forces `overflow-y` to clip too, whatever it is set to. The slate
+      lifts 4px and casts a 28px shadow on hover, and both were being cut off
+      flush at the rail's edges.
+
+      Padding, not margin: it is inside the scrollport, so the lifted card has
+      somewhere to go.
+    */
+    padding-block: 0.75rem 1.5rem;
+    padding-inline: calc(50vw - 50%);
+
+    /*
+      ─── SNAPPING IGNORES `padding`, SO THE GUTTER HAS TO BE DECLARED TWICE ──
+
+      `scroll-snap-align: start` aligns a card to the SNAPPORT, and the
+      snapport starts at the scroll container's padding-box edge unless
+      `scroll-padding` says otherwise. So the snap engine treated the gutter
+      above as empty space to be scrolled away: the rail loaded at
+      `scrollLeft: 32` on a phone, putting the first card flush against the
+      screen edge, 32px to the left of the heading it is supposed to line up
+      with. It looked like the padding had not applied at all. It had; the
+      scroll position was hiding it.
+
+      It CANNOT be fixed in this rule, which is why it is set from the script
+      below instead. `scroll-padding`'s percentages resolve against the
+      scrollport — this element's own, now full-bleed, padding box — while
+      `padding`'s resolve against the containing block. The identical
+      expression therefore means two different things on the two properties:
+      `calc(50vw - 50%)` computes to 32px as padding here and to exactly 0 as
+      scroll-padding, which is the value that was doing nothing. `sync()` copies
+      the resolved padding across, so the two can never disagree, and it
+      already re-runs on resize.
+    */
+
+    /*
+      ─── THE FEATHER IS SCROLL-AWARE, NOT ALWAYS ON ──────────────────────────
+
+      A flat `linear-gradient(to right, transparent 0%, black 5%, black 95%,
+      transparent 100%)` fades BOTH edges permanently, and the first card sits
+      at the left edge — so the card a reader looks at first is always half
+      faded, before anything has scrolled anywhere. The effect is meant to say
+      "this continues past the edge"; on a rail resting at position 0 nothing
+      continues past the left edge, and saying so is a lie the eye reads as a
+      rendering fault.
+
+      So each side's feather is a variable, and `sync()` in the script below
+      turns it on only for a side that genuinely has content beyond it. Both
+      default to 0, which makes the gradient fully opaque — that is also the
+      correct no-JS state, since without script there is no scroll position to
+      reason about and a permanently faded card would be the only visible
+      result.
+    */
+    --feed-fade: clamp(28px, 5vw, 96px);
+    --fade-start: 0px;
+    --fade-end: 0px;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      #000 var(--fade-start),
+      #000 calc(100% - var(--fade-end)),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      #000 var(--fade-start),
+      #000 calc(100% - var(--fade-end)),
+      transparent 100%
+    );
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+  }
+
+  .feed-row-rail::-webkit-scrollbar { display: none; }
+
+  /*
+    `min(85vw, 320px)` is the brief's number and it is the right one: 320px caps
+    the card on desktop, and 85vw keeps a phone showing a sliver of the NEXT
+    card, which is the only affordance saying the rail scrolls at all.
+
+    `flex: 0 0 auto` matters as much as the width — without it flex would shrink
+    every card to fit the row and nothing would overflow, so nothing would
+    scroll.
+  */
+  .feed-row-item {
+    flex: 0 0 auto;
+    /* `--feed-card` steps with `--page-max` (modules/layout.css) so a row shows
+       about five cards at any screen size, instead of four at 1440 and ten on a
+       4K display. 85vw keeps the phone on a near-full-width card. */
+    width: min(85vw, var(--feed-card, 320px));
+    scroll-snap-align: center;
+    display: flex;
+  }
+
+  /*
+    ─── THE FEATURED SHELF'S CARDS ARE BIGGER THAN EVERYONE ELSE'S ───────────
+
+    A shelf that is meant to say "start here" cannot be the same size as the
+    browse rows under it. It had the banner and the accent wash and otherwise
+    identical 320px cards, so the only thing marking it out was scenery — and
+    scenery reads as decoration, not as emphasis.
+
+    560 against 320 is a 75% step up in width and a bit over three times the
+    area. 440 was tried first and read as "slightly bigger", which is the worst
+    of both: it spends the vertical space of a decision without making one.
+
+    A cap, not a fixed width. `min()` keeps the phone case on 90vw, where the
+    card is already as wide as the screen allows.
+
+    Scoped to `.feed-row--prestige` so the browse rows keep their density. The
+    point is the CONTRAST between them; making every row bigger would cost the
+    same space and say nothing.
+  */
+  .feed-row--prestige .feed-row-item {
+    width: min(90vw, var(--feed-card-featured, 560px));
+  }
+
+  /*
+    ─── THE FIRST AND LAST CARD OPT OUT OF CENTRE SNAPPING ───────────────────
+
+    The brief asks for `snap-center`, and it is the right feel mid-rail. At the
+    two ends it is not: a rail cannot scroll past 0 or past its maximum, so a
+    first card that wants to be centred can never reach its own snap position.
+    With `snap-type: mandatory` the browser resolves that by jumping to the
+    nearest position it CAN satisfy, which skips the first card — it becomes
+    unreachable, half off the left edge, and the same happens to the last card
+    at the other end.
+
+    `snap-align: start` on the first and `end` on the last are the positions
+    those two can actually occupy. Everything between them still centres.
+  */
+  /* ─── BOOKENDS ────────────────────────────────────────────────────────────
+     Deliberately quieter than a content tile: they are the ends of the shelf,
+     not things to look at. No artwork, no fill — the row's own accent wash
+     shows through, which is what ties the mark to the rail it heads.
+
+     They inherit `.feed-row-item`'s width and snap, so nothing here touches
+     either. Sizing them separately is how a rail blows out on mobile. */
+  /*
+    ─── THE OFF-RAMP IS BRANDED, AND HAS NO BOX ──────────────────────────────
+
+    It shipped as a bordered panel with an arrow in it, which read as an empty
+    card at the end of every row. The Instagram rail's terminal tile is the
+    reference: no border, no panel, just the mark and the words sitting on the
+    page.
+
+    What it gains here is the hub's OWN key art behind it, dimmed almost to
+    black — the same image /featured uses to represent that hub, so the tile
+    looks like the place it sends you rather than like a generic arrow. Set as
+    `--bookend-art` from the markup; a hub with no key art simply gets the flat
+    gradient and still reads.
+  */
+  .feed-bookend-inner {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.9rem;
+    width: 100%;
+    height: 100%;
+    min-height: 160px;
+    padding: 1.25rem;
+    border: none;
+    /* No radius and no border: there is no edge to round. The art layer below
+       feathers out to transparent on all four sides, so anything drawn on this
+       box would be the hard edge the mask exists to remove.
+
+       NO overflow:hidden either — a clipping ancestor is what hard rule 3
+       forbids anywhere near an iframe. */
+    background: none;
+    text-align: center;
+    isolation: isolate;
+  }
+
+  /* The art, and the scrim that keeps the label legible over it. Two layers on
+     one pseudo-element so the tile needs no extra markup. */
+  .feed-bookend--cta .feed-bookend-inner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(to bottom, rgba(10, 10, 10, 0.82), rgba(10, 10, 10, 0.94)),
+      var(--bookend-art, none);
+    background-size: cover, cover;
+    background-position: center, center;
+    opacity: 0.9;
+    transition: opacity 0.35s ease;
+
+    /*
+      ─── NO EDGES. IT DISSOLVES INTO THE PAGE ───────────────────────────────
+
+      The radius is gone and a mask took its place. A 4px radius still draws a
+      rectangle: the art and its scrim ended on a hard line, so the tile read as
+      a box parked at the end of the rail rather than as the rail running out.
+
+      TWO linear masks INTERSECTED, not one radial. A radial on a tile this much
+      taller than it is wide pinches the middle of the long sides and leaves the
+      label sitting in a visibly dimmer patch. Intersecting a horizontal and a
+      vertical ramp fades all four edges evenly and leaves the centre at full
+      strength, which is where the mark and the words are.
+
+      Where `mask-composite` is not understood the two masks add instead of
+      intersecting, which still softens the corners and never produces a hard
+      edge. The fallback is a weaker version of the same thing, not a different
+      result.
+    */
+    -webkit-mask-image:
+      linear-gradient(to right, transparent 0%, #000 20%, #000 80%, transparent 100%),
+      linear-gradient(to bottom, transparent 0%, #000 17%, #000 83%, transparent 100%);
+    mask-image:
+      linear-gradient(to right, transparent 0%, #000 20%, #000 80%, transparent 100%),
+      linear-gradient(to bottom, transparent 0%, #000 17%, #000 83%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+  }
+
+  /*
+    ─── BORDERLESS BRAND LOGO BOOKEND ─────────────────────────────────────────
+  */
+  .feed-bookend--logo-only .feed-bookend-inner {
+    background: transparent !important;
+    border: none;
+    padding: 0;
+    gap: 1.5rem;
+    min-height: auto;
+  }
+
+  .feed-bookend--logo-only .feed-bookend-inner::before {
+    display: none; /* remove the scrim and background */
+  }
+
+  .feed-bookend-logo {
+    max-width: 160px;
+    height: auto;
+    object-fit: contain;
+    opacity: 0.9;
+    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .feed-bookend-link:hover .feed-bookend-logo,
+  .feed-bookend-link:focus-visible .feed-bookend-logo {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+
+  .feed-bookend-link:hover::before,
+  .feed-bookend-link:focus-visible::before {
+    opacity: 1;
+  }
+
+  /*
+    ─── THE ROW MARK ────────────────────────────────────────────────────────
+
+    Big enough to read at a glance, which the 96px-in-a-tile version was not —
+    HBO Max's wordmark in particular was illegible at that size. Capped in
+    HEIGHT rather than width because these marks are wildly different shapes: a
+    height cap makes a round DC roundel and a long `prime video` wordmark carry
+    the same visual weight, where a width cap would make the roundel tiny.
+  */
+  .feed-row-title--mark {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    line-height: 0;
+  }
+
+  /*
+    ─── SIZED FOR A LETTERBOXED WORDMARK, NOT FOR THE FILE ───────────────────
+
+    Most of these assets are SQUARE canvases with the mark floating inside
+    them: HBO Max, Netflix and Prime Video all measure 1:1, so a 46px box gave
+    roughly 15px of actual wordmark and "hbo max" was unreadable. Marvel's is a
+    true 2.2:1 lockup and was fine at the same height, which is what made the
+    problem look like a Max-only bug.
+
+    The cap is raised until the letterboxed ones read, which makes the genuinely
+    wide marks a little larger than strictly necessary — the right trade, since
+    an oversized wordmark still reads and an undersized one does not. Cropping
+    the padding out of the source assets would be the real fix, and is an
+    editorial job rather than a CSS one.
+  */
+  .feed-row-mark {
+    height: clamp(44px, 5vw, 72px);
+    width: auto;
+    max-width: 260px;
+    object-fit: contain;
+    opacity: 0.95;
+  }
+
+  /* Matches the Instagram rail's terminal card: icon over a two-line label,
+     uppercase from `text-transform` rather than baked into the markup so the
+     two ends of a rail cannot drift in case. */
+  .feed-bookend-link {
+    color: var(--color-white-muted, #888);
+    font-family: var(--font-display, sans-serif);
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    line-height: 1.35;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: color 0.35s ease, border-color 0.35s ease, background 0.35s ease;
+  }
+
+  .feed-bookend-icon {
+    stroke: currentColor;
+    transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .feed-bookend-link:hover,
+  .feed-bookend-link:focus-visible {
+    color: var(--color-white, #f0f0f0);
+  }
+
+  .feed-bookend-link:hover .feed-bookend-icon,
+  .feed-bookend-link:focus-visible .feed-bookend-icon {
+    transform: translateX(4px);
+  }
+
+  .feed-bookend-link:focus-visible {
+    outline: 2px solid var(--color-accent-text, #ef4444);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .feed-bookend-link,
+    .feed-bookend-icon,
+    .feed-bookend--cta .feed-bookend-inner::before {
+      transition: none;
+    }
+
+    .feed-bookend-link:hover .feed-bookend-icon {
+      transform: none;
+    }
+  }
+
+  /*
+    The sticky mark and its scrim are gone with the tile they pinned. A row's
+    branding lives in its heading now (.feed-row-mark), where it needs neither
+    a pin nor a gradient to hide the cards passing under it.
+  */
+
+  /*
+    ─── THE CENTRED TILE, AND THE ONE YOU PICKED ─────────────────────────────
+
+    WHITE says "this is the one you are looking at". RED says "this is the one
+    you chose, and it is now in the hero". Two different facts, so two colours,
+    and the selected state wins where both are true.
+
+    Drawn with `outline` rather than `border` deliberately: a border would add
+    to the tile's box and shift every neighbour by 2px the moment the ring
+    appeared, which on a snapping rail nudges the scroll position. An outline
+    is painted outside the box and costs no layout, and `outline-offset: -2px`
+    tucks it just inside the artwork's own edge so it reads as a rim rather
+    than a halo.
+
+    Phones only — desktop shows four tiles at once, so there is no single
+    "current" one to mark.
+  */
+  /*
+    `:global()` on the card, and it is not optional.
+
+    Astro scopes these styles by stamping a `data-astro-cid-*` attribute on the
+    elements in THIS component's template. `.feed-row-item` is one of them;
+    `.content-card` is not — it is rendered by ContentCard.astro and carries
+    that component's attribute instead. Without :global() the compiled selector
+    asks for a card bearing FeedGrid's scope, which no card has, and the rules
+    silently match nothing.
+
+    Caught by measuring: with the classes correctly applied, `outlineColor` read
+    back the inherited #f0f0f0 rather than either ring colour, which is what an
+    element with `outline-style: none` reports.
+  */
+  @media (max-width: 899px) {
+    .feed-row-item.is-centered :global(.content-card) {
+      outline: none;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3), 0 0 12px rgba(255, 255, 255, 0.1);
+    }
+
+    .feed-row-item.is-selected :global(.content-card) {
+      outline: none;
+      box-shadow: 0 0 0 1px var(--color-accent-text, #ef4444), 0 0 16px rgba(var(--brand-rgb, 239, 68, 68), 0.3);
+    }
+
+    .feed-row-item :global(.content-card) {
+      transition: box-shadow 0.25s ease;
+    }
+  }
+
+  @media (max-width: 899px) and (prefers-reduced-motion: reduce) {
+    .feed-row-item :global(.content-card) {
+      transition: none;
+    }
+  }
+
+  .feed-row-item:first-child {
+    scroll-snap-align: start;
+  }
+
+  .feed-row-item:last-child {
+    scroll-snap-align: end;
+  }
+
+  .feed-row-item > * { width: 100%; }
+
+  .feed-row-nav {
+    display: none;
+    gap: 0.4rem;
+  }
+
+  .feed-row-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 0;
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--color-white, #f0f0f0);
+    cursor: pointer;
+    transition: border-color 0.25s ease, background 0.25s ease, opacity 0.25s ease;
+  }
+
+  .feed-row-chevron:hover {
+    border-color: rgba(var(--brand-rgb, 204, 0, 0), 0.85);
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  /* Set by the rail's scroll handler: nothing further to scroll that way. */
+  .feed-row-chevron[data-disabled='true'] {
+    opacity: 0.25;
+    pointer-events: none;
+  }
+
+  /* Mouse territory only. A coarse pointer scrolls the rail with a thumb. */
+  @media (hover: hover) and (pointer: fine) {
+    .feed-row-nav { display: flex; }
+  }
+
+  /*
+    THE PRESTIGE ROW. A dark emerald wash, which is Lanterns' own colour, bled
+    out past the page gutter so the row reads as a band rather than a boxed
+    panel. No `overflow: hidden` anywhere in here: these rows carry cards that
+    open a YouTube iframe, and hard rule 3 makes any clipping ancestor of one a
+    black box on iOS Safari.
+  */
+  /* The banner is the top of this row, and it meets the hero directly. */
+  #feed-rows[data-hero-banner] .feed-row--prestige {
+    padding-top: 0;
+  }
+
+  /*
+    ─── THE ROW SITS ON TOP OF THE BANNER'S OVERHANG ─────────────────────────
+
+    The banner's artwork paints past its own box, down behind this heading and
+    the top of the tiles (see `--banner-bleed` in FeedRowBanner.astro). The art
+    is a positioned element and these are not, so without a stacking position of
+    their own the picture would paint over the row's own content.
+  */
+  .feed-row--prestige .feed-row-head,
+  .feed-row--prestige .feed-row-rail {
+    position: relative;
+    z-index: 1;
+  }
+
+  .feed-row--prestige {
+    position: relative;
+    /* 1.5rem is the shelf's own air. It was raised to 3rem to push the banner
+       clear of an overlap that no longer exists, and the banner zeroes it
+       outright below. */
+    padding: 1.5rem 0 1.25rem;
+    margin-bottom: 3.25rem;
+  }
+
+  /* Already full-bleed by the same reasoning as the rail above, and unchanged:
+     this is the band BEHIND the row, so it uses inset rather than margin. */
+  /*
+    A radial bloom anchored behind the lockup, not a flat linear wash. The light
+    now has a source — it falls off from the badge outward — which is what makes
+    the shelf read as lit rather than tinted.
+  */
+  /*
+    ─── THE SHELF WASH, LIT AND FEATHERED ────────────────────────────────────
+
+    What stood here had two visible faults.
+
+    HARD TOP AND BOTTOM EDGES. `inset: 0 -50vw` clamped the wash to exactly the
+    row's box, and the colours it started with were opaque dark greens —
+    `rgba(6, 46, 34, 0.8)` and `rgba(8, 30, 24, 0.55)` — beginning at y=0. An
+    opaque band that starts abruptly against a near-black page draws a line,
+    and that line ran across the screen just above the eyebrow.
+
+    IT RAN OUT TO THE RIGHT. A 600px bloom and a linear wash ending at 70% left
+    the fourth card onward, and the Explore link, sitting in plain black.
+
+    The repair is light rather than paint: low-alpha brand colour over the
+    page's own background, spread wide, with a vertical mask taking both edges
+    to zero so there is no boundary to see. Nothing here is opaque.
+
+    The mask is on the PSEUDO-ELEMENT, deliberately. Feathering the row itself
+    would mean a clipping ancestor, and these shelves carry cards that open a
+    YouTube iframe — hard rule 3.
+  */
+  .feed-row--accented {
+    position: relative;
+  }
+
+  .feed-row--accented::before {
+    content: '';
+    position: absolute;
+    /* Bleeds past the row on all four sides so the mask has somewhere to fade
+       INTO, rather than fading exactly where the content stops. */
+    inset: -3.5rem -50vw -4rem;
+    background:
+      /*
+        ─── THE WHOLE ROW IS THEMED, NOT JUST ITS LEFT-HAND END ──────────────
+
+        The wash was one bloom at 20% plus a left-to-right ramp decaying to
+        alpha 0.02 by 80%, so the colour was spent before the third card and
+        everything past it sat on plain black. On a shelf that is meant to BE
+        the show — its banner above it, its logo in the heading — a tint that
+        only reaches the first card reads as a gradient someone forgot to
+        finish rather than as a theme.
+
+        Three layers now, and each has a job:
+
+          a bloom at each END, offset vertically from one another, so the band
+          has depth and neither side is flat;
+
+          an even BED under both, which is what actually themes the middle. It
+          never drops below the blooms' own tail, so there is no stretch of the
+          row that is not in the show's colour.
+
+        Alphas stay low. This is light over the page's own background, not
+        paint: the cards' artwork still has to read as the brightest thing in
+        the row.
+      */
+      radial-gradient(
+        ellipse 1200px 460px at 10% 26%,
+        rgba(var(--row-accent-rgb, 204, 0, 0), 0.24) 0%,
+        rgba(var(--row-accent-rgb, 204, 0, 0), 0.10) 48%,
+        transparent 84%
+      ),
+      radial-gradient(
+        ellipse 1150px 440px at 90% 74%,
+        rgba(var(--row-accent-rgb, 204, 0, 0), 0.20) 0%,
+        rgba(var(--row-accent-rgb, 204, 0, 0), 0.08) 50%,
+        transparent 86%
+      ),
+      linear-gradient(
+        90deg,
+        rgba(var(--row-accent-rgb, 204, 0, 0), 0.13) 0%,
+        rgba(var(--row-accent-rgb, 204, 0, 0), 0.10) 30%,
+        rgba(var(--row-accent-rgb, 204, 0, 0), 0.10) 70%,
+        rgba(var(--row-accent-rgb, 204, 0, 0), 0.13) 100%
+      );
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      #000 14%,
+      #000 86%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      #000 14%,
+      #000 86%,
+      transparent 100%
+    );
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .feed-row-head--prestige {
+    align-items: flex-end;
+  }
+
+  /*
+    `.feed-row-head` is `justify-content: space-between`, which does nothing
+    with a single child — the actions would fall to the LEFT edge on exactly
+    the rows that have a banner, which is all of them in practice. `margin-left:
+    auto` puts them back on the right without the head needing to know how many
+    children it has.
+  */
+  .feed-row-head--prestige > .prestige-actions:only-child {
+    margin-left: auto;
+  }
+
+  .prestige-brand-lockup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .prestige-eyebrow {
+    font-family: var(--font-body);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(215, 247, 230, 0.7);
+  }
+
+  .prestige-title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  /*
+    ─── THE HUB'S REAL MARK, NOT ITS NAME IN A BOX ───────────────────────────
+
+    This slot used to render the word "DC" inside a hairline rectangle, on the
+    reasoning that an <img> "would mean another asset lookup and another thing
+    to go missing". Neither half held up. `prestigeHub` comes from
+    resolveEntity(), which already resolves `logo` for the card watermarks, so
+    the lookup is paid for whether this uses it or not; and the shelf sits
+    directly above cards that ARE showing the real mark, so drawing it as type
+    here was the one place on the row that did not look like DC.
+
+    Sized like `.feed-row-mark`, and for the same reason: DC, HBO Max, Netflix
+    and Prime ship as 320x320 letterboxed squares, so the cap has to clear the
+    padding baked into the asset before the mark itself reads. Smaller than that
+    rule because this one sits inline with the row title rather than above it.
+  */
+  .prestige-mark {
+    flex-shrink: 0;
+    height: clamp(34px, 3.6vw, 52px);
+    width: auto;
+    max-width: 150px;
+    object-fit: contain;
+  }
+
+  /* The fallback, for a hub with no mark on file: its name as a lettermark. */
+  .prestige-badge {
+    flex-shrink: 0;
+    padding: 0.2rem 0.55rem;
+    border: 1.5px solid rgba(255, 255, 255, 0.9);
+    border-radius: 3px;
+    font-family: var(--font-display, sans-serif);
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #fff;
+    line-height: 1.35;
+  }
+
+  /* A hairline rule rather than a literal "|" glyph, which sat at the wrong
+     height against a 900-weight display face and changed with the font. */
+  .prestige-divider {
+    flex-shrink: 0;
+    width: 1px;
+    align-self: stretch;
+    min-height: 1.1em;
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      rgba(215, 247, 230, 0.55),
+      transparent
+    );
+  }
+
+  .feed-row--prestige .prestige-title {
+    font-family: var(--font-display, sans-serif);
+    font-size: clamp(1.15rem, 2.1vw, 1.7rem);
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    color: #d7f7e6;
+    /* Reads the row's own accent so the mark and the wash behind it can never
+       be two different greens. */
+    text-shadow: 0 0 24px rgba(var(--row-accent-rgb, 16, 185, 129), 0.6), 0 2px 18px rgba(0, 0, 0, 0.8);
+    margin: 0;
+    min-width: 0;
+  }
+
+  .prestige-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+  }
+
+  .prestige-hub-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-body);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: rgba(215, 247, 230, 0.82);
+    transition: color 0.25s ease, transform 0.25s ease;
+  }
+
+  .prestige-hub-link:hover,
+  .prestige-hub-link:focus-visible {
+    color: #eafff4;
+  }
+
+  .prestige-hub-link:focus-visible {
+    outline: 2px solid var(--color-accent-text, #ef4444);
+    outline-offset: 3px;
+  }
+
+  /* Below the phone breakpoint the lockup and the link stop competing for one
+     line: the link drops under the title rather than squeezing it. */
+  @media (max-width: 640px) {
+    .feed-row-head--prestige {
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .prestige-hub-link {
+      font-size: 0.58rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .prestige-hub-link {
+      transition: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .feed-row-rail { scroll-behavior: auto; }
+    .feed-row-chevron { transition: none; }
+  }
+</style>
+<div id="feed-grid-wrapper" style="width: 100%; clear: both; transition: opacity 0.2s ease;">
+  {/*
+    ─── TWO VIEWS, ONE WRAPPER ───────────────────────────────────────────────
+
+    UNFILTERED  -> #feed-rows  (horizontal rows, grouped by hub)
+    FILTERED    -> #feed-grid  (the flat grid the hash filter already builds)
+
+    They are mutually exclusive and the swap is a single class on this wrapper,
+    set by applyFilters() below. Doing it this way is deliberate: the filtering
+    code already owns #feed-grid entirely — it caches the grid's original HTML,
+    rebuilds it from the <template>, and pages it with Load More. Rebuilding
+    that machinery to page six independent horizontal rows would have been a
+    rewrite of the one part of this component that currently works.
+
+    So the rows are the browse view and the grid is the results view, which is
+    also the right split for a reader: you scan rows when you have not decided
+    what you want, and you want a plain list the moment you have.
+  */}
+
+  {/*
+    ─── ONE ROW COMPONENT, RENDERED AT TWO DEPTHS ────────────────────────────
+
+    The tentpole row sits on its own above the sections; every other row sits
+    inside one. Both use the same `.feed-row` markup so a change to the rail,
+    the snapping or the chevrons lands in both places at once.
+
+    HEADING LEVELS: FeedLayout already emits the page h1 and an sr-only h2
+    naming the surface, so section titles are h2 (siblings of it) and row
+    titles are h3. Nothing skips a level, which is what axe reports on.
+  */}
+
+  {hasRows && (
+    <>
+      <FloatingPageNav entries={navItems} />
+      <div id="feed-rows" data-hero-banner={collections[0]?.bannerArt ? "" : undefined}>
+
+      {/*
+        ─── CURATED COLLECTIONS ───────────────────────────────────────────────
+
+        The Lanterns shelf, generalised. Identical treatment: full-bleed key
+        art, the brand lockup, the accent wash across the whole row and tiles at
+        the `featured` size. One per flagged series, so a second show can have
+        one without touching this file.
+      */}
+      {collections.map((collection) => (
+        <section
+          class="feed-row feed-row--prestige feed-row--accented"
+          id={collection.id}
+          data-row={collection.id}
+          data-collection
+          style={`--row-accent-color: ${collection.accentColor}; --row-accent-rgb: ${collection.accentRgb};`}
+        >
+          {collection.bannerArt && (
+            <FeedRowBanner
+              art={collection.bannerArt}
+              logo={collection.bannerLogo}
+              title={collection.name}
+              eyebrow={collection.eyebrow}
+              accentRgb={collection.accentRgb}
+              href={collection.hub?.url}
+            />
+          )}
+
+          {/*
+            ─── THE LOCKUP BELONGS TO WHICHEVER ELEMENT IS THERE, NOT BOTH ────
+
+            FeedRowBanner already renders the eyebrow in words at its lower
+            left, the series logo as art at its lower right, and the row's
+            `<h2>` as sr-only beside the eyebrow. Rendering the lockup HERE as
+            well put "FEATURED SERIES - DC" on screen twice and "LANTERNS"
+            twice — once as the banner's logo and once as type — which is what
+            was reported.
+
+            FeedRowBanner.astro carried both decisions at once: its header note
+            said the duplication was accepted for consistency, and a note
+            further down said "the row head below now carries only its
+            actions". The code followed the first and the comment promised the
+            second. This is the second, which is also the owner's call on
+            seeing it.
+
+            A collection with NO banner art keeps the full lockup — otherwise
+            that row would have no visible heading and no <h2> at all, since
+            both live in the banner.
+          */}
+          <div class="feed-row-head feed-row-head--prestige">
+            {!collection.bannerArt && (
+              <div class="prestige-brand-lockup">
+                <span class="prestige-eyebrow">{collection.eyebrow}</span>
+                <div class="prestige-title-group">
+                  {collection.hub?.logo ? (
+                    <img src={collection.hub.logo} alt={collection.hub.title} class="prestige-mark" loading="lazy" decoding="async" />
+                  ) : (
+                    collection.hub && <span class="prestige-badge">{collection.hub.title}</span>
+                  )}
+                  {collection.hub && <span class="prestige-divider" aria-hidden="true"></span>}
+                  <h2 class="feed-row-title prestige-title">{collection.name}</h2>
+                </div>
+              </div>
+            )}
+
+            <div class="prestige-actions">
+              {collection.hub && (
+                <a href={collection.hub.url} class="prestige-hub-link">
+                  <span>EXPLORE {collection.hub.title.toUpperCase()} HUB</span>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </a>
+              )}
+              <div class="feed-row-nav" aria-hidden="true">
+                <button type="button" class="feed-row-chevron" data-dir="-1" tabindex="-1">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                    <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" />
+                  </svg>
+                </button>
+                <button type="button" class="feed-row-chevron" data-dir="1" tabindex="-1">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                    <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <ul class="feed-row-rail" data-rail>
+            {collection.items.map((item: any, index: number) => (
+              <li class="feed-row-item">
+                <ContentCard
+                  item={item}
+                  index={index}
+                  context="feed"
+                  variant="featured"
+                  brandOverride={collectionBrands.get(collection.id) ?? null}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+
+      {collections.length > 0 && (
+        <div class="feed-rotator-break">
+          <CommercialRotator />
+        </div>
+      )}
+
+      {/*
+        ─── THE RAILS ─────────────────────────────────────────────────────────
+
+        Flat, and visible. They were six collapsible SECTIONS containing
+        fourteen rows, and the accordion existed because fourteen stacked rows
+        made the page an endless scroll. Eight rails do not stack that way: a
+        rail of seventeen stories is one row of vertical space, which is the
+        whole reason a browse surface uses them. Nothing to collapse, so nothing
+        to open.
+
+        Same `.feed-row` markup as the collections above, so the rail, the
+        snapping and the chevrons are one implementation.
+      */}
+      {rails.map((rail) => (
+        <section class="feed-row feed-rail" id={rail.anchor ?? rail.id} data-row={rail.id}>
+          <div class="feed-row-head">
+            <h2 class="feed-row-title feed-rail-title">{rail.title}</h2>
+            <div class="feed-row-actions">
+              {rail.href && (
+                <a href={rail.href} class="feed-hub-link">
+                  <span>EXPLORE {rail.title.toUpperCase()}</span>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </a>
+              )}
+              {/* Mouse affordances only. A touch device scrolls the rail
+                  directly and a keyboard reaches every card through it. */}
+              <div class="feed-row-nav" aria-hidden="true">
+                <button type="button" class="feed-row-chevron" data-dir="-1" tabindex="-1">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                    <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" />
+                  </svg>
+                </button>
+                <button type="button" class="feed-row-chevron" data-dir="1" tabindex="-1">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                    <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <ul class="feed-row-rail" data-rail>
+            {rail.items.map((item: any, index: number) => (
+              <li class="feed-row-item">
+                <ContentCard item={item} index={index} context="feed" />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+      </div>
+    </>
+  )}
+
+  {!hasRows && (
+    <EmptyState message={MESSAGES.noContent} actionLabel={LABELS.viewAllContent} actionHref="/feed" />
+  )}
+</div>
+
+{/*
+  The <template id="full-dataset-cards"> that stood here is gone. It rendered
+  EVERY feed item a second time as full cards so the legacy hash filter could
+  clone from it, which on /feed meant shipping 40 extra card subtrees the page
+  never displayed. Removed for parse time and TBT.
+
+  Nothing reads it any more: the filter row is no longer rendered on any /feed
+  route (FeedLayout's `showFilters`), so there is no control that can set a
+  filter, and the horizontal rows segment the same content by type and brand.
+*/}
+
+
+
+{/*
+  ─── NO PAGINATION AND NO LOAD MORE ────────────────────────────────────────
+
+  <Pagination /> used to render here, then a Load More button that replaced it.
+  Both are gone from THIS component; the Pagination component itself still
+  serves /intel, /category/*, /events, the events archive and event coverage.
+
+  The rows carry every item already, so a "page 2" of a feed you scroll
+  sideways is a second, contradictory way through the same content. Load More
+  outlived it only to page the filtered grid, and that grid no longer exists.
+*/}
+
+<script>
+  /*
+    ─── THE CLIENT-SIDE HASH FILTER IS GONE ──────────────────────────────────
+
+    ~300 lines of initFeedClientFiltering() stood here: it rebuilt #feed-grid
+    from a <template> of the whole feed, paged it with Load More, kept the
+    filter buttons' active states in step and normalised ?category= into a hash.
+
+    Every input it had has been removed. The /feed routes no longer render a
+    filter row, the template it cloned from is gone, and the grid it wrote into
+    is gone — it had already been dead at runtime, bailing at its own
+    `if (!feedGrid || !template) return;` on every page load.
+
+    A stale /feed#film link now simply shows the full feed instead of a filtered
+    grid with no way back to the rows, which is the better of the two.
+  */
+
+  /*
+    THE ROW CHEVRONS.
+
+    Bound per rail, and re-bound on every `astro:page-load` because ClientRouter
+    swaps the document without reloading this module. Nothing is stored on
+    `window` here (unlike the delegated handlers below) because these listeners
+    live on elements that are themselves replaced by the swap, so they go with
+    the nodes they were attached to.
+
+    `scrollBy` gets 90% of the rail's visible width rather than a fixed pixel
+    count, so one press advances by roughly one screenful of cards at any
+    breakpoint, and the snap points do the final alignment.
+  */
+  function initFeedRows() {
+    document.querySelectorAll<HTMLElement>('.feed-row').forEach((row) => {
+      const rail = row.querySelector<HTMLElement>('[data-rail]');
+      if (!rail) return;
+
+      const chevrons = Array.from(row.querySelectorAll<HTMLButtonElement>('.feed-row-chevron'));
+
+      /* A rail that fits its content has nothing to scroll, so both chevrons
+         are disabled rather than left live and inert-feeling. 1px of slack
+         absorbs sub-pixel layout rounding, which otherwise leaves the right
+         chevron permanently enabled on an exactly-fitting row. */
+      /*
+        ─── READS AND WRITES ARE SEPARATED, AND COALESCED ─────────────────────
+
+        This runs on every scroll tick. It used to read layout (`scrollWidth`,
+        `clientWidth`, `scrollLeft`) and then immediately write to the DOM
+        (`setAttribute`, `setProperty`) in the same frame, which forces a
+        synchronous re-layout on each tick — layout thrashing, straight into
+        Total Blocking Time on a page carrying nine of these rails.
+
+        Now every read happens first, and the writes are deferred to the next
+        animation frame.
+
+        `pending` is the second half of the fix and matters as much as the rAF:
+        a scroll gesture fires this dozens of times, and scheduling a frame per
+        tick just moves the pile-up rather than removing it. One frame is
+        queued at a time and it writes the freshest values it was given.
+      */
+      let pending = false;
+      let latest = { max: 0, left: 0 };
+
+      const sync = () => {
+        // 1. Read layout properties first.
+        const max = rail.scrollWidth - rail.clientWidth;
+        const left = rail.scrollLeft;
+        latest = { max, left };
+
+        if (pending) return;
+        pending = true;
+
+        // 2. Write to the DOM asynchronously.
+        requestAnimationFrame(() => {
+          pending = false;
+          const scrollable = latest.max > 1;
+          const atStart = latest.left <= 1;
+          const atEnd = latest.left >= latest.max - 1;
+
+          chevrons.forEach((btn) => {
+            const dir = Number(btn.dataset.dir);
+            btn.setAttribute('data-disabled', String(!scrollable || (dir < 0 ? atStart : atEnd)));
+          });
+
+          /*
+            The feather, one side at a time. A side is faded only when there is
+            actually content past it, so a rail resting at 0 has a crisp first
+            card and a fade on the right. Derived from the SAME values as the
+            chevrons above: the button being disabled and that edge being
+            un-feathered are one fact, and computing them separately is how the
+            two would drift.
+          */
+          rail.style.setProperty('--fade-start', !scrollable || atStart ? '0px' : 'var(--feed-fade)');
+          rail.style.setProperty('--fade-end', !scrollable || atEnd ? '0px' : 'var(--feed-fade)');
+        });
+      };
+
+      /*
+        Mirror the rail's resolved inline padding onto its scroll padding. See
+        the note on `scroll-padding-inline` in the stylesheet: the snapport
+        otherwise starts at the padding-box edge and the snap engine scrolls
+        the gutter away on load, landing the first card flush against the
+        screen instead of on its heading's line.
+
+        Read from the computed style rather than restated as a number, so the
+        breakpoint that owns the gutter stays the only place it is defined.
+      */
+      const syncScrollPadding = () => {
+        const { paddingLeft } = getComputedStyle(rail);
+        rail.style.scrollPaddingInline = paddingLeft;
+      };
+
+      chevrons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const dir = Number(btn.dataset.dir) || 1;
+          rail.scrollBy({ left: dir * rail.clientWidth * 0.9, behavior: 'smooth' });
+        });
+      });
+
+      /*
+        ─── WHICH TILE IS THE READER LOOKING AT ──────────────────────────────
+
+        On a phone the rail shows one tile at a time, so "the tile in the
+        middle" is the tile being read — and nothing said which one that was.
+
+        An IntersectionObserver whose ROOT is the rail and whose rootMargin
+        squeezes it to a narrow band down the centre: the tile intersecting that
+        band is the centred one. That is why this is an observer rather than a
+        scroll handler doing arithmetic — the browser already knows what
+        overlaps what, and it tells us off the main thread.
+
+        Desktop shows four tiles at once, so there is no single "current" tile
+        to mark and the observer is never created there.
+      */
+      const centreQuery = window.matchMedia('(max-width: 899px)');
+
+      const observeCentre = () => {
+        const key = '__hqRailCentreObserver';
+        const previous = (rail as any)[key] as IntersectionObserver | undefined;
+        if (previous) previous.disconnect();
+        (rail as any)[key] = undefined;
+
+        if (!centreQuery.matches) {
+          rail.querySelectorAll('.is-centered').forEach((el) => el.classList.remove('is-centered'));
+          return;
+        }
+
+        const observer = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              entry.target.classList.toggle('is-centered', entry.isIntersecting);
+            }
+          },
+          { root: rail, rootMargin: '0px -45% 0px -45%', threshold: 0 },
+        );
+
+        rail.querySelectorAll('.feed-row-item').forEach((tile) => observer.observe(tile));
+        (rail as any)[key] = observer;
+      };
+
+      observeCentre();
+      centreQuery.addEventListener('change', observeCentre);
+
+      /*
+        Tapping the centred tile promotes it into the hero. The ring turns from
+        white to red to confirm that, and only one tile in a rail can be the
+        selected one.
+
+        Marked here rather than in the hero's swap handler because it is a
+        property of THIS rail — a click in one row must not clear the mark in
+        another, and the hero does not know which rail it was handed an item
+        from.
+      */
+      rail.addEventListener('click', (event) => {
+        const tile = (event.target as Element)?.closest('.feed-row-item');
+        if (!tile || !rail.contains(tile)) return;
+        rail.querySelectorAll('.is-selected').forEach((el) => el.classList.remove('is-selected'));
+        tile.classList.add('is-selected');
+      });
+
+      rail.addEventListener('scroll', sync, { passive: true });
+      window.addEventListener('resize', () => {
+        syncScrollPadding();
+        sync();
+      });
+
+      syncScrollPadding();
+
+      /*
+        Undo the snap the browser already performed.
+
+        On first layout the scroll-padding above has not been applied yet, so
+        the snap engine treats the rail's inline padding as empty space and
+        scrolls it away to align the first card to the bare padding box. Adding
+        scroll-padding afterwards fixes future snaps but does not re-run that
+        one, which left the rail resting at a non-zero scrollLeft — 32px, then
+        8px once the padding landed mid-pass — with the first card sitting left
+        of the heading it should line up with.
+
+        Init only, deliberately. Doing this on resize would throw away a
+        reader's place in the rail every time a phone rotated.
+      */
+      rail.scrollLeft = 0;
+
+      sync();
+    });
+  }
+
+  /*
+    ─── ARRIVING WITH A ROW IN MIND ──────────────────────────────────────────
+
+    /intel links to /feed#all-videos rather than to the video-only route, which
+    had no way back out of itself. The hash names a row, and this takes the
+    reader to it.
+
+    Not left to the browser's native anchor jump: the rows are lazy in practice
+    (images and the rotator settle after paint), so the element's position when
+    the fragment resolves is not where it ends up. One frame plus a short beat
+    is the difference between landing on the row and landing above it.
+
+    `block: 'center'` rather than 'start' because the site header is fixed —
+    'start' would put the row's heading underneath it.
+  */
+  /*
+    ─── ARRIVING IS A JUMP; A HASH CHANGE IN PLACE IS A SCROLL ───────────────
+
+    These are two different events and they used to share one answer: a smooth
+    scroll, always. On ARRIVAL that is the second half of a lurch. The page
+    transition has already animated the move, and then this smooth-scrolled
+    several thousand pixels down a 7000px feed to reach the row, in a different
+    axis from the slide that had just run. Reported as "way too jarring".
+
+    So arrival lands instantly, underneath the transition: by the time the new
+    page is painted it is already at the row, and the only motion the reader
+    sees is the one the transition drew.
+
+    A hashchange on the page you are ALREADY on has no transition to hide
+    behind, and there the scroll IS the feedback that the click did something.
+    That one stays smooth.
+  */
+  function scrollToHashRow(instant = false) {
+    const id = window.location.hash.replace('#', '');
+    if (!id) return;
+
+    const row = document.getElementById(id) || document.querySelector(`[data-row="${CSS.escape(id)}"]`);
+    if (!row) return;
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const behavior = instant || reduced ? 'auto' : 'smooth';
+    
+    if (instant) {
+      row.scrollIntoView({ behavior: 'auto', block: 'center' });
+    } else {
+      setTimeout(() => row.scrollIntoView({ behavior, block: 'center' }), 150);
+    }
+  }
+
+  /* Same reason as /featured's: a hash change on the page you are already on is
+     not a navigation, so `astro:page-load` never fires for it. */
+  const ROW_HASH_KEY = '__hqFeedRowHashListener';
+  const previousRowHashListener = (window as any)[ROW_HASH_KEY];
+  if (previousRowHashListener) window.removeEventListener('hashchange', previousRowHashListener);
+  /* Wrapped, not passed directly: the handler receives an Event, which would
+     land in the `instant` parameter and be truthy. */
+  const onRowHashChange = () => scrollToHashRow(false);
+  (window as any)[ROW_HASH_KEY] = onRowHashChange;
+  window.addEventListener('hashchange', onRowHashChange);
+
+  document.addEventListener('astro:after-swap', () => {
+    /* `true`: this is an arrival, so the row is already in place behind the
+       page transition rather than scrolled to after it. Fires in after-swap
+       so the browser captures the scrolled page for its View Transition
+       snapshot, preventing a mid-animation jump. */
+    scrollToHashRow(true);
+  });
+
+  /*
+    ─── THE COLLAPSIBLE SECTIONS ARE GONE ────────────────────────────────────
+
+    ~70 lines of accordion lived here. It existed because the page was six
+    sections containing fourteen stacked ROWS, which made it an endless scroll.
+    Eight horizontal rails do not stack that way: a rail of seventeen stories
+    occupies one row of vertical space, which is the entire reason a browse
+    surface uses them. There is nothing left to collapse.
+
+    /featured keeps its accordion, and should: its rows are decks of hub cards,
+    which DO stack.
+  */
+
+  document.addEventListener('astro:page-load', () => {
+    initFeedRows();
+    /* Fallback for hard reloads where after-swap doesn't fire */
+    if (!document.documentElement.dataset.pageTransition) {
+      scrollToHashRow(true);
+    }
+    
+    /*
+      ─── THE SPOTLIGHT SWAP MOVED TO THE HERO ────────────────────────────────
+
+      Clicking a card to load it into the hero used to be wired up here, which
+      tied it to this component: /category/<slug> mounts the same
+      <FeedSpotlightHero /> but not this grid, so its cards were inert and its
+      hero could only ever show the newest item.
+
+      The behaviour belongs to the hero, not to whatever happens to be rendering
+      cards beneath it, so it lives in FeedSpotlightHero.astro now and every
+      page that mounts that hero gets it.
+    */
+  });
+</script>

@@ -1,0 +1,59 @@
+---
+import Layout from '../layouts/Layout.astro';
+import LocalCmsApp from '../components/admin/LocalCmsApp.tsx';
+
+---
+
+<Layout title="Local Admin CMS" description="Manage local videos" noindex={true}>
+  <div class="local-cms-shell">
+    <div class="border-b border-white/10 pb-5 mb-6 flex justify-between items-center">
+      <div>
+        <h1 class="text-3xl font-bold font-syne text-white uppercase tracking-wider">Local CMS Dashboard</h1>
+        <p class="mt-3 text-sm text-gray-300 font-bold tracking-widest uppercase flex items-center gap-3">
+          DIRECTLY MANAGING <span class="font-mono font-medium normal-case tracking-normal text-red-400 bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20 text-xs">src/data/videos.json</span>
+        </p>
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="/media-kit" target="_blank" class="inline-flex items-center rounded-md bg-white/10 text-xs font-medium text-white ring-1 ring-inset ring-white/20 hover:bg-white/20 transition-colors" style="padding: 0.25rem 0.5rem; text-decoration: none;">
+          Preview Media Kit
+        </a>
+        <span class="inline-flex items-center rounded-md bg-green-500/10 text-xs font-medium text-green-400 ring-1 ring-inset ring-green-500/20" style="padding: 0.25rem 0.5rem;">
+          Dev Mode Active
+        </span>
+      </div>
+    </div>
+
+    <div class="w-full h-full">
+      <LocalCmsApp client:only="react" />
+    </div>
+  </div>
+</Layout>
+
+<style>
+  /* Plain scoped CSS, not Tailwind utilities - several utility classes on
+     this specific wrapper (mx-auto, pt-28, px-4/sm:px-6/lg:px-8, pb-12) were
+     computing to 0px in dev despite being present in the class list; traced
+     it to Tailwind's JIT not generating rules for them here (className list
+     confirmed via getComputedStyle + a live CSSOM scan finding zero matching
+     rules across all 11 loaded stylesheets). Root cause undetermined after
+     real investigation; this sidesteps it entirely via a different code path
+     that doesn't depend on Tailwind's content scanning. */
+  .local-cms-shell {
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 120px 1rem 3rem;
+  }
+  @media (min-width: 640px) {
+    .local-cms-shell {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .local-cms-shell {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+</style>

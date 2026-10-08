@@ -1,0 +1,550 @@
+---
+/**
+ * IntelMagazine — the three-column magazine spread at the top of /intel.
+ *
+ * ─── THE LAYOUT ───────────────────────────────────────────────────────────
+ *     ┌──────────┬────────────────────┬──────────┐
+ *     │ left     │  CENTRE FEATURE    │ right    │
+ *     │ rail     │  big image         │ rail     │
+ *     │ (links)  │  title + standfirst│ (links)  │
+ *     └──────────┴────────────────────┴──────────┘
+ * Clicking a rail item swaps the CENTRE, rather than loading a new page.
+ *
+ * ─── HOW THE SWAP WORKS (worth understanding before editing) ──────────────
+ * This is a "progressive enhancement". The page is built so it works with no
+ * JavaScript at all, and the script only makes it nicer:
+ *
+ *   1. Astro renders the newest article into the centre on the server. So the
+ *      centre is real HTML before any script runs — good for search engines
+ *      and for anyone whose JS fails to load.
+ *   2. Every rail item is a real <a href="/intel/…">. With JS off, clicking
+ *      one just navigates to that article. Nothing is broken.
+ *   3. With JS on, the script below intercepts the click, cancels the
+ *      navigation, and rewrites the centre using the data-* attributes the
+ *      rail item carries.
+ *
+ * That ordering is deliberate. If the rails were <button>s or <div>s with
+ * click handlers, Google could not follow them and the articles would lose
+ * the internal links that help them rank — which is the whole point of
+ * hosting articles here instead of on Substack.
+ *
+ * ─── HOW TO CHANGE WHAT THE CENTRE SHOWS ──────────────────────────────────
+ * Adding a field (say, a read time) takes three edits:
+ *   1. add the element in the centre markup below, with an id;
+ *   2. add a matching data-* attribute in MagazineRail.astro;
+ *   3. copy it across in the `paint()` function in the script below.
+ *
+ * ─── HOW TO CHANGE THE SIZE OF THE SPREAD ─────────────────────────────────
+ * MAGAZINE_SIZE in src/data/sections.js decides how many articles the spread
+ * uses in total (1 centre + the rest split between the rails).
+ *
+ * ─── HOW TO RESTYLE IT ────────────────────────────────────────────────────
+ * `.intel-magazine` and `.intel-feature-*` in src/styles/modules/intel.css.
+ */
+import MagazineRail from './MagazineRail.astro';
+import { Image } from 'astro:assets';
+/* Pre-cropped mark, matching ArticleThumb — see the note there for why the
+   padded square version renders blurry at fallback sizes. */
+import logoImage from '../assets/logo-mark.webp';
+import { LABELS } from '../data/content.js';
+import { articlePreview } from '../lib/articles';
+import { clipPreview } from '../lib/homepage-feed';
+import { getDisplayTags } from '../lib/tags';
+
+import { getCardImageSources } from '../lib/card-images.js';
+import type { ArticleRecord } from '../lib/articles';
+import { INTEL_FEATURE_SIZES } from '../lib/intel-sizes';
+
+
+type MagazineArticle = ArticleRecord & { link: string; isExternal: boolean };
+
+interface Props {
+  /** Newest first. The first article becomes the opening centre feature. */
+  articles: MagazineArticle[];
+  /**
+   * The homepage's miniature of this spread. Below the fold there, so the
+   * feature image must not load eagerly at high priority (it would compete
+   * with the hero, the homepage's real LCP), and it sits under the section's
+   * own <h2>, so its title is an <h3>. Size is `.intel-magazine--compact`
+   * in src/styles/modules/home.css.
+   */
+  compact?: boolean;
+}
+
+const { articles, compact = false } = Astro.props;
+const FeatureHeading = compact ? 'h3' : 'h2';
+/*
+  In the compact spread every article's lede is cut to the SAME character
+  count, so the centre is the same height whichever article is in it and the
+  section never grows on a swap (Andrew's rule). The swap script reads the
+  budget from `data-excerpt-chars` and cuts with the same clipPreview().
+*/
+const COMPACT_EXCERPT_CHARS = 170;
+const ledeOf = (a: MagazineArticle) =>
+  compact ? [clipPreview(articlePreview(a), COMPACT_EXCERPT_CHARS)] : articlePreview(a);
+
+/*
+  The newest article opens the spread in the centre.
+
+  Typed explicitly as possibly-undefined: TypeScript assumes indexing an array
+  always yields an element, but `articles` can legitimately be empty (no
+  articles published yet), and the markup below guards on `feature` for
+  exactly that reason.
+*/
+const feature: MagazineArticle | undefined = articles[0];
+/*
+  ─── THE FEATURE IMAGE IS THE LCP ELEMENT, SO IT MUST BE A RENDITION ────────
+
+  This used to render `src={feature.image}` — the raw Substack URL, straight
+  from their S3 bucket with no transform. The Lighthouse gate caught it the
+  moment /intel was added to the audited set:
+
+    largest-contentful-paint   9.1 s   score 1/100
+    LCP element  <img id="intel-feature-img" src="https://substack-post-media…">
+    heaviest     1198 kB  substack-post-media.s3.amazonaws.com/public/images/…
+
+  1.2 MB, for an element that renders at 720x405 on desktop and 326x183 on a
+  phone. Every other cover on the site goes through getCardImageSources; this
+  one did not, and it cost /intel 23 points — three identical 75% samples, so
+  not runner noise.
+*/
+const featureSources = feature?.image ? getCardImageSources(feature.image) : null;
+
+/* Measured render size: 720x405 desktop, 326x183 mobile. The srcset offers
+   400/600/900/1200, so this lets the browser take ~900 on a retina desktop and
+   ~400-600 on a phone instead of one 1456px original for both. */
+/*
+  ─── THE LEAD COLUMN IS NOT 720px ANY MORE ─────────────────────────────────
+
+  This was a flat 720px, which was the centre column's width while the page
+  capped at 1536. The page steps up on wide screens now (`--page-max`) and the
+  spread rebalances with it, so the column runs 957px at 1920 and 1162px at
+  3840 — and the browser, told 720, fetched a 720px rendition for a 1162px box.
+  Measured: a 1.61x upscale, on the largest picture on the page.
+
+  Largest-first, like every other `sizes` on the site: written the other way
+  round an earlier narrow match swallows every wider screen.
+
+  The numbers are the column's measured widths rounded up, and they track
+  `--page-max` in modules/layout.css together with the `.intel-magazine`
+  proportions in modules/intel.css. All three change at the same breakpoints.
+*/
+const FEATURE_SIZES = INTEL_FEATURE_SIZES;
+
+/*
+  EVERY article in the spread gets a rail tile — including the one currently
+  in the centre.
+
+  This was a bug worth understanding: the rails used to hold only the articles
+  *after* the feature. So the opening article had no tile, and once you clicked
+  a rail item the article you had just navigated away from vanished from the
+  page entirely — you could not get back to it without reloading. Now the rails
+  are the full, stable set and the centre simply reflects whichever one is
+  selected, with that tile marked active.
+
+  Split SEQUENTIALLY — newest half down the left rail, older half down the
+  right — not alternating sides.
+
+  Alternating (0→left, 1→right, 2→left …) was chosen to keep the rails equal
+  when the count is odd, but it broke reading order. With six articles the
+  left rail ran Aug 21 → Aug 19 → May 5 and the right ran Aug 20 → Aug 4 →
+  May 2: each rail descends on its own, but the second-newest article sits at
+  the top of the OTHER column, so there is no single chronological list to
+  follow. Reported from production as "the articles are not in order".
+
+  Reading order only worked if you scanned row by row ACROSS the spread, and
+  a full-height feature image sits between the two rails, so nobody does.
+  Column by column is how flanking rails actually read.
+
+  This also fixes the accessibility claim the old note made rather than
+  breaking it: the DOM emits the left rail then the right, so sequential
+  halves mean DOM order now genuinely equals reading order. Alternating did
+  not — it emitted 0, 2, 4, 1, 3, 5.
+
+  Odd counts put the extra tile on the left, which is the half holding the
+  newer articles.
+*/
+const railArticles = articles;
+const splitAt = Math.ceil(railArticles.length / 2);
+const leftRail = railArticles.slice(0, splitAt);
+const rightRail = railArticles.slice(splitAt);
+
+/*
+  The slug of the article currently in the centre, so its rail tile can render
+  already-active on the server. Without this the highlight would only appear
+  after the first click, and a no-JS visitor would never see it at all.
+*/
+const activeSlug = feature?.slug ?? '';
+---
+
+{
+  /* No articles at all → render nothing. The page shows an <EmptyState />. */
+  feature && (
+    <section
+      class:list={['intel-magazine', { 'intel-magazine--compact': compact }]}
+      aria-label="Featured articles"
+      data-excerpt-chars={compact ? COMPACT_EXCERPT_CHARS : undefined}
+    >
+      <MagazineRail side="left" articles={leftRail} activeSlug={activeSlug} compact={compact} />
+
+      {/*
+        The swappable centre.
+        aria-live="polite" tells a screen reader to announce the new headline
+        when the centre changes — without it, the swap would be silent and a
+        non-sighted reader would have no idea anything happened.
+      */}
+      <article class="intel-feature" id="intel-feature" aria-live="polite">
+        <a class="intel-feature-link" id="intel-feature-link" href={feature.link}>
+          <div class="intel-feature-image">
+            {/*
+              BOTH states are rendered, and the script toggles between them.
+
+              Why: the centre swaps between articles, and some have a cover
+              image while others don't. If only one state existed in the DOM,
+              switching from a no-image article to one with a cover would have
+              nothing to put the image into. Rendering both and flipping a
+              `hidden` attribute keeps the swap a simple attribute change
+              instead of rebuilding markup in JavaScript.
+
+              width/height reserve the space before the image loads, which is
+              what stops the page jumping (cumulative layout shift).
+            */}
+            {/* Compact (the homepage, below the fold): the sources wait in
+                data-defer-* until the page has loaded, so this cover does not
+                race the hero art for bandwidth (src/lib/deferred-images.ts).
+                /intel's own feature is its LCP image and loads at once. */}
+            <img
+              id="intel-feature-img"
+              src={compact ? undefined : featureSources?.src || ''}
+              srcset={compact ? undefined : featureSources?.srcset || undefined}
+              data-defer-src={compact ? featureSources?.src || undefined : undefined}
+              data-defer-srcset={compact ? featureSources?.srcset || undefined : undefined}
+              sizes={featureSources?.srcset ? FEATURE_SIZES : undefined}
+              alt={feature.image ? `Cover image for ${feature.title}` : ''}
+              width="1456"
+              height="816"
+              loading={compact ? 'lazy' : 'eager'}
+              fetchpriority={compact ? 'auto' : 'high'}
+              hidden={!feature.image}
+            />
+            <div
+              id="intel-feature-fallback"
+              class="article-thumb-fallback is-feature"
+              hidden={!!feature.image}
+            >
+              {/* 2x the displayed width, at the mark's own ratio — same
+                  reasoning as ArticleThumb.astro. */}
+              <Image
+                src={logoImage}
+                alt=""
+                width={520}
+                height={239}
+                class="article-thumb-fallback-logo"
+                loading="lazy"
+                decoding="async"
+                aria-hidden="true"
+              />
+              <span class="article-thumb-fallback-title" id="intel-feature-fallback-title">
+                {feature.title}
+              </span>
+            </div>
+          </div>
+
+          <div class="intel-feature-copy">
+            <span class="intel-feature-meta">
+              <span id="intel-feature-category">{(() => {
+                const finalTags = getDisplayTags(feature);
+                return finalTags.length > 0 ? finalTags.join(' | ') + ' | ' : '';
+              })()}</span><span id="intel-feature-date">{feature.date}</span>
+            </span>
+
+            {/* h2: the page <h1> is the "THE INTEL" title in the header. */}
+            <FeatureHeading class="intel-feature-title" id="intel-feature-title">{feature.title}</FeatureHeading>
+
+            {/*
+              THE LEDE — several real paragraphs, not a one-line teaser.
+
+              The centre feature is a full editorial block: on desktop it sits
+              beside two rails of article tiles, and on a phone it is the first
+              thing on the page. A single sentence left a large empty area
+              under the "Read More" link, which read as a rendering fault
+              rather than as design. articlePreview() returns the article's
+              opening paragraphs (see buildPreview in articles-transform.ts).
+
+              A <div> of <p>s rather than one <p>, because a paragraph cannot
+              legally contain other paragraphs.
+            */}
+            <div class="intel-feature-excerpt" id="intel-feature-excerpt">
+              {ledeOf(feature).map((paragraph) => <p>{paragraph}</p>)}
+            </div>
+
+            {/* "Read More" rather than "Read Now": the excerpt above is a
+                real preview, so this continues reading rather than starting
+                it. Wording lives in LABELS (src/data/content.js). */}
+            <span class="intel-feature-cta">
+              {LABELS.readMore} <span class="arrow" aria-hidden="true">&rarr;</span>
+            </span>
+          </div>
+        </a>
+      </article>
+
+      <MagazineRail side="right" articles={rightRail} activeSlug={activeSlug} compact={compact} />
+    </section>
+  )
+}
+
+<script>
+  import { clipPreview } from '../lib/homepage-feed';
+  import { cancelDeferredImage, initDeferredImages } from '../lib/deferred-images';
+
+  /*
+    Magazine centre-swap.
+
+    Runs on `astro:page-load` rather than `DOMContentLoaded` because this site
+    uses Astro's ClientRouter for page transitions: on a client-side
+    navigation there is no new DOMContentLoaded, so a handler bound to it
+    would silently stop working after the first navigation.
+  */
+  function initIntelMagazine() {
+    const feature = document.getElementById('intel-feature');
+    if (!feature) return; // Not on a page with a magazine — nothing to do.
+
+    /* The compact spread's images are held back until the page has loaded
+       (data-defer-*, see ArticleThumb's `defer`). A no-op on /intel. */
+    initDeferredImages();
+
+    // The parts of the centre that change when a rail item is picked.
+    const link = document.getElementById('intel-feature-link') as HTMLAnchorElement | null;
+    const image = document.getElementById('intel-feature-img');
+    const title = document.getElementById('intel-feature-title');
+    const excerpt = document.getElementById('intel-feature-excerpt');
+    const category = document.getElementById('intel-feature-category');
+    const date = document.getElementById('intel-feature-date');
+
+    const items = Array.from(document.querySelectorAll<HTMLAnchorElement>('.intel-rail-item'));
+    if (!link || items.length === 0) return;
+
+    /*
+      ─── ONLY FADE TEXT THAT IS ACTUALLY CUT ────────────────────────────
+
+      The excerpt is capped at a fixed number of lines so the spread cuts at
+      the same place on every article. A preview shorter than that cap now
+      ends where its words end (see `max-height` in intel.css), and fading
+      the last line of a COMPLETE sentence reads as a rendering fault.
+
+      `scrollHeight > clientHeight` is the only reliable way to ask "did
+      this overflow", and it has to be re-asked after every swap: the rail's
+      articles do not share a paragraph count. One tolerance pixel absorbs
+      sub-pixel line-box rounding, which otherwise reports a one-line
+      overflow on text that fits exactly.
+    */
+    function markClipped() {
+      if (!excerpt) return;
+      excerpt.classList.toggle('is-clipped', excerpt.scrollHeight > excerpt.clientHeight + 1);
+    }
+
+    /** Redraw the centre feature from one rail item's data-* attributes. */
+    function paint(item: HTMLAnchorElement) {
+      const data = item.dataset;
+      const href = data.href ?? item.getAttribute('href') ?? '';
+
+      link!.setAttribute('href', href);
+
+      // An article we host is an internal link; one still living on Substack
+      // is external and should open in a new tab with a safe rel.
+      if (data.external === 'true') {
+        link!.setAttribute('target', '_blank');
+        link!.setAttribute('rel', 'noopener noreferrer');
+      } else {
+        link!.removeAttribute('target');
+        link!.removeAttribute('rel');
+      }
+
+      if (title) title.textContent = data.title ?? '';
+
+      /*
+        Rebuild the lede paragraph by paragraph.
+
+        `data-preview` is the paragraphs joined with a blank line, so split on
+        that and create one <p> per entry. Each paragraph's text is set with
+        `textContent`, never innerHTML — so even though this content came from
+        an RSS feed originally, it can never execute as markup here.
+      */
+      if (excerpt) {
+        const paragraphs = (data.preview ?? '')
+          .split('\n\n')
+          .map((text) => text.trim())
+          .filter(Boolean);
+        /* The compact (homepage) spread cuts every lede to one budget. */
+        const budget = Number(feature!.closest<HTMLElement>('.intel-magazine')?.dataset.excerptChars);
+        const lede = budget > 0 ? [clipPreview(paragraphs, budget)] : paragraphs;
+        excerpt.replaceChildren(
+          ...lede
+            .map((text) => {
+              const p = document.createElement('p');
+              p.textContent = text;
+              return p;
+            }),
+        );
+      }
+
+      if (category) category.textContent = data.tags ?? '';
+      if (date) date.textContent = data.date ?? '';
+
+      /*
+        Show the cover image when the article has one, otherwise show the
+        branded fallback. `hidden` is a plain HTML attribute — setting it is
+        equivalent to display:none, with no CSS class bookkeeping.
+      */
+      const fallback = document.getElementById('intel-feature-fallback');
+      const fallbackTitle = document.getElementById('intel-feature-fallback-title');
+
+      if (data.image) {
+        if (image) {
+          /*
+            Use the RENDITION the rail carries, not the raw url. `data-image`
+            is only a "has a cover?" flag; setting it as the src is what made
+            the feature load a 1.2 MB Substack original. srcset is set (or
+            cleared) in step, or a stale one from the previous article would
+            outrank the new src.
+          */
+          /* A still-pending deferred source must not land later and
+             overwrite the article just painted. */
+          cancelDeferredImage(image as HTMLImageElement);
+          image.setAttribute('src', data.imageSrc || data.image);
+          if (data.imageSrcset) image.setAttribute('srcset', data.imageSrcset);
+          else image.removeAttribute('srcset');
+          image.setAttribute('alt', `Cover image for ${data.title ?? ''}`);
+          image.removeAttribute('hidden');
+        }
+        if (fallback) fallback.setAttribute('hidden', '');
+      } else {
+        if (image) image.setAttribute('hidden', '');
+        if (fallbackTitle) fallbackTitle.textContent = data.title ?? '';
+        if (fallback) fallback.removeAttribute('hidden');
+      }
+
+      /*
+        Restart the fade-in so the swap reads as a deliberate change rather
+        than text mutating in place. Removing the class, forcing the browser
+        to recalculate layout by reading offsetWidth, then re-adding it is the
+        standard way to replay a CSS animation — without the reflow the
+        browser batches both changes and nothing appears to happen.
+      */
+      feature!.classList.remove('is-swapping');
+      void feature!.offsetWidth;
+      feature!.classList.add('is-swapping');
+
+      /* After the new paragraphs are in, never before: the old article's
+         overflow tells us nothing about this one. */
+      markClipped();
+    }
+
+    /** Mark which rail item is currently in the centre. */
+    function setActive(slug: string) {
+      items.forEach((item) => {
+        const isActive = item.dataset.slug === slug;
+        item.classList.toggle('active', isActive);
+        // aria-current is the accessible equivalent of the visual highlight.
+        if (isActive) item.setAttribute('aria-current', 'true');
+        else item.removeAttribute('aria-current');
+      });
+    }
+
+    function select(item: HTMLAnchorElement) {
+      paint(item);
+      setActive(item.dataset.slug ?? '');
+    }
+
+    /*
+      The article the SERVER rendered never goes through paint(), so without
+      this the first thing the reader sees is the one view that never gets
+      measured. Fonts move the answer — a webfont swapping in after this runs
+      can add or remove a line — so it is asked again once the fonts settle.
+      `document.fonts` is guarded because it is absent in some older
+      WebKit builds, where the initial call still stands.
+    */
+    markClipped();
+    if (document.fonts?.ready) document.fonts.ready.then(markClipped).catch(() => {});
+
+    items.forEach((item) => {
+      // Guard against binding twice if this runs again after a navigation.
+      if (item.dataset.bound) return;
+      item.dataset.bound = 'true';
+
+      item.addEventListener('click', (event) => {
+        /*
+          Let the browser handle anything that isn't a plain left-click:
+          cmd/ctrl-click opens a new tab, middle-click too, shift opens a
+          window. Hijacking those would break behaviour people rely on.
+        */
+        const mouseEvent = event as MouseEvent;
+        if (
+          event.defaultPrevented ||
+          mouseEvent.button !== 0 ||
+          mouseEvent.metaKey ||
+          mouseEvent.ctrlKey ||
+          mouseEvent.shiftKey ||
+          mouseEvent.altKey
+        ) {
+          return;
+        }
+
+        event.preventDefault(); // Stay on the page; swap instead of navigating.
+        select(item);
+
+        /*
+          Record the choice in the URL (#some-article-slug) with replaceState,
+          so the state can be shared or reloaded. replaceState rather than
+          pushState so the back button leaves /intel entirely instead of
+          stepping back through every swap the reader made.
+        */
+        const slug = item.dataset.slug;
+        /* `history.state`, never null: null replaces ClientRouter's state for
+           this entry, and a later popstate with no state makes it skip the page
+           swap — the URL changes while the old DOM stays. */
+        if (slug) history.replaceState(history.state, '', `#${slug}`);
+
+        /*
+          ─── `start`, NOT `nearest` ───────────────────────────────────────
+          Reported on landscape mobile: pick an article from a rail and the
+          page lands in the MIDDLE of it rather than at the top of its hero.
+
+          `nearest` scrolls the minimum distance needed to bring the element
+          into view — and when the element is TALLER than the viewport it
+          already spans the whole scrollport, so it counts as "in view" and
+          barely scrolls at all. The reader is left wherever they happened to
+          be, which is somewhere down the body of the article they just
+          picked. Measured at 844x390 after a rail tap: the feature is 1060px
+          tall in a 390px viewport and its top sat at -670px, so the cover
+          image and headline were both off-screen above. Desktop had a milder
+          version of the same thing (-211px); portrait only looked correct
+          because the feature nearly fits an 844px-tall viewport.
+
+          `start` aligns the feature's top edge with the top of the scrollport
+          every time, regardless of how tall it is. The fixed navbar is
+          already accounted for by the global `scroll-padding-top`, so the
+          headline lands just below the chrome rather than under it.
+        */
+        /*
+          A host can name a larger block to bring into view instead, with
+          `data-magazine-scroll-anchor`: the homepage's mini spread sits
+          under its own "INTEL" heading, and scrolling to the feature put
+          that heading under the navbar (Andrew: the label must stay
+          visible). /intel sets nothing, so it behaves exactly as above.
+        */
+        const anchor = feature!.closest<HTMLElement>('[data-magazine-scroll-anchor]') ?? feature!;
+        anchor.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      });
+    });
+
+    // If the page was opened with a #slug, restore that selection.
+    const hash = decodeURIComponent(window.location.hash.replace('#', ''));
+    if (hash) {
+      const match = items.find((item) => item.dataset.slug === hash);
+      if (match) select(match);
+    }
+  }
+
+  document.addEventListener('astro:page-load', initIntelMagazine);
+</script>

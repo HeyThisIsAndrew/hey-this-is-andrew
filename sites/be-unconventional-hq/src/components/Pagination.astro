@@ -1,0 +1,210 @@
+---
+export interface Props {
+  page: {
+    currentPage: number;
+    lastPage: number;
+    url: {
+      prev: string | undefined;
+      next: string | undefined;
+      current: string;
+    };
+  };
+}
+
+const { page } = Astro.props;
+const { lastPage, url } = page;
+
+
+---
+
+{/*
+  "Previous" / "Next", not "Previous Page" / "Next Page".
+
+  The word "Page" was redundant in both labels, and because the buttons were
+  sized by their content it also made them different widths — "PREVIOUS PAGE"
+  is four characters longer than "NEXT PAGE", so the pair looked misaligned on
+  every screen. Dropping it shortens the longest label and the grid below
+  makes both columns equal regardless.
+
+  `aria-label` keeps the full phrase for screen readers, where "Next" on its
+  own out of context is vaguer than the visible button needs to be.
+*/}
+{lastPage > 1 && (
+  <nav class="pagination-nav animate-on-scroll" aria-label="Pagination">
+    {url.prev && (
+      <a href={url.prev} class="cta-button-primary pagination-link" aria-label="Previous page" data-direction="back">
+        Previous
+      </a>
+    )}
+
+    {url.next && (
+      <a href={url.next} class="cta-button-primary pagination-link" aria-label="Next page">
+        Next
+      </a>
+    )}
+  </nav>
+)}
+
+<style>
+  /*
+     A GRID, not a flex row.
+
+     Flex sized each button to its own label, so "Previous Page" rendered
+     visibly wider than "Next Page". `grid-auto-columns: 1fr` with
+     `grid-auto-flow: column` gives every button an identical track, so the
+     pair is always symmetrical — and stays symmetrical whatever the labels
+     say, which a hand-tuned min-width would not.
+
+     `max-width` keeps them from stretching to the full container on a wide
+     screen; the pair stays a centred unit rather than two banners.
+  */
+  .pagination-nav {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    align-items: stretch;
+    justify-content: center;
+    gap: 1rem;
+    width: 100%;
+    max-width: 460px;
+    margin: 3rem auto 0;
+    font-family: var(--font-display);
+  }
+
+  /* Centres the label inside its equal-width track. Without this the buttons
+     would be the same size but their text would sit wherever the inherited
+     alignment left it. */
+  .pagination-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    /* One button alone (first or last page) should not stretch across the
+       whole 460px — it keeps the width it would have had as part of a pair. */
+    min-width: 0;
+  }
+
+  /* A single button (first or last page) is centred rather than left in a
+     half-width track. */
+  .pagination-nav:has(> :only-child) {
+    max-width: 222px;
+  }
+
+  .pagination-numbers {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .pagination-number {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--color-white-muted);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    padding: 0.75rem;
+    min-width: 48px;
+    min-height: 48px;
+    text-align: center;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 4px;
+    position: relative;
+  }
+
+  .pagination-number::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 2px;
+    background: var(--color-accent, #ef4444);
+    border-radius: 2px;
+    opacity: 0;
+    transition: opacity 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .pagination-ellipsis {
+    color: var(--color-white-muted);
+    opacity: 0.5;
+    letter-spacing: 2px;
+  }
+
+  .pagination-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    color: var(--color-white);
+    transition: all 0.3s ease;
+    border-radius: 50%;
+    border: 1px solid transparent;
+  }
+
+  .pagination-arrow.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .pagination-number:focus-visible,
+  .pagination-arrow:focus-visible {
+    outline: 2px solid var(--color-white, #ffffff);
+    outline-offset: 2px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .pagination-number:hover:not(.active) {
+      color: var(--color-white);
+      transform: translateY(-2px);
+    }
+
+    .pagination-number:hover:not(.active)::after {
+      opacity: 1;
+      box-shadow: 0 0 12px rgba(204, 0, 0, 0.6);
+    }
+
+    .pagination-arrow:not(.disabled):hover {
+      background: transparent;
+      color: var(--color-white);
+      border-color: var(--color-accent);
+      box-shadow: 0 0 12px rgba(204, 0, 0, 0.4);
+      transform: scale(1.1);
+    }
+  }
+
+  .pagination-number.active {
+    color: var(--color-white);
+    font-weight: 700;
+  }
+
+  .pagination-number.active::after {
+    opacity: 1;
+  }
+
+  @media (max-width: 768px) {
+    .pagination-nav {
+      gap: 0.75rem;
+      margin: 2rem auto 0;
+    }
+
+    /* Slightly smaller type and tighter side padding so two equal buttons sit
+       comfortably side by side at 390px without either wrapping. */
+    .pagination-link {
+      font-size: 0.75rem;
+      padding-inline: 1rem;
+      letter-spacing: 0.12em;
+    }
+    .pagination-numbers {
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .pagination-number {
+      font-size: 1.25rem;
+    }
+  }
+</style>

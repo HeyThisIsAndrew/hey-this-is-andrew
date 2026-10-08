@@ -1,0 +1,106 @@
+---
+/**
+ * MagazineRail — one column of article links beside the magazine's centre
+ * feature.
+ *
+ * ─── WHY THIS EXISTS ──────────────────────────────────────────────────────
+ * IntelMagazine originally wrote this markup out twice, once for the left
+ * rail and once for the right. They were identical, so a change to a rail
+ * card had to be made twice or the two sides would drift apart. Now the
+ * markup exists once and the component is used twice with a different `side`.
+ *
+ * ─── HOW A RAIL ITEM WORKS ────────────────────────────────────────────────
+ * Each item is a REAL link to its article (`<a href="/intel/the-slug">`).
+ * That matters: the magazine's click-to-swap behaviour is an enhancement
+ * layered on top, so if JavaScript fails or a search engine crawls the page,
+ * these are still ordinary working links. The `data-*` attributes carry
+ * everything the centre feature needs to redraw itself, which is why no
+ * article data has to be duplicated into a separate <script> block.
+ *
+ * ─── HOW TO USE IT ────────────────────────────────────────────────────────
+ *     <MagazineRail side="left"  articles={leftArticles} />
+ *     <MagazineRail side="right" articles={rightArticles} />
+ *
+ * ─── HOW TO RESTYLE IT ────────────────────────────────────────────────────
+ * `.intel-rail`, `.intel-rail-item`, `.intel-rail-thumb`, `.intel-rail-title`
+ * in src/styles/modules/intel.css. The `side` prop only adds
+ * `.intel-rail-left` / `.intel-rail-right`, which control which edge gets the
+ * divider border and which side the active accent bar sits on.
+ */
+import ArticleThumb from './ArticleThumb.astro';
+import { getDisplayTags } from '../lib/tags';
+
+import { articlePreview } from '../lib/articles';
+import { getCardImageSources } from '../lib/card-images.js';
+import type { ArticleRecord } from '../lib/articles';
+
+/*
+  `data-image` below is the RAW article url and is only a "does this article
+  have a cover?" flag for the swap script. `data-image-src` and
+  `data-image-srcset` carry what the image should actually REQUEST.
+
+  Without them, IntelMagazine's swap set the raw Substack original as the src.
+  On /intel that meant a 1.2 MB S3 upload as the LCP element — 9.1 s, scoring
+  1 out of 100, which is what dragged the page to 75%.
+*/
+
+/** The shape a rail item needs: an article plus its resolved link. */
+type RailArticle = ArticleRecord & { link: string; isExternal: boolean };
+
+interface Props {
+  /** Which side of the feature this rail sits on. Controls borders only. */
+  side: 'left' | 'right';
+  /** The articles to list, already in display order. */
+  articles: RailArticle[];
+  /**
+   * Slug of the article currently in the centre. That tile renders already
+   * highlighted, so the active state is correct on first paint and is still
+   * visible with JavaScript disabled.
+   */
+  activeSlug?: string;
+  /** Inside the homepage's compact spread: thumbs take smaller `sizes`. */
+  compact?: boolean;
+}
+
+const { side, articles, activeSlug = '', compact = false } = Astro.props;
+---
+
+<div class:list={['intel-rail', `intel-rail-${side}`]}>
+  {
+    articles.map((article) => {
+      const finalTags = getDisplayTags(article);
+      const tagsString = finalTags.length > 0 ? finalTags.join(' | ') + ' | ' : '';
+      
+      return (
+      <a
+        class:list={['intel-rail-item', { active: article.slug === activeSlug }]}
+        aria-current={article.slug === activeSlug ? 'true' : undefined}
+        href={article.link}
+        data-slug={article.slug}
+        data-title={article.title}
+        data-preview={articlePreview(article).join('\n\n')}
+        data-image={article.image}
+        data-image-src={article.image ? getCardImageSources(article.image).src : undefined}
+        data-image-srcset={article.image ? getCardImageSources(article.image).srcset : undefined}
+        data-tags={tagsString}
+        data-date={article.date}
+        data-href={article.link}
+        data-external={article.isExternal ? 'true' : 'false'}
+      >
+        <div class="intel-rail-thumb">
+          {/* The compact spread is the homepage's, below the fold: its thumbs
+              wait for the page to load (defer) rather than racing the hero. */}
+          <ArticleThumb image={article.image} title={article.title} size="rail" decorative compact={compact} defer={compact} />
+        </div>
+
+        <div class="intel-rail-copy">
+          <span class="intel-rail-meta">
+            {tagsString}{article.date}
+          </span>
+          <h3 class="intel-rail-title">{article.title}</h3>
+        </div>
+      </a>
+      );
+    })
+  }
+</div>

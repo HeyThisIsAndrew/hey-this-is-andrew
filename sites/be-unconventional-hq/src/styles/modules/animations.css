@@ -1,0 +1,53 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SCROLL ANIMATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.animate-on-scroll {
+  opacity: 0;
+  transform: scale(0.985) translateY(15px);
+  filter: blur(4px);
+  transition:
+    opacity 1.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 1.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 1s ease-out;
+  will-change: transform, opacity, filter;
+}
+
+.animate-on-scroll[data-state='active'] {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  filter: blur(0);
+}
+
+.animate-on-scroll[data-state='enter'] {
+  opacity: 0;
+  transform: scale(0.985) translateY(15px);
+  filter: blur(4px);
+}
+
+.animate-on-scroll[data-state='exit'] {
+  opacity: 0;
+  transform: scale(0.985) translateY(-15px);
+  filter: blur(4px);
+}
+/* Unified Grid Ripple (Composition-first).
+
+   This block used to open with four `.categories-grid > .animate-on-scroll`
+   steps, and to list `.video-grid` and `.articles-grid` alongside the two
+   below. None of those three classes appear in any markup. Note the delay
+   is a transition-delay, so it lingers on the tile's hover afterwards; an
+   ANIMATION delay would not. `.latest-grid` and `.event-grid` are the two
+   that still exist. */
+.latest-grid > .animate-on-scroll:nth-child(n),
+.event-grid > .animate-on-scroll:nth-child(n) {
+  transition-delay: calc(var(--index, 0) * 30ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-on-scroll {
+    transition: none !important;
+    transform: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
+}

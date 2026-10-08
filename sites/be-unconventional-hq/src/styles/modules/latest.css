@@ -1,0 +1,90 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   LATEST ARTICLES SECTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.latest-section {
+  width: 100%;
+  /*
+    THE TOKEN, NOT 1536. This was a hard cap on the WRAPPER while `.latest-grid`
+    inside it already read `--page-max`, so the grid was free to grow and its
+    parent would not let it. On a 3840px screen the section measured 1444px
+    inside a 2600px page: the one homepage section that stopped a thousand
+    pixels short, which is why the category tiles grew when this was fixed
+    elsewhere and the Intel cards did not.
+  */
+  max-width: var(--page-max, 1536px);
+  margin: 0 auto;
+  /* Top padding is 0 because the previous section provides a 6rem bottom padding.
+     Bottom padding is 6rem to provide the exact gap to the next section. */
+  padding: 0 2.5rem 6rem;
+}
+
+/* .latest-grid's column math now lives in home-cards.css alongside the other
+   homepage rows, so all three stay in step. */
+
+@media (max-width: 768px) {
+  /* .latest-grid removed from this override — its columns are defined once in
+     home-cards.css, and forcing 1fr here fought that rule at 768px. */
+  .event-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    overflow-x: hidden !important;
+    width: 100% !important;
+  }
+}
+
+.latest-view-all {
+  text-align: center;
+  margin-top: 3rem;
+}
+
+.view-all-link {
+  color: var(--color-white-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-decoration: none;
+  position: relative;
+  padding-bottom: 4px;
+  transition:
+    color 0.3s ease,
+    text-shadow 0.3s ease;
+}
+
+.view-all-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.2, 1);
+}
+
+.view-all-link:hover {
+  color: var(--color-accent-text);
+  text-shadow: 0 0 16px rgba(204, 0, 0, 0.5);
+}
+
+.view-all-link:hover::after {
+  transform: scaleX(1);
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition-property: opacity, transform;
+  transition-duration: 0.7s;
+  transition-timing-function: cubic-bezier(0.22, 0.8, 0.2, 1);
+  will-change: opacity, transform;
+}
+.reveal[data-state='in'] {
+  opacity: 1;
+  transform: none;
+}
+/* `.container` moved to modules/layout.css (imported immediately after this
+   file, so its cascade position is unchanged). */

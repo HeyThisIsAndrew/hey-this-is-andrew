@@ -1,0 +1,149 @@
+# Automated YouTube -> videos.json sync.
+#
+# Closes the loop that ticket #36 promised and never built: upload + tag a
+# video on YouTube, and it shows up on the site without anyone touching a
+# keyboard. This workflow just automates `pnpm --filter beunconventionalhq sync:youtube -- --execute`
+# on a schedule and committing the result if anything changed — it does NOT
+# change the auto-publish rules themselves. Those already live in
+# scripts/sync-youtube.mjs (planVideoSync): a video only auto-publishes if
+# its YouTube tags produce a clean Tier-1 topic match; anything else lands in
+# contentStatus: "needs-review" and stays invisible on the site until a human
+# promotes it in the Local CMS. This workflow deliberately does not touch
+# that gate.
+#
+# Quota cost per run is tiny: collectUploadIds -> channels.list (1 unit) +
+# playlistItems.list (1 unit/page of 50), then videos.list (1 unit per 50
+# ids) — a few units per run against a 10,000/day free-tier quota, so the
+# hourly cadence below has enormous headroom either direction. Cloudflare
+# *build* minutes are the actual constrained resource, which is why this
+# job only commits (and therefore only triggers a redeploy) when
+# videos.json actually changed.
+#
+# Owner call (2026-07-23): hourly, not tighter — one person can't realistically
+# upload more often than that, and an out-of-band sync is one message away
+# (trigger this workflow's workflow_dispatch manually, or ask Claude to fire
+# it) if something needs to go up faster than the next scheduled run.
+#
+# INERT UNTIL CONFIGURED: if YOUTUBE_API_KEY/YOUTUBE_CHANNEL_ID secrets are
+# absent, the job logs a skip and exits green (same convention as
+# daily-rebuild.yml).
+#
+# Cron schedules only fire for workflows on the repo's default branch, so
+# this stays fully dormant on integration/feature branches — safe to merge
+# and test via workflow_dispatch before it's ever live on a schedule.
+name: Sync YouTube videos
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # Run every 6 hours as a fallback for WebSub
+  workflow_dispatch:
+    inputs:
+      execute:
+        description: 'Write videos.json (uncheck for a dry-run preview only)'
+        type: boolean
+        default: true
+
+# ── SERIALISED AGAINST THE OTHER CONTENT SYNCS ───────────────────────────────
+# Five workflows commit and push to main. Two of them fired on the same cron
+# minute, so whichever finished second pushed onto a ref that had moved and
+# failed — a red run that had nothing to do with the sync itself.
+#
+# The cron times are now staggered (:00 youtube, :15 instagram, :30 articles),
+# which handles the scheduled case. This shared group handles everything the
+# schedule cannot: a run that overruns its slot, two workflow_dispatch clicks,
+# or a weekly job landing on top of a six-hourly one.
+#
+# ONE group name across all five is the point — concurrency only serialises
+# runs that share a group, and the resource being contended is main itself.
+# cancel-in-progress is false deliberately: these jobs push commits, and
+# cancelling one mid-push is how you get a partial sync, not a fast one.
+concurrency:
+  group: content-sync-push
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check secrets configured
+        id: check
+        env:
+          HAS_KEY: ${{ secrets.YOUTUBE_API_KEY != '' }}
+          HAS_CHANNEL: ${{ secrets.YOUTUBE_CHANNEL_ID != '' }}
+        run: |
+          if [ "$HAS_KEY" != "true" ] || [ "$HAS_CHANNEL" != "true" ]; then
+            echo "YOUTUBE_API_KEY / YOUTUBE_CHANNEL_ID not configured — skipping (see workflow header to activate)."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.configured == 'true'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.configured == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.check.outputs.configured == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Run sync
+        if: steps.check.outputs.configured == 'true'
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          YOUTUBE_CHANNEL_ID: ${{ secrets.YOUTUBE_CHANNEL_ID }}
+        # `sync:youtube`, NOT `sync`. This job is given YOUTUBE_API_KEY and
+        # YOUTUBE_CHANNEL_ID and nothing else, but `pnpm --filter beunconventionalhq sync` also runs the
+        # Instagram sync, which needs META_ACCESS_TOKEN and a .env file. On
+        # 2026-08-14 that failed the whole scheduled run:
+        #
+        #   node: .env: not found
+        #   ##[error]Process completed with exit code 9
+        #
+        # The YouTube sync had already finished successfully by then, so a
+        # source this job has no credentials for was failing a source it does.
+        # They are independent and are now invoked independently.
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.execute }}" = "false" ]; then
+            pnpm --filter beunconventionalhq sync:youtube
+          else
+            pnpm --filter beunconventionalhq sync:youtube -- --execute
+          fi
+
+      # THE HQ DISPATCH's story images (scripts/sync-dispatch-images.mjs):
+      # every story /dispatch.xml lists needs its 16:9, never-cropped JPEG
+      # built and committed before Kit reads the feed, or the newsletter shows
+      # the fallback art for it. Unconditional for the same reason as the
+      # article renditions, and non-fatal by construction: a story without a
+      # built image gets the fallback, never a broken or cropped one.
+      - name: Build newsletter images
+        if: steps.check.outputs.configured == 'true'
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.execute }}" = "false" ]; then
+            pnpm --filter beunconventionalhq sync:dispatch-images
+          else
+            pnpm --filter beunconventionalhq sync:dispatch-images -- --execute || echo "dispatch-image sync degraded; the feed uses the fallback art"
+          fi
+
+      - name: Commit and push if videos.json changed
+        if: steps.check.outputs.configured == 'true'
+        run: |
+          if git diff --quiet -- src/data/videos.json src/data/dispatch-images.json; then
+            echo "No changes — nothing to sync."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/data/videos.json
+          # The newsletter's manifest and the images it names travel together.
+          git add src/data/dispatch-images.json public/dispatch/images
+          git commit -m "chore: automated YouTube sync" -m "Synced by the sync-youtube.yml workflow (run ${{ github.run_id }})."
+          git pull origin HEAD --rebase && git push origin HEAD:${{ github.ref }}

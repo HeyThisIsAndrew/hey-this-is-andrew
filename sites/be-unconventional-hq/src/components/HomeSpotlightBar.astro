@@ -1,0 +1,1462 @@
+---
+/**
+ * The homepage spotlight bar: a rotating band of INTERNAL promotion, directly
+ * under the hero.
+ *
+ * ─── WHAT IT REPLACED, AND WHY ──────────────────────────────────────────────
+ * A static one-item strip. It was correct and far too quiet: a thin row that
+ * sat flush against the hero above and the section below, and on a phone it
+ * fell under the fixed navbar. Reported twice,
+ * the second time as "the placement of what you built is completely bad".
+ *
+ * ─── IT IS NOT CommercialRotator, AND MUST NOT BECOME IT ────────────────────
+ * The obvious move was to reuse CommercialRotator, and it is the wrong one.
+ * That component's slides ARE referral partners: its data comes from
+ * getReferralItems() and every slide carries an FTC disclosure line naming the
+ * commercial relationship. This bar is the first thing under the hero, and
+ * filling that slot with affiliate links would make the homepage's opening
+ * statement an ad break. "Support The HQ" already exists further down the page
+ * and in the article rail, which is where a commercial ask belongs.
+ *
+ * So: same IDEA, opposite content. Every destination here is somewhere else on
+ * this site.
+ *
+ * ─── ONE CLOCK, NOT TWO ─────────────────────────────────────────────────────
+ * The progress bar's CSS animation IS the timer: the script advances on its
+ * `animationend` and pausing is a class the stylesheet reads, so a paused bar
+ * is a paused rotation by construction. This is the same rule CommercialRotator
+ * records, for the same reason — its first version ran a setInterval alongside
+ * a CSS animation and the two drifted apart the moment anything paused one of
+ * them. The rule is copied here deliberately rather than the code, because the
+ * two components share no markup and a shared script would have to carry both
+ * their DOM shapes.
+ */
+/**
+ * TWO PLACES ON THE HOMEPAGE, ONE COMPONENT.
+ *
+ *   variant="panel"   floating at the foot of the hero, on the page column,
+ *                     over the artwork. The first thing a reader sees.
+ *   variant="banner"  edge to edge between What We Cover and Featured, as a
+ *                     break between the two sections.
+ *
+ * The rotation is per-instance by construction: the script binds inside each
+ * `[data-spotlight]` root and every query is scoped to it, so two on one page
+ * run their own clocks. That is the difference from CommercialRotator, which
+ * binds by id and documents itself as single-instance for exactly that reason.
+ */
+import { getImage } from 'astro:assets';
+import logoMark from '../assets/logo-mark.webp';
+import { getAllFeedItems } from '../lib/feed-items';
+import { cappedWidths, getEventsLocal, buildImageSet } from '../lib/local-content';
+import { getEventStatus, formatEventDateRange } from '../lib/events';
+import { getCardImageSources } from '../lib/card-images';
+import { selectCollections } from '../lib/feed-rails';
+
+interface SlideArt {
+  src: string;
+  srcset?: string;
+}
+
+interface OptimizedImage {
+  src: string;
+  srcset?: string;
+  width?: number | string;
+  height?: number | string;
+}
+
+interface Slide {
+  key: string;
+  eyebrow: string;
+  title: string;
+  href: string;
+  cta: string;
+  art: SlideArt | null;
+  accent: string | null;
+  external: boolean;
+  /** The HQ's own mark, for the slide that promotes the HQ rather than a
+      piece of coverage. Sized, never the raw import — see the note below. */
+  mark?: OptimizedImage | null;
+  /**
+   * WHAT KIND OF PICTURE IT IS, which decides where the band crops it.
+   * A YouTube thumbnail and a key-art poster are composed differently and a
+   * 6.4:1 band shows barely a quarter of either, so one crop cannot serve
+   * both. See `.spotlight-art` for the numbers.
+   */
+  artFocus?: 'thumbnail' | 'keyart';
+  /**
+   * The series' own title treatment, where one exists. A logo IS the title on
+   * this slide, so it replaces the text rather than sitting beside it.
+   */
+  logo?: OptimizedImage | null;
+}
+
+interface Props {
+  variant?: 'panel' | 'banner';
+  /** Distinguishes the two instances for a screen reader. */
+  label?: string;
+  /**
+   * Stories already on screen above this bar, as `video:<id>` or the link
+   * (the homepage's keys). The homepage mounts the banner straight under the
+   * hero, whose LATEST panel is the newest story, so the band opened on the
+   * same story one scroll later. Its first slide is the newest story NOT in
+   * this set, named "Also new" when it had to skip one.
+   */
+  exclude?: string[];
+  /**
+   * What the first slide promotes. 'latest' (the default) is the newest
+   * story; 'event' is the next event on the calendar, the one happening now
+   * if there is one, else the soonest upcoming, falling back to 'latest' when
+   * none is scheduled. The homepage uses 'event' (Andrew): the page already
+   * carries plenty of stories, and the band is the one place it always
+   * advertises what the HQ is covering next.
+   */
+  lead?: 'latest' | 'event';
+}
+
+const { variant = 'banner', label = 'Highlights', exclude = [], lead = 'latest' } = Astro.props;
+
+const items = await getAllFeedItems();
+const shown = new Set(exclude);
+const keyOf = (i: any) => (i?.youtubeId ? `video:${i.youtubeId}` : String(i?.link ?? ''));
+const newest = items.find((i: any) => !shown.has(keyOf(i)));
+const skippedNewest = !!items[0] && newest !== items[0];
+
+/*
+  The featured series, derived the same way the Feed derives it — the CMS's
+  `featuredSeries` flag first, most recently updated series otherwise. Reading
+  it from the same function rather than naming a show here is what stops this
+  bar and the Feed's own shelf disagreeing about what is being featured.
+*/
+const [featured] = selectCollections(items);
+
+const seriesSlug = (name: string) =>
+  String(name)
+    .toLowerCase()
+    .replace(/[‘’']/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+/*
+  Same convention and the same folder the Feed's row banners use:
+  `<slug>-key-art.*` in src/assets/rows. A series with no art is not an error —
+  its slide simply renders without a picture, which is the same all-or-nothing
+  rule FeedGrid applies.
+*/
+const ROW_ART = import.meta.glob<{ default: ImageMetadata }>(
+  '/src/assets/rows/*.{jpg,jpeg,png,webp,avif}',
+  { eager: true },
+);
+const rowArt = (name: string): ImageMetadata | null => {
+  const hit = Object.entries(ROW_ART).find(
+    ([path]) => path.split('/').pop()?.replace(/\.[^.]+$/, '') === name,
+  );
+  return hit ? hit[1].default : null;
+};
+
+const featuredSlug = featured ? seriesSlug(featured.name) : '';
+const featuredArtSource = featuredSlug ? rowArt(`${featuredSlug}-key-art`) : null;
+
+/*
+  ─── THROUGH getImage(), NEVER THE GLOB'S OWN `.src` ────────────────────────
+
+  `import.meta.glob` hands back the ImageMetadata, and its `.src` is a path
+  Astro does not emit unless something actually asks the pipeline to process
+  that file. Passing it straight to an <img> shipped a 404: the element
+  reported `complete: true` with `naturalWidth: 0`, so the band rendered as a
+  flat dark box and looked like a styling problem rather than a missing file.
+
+  THE LADDER IS CAPPED BY THE FILE, NOT WRITTEN OUT. It was a flat 1600 and
+  2400. The band is full bleed, so on a 4K screen its slot is 3840 CSS pixels
+  and 2400 was the most it could ever be offered: the art rendered upscaled and
+  soft, and the old `sizes` below made it worse by claiming 1536.
+
+  3840 is in the ladder now, but `cappedWidths` drops any rung the file cannot
+  actually fill, so today's 2560-wide key art tops out at 2560 rather than
+  being upsampled to 3840 — which would cost more bytes to look worse. Drop in
+  a 3840 original and the top rung appears on its own.
+*/
+const ART_WIDTHS = cappedWidths(featuredArtSource, [400, 600, 750, 900, 1100, 1600, 2400, 3840]);
+const featuredArtAt = async (w: number) =>
+  (await getImage({ src: featuredArtSource!, width: w, format: 'webp', quality: 78 })).src;
+/*
+  ─── THE SERIES SETS ITS OWN TITLE, WHERE IT HAS ONE ────────────────────────
+
+  Same folder and the same `<slug>-<kind>` convention the key art uses, so a
+  series earns its title treatment by having the file and nothing here needs
+  editing. A series with no logo keeps the text title, which is why this is a
+  fallback rather than a requirement.
+
+  Requested at 160px tall against a display height that tops out at 48px: the
+  ceiling is generous because this is a wordmark on a dark ground, where
+  softness reads as a bad asset rather than a small one.
+*/
+const featuredLogoSource = featuredSlug ? rowArt(`${featuredSlug}-logo`) : null;
+const featuredLogoData = featuredLogoSource
+  ? await getImage({ src: featuredLogoSource, height: 150, format: 'webp', quality: 85 })
+  : null;
+const featuredLogo = featuredLogoData && featuredLogoSource
+  ? { 
+      src: featuredLogoData.src, 
+      srcset: [
+        `${(await getImage({ src: featuredLogoSource, height: 50, format: 'webp', quality: 85 })).src} 1x`,
+        `${(await getImage({ src: featuredLogoSource, height: 75, format: 'webp', quality: 85 })).src} 1.5x`,
+        `${(await getImage({ src: featuredLogoSource, height: 100, format: 'webp', quality: 85 })).src} 2x`,
+        `${featuredLogoData.src} 3x`
+      ].join(', '),
+      width: featuredLogoData.attributes.width, 
+      height: featuredLogoData.attributes.height 
+    }
+  : null;
+
+const featuredArt = featuredArtSource
+  ? {
+      src: await featuredArtAt(ART_WIDTHS[0]),
+      srcset: (
+        await Promise.all(ART_WIDTHS.map(async (w) => `${await featuredArtAt(w)} ${w}w`))
+      ).join(', '),
+    }
+  : null;
+
+/* The series accent, read off any member so it survives one document being
+   edited. Falls back to the site accent. */
+const featuredAccent =
+  items
+    .filter((i: any) => String(i?.series ?? '').trim().toLowerCase() === String(featured?.name ?? '').trim().toLowerCase())
+    .map((i: any) => (typeof i?.seriesAccent === 'string' ? i.seriesAccent.trim() : ''))
+    .find((hex: string) => /^#[0-9a-f]{6}$/i.test(hex)) || null;
+
+const slides: Slide[] = [];
+
+/*
+  ─── THE NEXT EVENT ─────────────────────────────────────────────────────────
+  Through the site's own event helpers, so it agrees with /events: dates are
+  compared as YYYY-MM-DD strings in the reference timezone (hard rule 1),
+  cancelled and finished events are skipped, and a live one beats the soonest
+  upcoming. Decided at build time, like /events: a deploy refreshes it.
+*/
+const nextEvent = lead === 'event'
+  ? (() => {
+      const open = getEventsLocal()
+        .filter((e: any) => e?.startDate && e?.slug?.current)
+        .map((e: any) => ({ e, status: getEventStatus(e) }))
+        .filter(({ status }) => status === 'live' || status === 'upcoming')
+        .sort((a, b) =>
+          a.status === b.status
+            ? String(a.e.startDate).localeCompare(String(b.e.startDate))
+            : a.status === 'live' ? -1 : 1,
+        );
+      return open[0] ?? null;
+    })()
+  : null;
+
+if (nextEvent) {
+  const { e: event, status } = nextEvent;
+  const when = formatEventDateRange(event.startDate, event.endDate);
+  /* The whole key art, never cropped: the thumbnail treatment shows the
+     picture entire at the band's edge over a blurred fill, which matters
+     here because event art often sets the event's name across its width. */
+  const hero = buildImageSet(event.heroImage, { widths: [480, 800, 1200, 1600] });
+  slides.push({
+    key: 'event',
+    eyebrow: status === 'live' ? `Happening now · ${when}` : `Next event · ${when}`,
+    title: event.title,
+    href: `/events/${event.slug.current}`,
+    cta: 'Event details',
+    art: hero?.src ? { src: hero.src, srcset: hero.srcset || undefined } : null,
+    artFocus: 'thumbnail',
+    accent: null,
+    external: false,
+  });
+}
+
+if (newest && !nextEvent) {
+  const { src, srcset } = getCardImageSources(newest.image);
+  const link = typeof newest.link === 'string' ? newest.link : '';
+  const isVideo = newest.type === 'video';
+  /* A video goes to /feed?play=<id>: the feed promotes that video into its
+     own stage on arrival, cued one tap from playing (the /feed page's
+     promoteFromQuery). Plain /feed opened on whatever the feed was
+     featuring instead of the video this slide names. */
+  const videoId = typeof (newest as any).youtubeId === 'string' ? (newest as any).youtubeId : '';
+  const destination = isVideo ? (videoId ? `/feed?play=${encodeURIComponent(videoId)}` : '/feed') : link;
+
+  slides.push({
+    key: 'latest',
+    eyebrow: skippedNewest ? 'Also new' : 'Latest',
+    title: newest.title,
+    href: destination,
+    cta: isVideo ? 'Watch' : 'Read',
+    art: src ? { src, srcset } : null,
+    artFocus: 'thumbnail',
+    accent: null,
+    /*
+      A video's canonical home is YouTube, but we no longer send the reader
+      there directly from the homepage. The Feed's hero is built to showcase
+      the latest video, so we deep-link to the feed where it is ready to play.
+    */
+    external: false,
+  });
+}
+
+if (featured) {
+  slides.push({
+    key: 'series',
+    eyebrow: 'Featured series',
+    title: featured.name,
+    /* The series' own shelf on the Feed, not an outbound link and not a hub
+       page that may not exist for every series. */
+    href: `/feed#${featuredSlug}`,
+    cta: 'See the coverage',
+    art: featuredArt,
+    artFocus: 'keyart',
+    logo: featuredLogo,
+    accent: featuredAccent,
+    external: false,
+  });
+}
+
+/*
+  ─── THE HQ SLIDE IS THE ONE WITH NO COVERAGE TO SHOW ───────────────────────
+
+  Every other slide brings a picture. This one promotes the HQ itself, so it
+  brought nothing and rendered as a flat black band with two lines of type on
+  it — reported as blank. It carries the HQ's own mark and the brand gradient
+  instead, which is the thing it is actually advertising.
+
+  `getImage()` rather than `logoMark.src`: a raw import's `.src` is a path
+  Astro only emits when something asks the pipeline to process the file, which
+  is how the featured art 404'd on this same component.
+*/
+const markData = await getImage({ src: logoMark, height: 100, format: 'webp', quality: 80 });
+const markObj = { src: markData.src, width: markData.attributes.width, height: markData.attributes.height };
+
+slides.push({
+  key: 'subscribe',
+  eyebrow: 'The HQ',
+  title: 'Get new coverage as it lands',
+  /* On this page. SubscribeCTA carries the matching id. */
+  href: '#subscribe',
+  cta: 'Subscribe',
+  art: null,
+  accent: null,
+  external: false,
+  mark: markObj,
+});
+
+/* Nothing to rotate through is not a failure: one slide renders as a static
+   band and the script never starts the clock. */
+const rotates = slides.length > 1;
+
+/*
+  WHAT THE SLOT ACTUALLY IS, which the old flat "1536px" was not.
+  Under-declaring is what made a 4K screen fetch the 1600 rung and stretch it
+  across 3840 pixels.
+
+  The banner is full bleed with no ceiling, so it is simply the viewport:
+  measured 3825 of 3840.
+
+  The panel is NOT 95vw all the way up, which is what this said first. It sits
+  on the hero column, which stops at `--page-max` (2600px), so it tracks the
+  viewport to about 2737px and is flat above that: 957 of 1024, 1434 of 1497,
+  then 2494 at 3840 where a bare 95vw would have claimed 3648. The breakpoint
+  is where 95vw reaches 2600.
+
+  Written as a media condition rather than `min(95vw, 2600px)` on purpose: a
+  browser that does not understand a function in `sizes` discards the whole
+  attribute and falls back to 100vw, and that failure is silent.
+*/
+const artSizes = variant === 'banner' ? '100vw' : '(min-width: 2737px) 2600px, 95vw';
+/* A banner slide shown in THUMBNAIL focus draws its art whole, beside the
+   copy: full width on a phone, a fixed 400px box from 768 up (measured at
+   768, 1440, 1920 and 2560). At '100vw' it asked for a 1600px file for that
+   400px box. The blurred fill behind it takes the SAME value, so the two
+   stay one download. */
+const THUMB_ART_SIZES = '(max-width: 767px) 100vw, 400px';
+const sizesFor = (slide: { artFocus?: string }) =>
+  variant === 'banner' && slide.artFocus === 'thumbnail' ? THUMB_ART_SIZES : artSizes;
+
+/*
+  ─── THE FIRST SLIDE'S ART LOADS WITH THE PAGE; THE REST AFTER IT ──────────
+  Slide 0 renders its real `src` (hard rule 10: its visibility must never wait
+  on the bundle). Every later slide is `visibility: hidden` for at least seven
+  seconds, yet its eager art and logo were requested with the page: on the
+  homepage that was ~27 KiB started before the first paint, which PageSpeed's
+  simulation charges to both FCP and LCP. They now wait in data-defer-* until
+  the page has loaded (the same data-defer-* shape as src/lib/deferred-images.ts,
+  filled by this component's own script), and `show()` fills a
+  slide's images the moment it becomes current, so a slide can never arrive
+  blank even if the reader presses Next before `load`.
+*/
+const artSources = (img: { src: string; srcset?: string }, index: number) =>
+  index === 0
+    ? { src: img.src, srcset: img.srcset || undefined }
+    : { 'data-defer-src': img.src, 'data-defer-srcset': img.srcset || undefined };
+---
+
+<section class:list={['spotlight', `spotlight--${variant}`]} aria-label={label} data-spotlight>
+  <div class="spotlight-frame">
+    {/*
+        ─── THE FIRST SLIDE SHIPS VISIBLE, FROM THE SERVER ───────────────────
+
+        `.spotlight-slide` rests at `opacity: 0; visibility: hidden` and only
+        `.is-current` lifts it. That class used to be applied ONLY by the
+        script, which cost two things:
+
+        1. THE BAND WAS BLANK WITHOUT JAVASCRIPT. Measured on the built site
+           with JS disabled: 0 of 3 slides visible, in BOTH instances. Not
+           degraded — empty. The markup was there and nothing could show it.
+        2. LCP WAITED ON THE MODULE. The homepage's LCP element is this
+           slide's art (CI confirms it, on main and on the branch). The image
+           was arriving at ~180ms and painting at ~1.2s: measured LCP phases
+           were load delay 13ms, load duration 125ms, and then RENDER DELAY
+           1016ms. Nothing was slow to fetch; the pixels sat decoded and
+           hidden while the browser fetched, parsed and ran the bundle, then
+           waited out a 0.5s fade.
+
+        Rendering the state here costs nothing and removes both. `show(0)`
+        produces exactly this — `is-current` on the first, `inert` and
+        `aria-hidden` on the rest — so the script's first call is now a no-op
+        rather than the thing that reveals the band, and no flash is possible
+        because nothing changes.
+
+        The transition does not fire on the first paint either: `is-current`
+        is present in the parsed HTML, so opacity has no previous value to
+        animate from. The cross-fade still runs on every LATER change, which
+        is the only place it was ever wanted.
+
+        `inert` and `aria-hidden` were ALREADY rendered here correctly, below.
+        Only the visibility class was missing, so this adds one class and
+        nothing else.
+    */}
+    {slides.map((slide, index) => (
+      <a
+        class:list={[
+          'spotlight-slide',
+          { 'spotlight-slide--brand': !!slide.mark },
+          { 'is-current': index === 0 },
+        ]}
+        data-slide
+        data-art-focus={slide.artFocus}
+        href={slide.href}
+        style={slide.accent ? `--slide-accent: ${slide.accent};` : undefined}
+        aria-hidden={index === 0 ? undefined : 'true'}
+        {...(index === 0 ? {} : { inert: true })}
+        {...(slide.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+      >
+        {/*
+          ─── EAGER ON EVERY SLIDE, NOT JUST THE FIRST ─────────────────────
+
+          `loading="lazy"` was right for a slide that might never be seen and
+          wrong for these: the hidden slides are `visibility: hidden`, and the
+          browser does not start a lazy image on an element it is not
+          rendering. Measured — the mark on the third slide reported
+          `naturalWidth: 0` with an empty `currentSrc` even after its slide was
+          made current, and setting `loading` to eager on the live element
+          loaded it immediately from the same URL.
+
+          The cost is small and bounded: three images, the same three URLs in
+          both instances of this bar, and every one of them is on screen within
+          seven seconds of the page settling. A slide that arrives blank is the
+          worse trade. Eager is not URGENT, though: everything but the panel's
+          first slide is `fetchpriority="low"`, because on the homepage the
+          whole band sits below the fold and eager-at-auto made it compete
+          with the hero art (the LCP image) for bandwidth.
+        */}
+        {/* The banner's thumbnail slides: a blurred fill behind the picture
+            (same file, one fetch). See `.spotlight-art--fill`. */}
+        {slide.art && variant === 'banner' && slide.artFocus === 'thumbnail' && (
+          <img
+            class="spotlight-art spotlight-art--fill"
+            {...artSources(slide.art, index)}
+            sizes={sizesFor(slide)}
+            alt=""
+            aria-hidden="true"
+            loading={variant === 'banner' ? 'lazy' : 'eager'}
+            fetchpriority="low"
+            decoding="async"
+          />
+        )}
+        {slide.art && (
+          <img
+            class="spotlight-art"
+            {...artSources(slide.art, index)}
+            sizes={sizesFor(slide)}
+            alt=""
+            loading={variant === 'banner' ? 'lazy' : 'eager'}
+            fetchpriority={variant === 'panel' && index === 0 ? 'high' : 'low'}
+            decoding="async"
+          />
+        )}
+        <span class="spotlight-scrim" aria-hidden="true"></span>
+
+        {/*
+          THE ART IS FULL BLEED, THE WORDS ARE NOT.
+
+          This inner wrapper carries the page's own column — same max-width,
+          same gutter, centred the same way — so the copy starts exactly where
+          every heading above and below it does. It is the shape
+          `.feed-row-banner-inner` already uses for the same problem, and it is
+          arithmetic-free: no expression has to know how far the full-bleed
+          escape overshot, which is where a hand-computed padding lands a few
+          pixels off the column and stays there.
+        */}
+        <span class="spotlight-inner">
+          <span class="spotlight-body">
+            <span class="spotlight-eyebrow">{slide.eyebrow}</span>
+            {/*
+              The logo REPLACES the title, so it carries the title's alt text
+              and stays in the accessible name of the link. Not aria-hidden:
+              hide it and the slide announces its eyebrow and its CTA and
+              never says which series it is about.
+            */}
+            {slide.logo ? (
+              <img
+                class="spotlight-logo"
+                {...artSources(slide.logo, index)}
+                width={slide.logo.width}
+                height={slide.logo.height}
+                alt={slide.title}
+                loading={variant === 'banner' ? 'lazy' : 'eager'}
+                fetchpriority={index === 0 && variant === 'panel' ? 'high' : 'low'}
+                decoding="async"
+              />
+            ) : (
+              <span class="spotlight-title">{slide.title}</span>
+            )}
+          </span>
+
+          {/*
+            IN THE ROW, NOT PINNED OVER IT. See the note on `.spotlight-mark`.
+          */}
+          {slide.mark && (
+            <img
+              class="spotlight-mark"
+              src={slide.mark.src}
+              width={slide.mark.width}
+              height={slide.mark.height}
+              alt=""
+              aria-hidden="true"
+              loading={variant === 'banner' ? 'lazy' : 'eager'}
+              decoding="async"
+            />
+          )}
+
+          <span class="spotlight-cta">
+            <span class="spotlight-cta-label">{slide.cta}</span>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </span>
+        </span>
+      </a>
+    ))}
+  </div>
+
+  {rotates && (
+    <div class="spotlight-controls">
+      {/*
+        WCAG 2.2.2: content that moves or auto-updates has to be pausable. This
+        is `hidden` in the markup and revealed by the script, because with no
+        JS nothing rotates and a pause button for a static band is a lie.
+      */}
+      {/*
+        Prev and Next are `hidden` for the same reason the pause button is, and
+        it is not the same reason as "no JS means no rotation". These move the
+        band by calling show(), which only exists in the script, so without it
+        they are two buttons that do nothing at all. The band is still readable
+        without them: slide one is rendered server-side.
+
+        They sit OUTSIDE `.spotlight-frame`, alongside the pause button, so a
+        press can never land on the active slide's full-bleed anchor.
+      */}
+      <button type="button" class="spotlight-nav" data-prev hidden aria-label="Previous highlight">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+      </button>
+
+      <button type="button" class="spotlight-pause" data-pause hidden aria-label="Pause the highlights">
+        <span class="spotlight-pause-glyph" data-pause-glyph aria-hidden="true"></span>
+      </button>
+
+      <button type="button" class="spotlight-nav" data-next hidden aria-label="Next highlight">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+      </button>
+
+      {/* The clock. Its animationend is what advances the slide. */}
+      <span class="spotlight-progress" data-progress aria-hidden="true"></span>
+
+      <span class="sr-only" role="status" data-live></span>
+    </div>
+  )}
+</section>
+
+<style>
+  /*
+    ─── EDGE TO EDGE, WITHOUT ESCAPING ANYTHING ────────────────────────────
+
+    No negative margin, and that is the fix rather than an omission. This is a
+    direct child of <main>, which already spans the whole content width — the
+    sections around it are narrower only because THEY carry a max-width and a
+    gutter. So the default width is already edge to edge.
+
+    It was written with the `margin-inline: calc(50% - 50vw)` break-out the
+    rails use, and that idiom is for an element INSIDE a column. Here it did
+    nothing but introduce the overshoot it exists to manage: `vw` counts the
+    scrollbar, so the band hung ~7px past the content on each side, the copy
+    inside it inherited the same 7px, and it no longer lined up with the
+    category tiles above.
+
+    All of that goes away by not moving it in the first place.
+  */
+  /* The banner is a break between two sections and needs air around it. The
+     panel is positioned by the hero and must not add margins of its own. */
+  .spotlight--banner {
+    margin-top: 0;
+    margin-bottom: var(--home-gap);
+  }
+
+  .spotlight--banner .spotlight-frame {
+    height: 25vh;
+    min-height: 25vh;
+  }
+
+  .spotlight-frame {
+    position: relative;
+    /*
+      A BANNER, not a strip. A fixed height rather than an aspect ratio,
+      because the slides carry art of different shapes and the band must not
+      resize as it rotates through them.
+    */
+    height: clamp(170px, 10rem + 7vw, 300px);
+    /*
+      ─── IT CLIPS. THIS IS NOT DECORATION ───────────────────────────────────
+
+      `overflow: hidden` lived on the panel variant alone, and the banner ran
+      `visible`, which is why a sliver of the artwork showed along the banner's
+      bottom edge and never along the panel's.
+
+      The height is a clamp, so it lands on a FRACTION: 199.672px at a 1512
+      viewport, measured. The frame's painted edge and the absolutely
+      positioned art inside it round that fraction to device pixels
+      independently, and when they round apart the art keeps a row the frame
+      has already given up. Unclipped, that row paints -- one bright line of
+      photograph under the band, against the page's black.
+
+      It cannot be fixed by nudging the height to a whole number, because the
+      clamp is meant to be fluid and the fraction comes back at the next
+      viewport width. Clipping the frame settles it at every width at once,
+      which is the same answer the panel has always had.
+    */
+    overflow: hidden;
+  }
+
+  /*
+    Shorter in the hero. It shares the frame with the lockup and the CTA, so it
+    is a strip of evidence under them rather than the band it becomes lower
+    down the page where it has the width to itself.
+  */
+  .spotlight--panel .spotlight-frame {
+    height: clamp(120px, 7rem + 4vw, 168px);
+    /* It is inside the page column here, not running off the screen, so its
+       side edges are visible and belong. */
+    border-inline: 1px solid rgba(255, 255, 255, 0.1);
+    /* `overflow: hidden` moved to `.spotlight-frame`: both variants need it,
+       and only this one had it. See the note there. */
+    /*
+      Top and bottom only. The left and right edges are off the screen now, so
+      a border there paints nothing; these two are what make the band read as a
+      layer sitting ON the page rather than a hole cut into it, and they are
+      what the shadow below lands against.
+    */
+    border-block: 1px solid rgba(255, 255, 255, 0.1);
+    border-inline: none;
+    background: #0d0d0d;
+    /* The same raised treatment the calendar tile and the category tiles
+       carry, so the layering is one idiom across the site. */
+    box-shadow: var(--shadow-tile);
+    isolation: isolate;
+  }
+
+  .spotlight-slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    padding-block: clamp(1rem, 0.75rem + 1vw, 1.75rem);
+    text-decoration: none;
+    color: inherit;
+    /*
+      Stacked, and cross-faded. `visibility` rather than `display` so the
+      outgoing slide can fade rather than vanish, and so a hidden slide is out
+      of the tab order as well as out of sight — `inert` in the markup covers
+      the rest.
+    */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.5s ease, visibility 0s linear 0.5s;
+  }
+
+  .spotlight-slide.is-current {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.5s ease, visibility 0s linear 0s;
+  }
+
+  .spotlight-inner {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: flex-end;
+    /*
+      FULL HEIGHT so the mark has something to centre against. The copy does
+      not move: `align-items: flex-end` still pins it to the bottom, and the
+      bottom it pins to is the same one, because the slide's own padding was
+      already what set it.
+    */
+    height: 100%;
+    gap: 1rem;
+    width: 100%;
+    max-width: var(--page-max, 1536px);
+    margin-inline: auto;
+    /*
+      The SAME expression `.container` uses in modules/layout.css, because the
+      homepage's sections are `.container` and this has to start where their
+      content starts. `.container-page`'s flat 2rem is the other gutter on this
+      site and would sit 13px inboard of the category tiles above.
+    */
+    padding-inline: clamp(1.25rem, calc(0.625rem + 2.5vw), 3rem);
+    min-width: 0;
+  }
+
+  /*
+    The panel's wrapper IS the column (see `.hero-spotlight` in modules/
+    hero.css), so repeating the page gutter in here would inset the copy twice
+    and it would not line up with the lockup above it.
+  */
+  .spotlight--panel .spotlight-inner,
+  .spotlight--panel .spotlight-controls {
+    padding-inline: clamp(0.9rem, 0.6rem + 1vw, 1.5rem);
+  }
+
+  /*
+    ─── THE BRAND SLIDE ────────────────────────────────────────────────────
+
+    Black into the house red, on the diagonal so it does not read as a flat
+    two-tone split.
+
+    THE RED IS THE BACKGROUND RED, NOT THE BUTTON RED. This shipped once as
+    opaque stops running out to `--color-accent` itself, and a panel of solid
+    #cc0000 next to a page whose every other red is a wash read as a different
+    site. So it is built the way the hero's own glow is built (hero.css): the
+    accent at a low alpha over the same `#0a0a0a` the page sits on, which is
+    what makes it the same red rather than a second one. The far end lands at
+    0.34 -- about where the old gradient's 72% stop was -- so the slide still
+    reads as branded without any stop reaching the accent at full strength.
+
+    The alpha stops name 204,0,0 literally, as hero.css does: `--color-accent`
+    is a hex token and there is no RGB triple stored beside it.
+
+    The mark sits where the other slides put their artwork, which is what
+    makes this read as the same kind of slide rather than an empty one.
+  */
+  .spotlight-slide--brand {
+    background-color: #0a0a0a;
+    background-image:
+      linear-gradient(
+        105deg,
+        transparent 0%,
+        rgba(204, 0, 0, 0.06) 38%,
+        rgba(204, 0, 0, 0.18) 72%,
+        rgba(204, 0, 0, 0.34) 100%
+      );
+  }
+
+  /*
+    ─── THE MARK IS A ROW ITEM, NOT AN OVERLAY ──────────────────────────────
+
+    It shipped `position: absolute` against the slide, pinned to the slide's
+    own right edge. The CTA is right-aligned inside `.spotlight-inner`, which
+    is the narrower page column, so the two were laid out against different
+    edges and the subscribe button sat on top of the wordmark. Worse, the
+    point where they touched moved with the CTA's label: "WATCH" and "SEE THE
+    COVERAGE" are different widths, so any right offset that cleared one would
+    have been wrong for the other, and the brand slide's own "SUBSCRIBE" is
+    the longest of the three.
+
+    In the flex row there is no offset to get wrong. The mark takes
+    `margin-left: auto`, the brand slide's CTA gives up its own, and the two
+    travel as a right-aligned pair with the row's 1rem gap between them,
+    at every width and every label length.
+  */
+  .spotlight-mark {
+    /*
+      ─── CENTRED IN THE BAND, NOT PARKED NEXT TO THE BUTTON ──────────────
+
+      It sat at the end of the flex row, which put it hard against SUBSCRIBE
+      with the row's 1rem gap and nothing else, while 700px of the band sat
+      empty to its left.
+
+      NOT BECAUSE FLEX WAS SQUEEZING IT, which is the obvious reading and the
+      wrong one. Measured before this change: rendered 133x61 against a
+      natural 522x240, an aspect ratio of 2.17 against 2.17. Nothing was
+      compressed. It was small because the clamp's fluid term lands on 61px at
+      a 1512 viewport and its ceiling was 72px, and it looked cramped because
+      of where it was, not what size it was. Worth recording, because "the
+      flex item is being crushed" would have sent the next reader to
+      `flex-shrink` and there is nothing wrong there.
+
+      So: out of the row and absolutely centred in `.spotlight-inner`, which
+      now fills the slide. The row goes back to two items, which is why the
+      brand slide's `margin-left: 0` override on the CTA has gone -- the base
+      rule's `margin-left: auto` puts SUBSCRIBE back on the right edge by
+      itself.
+
+      `z-index: 0` keeps it under the copy. At a width where the title is long
+      enough to reach the middle they overlap, and a watermark behind the
+      words is the right way for that to land.
+    */
+    flex: 0 1 auto;
+    margin-left: auto;
+    align-self: center;
+    /* Larger, and the ceiling is the part that was actually holding it back. */
+    height: clamp(60px, 3.5rem + 3vw, 100px);
+    width: auto;
+    min-width: 0;
+    object-fit: contain;
+    z-index: 0;
+    /* Bright enough to be the brand, quiet enough that the copy still wins. */
+    opacity: 0.9;
+    /* No drop-shadow: hard rule 6 forbids the filter on an <img>. The mark is
+       light-on-dark over a gradient that is darkest exactly where the mark is
+       lightest, so it had nothing to separate it from anyway. */
+  }
+
+  /* The pair, not two things each reaching for the right edge. */
+  .spotlight-slide--brand .spotlight-cta {
+    margin-left: 0;
+  }
+
+  /* The scrim exists to hold type over a photograph. On the brand slide there
+     is no photograph, and running it at full strength put a dark wash over a
+     gradient that is already dark on the left and is the whole point on the
+     right. */
+  .spotlight-slide--brand .spotlight-scrim {
+    background: linear-gradient(
+      to right,
+      rgba(10, 10, 10, 0.7) 0%,
+      rgba(10, 10, 10, 0.35) 45%,
+      transparent 72%
+    );
+  }
+
+  /*
+    ─── WHERE A 6.4:1 BAND CROPS A 16:9 PICTURE ────────────────────────────
+
+    The band is 1497x234 at a 1512 viewport, so `cover` shows about 28% of the
+    art's height and throws the rest away. WHICH 28% cannot be one number for
+    every slide, because the two kinds of picture here are composed
+    differently.
+
+    `thumbnail` keeps the 35% bias: a YouTube cover puts its subject in the
+    upper third, and centring one crops the face off.
+
+    `keyart` sits at 53%, and that number is solved, not judged by eye.
+    Measured on the Lanterns art (1536x864) the ring occupies 43.6% to 61.3%
+    of the image height; at 35% the visible band was 25% to 53%, which cut the
+    top third off it. Reported as "I want the ring to be visible in the
+    preview".
+
+    THE PANEL IS THE BINDING CONSTRAINT, NOT THE BANNER. The banner is 6.4:1
+    and shows a 27.8% band, so anything from 46.4% to 60.4% keeps the ring
+    whole there. The panel is 9.69:1 and shows 18.4%, barely more than the
+    ring's own 17.7%, which leaves only 52.6% to 53.4%. 53% is the overlap.
+    Plain `center` satisfies the banner and clips the panel, which is what
+    checking only the wider box would have shipped.
+
+    It is one number for one piece of key art, and it is the right shape of fix
+    only while there is one. A second series whose subject sits elsewhere needs
+    a focal point per image, and that belongs in the CMS beside the art, not
+    here. Purpose-built band art removes the question entirely.
+  */
+  .spotlight-art {
+    position: absolute;
+    inset: -1px;
+    width: calc(100% + 2px);
+    height: calc(100% + 2px);
+    object-fit: cover;
+    object-position: center 35%;
+    z-index: 0;
+  }
+
+  [data-art-focus='keyart'] .spotlight-art {
+    object-position: center 53%;
+  }
+
+  /*
+    ─── THE BANNER NEVER ZOOMS A THUMBNAIL ────────────────────────────────────
+    A YouTube thumbnail is 1280x720 at most. Covering a full-bleed band of
+    roughly 6:1 with it cropped away two thirds of its height and upscaled
+    the rest: at 1440px on a 2x screen the band needed 2880 pixels of width
+    from a 1280 file (measured, 0.44x), which is the soft "eyes only" strip.
+    So on the banner a thumbnail is shown WHOLE, at the band's height, against
+    its right edge, and a blurred copy of the same file fills the band behind
+    it (same src and srcset: one fetch painted twice). Key art is 2560px and
+    keeps the full bleed. The left edge of the sharp copy feathers into the
+    fill so there is no seam; mask, not filter, on the <img> (hard rule 6).
+  */
+  .spotlight--banner [data-art-focus='thumbnail'] .spotlight-art:not(.spotlight-art--fill) {
+    inset: 0 0 0 auto;
+    width: auto;
+    height: 100%;
+    aspect-ratio: 16 / 9;
+    max-width: 100%;
+    object-fit: cover;
+    object-position: center;
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 22%);
+    mask-image: linear-gradient(to right, transparent 0%, #000 22%);
+  }
+  .spotlight-art--fill {
+    filter: blur(28px) brightness(0.55) saturate(1.1);
+    transform: scale(1.15);
+  }
+
+  /*
+    Left-weighted, because that is where the words are. Solid at the left edge
+    so the eyebrow and title sit on their own ground whatever the artwork does,
+    clearing by the middle so the picture is still a picture.
+  */
+  .spotlight-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background:
+      linear-gradient(
+        to right,
+        rgba(10, 10, 10, 0.96) 0%,
+        rgba(10, 10, 10, 0.82) 38%,
+        rgba(10, 10, 10, 0.35) 70%,
+        rgba(10, 10, 10, 0.2) 100%
+      ),
+      linear-gradient(to top, rgba(10, 10, 10, 0.75) 0%, transparent 60%);
+  }
+
+  /* The series slide lights in its own colour. Every other slide has no accent
+     and falls back to the site's. */
+  .spotlight-slide[style*='--slide-accent']::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--slide-accent, var(--color-accent, #cc0000));
+    z-index: 2;
+  }
+
+  .spotlight-body {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 0;
+  }
+
+  .spotlight-eyebrow {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--slide-accent, var(--color-accent-text, #ef4444));
+  }
+
+  .spotlight-title {
+    /*
+      ─── THE DISPLAY FACE, AND CAPS ─────────────────────────────────────────
+
+      Set in the body font and sentence case, this was the only title on the
+      homepage not in the site's own voice: "FEATURED HIGHLIGHTS" directly
+      beneath it is Syne, uppercase and tracked, and so is every row title on
+      the Feed (`.feed-row-title`). The band read as a widget dropped onto the
+      page rather than part of it.
+
+      Same three properties those use — family, weight, tracking — so a change
+      to the house treatment finds this too. The fallback is a bare
+      `sans-serif` rather than a guessed family name: `--font-display` is
+      declared by the Astro Fonts API in astro.config.mjs and naming a
+      not-quite-right family after it only masks the day it fails to load.
+    */
+    font-family: var(--font-display, sans-serif);
+    font-size: clamp(1.05rem, 0.85rem + 0.9vw, 1.7rem);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.25;
+    color: var(--color-white, #f0f0f0);
+    /* Two lines, then stop: a headline is allowed to be long, this band is
+       not allowed to grow. */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /*
+    The title treatment, sized to sit where the text title would. It is the
+    heading on this slide, so it takes the text's optical weight rather than
+    the artwork's: tall enough to read as a title, nowhere near the key art
+    behind it.
+  */
+  .spotlight-logo {
+    display: block;
+    max-width: 100%;
+    height: clamp(32px, 3.5vw, 48px);
+    width: auto;
+    object-fit: contain;
+    object-position: left center;
+    /* Optical, not layout: lines the wordmark's cap height up with where the
+       text baseline sat under the eyebrow. */
+    margin-top: 0.15rem;
+  }
+
+  .spotlight-cta {
+    position: relative;
+    z-index: 2;
+    margin-left: auto;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(0, 0, 0, 0.35);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-white, #f0f0f0);
+    white-space: nowrap;
+    transition: border-color 0.25s ease, background 0.25s ease, transform 0.25s ease;
+  }
+
+  .spotlight-slide:hover .spotlight-cta,
+  .spotlight-slide:focus-visible .spotlight-cta {
+    border-color: var(--slide-accent, var(--color-accent, #cc0000));
+    background: rgba(0, 0, 0, 0.6);
+    transform: translateX(3px);
+  }
+
+  .spotlight-slide:focus-visible {
+    outline: 2px solid var(--color-accent-text, #ef4444);
+    outline-offset: -4px;
+  }
+
+  /* ─── CONTROLS ─────────────────────────────────────────────────────────── */
+
+  .spotlight-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.6rem;
+    /*
+      ─── RESERVE THE CONTROL ROW'S HEIGHT BEFORE THE SCRIPT FILLS IT ────────
+
+      Every control in this row ships `hidden` and is revealed by the script,
+      so until then the row is only as tall as the 2px clock. Revealing them
+      takes it to 26px, and in the PANEL variant that is a visible jump rather
+      than a detail: `.hero-spotlight` is bottom-anchored inside the hero
+      (`position: absolute; bottom: clamp(...)`), so a row that grows pushes
+      everything above it UP the screen instead of down.
+
+      Measured on the homepage at 1440x900: the panel's frame moved from y=675
+      to y=651 at ~465ms, and desktop CLS was 0.0068 with the single pause
+      button. Adding prev and next to the same row tripled it to 0.0205 --
+      still inside Lighthouse's 0.1 "good" band, but a real regression and a
+      pointless one.
+
+      24px of nothing, reserved up front, removes the whole class of problem:
+      the row is its final height from first paint, so revealing one control
+      or three moves nothing at all. It is `min-height` rather than a fixed
+      `height` so the row can still grow if a control is ever added that does
+      not fit the 26px square.
+    */
+    min-height: 26px;
+    /* Furniture belongs in the column even though the art does not, so it uses
+       the same measurements the slide's inner does. */
+    width: 100%;
+    max-width: var(--page-max, 1536px);
+    margin-inline: auto;
+    padding-inline: clamp(1.25rem, calc(0.625rem + 2.5vw), 3rem);
+  }
+
+  /*
+    ONE BOX FOR ALL THREE CONTROLS. Prev, pause and next share this rule rather
+    than `.spotlight-nav` carrying a copy of it, because the row's height is
+    set by whichever control is tallest: two rules drifting by a pixel would
+    move the clock and the whole band with it. The 26px square is also what
+    keeps the JS reveal free of any VERTICAL layout shift — the row is already
+    26px tall from the pause button alone, so unhiding two more changes only
+    how much width the `flex: 1` clock is given.
+  */
+  .spotlight-pause,
+  .spotlight-nav {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .spotlight-pause[hidden],
+  .spotlight-nav[hidden] {
+    display: none;
+  }
+  .spotlight-pause:hover,
+  .spotlight-pause:focus-visible,
+  .spotlight-nav:hover,
+  .spotlight-nav:focus-visible {
+    border-color: var(--color-accent, #cc0000);
+    color: var(--color-white, #f0f0f0);
+  }
+  .spotlight-pause:focus-visible,
+  .spotlight-nav:focus-visible {
+    outline: 2px solid var(--color-accent-text, #ef4444);
+    outline-offset: 2px;
+  }
+  /* The chevron is drawn by the SVG's own stroke, so the button carries no
+     glyph rules of its own. `display: block` kills the inline baseline gap
+     that would otherwise push it a pixel off centre inside the 26px box. */
+  .spotlight-nav svg {
+    display: block;
+  }
+
+  /* Two bars, or one triangle. Drawn rather than an icon file: it is 26px and
+     it has exactly two states. */
+  .spotlight-pause-glyph {
+    display: block;
+    width: 8px;
+    height: 9px;
+    border-left: 3px solid currentColor;
+    border-right: 3px solid currentColor;
+  }
+  .spotlight-pause[data-paused='true'] .spotlight-pause-glyph {
+    width: 0;
+    height: 0;
+    border-left: 8px solid currentColor;
+    border-right: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+  }
+
+  /*
+    ─── THE CLOCK ──────────────────────────────────────────────────────────
+
+    This animation is the ONLY timer. The script listens for its `animationend`
+    and advances there, so pausing the animation pauses the rotation and the
+    two cannot drift apart.
+  */
+  .spotlight-progress {
+    flex: 1;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .spotlight-progress::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform-origin: left center;
+    transform: scaleX(0);
+    background: var(--color-accent, #cc0000);
+  }
+
+  .spotlight-progress.is-running::after {
+    animation: spotlight-lap 7s linear forwards;
+  }
+
+  .spotlight-controls.is-paused .spotlight-progress::after {
+    animation-play-state: paused;
+  }
+
+  @keyframes spotlight-lap {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+
+  @media (max-width: 599px) {
+    /*
+      AT THIS WIDTH THE MARK LEAVES THE ROW AGAIN, and that is not a return to
+      the bug above. The bug was anchoring the mark to the SLIDE while the CTA
+      was anchored to the column, so the two were measured from different
+      edges. Here it is `.spotlight-inner` that it pins to, the column itself,
+      which is the same box the CTA sits in.
+
+      It has to leave, because in the row it was costing the title 57px of a
+      290px line and "GET NEW COVERAGE AS IT LANDS" was truncating to "GET NEW
+      COVERAGE AS IT...". A headline that does not finish is a worse loss than
+      a wordmark that moves, and the alternatives were both worse: a third
+      clamped line grows a band that has no min-height and is sized by its
+      content, and dropping the mark outright is the blank slide this whole
+      change set out to fix.
+
+      Top right, not centre right: the arrow CTA is vertically centred, so the
+      corner above it is the one part of the column that nothing else claims.
+    */
+    .spotlight-mark {
+      position: absolute;
+      /*
+        TOP RIGHT, and `bottom: calc(100% + …)` no longer works for it. That
+        expression put the mark's foot on the column's top edge, which was
+        correct while the column was only as tall as its own two lines. The
+        column fills the slide now, so "just above it" is outside the band.
+        Pinned to the top instead, in the strip the centred copy leaves empty,
+        clear of the arrow that sits centred on the right.
+      */
+      top: 0;
+      bottom: auto;
+      left: auto;
+      transform: none;
+      margin-left: 0;
+      height: 28px;
+    }
+
+    /*
+      The mark's containing block is `.spotlight-inner`, and an absolute offset
+      is measured from the PADDING box, so `right: 0` would land on the slide
+      edge rather than the column. Each variant repeats its own gutter, the
+      same pairing the padding rules above use, so the mark's right edge and
+      the CTA's agree at every width.
+    */
+    .spotlight--panel .spotlight-mark {
+      right: clamp(0.9rem, 0.6rem + 1vw, 1.5rem);
+    }
+    .spotlight--banner .spotlight-mark {
+      right: clamp(1.25rem, calc(0.625rem + 2.5vw), 3rem);
+    }
+
+    /* The label goes, the arrow stays: at this width the words cost more room
+       than they buy, and the whole band is the link anyway. */
+    .spotlight-cta-label {
+      display: none;
+    }
+    .spotlight-cta {
+      padding: 0.5rem;
+    }
+  }
+
+  /*
+    ─── NOTHING MOVES ON ITS OWN ───────────────────────────────────────────
+
+    The script checks the same query and never starts the clock, so this is
+    belt and braces rather than the whole implementation: a reader who has
+    asked for less motion gets slide one and a band that stays put.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    .spotlight-slide,
+    .spotlight-cta {
+      transition: none;
+    }
+    .spotlight-progress.is-running::after {
+      animation: none;
+      transform: scaleX(1);
+    }
+  }
+</style>
+
+<script>
+  /* Kept free of imports on purpose: a self-contained script this size is
+     inlined into the page, and importing even a tiny module turns it into one
+     more request started before the first paint. */
+  const fillDeferred = (img: HTMLImageElement) => {
+    const { deferSrc, deferSrcset } = img.dataset;
+    if (!deferSrc) return;
+    if (deferSrcset) img.srcset = deferSrcset;
+    img.src = deferSrc;
+    delete img.dataset.deferSrc;
+    delete img.dataset.deferSrcset;
+  };
+
+  /*
+    ─── ONE CLOCK ────────────────────────────────────────────────────────────
+
+    There is no timer in here. `.spotlight-progress` runs a 7s CSS animation
+    and this advances on its `animationend`; pausing is a class the stylesheet
+    reads. See the note in the component header for the bug that rule exists to
+    prevent.
+  */
+  function initSpotlightBar() {
+    document.querySelectorAll<HTMLElement>('[data-spotlight]').forEach((root) => {
+      /* ClientRouter hands us a fresh DOM on every navigation, so there is
+         nothing to tear down — the flag only guards this module's listener
+         firing twice against one document. */
+      if (root.dataset.spotlightBound === 'true') return;
+      root.dataset.spotlightBound = 'true';
+
+      const slides = Array.from(root.querySelectorAll<HTMLElement>('[data-slide]'));
+      const controls = root.querySelector<HTMLElement>('.spotlight-controls');
+      const progress = root.querySelector<HTMLElement>('[data-progress]');
+      const pause = root.querySelector<HTMLButtonElement>('[data-pause]');
+      const live = root.querySelector<HTMLElement>('[data-live]');
+
+      /* One slide is a static band: no clock, no control, nothing to announce. */
+      if (slides.length <= 1) {
+        slides[0]?.classList.add('is-current');
+        return;
+      }
+
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      /* Later slides' images wait until the page has loaded (see artSources
+         in the frontmatter); a slide being shown is filled at once. */
+      const fillAll = () => root.querySelectorAll<HTMLImageElement>('img[data-defer-src]').forEach(fillDeferred);
+      if (document.readyState === 'complete') fillAll();
+      else window.addEventListener('load', fillAll, { once: true });
+
+      let index = 0;
+      const show = (next: number) => {
+        slides.forEach((slide, i) => {
+          const current = i === next;
+          if (current) slide.querySelectorAll<HTMLImageElement>('img[data-defer-src]').forEach(fillDeferred);
+          slide.classList.toggle('is-current', current);
+          /* `inert` takes a hidden slide out of the tab order and the
+             accessibility tree in one attribute; aria-hidden is belt and
+             braces for browsers that shipped it late. */
+          slide.inert = !current;
+          if (current) slide.removeAttribute('aria-hidden');
+          else slide.setAttribute('aria-hidden', 'true');
+        });
+        index = next;
+        if (live) live.textContent = `Highlight ${next + 1} of ${slides.length}`;
+      };
+
+      show(0);
+
+      /*
+        Restarting the clock is its own function and it GUARDS ITSELF, rather
+        than living below the reduced-motion return where it used to. Manual
+        navigation has to be able to call it from above that line, and a reader
+        on reduced motion has no clock to restart.
+      */
+      const lap = () => {
+        if (reduced || !progress) return;
+        progress.classList.remove('is-running');
+        /* Force the style flush. Without it the remove and the add coalesce
+           into no change and the animation never restarts. */
+        void progress.offsetWidth;
+        progress.classList.add('is-running');
+      };
+
+      /*
+        ─── PREV / NEXT ARE WIRED ABOVE THE REDUCED-MOTION RETURN ────────────
+
+        Deliberately, and it is the one part of this that is not just "the same
+        as the pause button". Everything below that return is the CLOCK: the
+        7s animation, the pause button that stops it, the hover and focus
+        holds. A reader who asked for less motion gets none of it — which up
+        to now also meant they got slide one and no way to reach slides two or
+        three at all. The other slides were unreachable content, not slower
+        content.
+
+        These buttons are not motion. They move the band only when pressed, so
+        they belong to the part of the component that still exists for that
+        reader. The pause button stays below the line, because a control that
+        stops a clock that is not running is the same lie as a pause button on
+        a band with no JS.
+
+        lap() no-ops under reduced motion, so `step` is one path for both.
+      */
+      const prev = root.querySelector<HTMLButtonElement>('[data-prev]');
+      const next = root.querySelector<HTMLButtonElement>('[data-next]');
+
+      /*
+        The modulo is written with `+ slides.length` so going back from slide
+        one lands on the last slide rather than -1. Both directions wrap: the
+        band is a loop and a control that dead-ends at an edge would need a
+        disabled state the rotation itself never has.
+      */
+      const step = (delta: number) => {
+        show((index + delta + slides.length) % slides.length);
+        /*
+          Restart the clock, unconditionally, and that is correct even while
+          the reader has PAUSED. lap() re-adds `is-running`, but the paused
+          state lives in CSS (`.spotlight-controls.is-paused` sets
+          `animation-play-state: paused`), so the bar resets to zero and stays
+          frozen there. The slide advances, the clock does not resume, and no
+          JS flag has to be consulted to get that right.
+        */
+        lap();
+      };
+
+      if (prev && next) {
+        prev.hidden = false;
+        next.hidden = false;
+        prev.addEventListener('click', () => step(-1));
+        next.addEventListener('click', () => step(1));
+      }
+
+      if (reduced || !progress || !controls) return;
+
+      progress.addEventListener('animationend', () => {
+        show((index + 1) % slides.length);
+        lap();
+      });
+
+      /*
+        TWO REASONS TO BE PAUSED, TRACKED SEPARATELY.
+
+        Hovering pauses, and so does pressing the button, and they are not the
+        same state: folded into one flag, moving the pointer off the band would
+        resume a rotation the reader had explicitly stopped. The button's state
+        is sticky and the pointer's is not; the clock stops if EITHER says so.
+      */
+      let userPaused = false;
+      let hoverPaused = false;
+
+      const apply = () => {
+        const held = userPaused || hoverPaused;
+        controls.classList.toggle('is-paused', held);
+        if (pause) {
+          pause.dataset.paused = String(userPaused);
+          pause.setAttribute('aria-label', userPaused ? 'Play the highlights' : 'Pause the highlights');
+        }
+      };
+
+      if (pause) {
+        pause.hidden = false;
+        pause.addEventListener('click', () => {
+          userPaused = !userPaused;
+          apply();
+        });
+      }
+
+      /* Hovering or tabbing into the band holds it, so nothing changes under a
+         reader who is looking at it or a pointer already on its way to it. */
+      root.addEventListener('mouseenter', () => { hoverPaused = true; apply(); });
+      root.addEventListener('mouseleave', () => { hoverPaused = false; apply(); });
+      root.addEventListener('focusin', () => { hoverPaused = true; apply(); });
+      root.addEventListener('focusout', (event) => {
+        /* Only when focus has actually left the band, not while it moves
+           between the slide and the pause button inside it. */
+        if (!root.contains((event as FocusEvent).relatedTarget as Node)) {
+          hoverPaused = false;
+          apply();
+        }
+      });
+
+      lap();
+    });
+  }
+
+  document.addEventListener('astro:page-load', initSpotlightBar);
+</script>
