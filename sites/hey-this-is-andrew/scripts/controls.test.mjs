@@ -114,7 +114,10 @@ const contentCfg = read(new URL('../src/content.config.ts', import.meta.url));
 for (const c of ['projects', 'goals', 'gear']) {
   assert.match(contentCfg, new RegExp(`file\\('src/data/${c}\\.json'\\)`), `${c} loads from src/data/${c}.json`);
   const docs = JSON.parse(read(new URL(`../src/data/${c}.json`, import.meta.url)));
-  assert.ok(Array.isArray(docs) && docs.length >= 1 && docs.every((d) => /^[a-z0-9-]+$/.test(d.id)), `${c}.json holds entries with slug ids`);
+  // projects may be empty: the two mock entries were removed (Andrew,
+  // 2026-10-08) and the store waits for real work, added in the CMS.
+  const min = c === 'projects' ? 0 : 1;
+  assert.ok(Array.isArray(docs) && docs.length >= min && docs.every((d) => /^[a-z0-9-]+$/.test(d.id)), `${c}.json holds entries with slug ids`);
   assert.match(read(new URL('../local-cms.config.mjs', import.meta.url)), new RegExp(`file: 'src/data/${c}\\.json'`), `the CMS edits ${c}.json`);
 }
 assert.ok(!fs.existsSync(new URL('../src/content', import.meta.url)), 'no Markdown content folder left beside the JSON stores');
