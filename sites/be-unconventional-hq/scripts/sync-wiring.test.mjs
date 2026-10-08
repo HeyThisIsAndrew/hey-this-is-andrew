@@ -11,7 +11,7 @@
        node scripts/sync-youtube.mjs && node --env-file=.env scripts/sync-instagram.mjs
 
      npm appends passthrough arguments to the END of that string, so
-     `npm run sync -- --execute` put `--execute` on the LAST command only. Both
+     `pnpm --filter beunconventionalhq sync -- --execute` put `--execute` on the LAST command only. Both
      scripts are dry-run by default, so the YouTube sync previewed and exited
      while the job reported success. Straight from the failing log, with
      --execute explicitly requested:
@@ -33,7 +33,7 @@
      in CI.
 
   And the coupling underneath both: a workflow named "Sync YouTube videos",
-  holding only YOUTUBE_* secrets, ran `npm run sync` — which also runs the
+  holding only YOUTUBE_* secrets, ran `pnpm --filter beunconventionalhq sync` — which also runs the
   Instagram sync. A source the job has no credentials for was failing a source
   it does.
 
@@ -70,7 +70,7 @@ const scripts = pkg.scripts || {};
 const syncAll = fs.readFileSync(path.join(ROOT, 'scripts/sync-all.mjs'), 'utf8');
 const igSync = fs.readFileSync(path.join(ROOT, 'scripts/sync-instagram.mjs'), 'utf8');
 const workflow = fs.readFileSync(
-  path.join(ROOT, '.github/workflows/sync-youtube.yml'),
+  path.join(ROOT, '../../.github/workflows/hq-sync-youtube.yml'),
   'utf8'
 );
 
@@ -146,18 +146,18 @@ test('the YouTube workflow runs the YouTube sync ONLY', () => {
     .split('\n')
     .filter((line) => !line.trim().startsWith('#'))
     .join('\n')
-    .match(/npm run sync[a-z:-]*/g) || [];
+    .match(/pnpm --filter beunconventionalhq sync[a-z:-]*/g) || [];
   assert.ok(runs.length > 0, 'the workflow no longer runs any sync');
   /* sync:dispatch-images (THE HQ DISPATCH's story images) is allowed: it
      needs no secrets at all, and the new videos this job syncs are exactly
      what it has to build images for. Anything else, and above all the
-     combined `npm run sync`, is still refused. */
-  const ALLOWED = ['npm run sync:youtube', 'npm run sync:dispatch-images'];
+     combined `pnpm --filter beunconventionalhq sync`, is still refused. */
+  const ALLOWED = ['pnpm --filter beunconventionalhq sync:youtube', 'pnpm --filter beunconventionalhq sync:dispatch-images'];
   for (const cmd of runs) {
     assert.ok(
       ALLOWED.includes(cmd),
       `sync-youtube.yml runs "${cmd}". It holds only YOUTUBE_* secrets, so\n` +
-        '      running the combined `npm run sync` drags in the Instagram sync and\n' +
+        '      running the combined `pnpm --filter beunconventionalhq sync` drags in the Instagram sync and\n' +
         '      fails the job on credentials it was never given.',
     );
   }
@@ -165,7 +165,7 @@ test('the YouTube workflow runs the YouTube sync ONLY', () => {
 
 test('the workflow still asks for --execute on its real runs', () => {
   assert.ok(
-    /npm run sync:youtube -- --execute/.test(workflow),
+    /pnpm --filter beunconventionalhq sync:youtube -- --execute/.test(workflow),
     'the non-dry-run branch must pass --execute, or the schedule writes nothing.',
   );
 });
@@ -192,7 +192,7 @@ test('an empty API response never blanks the stored feed', () => {
 });
 
 test('an Instagram sync workflow exists and uses the EXISTING Meta secret', () => {
-  const p = path.join(ROOT, '.github/workflows/sync-instagram.yml');
+  const p = path.join(ROOT, '../../.github/workflows/hq-sync-instagram.yml');
   assert.ok(
     fs.existsSync(p),
     'There is no sync-instagram.yml. META_ACCESS_TOKEN has been a repository\n' +
@@ -207,13 +207,13 @@ test('an Instagram sync workflow exists and uses the EXISTING Meta secret', () =
       '      Instagram through the linked Facebook Page.',
   );
   assert.ok(
-    /npm run sync:instagram -- --execute/.test(wf),
+    /pnpm --filter beunconventionalhq sync:instagram -- --execute/.test(wf),
     'the workflow must pass --execute on its real runs, or it only ever previews.',
   );
 });
 
 test('the Instagram workflow commits the images as well as the JSON', () => {
-  const wf = fs.readFileSync(path.join(ROOT, '.github/workflows/sync-instagram.yml'), 'utf8');
+  const wf = fs.readFileSync(path.join(ROOT, '../../.github/workflows/hq-sync-instagram.yml'), 'utf8');
   assert.ok(
     /git add src\/data\/instagram\.json public\/instagram/.test(wf),
     'the JSON references files in public/instagram/ by path, so committing one\n' +
@@ -279,7 +279,7 @@ test('media already on disk is not re-downloaded', () => {
 });
 
 test('the Instagram schedule runs at least every 6 hours, offset from the others', () => {
-  const wf = fs.readFileSync(path.join(ROOT, '.github/workflows/sync-instagram.yml'), 'utf8');
+  const wf = fs.readFileSync(path.join(ROOT, '../../.github/workflows/hq-sync-instagram.yml'), 'utf8');
   const cron = (wf.match(/cron:\s*'([^']+)'/) || [])[1];
   assert.ok(cron, 'no cron schedule found');
   const [minute, hour] = cron.split(' ');

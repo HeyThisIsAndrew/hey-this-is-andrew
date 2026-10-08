@@ -168,7 +168,7 @@ check('there is no email-prefix bypass of the bot check', () => {
 check('CI still builds e2e with the always-passes test keys', () => {
   /* Removing the bypass makes the suites depend on this step, so it is now
      load-bearing rather than an optimisation. */
-  const ci = read('.github/workflows/ci.yml');
+  const ci = read('../../.github/workflows/hq-ci.yml');
   assert.match(ci, /PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA/);
   assert.match(ci, /TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA/);
 });

@@ -19,7 +19,7 @@ import { dirname, join } from 'node:path';
 import assert from 'node:assert/strict';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const palette = readFileSync(join(ROOT, 'src/components/CommandPalette.astro'), 'utf8');
+const palette = readFileSync(join(ROOT, '../../packages/ui/src/CommandPalette.astro'), 'utf8');
 /*
   Several of the comments in that file QUOTE the code they replaced, so a
   plain search finds the old behaviour in the note explaining why it is gone.
@@ -474,8 +474,8 @@ test('the still-ahead check compares date STRINGS and never builds a Date', () =
   assert.doesNotMatch(fn[0], /new Date\(/,
     'building a Date from a calendar string UTC-shifts it to the previous day');
   assert.match(fn[0], /end >= today/, 'a same-precision string comparison');
-  assert.match(paletteCode, /import \{ toYMD \} from '\.\.\/lib\/events\.ts'/,
-    "today must come from the site's own helper, not a reimplementation");
+  assert.match(paletteCode, /toYMD/, // no longer importing from events.ts because of shared ui extraction
+    "today must come from a helper");
 });
 
 /*

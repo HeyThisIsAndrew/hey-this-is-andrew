@@ -52,7 +52,7 @@ function test(name, fn) {
 }
 
 const runner = fs.readFileSync(path.join(ROOT, 'scripts/e2e-run.mjs'), 'utf8');
-const ci = fs.readFileSync(path.join(ROOT, '.github/workflows/ci.yml'), 'utf8');
+const ci = fs.readFileSync(path.join(ROOT, '../../.github/workflows/hq-ci.yml'), 'utf8');
 
 /** The steps of one job in ci.yml, as raw text. */
 function jobBlock(name) {
