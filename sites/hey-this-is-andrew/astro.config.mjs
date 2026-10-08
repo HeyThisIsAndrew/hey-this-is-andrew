@@ -19,11 +19,10 @@ export default defineConfig({
     '/latest': withBase('/#latest'),
     '/goals': withBase('/build/#goals'),
     '/services': withBase('/#services'),
-    '/gear': withBase('/#gear'),
     '/now': withBase('/#about'),
     '/now/': withBase('/#about'),
-    '/cafe': withBase('/#brew'),
-    '/cafe/': withBase('/#brew'),
+    '/cafe': withBase('/gear/#brew'),
+    '/cafe/': withBase('/gear/#brew'),
     '/brands/hey-this-is-andrew': withBase('/#about'),
     '/brands/hey-this-is-andrew/': withBase('/#about'),
     '/brands/be-unconventional-hq': withBase('/#about'),
@@ -57,7 +56,7 @@ export default defineConfig({
     sitemap({
       // Hero concept previews and the 404 are not pages to index.
       // /events/ is hidden until there is a real event (the page is kept).
-      filter: (page) => !page.includes('/preview/') && !page.includes('/404') && !page.includes('/kit/') && !page.includes('/events/') && !page.includes('/work/') && !page.includes('/latest/') && !page.includes('/goals/') && !page.includes('/services/') && !page.includes('/gear/'),
+      filter: (page) => !page.includes('/preview/') && !page.includes('/404') && !page.includes('/kit/') && !page.includes('/events/') && !page.includes('/work/') && !page.includes('/latest/') && !page.includes('/goals/') && !page.includes('/services/'),
     }),
   ],
 });

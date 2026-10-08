@@ -58,10 +58,13 @@ assert.doesNotMatch(filterTabs, /padding: 0 1\.1rem/, 'filter tabs have the stan
 const global = read(new URL('../src/styles/global.css', import.meta.url));
 assert.match(global, /\.back-to-top \{[^}]*width: var\(--btn-h-md\);[^}]*padding: 0;/, 'back-to-top is a square md control with no UA padding');
 
-// 4.1 White bar z-index below dropdown
-assert.match(global, /\.scroll-progress-bar \{[^}]*z-index: 140;/, 'white bar z-index is 140');
+// 4.1 White bar: under the header layer, so an open dropdown (which lives in
+// the header's stacking context) paints over it, and it never hides on hover.
 const navAstro = read(new URL('../../../packages/ui/src/Nav.astro', import.meta.url));
-assert.match(navAstro, /\.dropdown-menu \{[^}]*z-index: 150;/, 'dropdown menu z-index is 150');
+const barZ = Number(global.match(/\.scroll-progress-bar \{[^}]*z-index: (\d+);/)?.[1]);
+const headerZ = Number(navAstro.match(/\.site-nav \{[^}]*position: fixed;[^}]*z-index: (\d+);/)?.[1]);
+assert.ok(barZ > 0 && headerZ > 0 && barZ < headerZ, `white bar (z ${barZ}) sits under the header (z ${headerZ})`);
+assert.doesNotMatch(global, /nav-link\[aria-expanded="true"\]\) \.scroll-progress-bar/, 'hovering a nav link never hides the white bar');
 
 // 5. The one-pass fixes (Andrew, 2026-10-02, "shippable").
 const pageNav = read(new URL('PageNav.astro', ui));
@@ -73,7 +76,7 @@ assert.match(nav, /\.nav-search-btn \{[^}]*border: 0;[^}]*\}/, 'the search trigg
 assert.match(nav, /aria-current=\{isCurrent\(l\.href\) \? 'page' : undefined\}/, 'a page link is current on its own page only');
 assert.match(nav, /data-spy=/, 'the home scrollspy lights only a link whose own section is current');
 assert.doesNotMatch(nav, /currentActiveId/, 'the old sticky scrollspy (About lit through What I do) is gone');
-assert.match(navData, /label: 'Gear',[\s\S]*?spy: \['gear'\]/, 'Gear: one label, lit at the Gear section');
+assert.match(navData, /label: 'Gear',\s*href: page\('gear'\),/, 'Gear: one label, its own page (every nav item is a page)');
 assert.doesNotMatch(navData, /Production & Gear|'The Kit'|Meet Andrew/, 'one name per destination in the nav');
 assert.match(bacc, /--logo-zone:/, 'the collapsed name is centred above the logo zone (CCC overlap)');
 assert.match(bacc, /'copy logo'/, 'brand view: one stack bottom left, the logo bottom right');
@@ -103,6 +106,7 @@ assert.match(integ, /if \(command !== 'dev'\) return;/, 'the CMS integration doe
 const brandsJson = JSON.parse(read(new URL('../src/data/brands.json', import.meta.url)));
 assert.ok(Array.isArray(brandsJson) && brandsJson.length >= 1 && brandsJson.every((b) => b.id && b.name && b.headline), 'brands.json holds the brand panels');
 assert.ok(brandsJson.filter((b) => b.accent === 'be-red').every((b) => b.id === 'be'), 'red only on the BE Unconventional HQ panel');
+assert.deepEqual(brandsJson.map((b) => b.id), ['be', 'ccc', 'sip-the-magic'], 'the accordion holds exactly three brands: BE Unconventional HQ, Capture Create Caffeinate, Sip the Magic (no parent-brand panel)');
 
 // 8. The local CMS (final): every content store is JSON the CMS edits, and
 // images resolve through one function whichever host holds them.

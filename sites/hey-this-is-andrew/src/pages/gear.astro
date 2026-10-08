@@ -1,0 +1,86 @@
+---
+/**
+ * /gear: the full kit, its own page (every nav item is a page). The
+ * homepage keeps a short Gear section (the storefront) that links here.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import GearGrid from '../components/GearGrid.astro';
+import CafeSection from '../components/CafeSection.astro';
+import StorefrontCTA from '../components/StorefrontCTA.astro';
+import { getCollection } from 'astro:content';
+
+const gear = (await getCollection('gear')).sort((a, b) => a.data.order - b.data.order);
+---
+
+<BaseLayout
+  title="Gear · HEY_THISISANDREW"
+  description="The kit behind the work: camera bodies, lenses, lighting, audio, tools, and the coffee bar. Updated as it evolves."
+>
+  <div class="container gear-page">
+    <header class="gear-header">
+      <span class="mono-tag">The kit</span>
+      <h1 class="gear-title">Gear</h1>
+      <p class="gear-lede">Behind the work. Updated as it evolves.</p>
+    </header>
+
+    <h2 class="vh">Camera and studio kit</h2>
+    <GearGrid categories={gear} />
+
+    <h2 class="vh">Coffee bar</h2>
+    <CafeSection />
+
+    <div class="gear-shop">
+      <StorefrontCTA />
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .gear-page {
+    padding-top: clamp(2rem, 4vw, 4rem);
+    padding-bottom: clamp(4rem, 8vw, 7rem);
+  }
+  /* Same header unit as /build: tag, title, lede, small fixed steps. */
+  .gear-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.9rem;
+    margin-bottom: clamp(2rem, 3vw, 3rem);
+  }
+  .mono-tag {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    padding: 0.3rem 0.65rem;
+    display: inline-block;
+  }
+  .gear-title {
+    font-family: var(--font-display);
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+    margin: 0;
+    line-height: 1.05;
+  }
+  .gear-lede {
+    font-size: 1.05rem;
+    color: var(--muted);
+    max-width: 65ch;
+    line-height: 1.7;
+    margin: 0;
+  }
+  .gear-shop {
+    margin-top: clamp(2.5rem, 5vw, 4rem);
+  }
+  .gear-shop :global(.storefront) {
+    margin-top: 0;
+  }
+</style>

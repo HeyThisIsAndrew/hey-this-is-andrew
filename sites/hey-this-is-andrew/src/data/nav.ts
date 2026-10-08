@@ -21,7 +21,7 @@ export const NAV_LINKS: NavItem[] = [
     section: 'home',
     subsections: toSubsections(HOME_SECTIONS, homeUrl),
   },
-      {
+  {
     label: 'Build in Public',
     href: page('build'),
     section: 'build',
@@ -29,9 +29,8 @@ export const NAV_LINKS: NavItem[] = [
   },
   {
     label: 'Gear',
-    href: homeUrl + '#gear',
+    href: page('gear'),
     section: 'gear',
-    spy: ['gear'],
     subsections: [],
   },
   {

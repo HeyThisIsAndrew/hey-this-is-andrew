@@ -440,15 +440,19 @@ html.js .section-header.is-revealed {
   transform: scaleX(0);
   transform-origin: left center;
   background-color: #ffffff;
-  z-index: 140;
+  /* One layer UNDER the fixed header (Nav.astro, z-index 100). An open
+     dropdown lives inside the header's stacking context, so its own
+     z-index (150) only counts there: with the bar above the header, the bar
+     drew across the menu, and the old fix hid the bar whenever any nav
+     dropdown was open, so hovering a nav link wiped the line out. Under
+     the header, the menu simply paints over it and the bar never hides. */
+  z-index: 99;
   pointer-events: none;
   will-change: transform;
 }
 /* Out of the way while a full-screen view is up (the brand view's band
    sits where the bar runs). */
 html.bacc-view-open .scroll-progress-bar,
-html:has(.menu-btn[aria-expanded="true"]) .scroll-progress-bar,
-html:has(.nav-link[aria-expanded="true"]) .scroll-progress-bar,
 html.bacc-view-open .back-to-top {
   visibility: hidden;
 }

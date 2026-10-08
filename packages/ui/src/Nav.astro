@@ -646,7 +646,9 @@ const isCurrent = (href: string) => {
   /* Smooth-Transitioning Dropdown Menu */
   .dropdown-menu {
     position: absolute;
-    top: calc(100% - 0.25rem);
+    /* Starts at the item's bottom, never above it: the menu is wider than
+       its link, and any overlap sat over the neighbouring links. */
+    top: 100%;
     left: 50%;
     transform: translateX(-50%) translateY(6px);
     min-width: 220px;
@@ -658,14 +660,18 @@ const isCurrent = (href: string) => {
       visibility 0.24s;
     z-index: 150;
   }
-  /* Hit-area bridge prevents accidental mouseout */
-  .dropdown-menu::before {
+  /* Hit-area bridge from the link down into its menu, so the pointer never
+     falls through the gap while the menu slides in. It belongs to the ITEM
+     and is the item's width: on the menu it was the menu's width (220px and
+     up, centred), which reached under the neighbouring links and kept this
+     menu open while the pointer was over them. */
+  .nav-item:has(.dropdown-menu)::after {
     content: '';
     position: absolute;
-    top: -14px;
+    top: 100%;
     left: 0;
     right: 0;
-    height: 16px;
+    height: 10px;
   }
   .nav-item:hover .dropdown-menu,
   .nav-item:focus-within .dropdown-menu,

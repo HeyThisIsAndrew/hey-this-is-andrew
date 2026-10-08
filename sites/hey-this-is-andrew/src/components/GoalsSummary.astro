@@ -1,18 +1,21 @@
 ---
 /**
  * Goals (homepage): The Big Goals stay public in full (building
- * in public); every other group is one line with its progress, 
- * expanding in-place to the full checklist from the former /goals/ page.
+ * in public); every other group is one line with its progress, and each
+ * line opens that group's row of the accordion on /build, where the full
+ * checklists live.
  */
 import type { CollectionEntry } from 'astro:content';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
-import ExpandSection from '@andrew/ui/ExpandSection.astro';
+import ViewAllLink from '@andrew/ui/ViewAllLink.astro';
 import GoalsChecklist from './GoalsChecklist.astro';
 
 interface Props { groups: CollectionEntry<'goals'>[] }
 const { groups } = Astro.props;
 
 const [lead, ...rest] = groups;
+const rawBase = import.meta.env.BASE_URL;
+const buildUrl = `${rawBase === '/' ? '' : rawBase.replace(/\/$/, '')}/build/`;
 const count = (g: CollectionEntry<'goals'>) => {
   const done = g.data.items.filter((i) => i.status === 'done').length;
   return { done, total: g.data.items.length, pct: Math.round((done / Math.max(1, g.data.items.length)) * 100) };
@@ -29,23 +32,19 @@ const count = (g: CollectionEntry<'goals'>) => {
         {rest.map((g) => {
           const { done, total, pct } = count(g);
           return (
-            <li class="goal-line">
-              <span class="goal-line-title">{g.data.title}</span>
-              <span class="goal-line-bar" aria-hidden="true"><span style={`width: ${pct}%`}></span></span>
-              <span class="goal-line-count">{done}/{total}<span class="vh"> done</span></span>
+            <li>
+              <a class="goal-line" href={`${buildUrl}#${g.id}`}>
+                <span class="goal-line-title">{g.data.title}</span>
+                <span class="goal-line-bar" aria-hidden="true"><span style={`width: ${pct}%`}></span></span>
+                <span class="goal-line-count">{done}/{total}<span class="vh"> done</span></span>
+              </a>
             </li>
           );
         })}
       </ul>
     )}
-    
-    <ExpandSection id="goals-expander" expandLabel="Show all goals" collapseLabel="Show less">
-      <div class="goals-full-list">
-        <GoalsChecklist groups={rest} />
-        
-        
-      </div>
-    </ExpandSection>
+
+    <ViewAllLink href={`${buildUrl}#goals`} label="See every goal" what="on Build in Public" />
   </div>
 </section>
 
@@ -61,8 +60,20 @@ const count = (g: CollectionEntry<'goals'>) => {
     grid-template-columns: minmax(0, 1fr) minmax(80px, 30%) auto;
     gap: 1rem;
     align-items: center;
+    min-height: var(--tap-min, 44px);
     padding: 0.9rem 0.25rem;
     border-bottom: 1px solid var(--line);
+    color: inherit;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+  }
+  .goal-line:hover,
+  .goal-line:focus-visible {
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .goal-line:hover .goal-line-title,
+  .goal-line:focus-visible .goal-line-title {
+    color: #fff;
   }
   .goal-line-title {
     font-weight: 600;
@@ -81,11 +92,5 @@ const count = (g: CollectionEntry<'goals'>) => {
     font-family: var(--font-mono);
     font-size: 0.85rem;
     color: var(--muted);
-  }
-  .goals-full-list {
-    margin-top: 2rem;
-  }
-  .goals-links {
-    margin-top: 2rem;
   }
 </style>

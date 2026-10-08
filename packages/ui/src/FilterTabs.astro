@@ -2,23 +2,33 @@
 /**
  * FilterTabs (@andrew/ui): a row of filter buttons over a list.
  *
- * Items inside the element named by `target` carry data-kind="<key>"; a tab
- * with key "all" shows everything. Plain buttons with aria-pressed (a
- * filter, not a tablist: the list itself never changes identity). Without
- * JavaScript every item stays visible.
+ * Items inside the element named by `target` carry data-kind="<key>". Plain
+ * buttons with aria-pressed (a filter, not a tablist: the list itself never
+ * changes identity). Without JavaScript every item stays visible.
+ *
+ * Two modes:
+ *  - `single` (default): exactly one tab is pressed; a tab with key "all"
+ *    shows everything, and the first tab starts pressed.
+ *  - `toggle` (BE Unconventional HQ's coverage filters): no "All" tab and
+ *    nothing pressed at first, which shows everything. A press filters to
+ *    that kind (releasing any other); pressing it again releases it and
+ *    everything shows again. The tabs share one equal width.
+ * Either way, ?filter=<key> presses that tab on load (deep links).
  */
 interface Props {
   /** id of the element whose [data-kind] children are filtered */
   target: string;
   tabs: { key: string; label: string }[];
   label: string;
+  mode?: 'single' | 'toggle';
 }
 
-const { target, tabs, label } = Astro.props;
+const { target, tabs, label, mode = 'single' } = Astro.props;
+const toggle = mode === 'toggle';
 ---
-<div class="filter-tabs" role="group" aria-label={label} data-filter-tabs data-target={target}>
+<div class:list={['filter-tabs', { 'filter-tabs--toggle': toggle }]} role="group" aria-label={label} data-filter-tabs data-target={target} data-mode={mode} style={toggle ? `--tab-n: ${tabs.length}` : undefined}>
   {tabs.map((t, i) => (
-    <button type="button" class="filter-tab" data-key={t.key} aria-pressed={i === 0 ? 'true' : 'false'}>
+    <button type="button" class="filter-tab" data-key={t.key} aria-pressed={!toggle && i === 0 ? 'true' : 'false'}>
       {t.label}
     </button>
   ))}
@@ -61,6 +71,17 @@ const { target, tabs, label } = Astro.props;
     color: var(--ink);
     border-color: rgba(255, 255, 255, 0.4);
   }
+  /* Toggle mode: one equal width (the widest label's), evenly spaced. */
+  .filter-tabs--toggle {
+    display: grid;
+    grid-template-columns: repeat(var(--tab-n, 2), minmax(0, 1fr));
+    width: max-content;
+    max-width: 100%;
+    gap: 0.75rem;
+  }
+  .filter-tabs--toggle .filter-tab {
+    min-width: 7.5rem;
+  }
   .filter-tab[aria-pressed='true'] {
     background: var(--ink);
     border-color: var(--ink);
@@ -75,15 +96,23 @@ const { target, tabs, label } = Astro.props;
     const list = document.getElementById(group.dataset.target ?? '');
     if (!list) return;
     const tabs = Array.from(group.querySelectorAll<HTMLButtonElement>('.filter-tab'));
-    const apply = (key: string) => {
-      tabs.forEach((t) => t.setAttribute('aria-pressed', String(t.dataset.key === key)));
+    const toggle = group.dataset.mode === 'toggle';
+    // key null: nothing pressed (toggle mode), which shows everything.
+    const apply = (key: string | null) => {
+      tabs.forEach((t) => t.setAttribute('aria-pressed', String(key !== null && t.dataset.key === key)));
       list.querySelectorAll<HTMLElement>('[data-kind]').forEach((item) => {
-        item.hidden = key !== 'all' && item.dataset.kind !== key;
+        item.hidden = key !== null && key !== 'all' && item.dataset.kind !== key;
       });
       // Anything revealed here must not sit at a scroll-reveal pre-state.
       document.dispatchEvent(new CustomEvent('reveal:force', { detail: list }));
     };
-    tabs.forEach((t) => t.addEventListener('click', () => apply(t.dataset.key ?? 'all')));
+    tabs.forEach((t) =>
+      t.addEventListener('click', () => {
+        const key = t.dataset.key ?? 'all';
+        if (toggle && t.getAttribute('aria-pressed') === 'true') apply(null);
+        else apply(key);
+      }),
+    );
     // ?filter=<key> preselects a tab (deep links from nav and search).
     const fromUrl = new URLSearchParams(window.location.search).get('filter');
     if (fromUrl && tabs.some((t) => t.dataset.key === fromUrl)) apply(fromUrl);

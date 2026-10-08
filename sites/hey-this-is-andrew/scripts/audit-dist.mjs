@@ -153,7 +153,10 @@ for (const page of pages) {
       for (const link of mainLinks) {
         if (!link.startsWith('http') && !link.startsWith('#') && !link.startsWith(base + '#')) {
           const allowed = [base + 'about/#press', base + 'gear/', base + 'rss.xml'];
-          if (!allowed.includes(link) && !link.startsWith('mailto:')) {
+          // The goals summary opens its group's row of the /build accordion
+          // (the full checklists live there, by Andrew's call).
+          const isBuildRow = link === base + 'build/' || link.startsWith(base + 'build/#');
+          if (!allowed.includes(link) && !isBuildRow && !link.startsWith('mailto:')) {
             fail(page, 'homepage main link to another internal page not allowed: ' + link);
           }
         }
