@@ -1,51 +1,79 @@
 ---
-// packages/ui/src/AccordionRow.astro
+/**
+ * AccordionRow (@andrew/ui): one row of an <Accordion>. A heading wrapping a
+ * button (BE Unconventional HQ's /featured pattern), and a region the button
+ * controls.
+ *
+ * - `open`: rendered expanded (the first row of /build).
+ * - `level`: the heading level, 2 by default; a row inside a section that
+ *   already has its own h2 takes 3.
+ * - `size`: 'lg' (default, page-level rows) or 'md' (rows inside a section).
+ * - The `media` slot puts a small image in the header (a work row's thumb).
+ *
+ * Collapsed is a CSS state only while the script runs (html.acc-js, set by
+ * Accordion.astro before its rows are parsed): without JavaScript every row
+ * reads open. A collapsed body is `inert`, so its links are not tab stops.
+ * Once a row has finished opening it stops clipping (.is-settled), so an
+ * iframe inside it has no clipping ancestor: iOS Safari paints a YouTube
+ * frame under an `overflow: hidden` ancestor as a black box.
+ */
 interface Props {
   id: string;
   kicker: string;
   title: string;
   progressCount?: number;
   progressTotal?: number;
+  open?: boolean;
+  level?: 2 | 3;
+  size?: 'lg' | 'md';
 }
-const { id, kicker, title, progressCount, progressTotal } = Astro.props;
+const { id, kicker, title, progressCount, progressTotal, open = false, level = 2, size = 'lg' } = Astro.props;
 const hasProgress = progressCount !== undefined && progressTotal !== undefined;
-const progressPercent = hasProgress ? Math.round((progressCount / progressTotal) * 100) : 0;
+const progressPercent = hasProgress ? Math.round((progressCount / Math.max(1, progressTotal)) * 100) : 0;
+const Heading = level === 3 ? 'h3' : 'h2';
+const hasMedia = Astro.slots.has('media');
 ---
-<div class="accordion-row" id={id}>
-  <h2 class="accordion-heading">
+<div class:list={['accordion-row', `accordion-row--${size}`, { 'is-expanded': open, 'is-settled': open }]} id={id} data-accordion-row>
+  <Heading class="accordion-heading">
     <button
       type="button"
       class="accordion-header"
+      id={`${id}-header`}
       data-accordion-header
-      aria-expanded="false"
+      aria-expanded={open ? 'true' : 'false'}
       aria-controls={`${id}-content`}
     >
       <span class="accordion-header-bg" aria-hidden="true"></span>
-      <div class="accordion-header-content">
-        <div class="accordion-header-text">
+      <span class="accordion-header-content">
+        {hasMedia && (
+          <span class="accordion-media">
+            <slot name="media" />
+          </span>
+        )}
+        <span class="accordion-header-text">
           <span class="accordion-kicker font-mono">{kicker}</span>
           <span class="accordion-title">{title}</span>
-        </div>
+        </span>
         {hasProgress && (
-          <div class="accordion-progress-meta">
-            <div class="accordion-progress-header">
+          <span class="accordion-progress-meta">
+            <span class="accordion-progress-header">
               <span class="accordion-progress-label font-mono">Verified Execution Tracker</span>
               <span class="accordion-progress-stat font-mono">{progressCount} of {progressTotal} Completed ({progressPercent}%)</span>
-            </div>
-            <div class="accordion-progress-bar-bg">
-              <div class="accordion-progress-fill" style={`width: ${progressPercent}%;`}></div>
-            </div>
-          </div>
+            </span>
+            <span class="accordion-progress-bar-bg">
+              <span class="accordion-progress-fill" style={`width: ${progressPercent}%;`}></span>
+            </span>
+          </span>
         )}
         <span class="accordion-chevron" aria-hidden="true">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M19 9l-7 7-7-7" />
           </svg>
         </span>
-      </div>
+      </span>
     </button>
-  </h2>
-  <div id={`${id}-content`} class="accordion-body" role="region" aria-labelledby={id}>
+  </Heading>
+  <div id={`${id}-content`} class="accordion-body" role="region" aria-labelledby={`${id}-header`}>
     <div class="accordion-body-inner">
       <slot />
     </div>
@@ -56,11 +84,15 @@ const progressPercent = hasProgress ? Math.round((progressCount / progressTotal)
   .accordion-row {
     background: var(--bg);
     position: relative;
-    overflow: hidden;
+    /* Land a #row link below the fixed header. */
+    scroll-margin-top: calc(var(--nav-bar-h, 76px) + 1rem);
   }
   .accordion-heading {
     margin: 0;
     padding: 0;
+    font: inherit;
+    letter-spacing: normal;
+    text-transform: none;
   }
   .accordion-header {
     width: 100%;
@@ -72,6 +104,11 @@ const progressPercent = hasProgress ? Math.round((progressCount / progressTotal)
     padding: 2rem 1.5rem;
     cursor: pointer;
     color: var(--text);
+    font: inherit;
+  }
+  .accordion-header:focus-visible {
+    outline: 2px solid var(--focus-ring, #f0f0f0);
+    outline-offset: -4px;
   }
   .accordion-header-bg {
     position: absolute;
@@ -91,8 +128,24 @@ const progressPercent = hasProgress ? Math.round((progressCount / progressTotal)
     align-items: center;
     gap: 2rem;
   }
+  .accordion-media {
+    flex: 0 0 auto;
+    display: block;
+    width: clamp(96px, 9vw, 168px);
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--surface-2, #1a1a1a);
+    border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  }
+  .accordion-media :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
   .accordion-header-text {
     flex: 1 1 auto;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -112,6 +165,13 @@ const progressPercent = hasProgress ? Math.round((progressCount / progressTotal)
     letter-spacing: 0.02em;
     color: var(--ink);
     line-height: 1.1;
+  }
+  .accordion-row--md .accordion-header {
+    padding: 1.25rem 1.5rem;
+  }
+  .accordion-row--md .accordion-title {
+    font-size: clamp(1.05rem, 1.6vw, 1.5rem);
+    line-height: 1.2;
   }
   .accordion-progress-meta {
     flex: 0 0 auto;
@@ -135,6 +195,7 @@ const progressPercent = hasProgress ? Math.round((progressCount / progressTotal)
     color: #f5f5f5;
   }
   .accordion-progress-bar-bg {
+    display: block;
     width: 100%;
     height: 3px;
     background: rgba(255,255,255,0.1);
@@ -142,33 +203,49 @@ const progressPercent = hasProgress ? Math.round((progressCount / progressTotal)
     overflow: hidden;
   }
   .accordion-progress-fill {
+    display: block;
     height: 100%;
     background: #f5f5f5;
     transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .accordion-chevron {
     flex: 0 0 auto;
+    display: inline-flex;
     transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     color: var(--muted);
   }
   .accordion-header[aria-expanded="true"] .accordion-chevron {
     transform: rotate(180deg);
   }
-  
+
   .accordion-body {
     display: grid;
-    grid-template-rows: 0fr;
+    grid-template-rows: 1fr;
     transition: grid-template-rows 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .accordion-row.is-expanded .accordion-body {
-    grid-template-rows: 1fr;
+  /* Collapsed only while the script runs (see Accordion.astro). */
+  :global(html.acc-js) .accordion-row:not(.is-expanded) .accordion-body {
+    grid-template-rows: 0fr;
   }
   .accordion-body-inner {
+    min-height: 0;
     overflow: hidden;
     padding: 0 1.5rem;
   }
-  .accordion-row.is-expanded .accordion-body-inner {
+  .accordion-row.is-expanded .accordion-body-inner,
+  :global(html:not(.acc-js)) .accordion-body-inner {
     padding-bottom: 2.5rem;
+  }
+  /* Open and done moving: nothing clips (an iframe inside must have no
+     clipping ancestor on iOS). */
+  .accordion-row.is-settled .accordion-body-inner {
+    overflow: visible;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .accordion-body,
+    .accordion-chevron {
+      transition: none;
+    }
   }
 
   @media (max-width: 768px) {
@@ -180,10 +257,21 @@ const progressPercent = hasProgress ? Math.round((progressCount / progressTotal)
       align-items: flex-start;
       gap: 1.5rem;
     }
+    .accordion-row--md .accordion-header-content {
+      flex-direction: row;
+      align-items: center;
+      gap: 1rem;
+    }
+    .accordion-row--md .accordion-header {
+      padding: 1rem;
+    }
+    .accordion-media {
+      width: 96px;
+    }
     .accordion-progress-meta {
       width: 100%;
     }
-    .accordion-chevron {
+    .accordion-row--lg .accordion-chevron {
       position: absolute;
       top: 0;
       right: 0;

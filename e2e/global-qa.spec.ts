@@ -126,23 +126,51 @@ test.describe('Global QA', () => {
     expect(await hidden('video')).toBe(0);
   });
 
-  test('/build: one accordion row per goal group, each opens and closes', async ({ page }) => {
+  test('/build: one accordion row per goal group, one open at a time', async ({ page }) => {
     await page.goto('./build/');
-    const headers = page.locator('.build-acc-header');
+    const rows = page.locator('#goals [data-accordion-row]');
+    const headers = page.locator('#goals [data-accordion-header]');
     expect(await headers.count()).toBeGreaterThanOrEqual(3);
-    await expect(page.locator('.build-acc-row').first()).toHaveClass(/expanded/);
+    await expect(rows.first()).toHaveClass(/is-expanded/);
     for (let i = 1; i < (await headers.count()); i++) {
       await headers.nth(i).click();
       await expect(headers.nth(i)).toHaveAttribute('aria-expanded', 'true');
-      await expect(page.locator('.build-acc-row.expanded')).toHaveCount(1);
-      await expect(page.locator('.build-acc-row').nth(i).locator('.build-acc-body')).toBeVisible();
+      await expect(page.locator('#goals [data-accordion-row].is-expanded')).toHaveCount(1);
+      await expect(rows.nth(i).locator('.accordion-body-inner')).toBeVisible();
     }
     await headers.last().click();
-    await expect(page.locator('.build-acc-row.expanded')).toHaveCount(0);
-    // A deep link opens its row.
+    await expect(page.locator('#goals [data-accordion-row].is-expanded')).toHaveCount(0);
+    // No empty anchor sections: every id on the page is unique.
+    const dupes = await page.evaluate(() => {
+      const seen = new Map<string, number>();
+      document.querySelectorAll('[id]').forEach((el) => seen.set(el.id, (seen.get(el.id) ?? 0) + 1));
+      return [...seen].filter(([, n]) => n > 1).map(([id]) => id);
+    });
+    expect(dupes).toEqual([]);
+    // A deep link opens its row, and its progress bar shows.
     await page.goto('./build/#content-engine');
-    await expect(page.locator('.build-acc-row[data-row="content-engine"]')).toHaveClass(/expanded/);
-    await expect(page.locator('#content-engine-panel [role="progressbar"]')).toBeVisible();
+    await expect(page.locator('#content-engine')).toHaveClass(/is-expanded/);
+    await expect(page.locator('#content-engine .accordion-progress-bar-bg')).toBeVisible();
+    await expect(page.locator('#content-engine .checklist-card').first()).toBeVisible();
+  });
+
+  test('Homepage goals expand in place, without leaving the page', async ({ page }) => {
+    await page.goto('./');
+    const url = page.url();
+    const header = page.locator('#goals [data-accordion-header]').first();
+    await header.scrollIntoViewIfNeeded();
+    const body = page.locator('#goals [data-accordion-row]').first().locator('.accordion-body');
+    await expect(header).toHaveAttribute('aria-expanded', 'false');
+    // Collapsed content is out of the tab order.
+    expect(await body.evaluate((b) => (b as HTMLElement).inert)).toBe(true);
+    await header.click();
+    await expect(header).toHaveAttribute('aria-expanded', 'true');
+    await expect(body.locator('.checklist-card').first()).toBeVisible();
+    expect(page.url()).toBe(url);
+    await header.click();
+    await expect(header).toHaveAttribute('aria-expanded', 'false');
+    // The one way out is the "View all goals" link.
+    await expect(page.locator('#goals a', { hasText: /View all goals/i })).toHaveAttribute('href', /\/build\/$/);
   });
 
   test('Gear is its own page, reached from the nav', async ({ page, isMobile }) => {
