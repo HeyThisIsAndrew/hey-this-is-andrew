@@ -173,6 +173,79 @@ test.describe('Global QA', () => {
     await expect(page.locator('#goals a', { hasText: /View all goals/i })).toHaveAttribute('href', /\/build\/$/);
   });
 
+  test('Creator intro: portrait and headline stay, the rest opens in panels', async ({ page }) => {
+    await page.goto('./');
+    const about = page.locator('#about');
+    await about.scrollIntoViewIfNeeded();
+    await expect(about.locator('.about-portrait')).toBeVisible();
+    await expect(about.locator('.about-headline')).toBeVisible();
+    const headers = about.locator('[data-accordion-header]');
+    await expect(headers).toHaveText([/What I.m building/i, /How I work/i, /Now/i]);
+    const url = page.url();
+    for (let i = 0; i < 3; i++) {
+      await expect(headers.nth(i)).toHaveAttribute('aria-expanded', 'false');
+      await headers.nth(i).click();
+      await expect(headers.nth(i)).toHaveAttribute('aria-expanded', 'true');
+      await expect(about.locator('[data-accordion-row]').nth(i).locator('.accordion-body-inner')).toBeVisible();
+    }
+    expect(page.url()).toBe(url);
+  });
+
+  test('Selected Work: a video loads nothing from YouTube until play, and unloads on close', async ({ page }) => {
+    const embeds: string[] = [];
+    page.on('request', (r) => { if (/youtube(-nocookie)?\.com\/embed\//.test(r.url())) embeds.push(r.url()); });
+    await page.goto('./');
+    const row = page.locator('#work [data-accordion-row]:has([data-inline-video])').first();
+    test.skip((await row.count()) === 0, 'no archive video in this build');
+    await row.scrollIntoViewIfNeeded();
+    await expect(page.locator('#work iframe')).toHaveCount(0);
+    await row.locator('[data-accordion-header]').click();
+    await expect(row).toHaveClass(/is-expanded/);
+    await expect(page.locator('#work iframe')).toHaveCount(0);
+    expect(embeds).toEqual([]);
+    await row.locator('.iv-poster').click();
+    const frame = row.locator('iframe');
+    await expect(frame).toHaveCount(1);
+    const src = await frame.getAttribute('src');
+    expect(src).toMatch(/^https:\/\/www\.youtube-nocookie\.com\/embed\//);
+    expect(src).not.toMatch(/autoplay=1/);
+    expect(await frame.getAttribute('allow')).toMatch(/fullscreen/);
+    // Once the row has finished opening, nothing above the frame clips it
+    // (iOS paints a YouTube frame under a clipping ancestor black).
+    await expect(row).toHaveClass(/is-settled/);
+    const clipped = await frame.evaluate((f) => {
+      for (let e = f.parentElement; e && e !== document.body; e = e.parentElement) {
+        if (getComputedStyle(e).overflow !== 'visible') return e.className;
+      }
+      return null;
+    });
+    expect(clipped).toBeNull();
+    await row.locator('[data-accordion-header]').click();
+    await expect(page.locator('#work iframe')).toHaveCount(0);
+  });
+
+  test('Search: the nav button opens it, and the index loads under the base path', async ({ page, isMobile }) => {
+    const index = page.waitForResponse((r) => r.url().endsWith('/hey-this-is-andrew/api/search.json'));
+    await page.goto('./');
+    if (isMobile) {
+      await page.locator('.menu-btn').click();
+      await page.locator('#mobile-search-trigger').click();
+    } else {
+      await page.locator('#nav-search-trigger').click();
+    }
+    await expect(page.locator('#command-palette')).toHaveAttribute('open', '');
+    expect((await index).status()).toBe(200);
+    await page.keyboard.type('sony');
+    await expect(page.locator('#command-palette a[href^="/hey-this-is-andrew/"]').first()).toBeVisible();
+  });
+
+  test('About quote: left aligned, all caps', async ({ page }) => {
+    await page.goto('./about/');
+    const q = page.locator('.quote-band blockquote p');
+    await expect(q).toHaveCSS('text-align', 'left');
+    await expect(q).toHaveCSS('text-transform', 'uppercase');
+  });
+
   test('Gear is its own page, reached from the nav', async ({ page, isMobile }) => {
     await page.goto('./');
     if (isMobile) {
@@ -200,5 +273,24 @@ test.describe('Global QA', () => {
     if (await btn.count() > 0) {
       await expect(btn).toHaveAttribute('aria-expanded', 'true');
     }
+  });
+});
+
+test.describe('Phone landscape', () => {
+  test.use({ viewport: { width: 667, height: 375 }, hasTouch: true, isMobile: true });
+
+  test('Shot on the job fits under the header', async ({ page }) => {
+    await page.goto('./');
+    const wall = page.locator('.photo-wall');
+    test.skip((await wall.count()) === 0, 'no synced Instagram photos in this build');
+    await wall.scrollIntoViewIfNeeded();
+    const { wallH, room, cols } = await page.evaluate(() => {
+      const nav = document.querySelector('.site-nav')!.getBoundingClientRect().height;
+      const w = document.querySelector('.photo-wall')!.getBoundingClientRect().height;
+      const c = [...document.querySelectorAll('.photo-column')].filter((e) => getComputedStyle(e).display !== 'none').length;
+      return { wallH: w, room: window.innerHeight - nav, cols: c };
+    });
+    expect(wallH).toBeLessThanOrEqual(room);
+    expect(cols).toBe(4);
   });
 });
