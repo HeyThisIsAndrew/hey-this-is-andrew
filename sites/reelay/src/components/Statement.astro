@@ -1,0 +1,75 @@
+---
+/**
+ * Statement: the product's thesis, set huge, lighting up word by word as it
+ * scrolls through the viewport. The sentence is the README's own first line.
+ */
+interface Props { id?: string }
+const { id = 'thesis' } = Astro.props;
+const lines = [
+  { text: 'Cross-posting isn’t a scheduling problem.', dim: false },
+  { text: 'It’s a packaging problem.', dim: false },
+  { text: 'Reelay’s job is to know whether a video is actually ready to leave the building.', dim: true },
+];
+---
+<section class="statement stage" id={id} aria-label="Why Reelay exists">
+  <div class="wrap">
+    <p class="st-text" data-statement>
+      {lines.map((l) => (
+        <span class:list={['st-line', { 'st-line--soft': l.dim }]}>
+          {l.text.split(' ').map((w) => <span class="w">{w} </span>)}
+        </span>
+      ))}
+    </p>
+  </div>
+</section>
+
+<style>
+  .statement { padding-block: clamp(7rem, 16vw, 14rem); }
+  .st-text {
+    font-family: var(--font-display);
+    font-size: clamp(2.1rem, 5.6vw, 4.6rem);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+    color: var(--r-ink);
+    max-width: 20ch;
+    text-wrap: balance;
+  }
+  .st-line { display: block; }
+  .st-line + .st-line { margin-top: 0.35em; }
+  .st-line--soft { font-size: 0.62em; line-height: 1.2; letter-spacing: -0.03em; max-width: 26ch; margin-top: 0.9em !important; }
+  .w { transition: color 0.5s ease; }
+  :global(html.js) .w { color: var(--r-fill-3); }
+  :global(html.js) .w.lit { color: var(--r-ink); }
+  :global(html.js) .st-line--soft .w.lit { color: var(--r-amber-text); }
+  @media (prefers-reduced-motion: reduce) {
+    :global(html.js) .w { color: var(--r-ink); }
+  }
+</style>
+
+<script>
+  const blocks = document.querySelectorAll<HTMLElement>('[data-statement]');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  blocks.forEach((block) => {
+    const words = Array.from(block.querySelectorAll<HTMLElement>('.w'));
+    if (reduce) { words.forEach((w) => w.classList.add('lit')); return; }
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      const r = block.getBoundingClientRect();
+      const vh = window.innerHeight;
+      // 0 when the block's top reaches 85% of the viewport, 1 when its
+      // bottom passes 45%: the sentence finishes lighting mid-screen.
+      const start = vh * 0.85;
+      const end = vh * 0.45;
+      const total = r.height + (start - end);
+      const p = Math.min(1, Math.max(0, (start - r.top) / total));
+      const n = Math.round(p * words.length);
+      words.forEach((w, i) => w.classList.toggle('lit', i < n));
+    };
+    const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    update();
+  });
+</script>

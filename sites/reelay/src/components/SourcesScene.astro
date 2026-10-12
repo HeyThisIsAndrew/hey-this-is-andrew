@@ -1,0 +1,75 @@
+---
+/**
+ * SourcesScene: the Download Sources window (reelay/gui/sources_panel.py):
+ * one section per platform, a field for a username or link, each saved
+ * source with Mine and List Videos. Snapchat can't list a profile, so its
+ * section takes Spotlight links.
+ */
+import AppWindow from './ui/AppWindow.astro';
+import PlatformIcon from './ui/PlatformIcon.astro';
+
+const sections = [
+  { key: 'tiktok', name: 'TikTok', placeholder: '@username or profile link', sources: [{ n: 'Juniper Lane', l: 'tiktok.com/@juniperlane', mine: true }] },
+  { key: 'instagram', name: 'Instagram', placeholder: '@username or profile link', sources: [{ n: 'juniperlane', l: 'instagram.com/juniperlane', mine: true }] },
+  { key: 'youtube', name: 'YouTube', placeholder: '@handle, channel ID or channel link', sources: [{ n: 'Juniper Lane', l: 'Connected channel', mine: true, connected: true }] },
+  { key: 'snapchat', name: 'Snapchat', placeholder: 'Paste Spotlight links', sources: [] },
+] as const;
+---
+<div class="scale-stage">
+  <div class="sscene">
+    <AppWindow title="Download Sources" label="Reelay's Download Sources window: TikTok, Instagram, YouTube and Snapchat sections, each with a field for a username or link and its saved sources with List Videos.">
+      <div class="sbody">
+        <p class="sintro">Where Juniper Lane’s videos come in from. Type a username or paste a profile link. Only import media you own or have permission to manage.</p>
+        <div class="sgrid">
+          {sections.map((sec) => (
+            <section class="sec">
+              <h4 class="sec-h">
+                {sec.key === 'snapchat' ? <span class="snap" aria-hidden="true">S</span> : <PlatformIcon name={sec.key} />}
+                {sec.name}
+              </h4>
+              {sec.sources.map((src) => (
+                <div class="src">
+                  <span class="src-n"><b>{src.n}</b><small>{src.l}</small></span>
+                  <span class:list={['mine', { on: src.mine }]}>{'connected' in src ? 'Connected' : 'Mine'}</span>
+                  <span class="list">List Videos</span>
+                </div>
+              ))}
+              {sec.key === 'snapchat' && <p class="snote">Snapchat doesn’t let apps list a profile’s videos: paste your Spotlight links in the Library.</p>}
+              <div class="add">
+                <span class="field">{sec.placeholder}</span>
+                <span class="addbtn">{sec.key === 'snapchat' ? 'List Videos' : 'Add'}</span>
+              </div>
+            </section>
+          ))}
+        </div>
+      </div>
+    </AppWindow>
+  </div>
+</div>
+
+<style>
+  .scale-stage { container-type: inline-size; width: 100%; }
+  .sscene { font-size: calc(100cqw / 50); }
+  .sbody { padding: 1.1em 1.2em 1.2em; background: var(--app-bg); color: var(--app-ink); }
+  .sintro { font-size: 0.78em; color: var(--app-ink-2); margin-bottom: 1em; }
+  .sgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8em; }
+  .sec { padding: 0.9em; border-radius: 0.8em; background: var(--app-surface); box-shadow: 0 0 0 0.0625em var(--app-border); display: grid; gap: 0.6em; align-content: start; }
+  .sec-h { display: flex; align-items: center; gap: 0.5em; font-size: 0.9em; font-weight: 700; color: var(--app-ink); }
+  .sec-h :global(svg) { width: 1.1em; height: 1.1em; }
+  .snap { display: inline-grid; place-items: center; width: 1.1em; height: 1.1em; border-radius: 0.3em; background: #fffc00; color: #000; font-size: 0.75em; font-weight: 800; }
+  .src { display: flex; align-items: center; gap: 0.5em; padding: 0.5em 0.6em; border-radius: 0.6em; background: var(--app-raised); }
+  .src-n { flex: 1; display: grid; min-width: 0; }
+  .src-n b { font-size: 0.78em; }
+  .src-n small { font-size: 0.66em; color: var(--app-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mine { font-size: 0.64em; font-weight: 600; padding: 0.3em 0.6em; border-radius: 1em; box-shadow: inset 0 0 0 0.09em var(--app-border); color: var(--app-ink-2); }
+  .mine.on { background: var(--app-accent); color: var(--app-on-accent); box-shadow: none; }
+  .list { font-size: 0.68em; font-weight: 600; padding: 0.35em 0.7em; border-radius: 0.5em; background: var(--app-surface); box-shadow: 0 0 0 0.0625em var(--app-border); }
+  .snote { font-size: 0.7em; color: var(--app-ink-2); }
+  .add { display: flex; gap: 0.5em; }
+  .field { flex: 1; font-size: 0.72em; padding: 0.55em 0.7em; border-radius: 0.55em; background: var(--app-bg); box-shadow: inset 0 0 0 0.0625em var(--app-border); color: var(--app-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .addbtn { font-size: 0.72em; font-weight: 600; padding: 0.55em 0.8em; border-radius: 0.55em; background: var(--app-accent); color: var(--app-on-accent); white-space: nowrap; }
+  @container (max-width: 560px) {
+    .sscene { font-size: calc(100cqw / 24); }
+    .sgrid { grid-template-columns: 1fr; }
+  }
+</style>

@@ -1,0 +1,23 @@
+---
+/** Who runs Reelay: the identity block Google, TikTok and Meta ask for. */
+import { OPERATOR, CONTACTS } from '../../data/operator';
+const ph = (v: string) => /\{\{/.test(v);
+const rows: [string, string, boolean?][] = [
+  ['Operator (legal name)', OPERATOR.legalEntity],
+  ['Address', OPERATOR.address],
+  ['Country', OPERATOR.country],
+  ['Website', `https://${OPERATOR.domain}`],
+  ['Support', CONTACTS.support, true],
+  ['Privacy', CONTACTS.privacy, true],
+  ['App review', CONTACTS.reviewers, true],
+  ['Security', CONTACTS.security, true],
+];
+---
+<dl class="facts operator">
+  {rows.map(([k, v, mail]) => (
+    <div>
+      <dt>{k}</dt>
+      <dd>{ph(v) ? <span class="placeholder-token">{v}</span> : mail ? <a href={`mailto:${v}`}>{v}</a> : v}</dd>
+    </div>
+  ))}
+</dl>

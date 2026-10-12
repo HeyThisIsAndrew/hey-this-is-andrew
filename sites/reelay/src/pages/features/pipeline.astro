@@ -1,0 +1,227 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/ui/PageHero.astro';
+import NextUp from '../../components/ui/NextUp.astro';
+import BoardScene from '../../components/BoardScene.astro';
+import PlatformIcon from '../../components/ui/PlatformIcon.astro';
+import CommandCenterScene from '../../components/CommandCenterScene.astro';
+import Screen from '../../components/ui/Screen.astro';
+import { SITE, href } from '../../data/site';
+
+const limits = [
+  ['youtube', 'YouTube title', '100 characters'],
+  ['youtube', 'YouTube description', '5,000 bytes'],
+  ['youtube', 'YouTube tags', '500 characters in total'],
+  ['tiktok', 'TikTok', '4,000 characters'],
+  ['instagram', 'Instagram', '2,200 characters and 30 hashtags'],
+  ['bluesky', 'Bluesky', '300 characters (an emoji counts once) and 3,000 bytes'],
+  ['threads', 'Threads', '500 characters (an emoji counts as its UTF-8 bytes)'],
+  ['facebook', 'Facebook', '63,206 characters'],
+] as const;
+
+const legend = [
+  { cls: 'live', mark: '✓', name: 'Published', note: 'Live on that platform' },
+  { cls: 'sched', mark: '◷', name: 'Scheduled', note: 'Has a time to go live' },
+  { cls: 'ready', mark: '●', name: 'Ready to publish', note: 'Copy and file check out' },
+  { cls: 'needs', mark: '!', name: 'Needs work', note: 'Missing caption or file, failed or interrupted' },
+  { cls: 'off', mark: '○', name: 'Not going', note: 'Faint: not posting there' },
+];
+
+const handoff = [
+  'Checks the file and the caption',
+  'Copies the caption',
+  'Opens the platform’s uploader',
+  'Shows the .mp4 in Finder',
+  'Records the post link and time you paste back',
+];
+---
+
+<BaseLayout
+  title={`Board and Tickets: ${SITE.fullName}`}
+  description="A Kanban board where every video is a ticket with ready-to-paste copy for six platforms, a Command Center with the player and readiness, a Ready gate before scheduling, a coverage map and a complete change history."
+  subnav
+>
+  <PageHero eyebrow="Board and Tickets">
+    <Fragment slot="title">Know what’s ready.<br /><span class="text-glow">Before it ships.</span></Fragment>
+    <Fragment slot="lede">Every video is a ticket on a four-column board. Each one holds the copy for every platform, a checklist that says whether it can go, and one record of everywhere it has been.</Fragment>
+  </PageHero>
+
+  <section class="stage stage--flush-top" aria-label="The Board">
+    <div class="wrap-wide" data-reveal>
+      <div class="pl-stage">
+        <div class="horizon" style="height:70%;bottom:-10%" aria-hidden="true"></div>
+        <BoardScene />
+      </div>
+    </div>
+    <div class="wrap mt-3" data-reveal><Screen id="board" caption="The Board in the app, from a demo profile." /></div>
+  </section>
+
+  <section class="stage" id="command-center" aria-labelledby="cc-title">
+    <div class="wrap">
+      <div class="split">
+        <div data-reveal>
+          <p class="eyebrow">The Command Center</p>
+          <h2 id="cc-title" class="title">Select a card. Everything about it, in one panel.</h2>
+          <p class="lede">The video plays on top. Under it, a readiness ring counts how many of the platforms it’s going to are ready, then the platforms, the captions, and <strong>Schedule pinned at the bottom with one line saying exactly what will happen.</strong></p>
+          <p class="fine mt-2">Platforms you post by hand aren’t checked, so they never hold a ticket back.</p>
+        </div>
+        <div data-reveal style="--reveal-delay:.08s"><CommandCenterScene /></div>
+      </div>
+      <div class="mt-4" data-reveal><Screen id="command-center" caption="The Command Center in the app, from a demo profile." /></div>
+    </div>
+  </section>
+
+  <section class="stage" aria-labelledby="ticket-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">The ticket</p>
+        <h2 id="ticket-title" class="headline">Everything a video<br /><span class="text-silver">needs to leave.</span></h2>
+        <p class="lede">Copy blocks for YouTube’s title, description and tags, for TikTok, Instagram, Bluesky, Threads and Facebook, and one shared hashtag block. <strong>Every block has a Copy button and a live count against that platform’s own limit.</strong></p>
+      </header>
+      <div class="table-scroll" data-reveal>
+        <table class="limits">
+          <caption class="sr-only">Copy limits Reelay checks for each platform</caption>
+          <thead><tr><th scope="col">Copy block</th><th scope="col">Limit Reelay checks</th></tr></thead>
+          <tbody>
+            {limits.map(([p, name, limit]) => (
+              <tr>
+                <th scope="row"><span class="lim-name"><PlatformIcon name={p} /> {name}</span></th>
+                <td>{limit}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="lede mt-3" data-reveal>Over-limit text is reported and the save is refused. <strong>Nothing is ever cut short.</strong> Copy an empty block and you get what Reelay would use instead: the title for Bluesky and Threads, the description for TikTok, Instagram and Facebook.</p>
+    </div>
+  </section>
+
+  <section class="stage stage--lift" id="readiness" aria-labelledby="ready-title">
+    <div class="wrap">
+      <div class="split">
+        <div data-reveal>
+          <p class="eyebrow">Readiness</p>
+          <h2 id="ready-title" class="title">A checklist at the top of every ticket.</h2>
+          <p class="lede">For each platform: is its copy written, is it within the limit, is the video downloaded. <strong>A ticket is READY when at least one of its platforms is.</strong> Platforms you post by hand (TikTok, Instagram and Snapchat, or any platform with automatic posting off) aren’t checked, so they never block.</p>
+          <p class="lede mt-1"><strong>The Ready gate</strong> refuses to schedule any platform that isn’t ready, and lists why. You can still go ahead after an explicit confirmation. Copying and pasting is never blocked.</p>
+        </div>
+        <div class="ready-card" data-reveal style="--reveal-delay:.08s" aria-hidden="true">
+          <div class="rc-head"><span>Tokyo after midnight</span><em class="rc-ok">READY</em></div>
+          <ul>
+            <li><PlatformIcon name="youtube" /><span>YouTube</span><b class="ok">✓ Ready</b></li>
+            <li class="bad"><PlatformIcon name="threads" /><span>Threads</span><b>⚠ 517 of 500 characters</b></li>
+            <li class="skip"><PlatformIcon name="tiktok" /><span>TikTok</span><b>Not checked: you post it</b></li>
+            <li class="skip"><PlatformIcon name="instagram" /><span>Instagram</span><b>Not checked: you post it</b></li>
+          </ul>
+          <div class="rc-gate">
+            <strong>Can’t schedule Threads yet</strong>
+            <span>The Threads text is 17 characters over.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage" id="coverage" aria-labelledby="cov-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">Coverage map</p>
+        <h2 id="cov-title" class="headline">Six platforms.<br /><span class="text-silver">One glance.</span></h2>
+        <p class="lede">Every card shows all six platforms in the same order, coloured by where it stands. The card’s status line names whatever needs work. <strong>Cards move themselves</strong>: to Scheduled once every platform it’s going to is scheduled or live, to Published once every one is live.</p>
+      </header>
+      <ul class="legend" data-reveal>
+        {legend.map((l) => (
+          <li>
+            <span class={`lg-dot lg--${l.cls}`} aria-hidden="true">{l.mark}</span>
+            <strong>{l.name}</strong>
+            <span>{l.note}</span>
+          </li>
+        ))}
+      </ul>
+      <p class="fine mt-2" data-reveal>Checked every minute by the background dispatcher, whether the app is open or running headless. YouTube is confirmed with YouTube.</p>
+    </div>
+  </section>
+
+  <section class="stage stage--lift" id="prepare-to-publish" aria-labelledby="ptp-title">
+    <div class="wrap">
+      <div class="split split--flip">
+        <div data-reveal>
+          <p class="eyebrow">Prepare to Publish</p>
+          <h2 id="ptp-title" class="title">For the platforms you post to yourself.</h2>
+          <p class="lede">Reelay never posts to TikTok, Instagram or Snapchat for you. It does everything up to the button, <strong>you post in their app</strong>, which keeps sounds, tags and Shop links, and then you mark it posted.</p>
+        </div>
+        <ol class="steps" data-reveal style="--reveal-delay:.08s">
+          {handoff.map((s, i) => (
+            <li><span class="step-n">{i + 1}</span><span>{s}</span></li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage" aria-labelledby="more-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">Built for a real backlog</p>
+        <h2 id="more-title" class="headline">Hundreds of tickets.<br /><span class="text-silver">No surprises.</span></h2>
+      </header>
+      <div class="feature-grid" data-reveal>
+        <div class="feature"><h3>Change history</h3><p>Every saved change is logged with the time, who made it (you, a rule or an agent), the field, and the old and new values. Restore any earlier value; the restore is logged too. If logging fails, nothing is saved.</p></div>
+        <div class="feature"><h3>Durable sends</h3><p>Every send is recorded before it runs. A send cut off by a crash or a sleeping Mac becomes interrupted and waits for you: Try Again, It Was Posted, or Cancel.</p></div>
+        <div class="feature"><h3>Import Sheet</h3><p>Fill tickets from a CSV or a shared Google Sheet. Every row is previewed first, empty cells never erase anything, and the whole import is one transaction.</p></div>
+        <div class="feature"><h3>Bulk edit</h3><p>⌘-click or Shift-click cards to set permission, type, topic, keywords, creator or hashtags on all of them at once, or to fill, fetch transcripts or archive them together.</p></div>
+        <div class="feature"><h3>Your own columns</h3><p>Rename, add, remove and reorder columns per profile. Reelay’s four steps always live somewhere, so automatic moves keep working.</p></div>
+        <div class="feature"><h3>Filters that answer questions</h3><p>Show: Ready, Not ready, or Blocking a platform. Archive hides a video without deleting anything; Archived… brings it back.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <NextUp kicker="Next" title="Automations" href={href('/features/automations')} />
+</BaseLayout>
+
+<style>
+  .pl-stage { position: relative; isolation: isolate; max-width: 1240px; margin: 0 auto; }
+  .limits { width: 100%; border-collapse: collapse; }
+  .limits th, .limits td { text-align: left; padding: 1.1rem 0; border-bottom: 1px solid var(--hairline); font-size: 1.05rem; vertical-align: middle; }
+  .limits thead th { font-size: 0.85rem; font-weight: 600; color: var(--r-ink-3); border-bottom-color: var(--hairline-strong); padding-top: 0; }
+  .limits tbody th { font-weight: 600; color: var(--r-ink); padding-right: 2rem; white-space: nowrap; }
+  .limits td { color: var(--r-ink-2); }
+  .lim-name { display: inline-flex; align-items: center; gap: 0.75rem; }
+  .lim-name :global(svg) { width: 1.25rem; height: 1.25rem; color: var(--r-ink-2); }
+
+  .ready-card {
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border-radius: var(--radius-xl);
+    background: radial-gradient(70% 50% at 80% 0%, rgba(255, 69, 58, 0.12), transparent 70%), var(--r-panel);
+    box-shadow: var(--r-panel-shadow);
+  }
+  .rc-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: 1.15rem; font-weight: 650; letter-spacing: -0.02em; }
+  .rc-ok { font-style: normal; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; padding: 0.3rem 0.6rem; border-radius: 6px; background: color-mix(in srgb, var(--r-ok) 16%, transparent); color: var(--r-ok-text); }
+  .ready-card ul { list-style: none; margin-top: 1.25rem; }
+  .ready-card li { display: grid; grid-template-columns: 1.4rem 6.5rem minmax(0, 1fr); align-items: center; gap: 0.75rem; padding: 0.85rem 0; border-top: 1px solid var(--r-fill-2); font-size: 0.98rem; }
+  .ready-card li :global(svg) { width: 1.15rem; height: 1.15rem; color: var(--r-ink-2); }
+  .ready-card li span { font-weight: 600; }
+  .ready-card li b { font-weight: 500; text-align: right; color: var(--r-ink-3); }
+  .ready-card li b.ok { color: var(--r-ok-text); }
+  .ready-card li.bad b { color: var(--r-bad-text); }
+  .ready-card li.skip { opacity: 0.55; }
+  .rc-gate { margin-top: 1rem; padding: 1rem 1.1rem; border-radius: 16px; background: rgba(255, 69, 58, 0.1); display: grid; gap: 0.25rem; }
+  .rc-gate strong { color: var(--r-bad-text); }
+  .rc-gate span { font-size: 0.92rem; color: var(--r-ink-2); }
+
+  .legend { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 2rem 1.5rem; }
+  .legend li { display: grid; gap: 0.35rem; padding-top: 1.25rem; border-top: 1px solid var(--hairline-strong); }
+  .legend strong { font-size: 1.05rem; }
+  .legend span:last-child { font-size: 0.92rem; color: var(--r-ink-3); }
+  .lg-dot { display: grid; place-items: center; width: 2.6rem; height: 2.6rem; margin-bottom: 0.6rem; border-radius: 12px; font-weight: 800; font-size: 1.05rem; }
+  .lg--live { color: var(--r-ok); background: rgba(48, 209, 88, 0.14); }
+  .lg--sched { color: var(--r-info); background: rgba(10, 132, 255, 0.16); }
+  .lg--ready { color: var(--r-warn); background: rgba(255, 159, 10, 0.15); }
+  .lg--needs { color: var(--r-bad); background: rgba(255, 69, 58, 0.15); }
+  .lg--off { color: var(--r-ink-4); background: var(--r-fill); }
+
+  .steps { list-style: none; display: grid; counter-reset: s; }
+  .steps li { display: flex; align-items: center; gap: 1.1rem; padding: 1.15rem 0; border-top: 1px solid var(--hairline); font-size: 1.12rem; font-weight: 500; color: var(--r-ink); }
+  .steps li:last-child { border-bottom: 1px solid var(--hairline); }
+  .step-n { display: grid; place-items: center; flex: none; width: 2.2rem; height: 2.2rem; border-radius: 50%; background: rgba(240, 180, 76, 0.14); color: var(--r-amber-text); font-size: 0.95rem; font-weight: 700; }
+</style>

@@ -1,0 +1,243 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/ui/PageHero.astro';
+import NextUp from '../../components/ui/NextUp.astro';
+import { SITE, href } from '../../data/site';
+import { CREATOR, OPEN_TICKET } from '../../data/demo';
+import Screen from '../../components/ui/Screen.astro';
+
+/* The vocabulary is the app's own (reelay/rules.py). */
+const triggers = ['A video is added to the board', 'A video is moved to a column'];
+const conditions = [
+  'Caption or copy contains',
+  'Title contains',
+  'Has hashtag',
+  'Tagged product or brand contains',
+  'Shorter than (seconds)',
+  'Longer than (seconds)',
+  'Came from (TikTok, Instagram, YouTube…)',
+];
+const actions = [
+  'Fill an empty field from a template',
+  'Add hashtags',
+  'Post to these platforms',
+  'Set a ticket field',
+  'Move to column',
+  'Schedule for the next…',
+];
+const sample = {
+  hook: OPEN_TICKET.card.title,
+  title: OPEN_TICKET.card.title,
+  caption: OPEN_TICKET.caption,
+  hashtags: '#bigsur #goldenhour #roadtrip',
+  topic: 'Travel',
+  creator: CREATOR.name,
+};
+const placeholders = Object.keys(sample).map((k) => `{${k}}`);
+const safety = [
+  { t: 'Once per video', d: 'A rule acts on each video once and remembers it, so edits you make afterwards are never overwritten by the same rule.' },
+  { t: 'Never on what’s already there', d: 'A new or re-enabled rule never fires on videos already on the board. Run on Existing Videos… does that on purpose, after showing how many match.' },
+  { t: 'Only empty fields', d: 'Templates fill empty fields only. Nothing a person typed is ever replaced.' },
+  { t: 'Through the Ready gate', d: 'A rule that schedules goes through the same gate you do. A ticket that isn’t ready isn’t scheduled, and the log says why.' },
+  { t: 'Agents wait for a person', d: 'A rule never schedules copy that came from an AI agent. That waits for a person’s approval instead.' },
+  { t: 'Everything is logged', d: 'Automations → Activity lists everything every rule did, in plain words.' },
+];
+---
+
+<BaseLayout
+  title={`Automations: ${SITE.fullName}`}
+  description="When, if, then rules that work your tickets for you: fill empty copy from templates, add hashtags, pick platforms and schedule, with safety rules that never overwrite what you wrote."
+  subnav
+>
+  <PageHero eyebrow="Automations">
+    <Fragment slot="title">When. If. Then.<br /><span class="text-glow">Done.</span></Fragment>
+    <Fragment slot="lede">Rules that do the repetitive part of every ticket the moment a video arrives, and that are careful about it: <strong>they fill what’s empty, act once, and write down everything they did.</strong></Fragment>
+  </PageHero>
+
+  <section class="stage stage--flush-top" aria-labelledby="builder-title">
+    <div class="wrap">
+      <h2 id="builder-title" class="sr-only">Build a rule</h2>
+      <div class="builder" data-rule-builder data-sample={JSON.stringify(sample)} data-reveal>
+        <div class="b-row">
+          <span class="b-k">When</span>
+          <label class="b-field">
+            <span class="sr-only">Trigger</span>
+            <select data-b-when>{triggers.map((t) => <option>{t}</option>)}</select>
+          </label>
+        </div>
+        <div class="b-row">
+          <span class="b-k">If</span>
+          <label class="b-field">
+            <span class="sr-only">Condition</span>
+            <select data-b-if>{conditions.map((c) => <option>{c}</option>)}</select>
+          </label>
+          <label class="b-field b-field--short">
+            <span class="sr-only">Value</span>
+            <input type="text" value="sunset" data-b-value />
+          </label>
+        </div>
+        <div class="b-row">
+          <span class="b-k">Then</span>
+          <label class="b-field">
+            <span class="sr-only">Action</span>
+            <select data-b-then>{actions.map((a) => <option>{a}</option>)}</select>
+          </label>
+        </div>
+        <div class="b-template">
+          <label for="b-tpl">TikTok caption template</label>
+          <input id="b-tpl" type="text" value="{hook}. Shot on the road. {hashtags}" spellcheck="false" data-b-tpl />
+          <div class="b-chips" aria-label="Placeholders">
+            {placeholders.map((p) => <button type="button" class="b-chip" data-b-insert={p}>{p}</button>)}
+          </div>
+        </div>
+        <div class="b-out">
+          <p class="b-sentence" data-b-sentence>When: a video is added to the board. If: caption or copy contains “sunset”. Then: fill an empty field from a template.</p>
+          <div class="b-preview">
+            <span class="b-preview-k">Filled for “{sample.title}”</span>
+            <p data-b-preview>{sample.hook}. Shot on the road. {sample.hashtags}</p>
+          </div>
+        </div>
+        <p class="b-note">An illustration of the Automations page. The sentence under the rule is how Reelay itself describes it.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage stage--tight" aria-labelledby="start-title">
+    <div class="wrap">
+      <div class="split">
+        <div data-reveal>
+          <p class="eyebrow">Start quickly</p>
+          <h2 id="start-title" class="title">Recipes to start from. A real video to test on.</h2>
+          <p class="lede">An empty Automations page offers quick-start recipes. Before you switch a rule on, <strong>Test this rule</strong> runs it against a real video and shows what it would do, without changing anything.</p>
+        </div>
+        <div data-reveal style="--reveal-delay:.08s"><Screen id="automations" caption="Automations in the app, from a demo profile." /></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage stage--lift" aria-labelledby="vocab-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">The vocabulary</p>
+        <h2 id="vocab-title" class="headline">Two triggers. Seven conditions.<br /><span class="text-silver">Six actions.</span></h2>
+      </header>
+      <div class="vocab" data-reveal>
+        <div><h3>When</h3><ul>{triggers.map((t) => <li>{t}</li>)}</ul></div>
+        <div><h3>If</h3><ul>{conditions.map((t) => <li>{t}</li>)}</ul></div>
+        <div><h3>Then</h3><ul>{actions.map((t) => <li>{t}</li>)}</ul></div>
+      </div>
+      <p class="lede mt-3" data-reveal>Templates can use <code>{'{caption}'}</code>, <code>{'{title}'}</code>, <code>{'{hashtags}'}</code>, <code>{'{topic}'}</code>, <code>{'{creator}'}</code> and <code>{'{hook}'}</code>, the video’s opening line as a viewer would recognise it.</p>
+    </div>
+  </section>
+
+  <section class="stage" aria-labelledby="safety-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">Safety first</p>
+        <h2 id="safety-title" class="headline">Rules that know<br /><span class="text-silver">their place.</span></h2>
+        <p class="lede">An automation that quietly overwrites a caption is worse than none. These six rules are built into how every rule runs.</p>
+      </header>
+      <div class="feature-grid" data-reveal>
+        {safety.map((s) => <div class="feature"><h3>{s.t}</h3><p>{s.d}</p></div>)}
+      </div>
+      <p class="fine mt-3" data-reveal>Rules and their memory live in each profile’s settings, so they travel with a shared database.</p>
+    </div>
+  </section>
+
+  <NextUp kicker="Next" title="Agents" href={href('/ai')} />
+</BaseLayout>
+
+<style>
+  .builder {
+    display: grid;
+    gap: 0.9rem;
+    max-width: 52rem;
+    margin: 0 auto;
+    padding: clamp(1.25rem, 3.5vw, 2.5rem);
+    border-radius: var(--radius-xl);
+    background:
+      var(--r-panel);
+    box-shadow: var(--r-panel-shadow);
+  }
+  .b-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+  .b-k { width: 3.5rem; font-weight: 700; font-size: 1.05rem; color: var(--r-amber-text); }
+  .b-field { flex: 1; min-width: min(100%, 14rem); }
+  .b-field--short { flex: 0 1 11rem; min-width: 8rem; }
+  .b-field select, .b-field input, .b-template input {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 1rem;
+    border: 0;
+    border-radius: 14px;
+    background: var(--r-fill-2);
+    color: var(--r-ink);
+    font: 500 1rem var(--font-body);
+    letter-spacing: -0.01em;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .b-field select {
+    padding-right: 2.5rem;
+    background-image: linear-gradient(45deg, transparent 50%, var(--r-ink-3) 50%), linear-gradient(135deg, var(--r-ink-3) 50%, transparent 50%);
+    background-position: calc(100% - 1.25rem) 52%, calc(100% - 0.9rem) 52%;
+    background-size: 6px 6px;
+    background-repeat: no-repeat;
+    cursor: pointer;
+  }
+  .b-field select option { background: var(--r-bg); color: var(--r-ink); }
+  .b-field select:focus, .b-field input:focus, .b-template input:focus { outline: none; box-shadow: inset 0 0 0 1px rgba(245, 197, 107, 0.6), 0 0 0 4px rgba(240, 180, 76, 0.12); }
+  .b-template { display: grid; gap: 0.6rem; margin-top: 0.5rem; padding-top: 1.25rem; border-top: 1px solid var(--hairline); }
+  .b-template label { font-size: 0.9rem; font-weight: 600; }
+  .b-template input { font-family: var(--font-mono); font-size: 0.92rem; }
+  .b-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .b-chip { min-height: 36px; padding: 0 0.8rem; border: 0; border-radius: 999px; background: rgba(240, 180, 76, 0.12); color: var(--r-amber-text); font: 500 0.85rem var(--font-mono); cursor: pointer; }
+  .b-chip:hover { background: rgba(240, 180, 76, 0.22); }
+  .b-out { display: grid; gap: 0.9rem; margin-top: 0.5rem; padding-top: 1.25rem; border-top: 1px solid var(--hairline); }
+  .b-sentence { font-size: 1.1rem; line-height: 1.5; color: var(--r-ink); }
+  .b-preview { padding: 1rem 1.15rem; border-radius: 16px; background: var(--r-input); box-shadow: inset 0 0 0 1px var(--hairline); }
+  .b-preview-k { font-size: 0.8rem; font-weight: 600; color: var(--r-ink-3); }
+  .b-preview p { margin-top: 0.4rem; color: var(--r-ink); overflow-wrap: anywhere; }
+  .b-note { font-size: 0.8rem; color: var(--r-ink-4); }
+
+  .vocab { display: grid; gap: 2.5rem 3rem; }
+  @media (min-width: 820px) { .vocab { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .vocab h3 { font-size: 1.5rem; font-weight: 700; color: var(--r-amber-text); padding-bottom: 0.9rem; border-bottom: 1px solid var(--hairline-strong); }
+  .vocab ul { list-style: none; }
+  .vocab li { padding: 0.8rem 0; border-bottom: 1px solid var(--hairline); color: var(--r-ink-2); }
+  .lede code { font-size: 0.85em; color: var(--r-amber-text); }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-rule-builder]').forEach((root) => {
+    const sample: Record<string, string> = JSON.parse(root.dataset.sample || '{}');
+    const when = root.querySelector<HTMLSelectElement>('[data-b-when]')!;
+    const cond = root.querySelector<HTMLSelectElement>('[data-b-if]')!;
+    const value = root.querySelector<HTMLInputElement>('[data-b-value]')!;
+    const then = root.querySelector<HTMLSelectElement>('[data-b-then]')!;
+    const tpl = root.querySelector<HTMLInputElement>('[data-b-tpl]')!;
+    const sentence = root.querySelector<HTMLElement>('[data-b-sentence]')!;
+    const preview = root.querySelector<HTMLElement>('[data-b-preview]')!;
+
+    const render = () => {
+      const v = value.value.trim();
+      const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+      sentence.textContent = `When: ${lower(when.value)}. If: ${lower(cond.value)}${v ? ` “${v}”` : ''}. Then: ${lower(then.value)}.`;
+      let out = tpl.value;
+      for (const [k, val] of Object.entries(sample)) out = out.split(`{${k}}`).join(val);
+      preview.textContent = out.trim() || '(empty: nothing is filled)';
+    };
+    root.querySelectorAll<HTMLButtonElement>('[data-b-insert]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const at = tpl.selectionStart ?? tpl.value.length;
+        const token = b.dataset.bInsert || '';
+        tpl.value = tpl.value.slice(0, at) + token + tpl.value.slice(tpl.selectionEnd ?? at);
+        tpl.focus();
+        tpl.setSelectionRange(at + token.length, at + token.length);
+        render();
+      })
+    );
+    [when, cond, then].forEach((el) => el.addEventListener('change', render));
+    [value, tpl].forEach((el) => el.addEventListener('input', render));
+    render();
+  });
+</script>

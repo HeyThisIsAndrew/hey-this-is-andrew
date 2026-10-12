@@ -1,0 +1,340 @@
+---
+/**
+ * InteractiveWorkflow: the Board's four columns as one stage with a
+ * segmented control. Each step shows the same ticket at that point in its
+ * life, and says exactly what moves it on (pipeline.py, coverage.py).
+ *
+ * Test hooks (scripts/verify-browser.mjs): #interactive-workflow, four
+ * .workflow-step-tab with data-step-target, #panel-<target>, APG arrow /
+ * Home / End keys, and .workflow-simulation-disclaimer.
+ */
+import Coverage from './ui/Coverage.astro';
+import PlatformIcon from './ui/PlatformIcon.astro';
+import { DEMO_CARDS, type Cover, type PlatformKey } from '../data/demo';
+
+const card = DEMO_CARDS[2];
+const cov = (yt: Cover, tt: Cover, ig: Cover, th: Cover): Record<PlatformKey, Cover> =>
+  ({ youtube: yt, tiktok: tt, instagram: ig, bluesky: 'off', threads: th, facebook: 'off' });
+
+const steps = [
+  {
+    id: 'backlog',
+    label: 'Backlog',
+    kicker: 'Every download lands here',
+    title: 'A video becomes a ticket.',
+    body: 'Each video you bring in arrives as a card in Backlog, carrying its original caption, where it came from, and a transcript when the original post had captions. Fill from Original Post writes its empty copy for you, within every platform’s limit.',
+    moves: 'You drag it to Staging when you start on it.',
+    coverage: cov('needs', 'needs', 'needs', 'needs'),
+    status: 'Needs copy for 4 platforms',
+    tone: 'needs',
+  },
+  {
+    id: 'staging',
+    label: 'Staging',
+    kicker: 'Write it once per platform',
+    title: 'Ready means ready.',
+    body: 'The top of the ticket is a checklist per platform. Copy written, copy within the limit, video file downloaded. A ticket is READY when at least one of its platforms is. Platforms you post by hand are never checked, so they never block.',
+    moves: 'It moves on when you schedule it.',
+    coverage: cov('ready', 'ready', 'ready', 'ready'),
+    status: 'Ready for 4 platforms',
+    tone: 'ready',
+  },
+  {
+    id: 'scheduled',
+    label: 'Scheduled',
+    kicker: 'Nothing unready gets through',
+    title: 'The Ready gate holds the door.',
+    body: 'Scheduling refuses any platform that is not ready and lists why. YouTube uploads straight away with a publish time, so YouTube publishes it even if Reelay is closed. Every send is recorded before it runs, and an interrupted one waits for you instead of retrying blindly.',
+    moves: 'It moves itself once every platform it’s going to is scheduled or live.',
+    coverage: cov('sched', 'ready', 'ready', 'sched'),
+    status: 'YouTube · Tue 9:00 AM',
+    tone: 'sched',
+  },
+  {
+    id: 'published',
+    label: 'Published',
+    kicker: 'One record of everywhere it went',
+    title: 'It finishes on its own.',
+    body: 'When the last platform goes live, the card moves to Published. Check YouTube for Updates confirms what went live, Mark as Posted records what you posted by hand, and the change history keeps every edit with who made it.',
+    moves: 'Archive hides it without deleting anything.',
+    coverage: cov('live', 'live', 'live', 'live'),
+    status: 'Live on 4 platforms',
+    tone: 'live',
+  },
+] as const;
+---
+<section id="interactive-workflow" class="stage stage--lift wf" aria-labelledby="wf-title">
+  <div class="wrap">
+    <header class="chapter-head center wf-head" data-reveal>
+      <p class="eyebrow">The Board</p>
+      <h2 id="wf-title" class="headline">Four columns.<br />It moves the cards.</h2>
+      <p class="lede">
+        Backlog, Staging, Scheduled, Published. You decide what each video says and where it goes. Reelay keeps track of whether it’s ready, and <strong>moves the card when the platforms say it’s done.</strong>
+      </p>
+    </header>
+
+    <div class="wf-control" data-reveal>
+      <div class="wf-tabs" role="tablist" aria-label="Board columns">
+        {steps.map((s, i) => (
+          <button
+            type="button"
+            role="tab"
+            class="workflow-step-tab"
+            id={`tab-${s.id}`}
+            data-step-target={s.id}
+            aria-selected={i === 0 ? 'true' : 'false'}
+            aria-controls={`panel-${s.id}`}
+            tabindex={i === 0 ? 0 : -1}
+          >
+            <span class="wf-num">{String(i + 1).padStart(2, '0')}</span>
+            <span>{s.label}</span>
+          </button>
+        ))}
+        <span class="wf-thumb" aria-hidden="true"></span>
+      </div>
+      <p class="workflow-simulation-disclaimer">An illustration of the desktop app. Nothing on this page connects to any platform.</p>
+    </div>
+
+    <div class="wf-panels" data-reveal>
+      {steps.map((s, i) => (
+        <div
+          class="wf-panel"
+          role="tabpanel"
+          id={`panel-${s.id}`}
+          aria-labelledby={`tab-${s.id}`}
+          hidden={i !== 0}
+          tabindex="0"
+        >
+          <div class="wf-copy">
+            <p class="wf-kicker">{s.kicker}</p>
+            <h3 class="title">{s.title}</h3>
+            <p class="wf-body">{s.body}</p>
+            <p class="wf-moves"><span aria-hidden="true">→</span> {s.moves}</p>
+          </div>
+
+          <div class="wf-visual" aria-hidden="true">
+            <div class="wf-rail">
+              {steps.map((r, j) => (
+                <span class:list={['wf-rail-col', { here: j === i, past: j < i }]}>{r.label}</span>
+              ))}
+            </div>
+            <div class="wf-card">
+              <div class={`wf-thumb-img still still--${card.still}`}><span>{card.length}</span></div>
+              <div class="wf-card-body">
+                <strong>{card.title}</strong>
+                <Coverage coverage={s.coverage} class="wf-cov" />
+                <span class={`wf-status tone-${s.tone}`}>{s.status}</span>
+              </div>
+            </div>
+
+            {s.id === 'backlog' && (
+              <div class="wf-detail">
+                <span class="wf-detail-head">From the original post</span>
+                <p>“The last ten minutes of light on the Big Sur coast…”</p>
+                <span class="wf-chip">Fill from Original Post</span>
+              </div>
+            )}
+            {s.id === 'staging' && (
+              <div class="wf-detail">
+                <span class="wf-detail-head">Readiness <em class="ok">READY</em></span>
+                <ul class="wf-checks">
+                  <li><PlatformIcon name="youtube" /> YouTube <b>✓</b></li>
+                  <li><PlatformIcon name="threads" /> Threads <b>✓</b></li>
+                  <li class="skip"><PlatformIcon name="tiktok" /> TikTok <b>Not checked: you post it</b></li>
+                  <li class="skip"><PlatformIcon name="instagram" /> Instagram <b>Not checked: you post it</b></li>
+                </ul>
+              </div>
+            )}
+            {s.id === 'scheduled' && (
+              <div class="wf-detail">
+                <span class="wf-detail-head">Uploading to YouTube</span>
+                <span class="wf-progress"><i></i></span>
+                <p>Private until Tue 9:00 AM, then YouTube publishes it.</p>
+              </div>
+            )}
+            {s.id === 'published' && (
+              <div class="wf-detail">
+                <span class="wf-detail-head">Where it’s been posted</span>
+                <ul class="wf-checks">
+                  <li><PlatformIcon name="youtube" /> YouTube <b class="live">Live</b></li>
+                  <li><PlatformIcon name="tiktok" /> TikTok <b class="live">Posted by hand</b></li>
+                  <li><PlatformIcon name="instagram" /> Instagram <b class="live">Posted by hand</b></li>
+                  <li><PlatformIcon name="threads" /> Threads <b class="live">Live</b></li>
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .wf-head { align-items: center; }
+  .wf-head .lede { margin-inline: auto; }
+
+  .wf-control { display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: clamp(2.5rem, 5vw, 4rem); }
+  .wf-tabs {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--r-fill-2);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    width: min(100%, 620px);
+  }
+  .workflow-step-tab {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--r-ink-3);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
+  .workflow-step-tab:hover { color: var(--r-ink); }
+  .workflow-step-tab[aria-selected='true'] { color: var(--r-on-ink); }
+  .wf-num { font-size: 0.72rem; font-variant-numeric: tabular-nums; opacity: 0.6; }
+  .wf-thumb {
+    position: absolute;
+    z-index: 0;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc((100% - 8px) / 4);
+    border-radius: 999px;
+    background: var(--r-ink);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+    transform: translateX(calc(var(--wf-i, 0) * 100%));
+    transition: transform 0.5s var(--r-ease);
+  }
+  .workflow-simulation-disclaimer { font-size: 0.8rem; color: var(--r-ink-4); text-align: center; }
+
+  .wf-panel {
+    display: grid;
+    gap: clamp(2rem, 5vw, 5rem);
+    align-items: center;
+  }
+  .wf-panel[hidden] { display: none; }
+  .wf-panel:focus-visible { outline-offset: 12px; border-radius: 24px; }
+  @media (min-width: 900px) {
+    .wf-panel { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); }
+  }
+  .wf-panel:not([hidden]) .wf-copy,
+  .wf-panel:not([hidden]) .wf-visual { animation: wf-in 0.7s var(--r-ease) both; }
+  .wf-panel:not([hidden]) .wf-visual { animation-delay: 0.06s; }
+  @keyframes wf-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .wf-panel:not([hidden]) .wf-copy, .wf-panel:not([hidden]) .wf-visual { animation: none; }
+    .wf-thumb { transition: none; }
+  }
+  .wf-kicker { color: var(--r-amber-text); font-weight: 600; font-size: 1rem; margin-bottom: 0.6rem; }
+  .wf-body { margin-top: 1.1rem; font-size: 1.1rem; line-height: 1.55; color: var(--r-ink-2); }
+  .wf-moves { margin-top: 1.5rem; padding-top: 1.1rem; border-top: 1px solid var(--hairline); color: var(--r-ink); font-weight: 500; }
+  .wf-moves span { color: var(--r-amber-text); margin-right: 0.3rem; }
+
+  .wf-visual {
+    position: relative;
+    display: grid;
+    gap: 1rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border-radius: var(--radius-xl);
+    background:
+      var(--r-panel);
+    box-shadow: var(--r-panel-shadow);
+  }
+  .wf-rail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
+  .wf-rail-col {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 0.45rem 0.2rem;
+    border-radius: 10px;
+    color: var(--r-ink-4);
+    background: var(--r-fill);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .wf-rail-col.past { color: var(--r-ink-3); }
+  .wf-rail-col.here { color: var(--r-on-amber); background: var(--r-amber); }
+  .wf-card {
+    display: grid;
+    grid-template-columns: 44% minmax(0, 1fr);
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--r-bg);
+    box-shadow: 0 0 0 1.5px var(--r-amber), 0 18px 50px rgba(240, 150, 40, 0.18);
+  }
+  .wf-thumb-img { min-height: 9.5rem; }
+  .wf-thumb-img span { position: absolute; z-index: 1; right: 0.6rem; bottom: 0.5rem; font-size: 0.75rem; font-weight: 600; padding: 0.15rem 0.45rem; border-radius: 6px; background: rgba(0, 0, 0, 0.6); }
+  .wf-card-body { display: grid; align-content: center; gap: 0.7rem; padding: 1rem 1.1rem; }
+  .wf-card-body strong { font-size: 1rem; line-height: 1.25; }
+  .wf-card-body :global(.wf-cov) { font-size: 1.05rem; }
+  .wf-status { font-size: 0.85rem; font-weight: 500; }
+  .tone-needs { color: var(--r-bad-text); }
+  .tone-ready { color: var(--r-warn-text); }
+  .tone-sched { color: var(--r-info-text); }
+  .tone-live { color: var(--r-ok-text); }
+  .wf-detail { padding: 1rem 1.1rem; border-radius: 18px; background: var(--r-fill); }
+  .wf-detail p { margin-top: 0.4rem; font-size: 0.92rem; color: var(--r-ink-2); }
+  .wf-detail-head { display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; font-weight: 600; color: var(--r-ink-3); }
+  .wf-detail-head .ok { font-style: normal; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; padding: 0.25rem 0.5rem; border-radius: 6px; background: rgba(48, 209, 88, 0.16); color: var(--r-ok-text); }
+  .wf-chip { display: inline-block; margin-top: 0.8rem; padding: 0.45rem 0.85rem; border-radius: 10px; background: var(--r-fill-3); font-size: 0.82rem; font-weight: 600; }
+  .wf-checks { list-style: none; display: grid; margin-top: 0.4rem; }
+  .wf-checks li { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0; font-size: 0.9rem; }
+  .wf-checks li + li { border-top: 1px solid var(--r-fill-2); }
+  .wf-checks :global(svg) { width: 1.05rem; height: 1.05rem; color: var(--r-ink-2); }
+  .wf-checks b { margin-left: auto; color: var(--r-ok-text); font-weight: 600; }
+  .wf-checks .skip b { color: var(--r-ink-3); font-weight: 500; }
+  .wf-progress { display: block; height: 6px; margin-top: 0.75rem; border-radius: 6px; background: var(--r-fill-3); overflow: hidden; }
+  .wf-progress i { display: block; width: 62%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #0a84ff, var(--r-info-text)); }
+
+  @media (max-width: 560px) {
+    .wf-num { display: none; }
+    .workflow-step-tab { font-size: 0.82rem; padding-inline: 0.25rem; }
+    .wf-card { grid-template-columns: 1fr; }
+    .wf-thumb-img { min-height: 11rem; }
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('#interactive-workflow').forEach((root) => {
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('.workflow-step-tab'));
+    const list = root.querySelector<HTMLElement>('.wf-tabs');
+    const select = (i: number, focus = false) => {
+      tabs.forEach((t, j) => {
+        const on = i === j;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        const panel = root.querySelector<HTMLElement>(`#panel-${t.dataset.stepTarget}`);
+        if (panel) panel.hidden = !on;
+      });
+      list?.style.setProperty('--wf-i', String(i));
+      if (focus) tabs[i].focus();
+    };
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => select(i));
+      t.addEventListener('keydown', (e) => {
+        const last = tabs.length - 1;
+        let next = -1;
+        if (e.key === 'ArrowRight') next = i === last ? 0 : i + 1;
+        else if (e.key === 'ArrowLeft') next = i === 0 ? last : i - 1;
+        else if (e.key === 'Home') next = 0;
+        else if (e.key === 'End') next = last;
+        if (next >= 0) { e.preventDefault(); select(next, true); }
+      });
+    });
+  });
+</script>

@@ -1,0 +1,76 @@
+---
+/**
+ * AccountsScene: the Accounts page (reelay/gui/accounts_page.py): an
+ * integration card per platform (YouTube, TikTok, Instagram, Bluesky,
+ * Threads, Facebook, Snapchat), "N of 7 connected", status pills, one-click
+ * sign-in first, and "Advanced Setup: use my own developer keys" folded away.
+ */
+import AppWindow from './ui/AppWindow.astro';
+import PlatformIcon from './ui/PlatformIcon.astro';
+
+const cards = [
+  { key: 'youtube', name: 'YouTube', status: 'Connected', tone: 'ok', line: 'Juniper Lane · uploads and schedules', action: 'Disconnect', advanced: true },
+  { key: 'tiktok', name: 'TikTok', status: 'Connected', tone: 'ok', line: '@juniperlane · posted by hand', action: 'Disconnect' },
+  { key: 'instagram', name: 'Instagram', status: 'Not connected', tone: 'off', line: 'Posted by hand', action: 'Sign in with Instagram' },
+  { key: 'bluesky', name: 'Bluesky', status: 'Not connected', tone: 'off', line: 'Automatic posting off', action: 'Connect Bluesky…' },
+  { key: 'threads', name: 'Threads', status: 'Connected', tone: 'ok', line: '@juniperlane · automatic posting on', action: 'Disconnect' },
+  { key: 'facebook', name: 'Facebook', status: 'Signed out', tone: 'warn', line: 'Juniper Lane Page · automatic posting off', action: 'Sign in with Facebook' },
+  { key: 'snapchat', name: 'Snapchat', status: 'Posted by hand', tone: 'off', line: 'Spotlight is posted from the Snapchat app', action: '' },
+] as const;
+const connected = cards.filter((c) => c.tone === 'ok').length;
+---
+<div class="scale-stage">
+  <div class="ascene">
+    <AppWindow title="Reelay: Accounts" label={`Reelay's Accounts page: seven integration cards, ${connected} of 7 connected, each with a status pill and a sign-in or disconnect button.`}>
+      <div class="abody">
+        <div class="ahead">
+          <span class="aname">Accounts</span>
+          <span class="acount">{connected} of 7 connected</span>
+        </div>
+        <p class="asub">Where Juniper Lane’s videos go out. Each profile has its own accounts, so creators stay separate.</p>
+        <div class="agrid">
+          {cards.map((c) => (
+            <div class="acard">
+              <div class="ac-top">
+                {c.key === 'snapchat' ? <span class="snap" aria-hidden="true">S</span> : <PlatformIcon name={c.key} />}
+                <b>{c.name}</b>
+                <span class={`pill pill--${c.tone}`}>{c.status}</span>
+              </div>
+              <p class="ac-line">{c.line}</p>
+              {c.action && <span class:list={['ac-btn', { primary: c.action.startsWith('Sign in') || c.action.startsWith('Connect') }]}>{c.action}</span>}
+              {'advanced' in c && <span class="ac-adv">▸ Advanced Setup: use my own developer keys</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </AppWindow>
+  </div>
+</div>
+
+<style>
+  .scale-stage { container-type: inline-size; width: 100%; }
+  .ascene { font-size: calc(100cqw / 56); }
+  .abody { padding: 1.1em 1.2em 1.3em; background: var(--app-bg); color: var(--app-ink); }
+  .ahead { display: flex; align-items: baseline; gap: 0.8em; }
+  .aname { font-size: 1.3em; font-weight: 700; letter-spacing: -0.02em; }
+  .acount { font-size: 0.78em; font-weight: 600; color: var(--app-ink-2); }
+  .asub { margin: 0.35em 0 1em; font-size: 0.76em; color: var(--app-ink-2); }
+  .agrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75em; }
+  .acard { display: grid; gap: 0.55em; align-content: start; padding: 0.85em; border-radius: 0.8em; background: var(--app-surface); box-shadow: 0 0 0 0.0625em var(--app-border); }
+  .ac-top { display: flex; align-items: center; gap: 0.5em; }
+  .ac-top :global(svg) { width: 1.15em; height: 1.15em; }
+  .ac-top b { font-size: 0.86em; }
+  .snap { display: inline-grid; place-items: center; width: 1.15em; height: 1.15em; border-radius: 0.3em; background: #fffc00; color: #000; font-size: 0.75em; font-weight: 800; }
+  .pill { margin-left: auto; font-size: 0.6em; font-weight: 700; padding: 0.3em 0.6em; border-radius: 1em; white-space: nowrap; }
+  .pill--ok { background: color-mix(in srgb, var(--app-ok) 18%, transparent); color: var(--app-ok); }
+  .pill--warn { background: color-mix(in srgb, var(--app-warn) 18%, transparent); color: var(--app-warn); }
+  .pill--off { background: var(--app-raised); color: var(--app-ink-2); }
+  .ac-line { font-size: 0.7em; color: var(--app-ink-2); }
+  .ac-btn { justify-self: start; font-size: 0.68em; font-weight: 600; padding: 0.4em 0.8em; border-radius: 0.5em; background: var(--app-raised); color: var(--app-ink); }
+  .ac-btn.primary { background: var(--app-accent); color: var(--app-on-accent); }
+  .ac-adv { font-size: 0.64em; color: var(--app-muted); }
+  @container (max-width: 640px) {
+    .ascene { font-size: calc(100cqw / 26); }
+    .agrid { grid-template-columns: 1fr; }
+  }
+</style>

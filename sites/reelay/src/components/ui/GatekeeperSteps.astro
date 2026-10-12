@@ -1,0 +1,46 @@
+---
+/**
+ * GatekeeperSteps: how to open a signed but not-yet-notarized app the
+ * first time. macOS 15 Sequoia removed the Control-click → Open bypass for
+ * unnotarized apps, so the steps differ by version. Remove this component
+ * once RELEASE.notarized is true.
+ */
+import { RELEASE } from '../../data/release';
+interface Props { compact?: boolean }
+const { compact = false } = Astro.props;
+---
+{!RELEASE.notarized && (
+  <section class:list={['gk', { 'gk--compact': compact }]} aria-labelledby={compact ? 'gk-title-c' : 'gk-title'}>
+    <h3 id={compact ? 'gk-title-c' : 'gk-title'}>Opening Reelay the first time</h3>
+    <p class="gk-why">This beta is signed with the hardened runtime but not yet notarized by Apple, so macOS asks you to confirm the first time you open it. After that it opens normally.</p>
+    <div class="gk-cols">
+      <div>
+        <p class="gk-os">macOS 12, 13 and 14</p>
+        <ol>
+          <li>Drag Reelay from the disk image to Applications.</li>
+          <li>In Applications, Control-click Reelay and choose <strong>Open</strong>.</li>
+          <li>Click <strong>Open</strong> in the dialog.</li>
+        </ol>
+      </div>
+      <div>
+        <p class="gk-os">macOS 15 and later</p>
+        <ol>
+          <li>Drag Reelay to Applications and open it. macOS stops it once.</li>
+          <li>Open <strong>System Settings → Privacy &amp; Security</strong>.</li>
+          <li>Next to “Reelay was blocked”, click <strong>Open Anyway</strong>, then confirm.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+  .gk { padding: clamp(1.25rem, 3vw, 2rem); border-radius: var(--radius-lg); background: var(--r-amber-soft); text-align: left; }
+  .gk h3 { font-size: 1.15rem; font-weight: 650; letter-spacing: -0.02em; }
+  .gk-why { margin-top: 0.5rem; font-size: 0.95rem; }
+  .gk-cols { display: grid; gap: 1.25rem 2rem; margin-top: 1.25rem; }
+  @media (min-width: 720px) { .gk-cols { grid-template-columns: 1fr 1fr; } }
+  .gk-os { font-size: 0.85rem; font-weight: 600; color: var(--r-amber-text); margin-bottom: 0.5rem; }
+  .gk ol { padding-left: 1.2rem; display: grid; gap: 0.35rem; color: var(--r-ink-2); font-size: 0.95rem; }
+  .gk ol li::marker { color: var(--r-ink-4); }
+</style>

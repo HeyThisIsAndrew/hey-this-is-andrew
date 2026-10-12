@@ -1,0 +1,45 @@
+---
+/** Questions as native disclosure rows: hairlines, a turning plus, no boxes. */
+interface Props {
+  items: { q: string; a: string }[];
+  class?: string;
+}
+const { items, class: cls } = Astro.props;
+---
+<div class:list={['faq', cls]}>
+  {items.map((it) => (
+    <details class="faq-item">
+      <summary><span>{it.q}</span><i aria-hidden="true"></i></summary>
+      <div class="faq-a" set:html={it.a} />
+    </details>
+  ))}
+</div>
+
+<style>
+  .faq-item { border-top: 1px solid var(--hairline-strong); }
+  .faq-item:last-child { border-bottom: 1px solid var(--hairline-strong); }
+  summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    min-height: 64px;
+    padding: 1.1rem 0;
+    cursor: pointer;
+    list-style: none;
+    font-size: clamp(1.08rem, 1.5vw, 1.25rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--r-ink);
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary i { position: relative; flex: none; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--r-fill-3); transition: transform 0.4s var(--r-ease), background-color 0.25s ease; }
+  summary i::before, summary i::after { content: ''; position: absolute; left: 50%; top: 50%; width: 0.65rem; height: 1.6px; margin: -0.8px 0 0 -0.325rem; background: currentColor; border-radius: 1px; }
+  summary i::after { transform: rotate(90deg); transition: transform 0.4s var(--r-ease); }
+  details[open] summary i { transform: rotate(180deg); background: var(--r-amber); color: var(--r-on-amber); }
+  details[open] summary i::after { transform: rotate(0); }
+  .faq-a { padding: 0 2.5rem 1.5rem 0; color: var(--r-ink-2); font-size: 1.02rem; line-height: 1.6; }
+  .faq-a :global(p + p) { margin-top: 0.75rem; }
+  .faq-a :global(code) { font-size: 0.88em; padding: 0.1em 0.4em; border-radius: 6px; background: var(--r-fill-2); color: var(--r-ink); overflow-wrap: anywhere; }
+  .faq-a :global(a) { color: var(--r-amber-text); }
+</style>

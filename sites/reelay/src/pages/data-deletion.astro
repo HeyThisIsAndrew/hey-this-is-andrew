@@ -1,0 +1,97 @@
+---
+import DocPage from '../components/ui/DocPage.astro';
+import { SITE, DATA_PATHS, href } from '../data/site';
+import { CONTACTS } from '../data/operator';
+
+const updated = 'October 12, 2026';
+const toc: [string, string][] = [
+  ['meta-compliance', 'Statement'],
+  ['disconnect', '1. Disconnect an account'],
+  ['delete-profile', '2. Delete a profile'],
+  ['delete-everything', '3. Remove the local data folder'],
+  ['revoke', '4. Remove Reelay on the platform'],
+  ['sign-in-server', '5. Data on our sign-in server'],
+  ['confirmation', 'Confirmation'],
+];
+---
+
+<DocPage
+  title="Data Deletion"
+  pageTitle={`Data Deletion Instructions: ${SITE.fullName}`}
+  description="How to delete every piece of data Reelay holds about your Instagram, Threads, Facebook, YouTube, TikTok, Bluesky and Snapchat use. It is all on your own Mac, and deleting it takes effect immediately."
+  updated={updated}
+  toc={toc}
+>
+  <Fragment slot="lede">Everything Reelay keeps about your accounts is on your own Mac, so you can delete it yourself, at once. <strong>Here is how, step by step.</strong></Fragment>
+
+  <section id="meta-compliance" class="doc-summary">
+    <h2>Data deletion statement</h2>
+    <p class="statement">Reelay does not store your social account data on cloud servers. Your account tokens are kept in your Mac’s Keychain, and your drafts and account details in Reelay’s database on your Mac. To delete them, click <strong>Disconnect</strong> on the account under <strong>Accounts</strong> in Reelay, or delete the Reelay data folder at <code>{DATA_PATHS.mac}</code>.</p>
+  </section>
+
+  <section id="disconnect">
+    <h2>1. Disconnect an account</h2>
+    <p>The quickest way to remove one platform account (Instagram, Threads, Facebook Page, YouTube, TikTok or Bluesky):</p>
+    <ol>
+      <li>Open Reelay and click <strong>Accounts</strong> in the sidebar.</li>
+      <li>Find the account’s card and click <strong>Disconnect</strong>.</li>
+    </ol>
+    <p>What happens straight away:</p>
+    <ul>
+      <li>Reelay asks the platform to revoke its access where the platform allows it: Google (YouTube), TikTok and Facebook. Instagram and Threads offer no revoke call to apps, so remove Reelay in their settings too (step 4).</li>
+      <li>The token is deleted from the macOS Keychain.</li>
+      <li>The account (its name, ID and picture) is removed from Reelay’s database.</li>
+    </ul>
+    <p>If the same account is connected to another profile, it stays connected there until you disconnect it there too. Videos and tickets you made stay on your Mac until you delete them with step 2 or 3.</p>
+  </section>
+
+  <section id="delete-profile">
+    <h2>2. Delete a profile</h2>
+    <ol>
+      <li>Click the profile at the top of the sidebar, or open the <strong>Profile</strong> menu.</li>
+      <li>Choose <strong>Delete Profile…</strong> and confirm.</li>
+    </ol>
+    <p>The profile’s board, tickets, drafts and connected accounts are removed from Reelay, and each account is disconnected as in step 1. Downloaded video files stay in the profile’s library folder for you to keep or delete. Delete Profile is available when you have more than one profile; with only one, use step 3.</p>
+  </section>
+
+  <section id="delete-everything">
+    <h2>3. Remove the local data folder</h2>
+    <p>Quit Reelay, then delete its data and log folders. This removes the database (<code>{DATA_PATHS.dbName}</code>) with every profile, ticket, transcript, rule and history entry, plus caches and backups. In Terminal:</p>
+    <pre><code>rm -rf ~/Library/Application\ Support/Reelay ~/Library/Logs/Reelay</code></pre>
+    <p>Or in Finder: press <code>⌘⇧G</code>, paste <code>{DATA_PATHS.mac}</code>, and move the folder to the Trash; do the same for <code>{DATA_PATHS.logs}</code>.</p>
+    <ul>
+      <li><strong>Sign-ins:</strong> open Keychain Access and delete the items named <strong>{DATA_PATHS.keychainService}</strong>.</li>
+      <li><strong>A shared database:</strong> if you moved the database to Google Drive, Dropbox, iCloud Drive or OneDrive, delete <code>{DATA_PATHS.dbName}</code> from that folder too.</li>
+      <li><strong>Videos:</strong> delete your library folder (by default <code>{DATA_PATHS.library}</code>) if you don’t want to keep the files.</li>
+      <li><strong>The app:</strong> drag Reelay from Applications to the Trash.</li>
+    </ul>
+  </section>
+
+  <section id="revoke">
+    <h2>4. Remove Reelay on the platform</h2>
+    <p>You can remove Reelay’s access from the platform itself at any time, even if Reelay is no longer installed:</p>
+    <ul>
+      <li><strong>Facebook:</strong> go to <a href="https://www.facebook.com/settings?tab=business_tools" target="_blank" rel="noopener">Settings &amp; privacy → Business integrations</a>, find Reelay and choose <strong>Remove</strong>.</li>
+      <li><strong>Instagram:</strong> in Instagram, <strong>Settings → Apps and websites</strong>, find Reelay and choose <strong>Remove</strong>.</li>
+      <li><strong>Threads:</strong> in Threads, <strong>Settings → Account → Website permissions</strong>, and remove Reelay.</li>
+      <li><strong>Google and YouTube:</strong> <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google Account → Third-party apps and services</a>, select Reelay and remove its access.</li>
+      <li><strong>TikTok:</strong> in TikTok, <strong>Settings and privacy → Security and permissions → Apps and services</strong>, and remove Reelay.</li>
+      <li><strong>Bluesky:</strong> <strong>Settings → Privacy and security → App passwords</strong>, and delete the password you made for Reelay.</li>
+      <li><strong>Snapchat:</strong> Reelay never signs in to Snapchat, so there is nothing to remove.</li>
+    </ul>
+  </section>
+
+  <section id="sign-in-server">
+    <h2>5. Data on our sign-in server</h2>
+    <p>Reelay’s sign-in server, <code>auth.reelay.app</code>, handles TikTok and Meta sign-in. It holds a sign-in’s result at most 10 minutes and never stores it, so after 10 minutes there is nothing there about you. If you want us to confirm that, or to delete anything you think we hold, email <a href={`mailto:${CONTACTS.privacy}`}>{CONTACTS.privacy}</a> with the subject “Data deletion request”. We reply within 30 days with what we found and what we deleted.</p>
+  </section>
+
+  <section id="confirmation">
+    <h2>Confirmation</h2>
+    <p>Deletion on your Mac takes effect immediately; there is no waiting period. For written confirmation of a request, or help with any step, email <a href={`mailto:${CONTACTS.privacy}`}>{CONTACTS.privacy}</a>. More detail is in the <a href={`${href('/privacy')}#sign-in-server`}>Privacy Policy</a>.</p>
+  </section>
+</DocPage>
+
+<style>
+  .statement { color: var(--r-ink); font-size: 1.08rem; line-height: 1.6; }
+</style>

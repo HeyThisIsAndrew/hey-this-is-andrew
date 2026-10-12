@@ -1,0 +1,49 @@
+---
+/**
+ * SafetySection: safety by design, as the code enforces it today
+ * (reelay/scoped_pipeline.py, approvals.py, board_page.py marks,
+ * platform_text.py limits). Approving an agent's request happens on the
+ * command line for now; the app shows the request but has no Approve
+ * button yet, and this says so.
+ */
+import { href } from '../data/site';
+interface Props { id?: string }
+const { id = 'safety' } = Astro.props;
+---
+<section class="stage stage--lift" id={id} aria-labelledby={`${id}-title`}>
+  <div class="wrap">
+    <header class="chapter-head" data-reveal>
+      <p class="eyebrow">Safety by design</p>
+      <h2 id={`${id}-title`} class="headline">Help that asks.<br /><span class="text-silver">You decide.</span></h2>
+      <p class="lede">Automations and AI assistants can do real work in Reelay. <strong>None of them can publish on their own</strong>, and everything they touch is marked.</p>
+    </header>
+    <div class="safe-grid" data-reveal>
+      <article>
+        <span class="mark" aria-hidden="true">⌛</span>
+        <h3>Agents propose. You approve.</h3>
+        <p>An agent can read the board and draft copy. Anything that publishes, schedules, archives or edits many tickets waits as a request, shown with an hourglass on the card. Today a person approves it on the Mac with <code>python -m reelay.approvals</code>; an Approve button in the app is still to come.</p>
+      </article>
+      <article>
+        <span class="mark" aria-hidden="true">✦</span>
+        <h3>AI edits are marked.</h3>
+        <p>When an AI assistant wrote a ticket’s latest copy, the card shows it, and the change history records every edit with who made it: you, a rule, or an agent. Any earlier value can be restored.</p>
+      </article>
+      <article>
+        <span class="mark" aria-hidden="true">✓</span>
+        <h3>Every limit, checked.</h3>
+        <p>Copy is counted against each platform’s own limits, and over-limit text is refused, never cut short. Scheduling goes through the Ready gate. Captions downloaded from the internet are treated as data, never as instructions.</p>
+      </article>
+    </div>
+    <p class="mt-2" data-reveal><a class="link-more" href={href('/security')}>How Reelay protects your data</a></p>
+  </div>
+</section>
+
+<style>
+  .safe-grid { display: grid; gap: 2.5rem 3rem; }
+  @media (min-width: 880px) { .safe-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .safe-grid article { border-top: 1px solid var(--hairline-strong); padding-top: 1.5rem; }
+  .mark { display: grid; place-items: center; width: 2.8rem; height: 2.8rem; margin-bottom: 1.1rem; border-radius: 14px; background: var(--r-amber-soft); color: var(--r-amber-text); font-size: 1.2rem; }
+  .safe-grid h3 { font-size: clamp(1.3rem, 2vw, 1.55rem); font-weight: 650; letter-spacing: -0.025em; }
+  .safe-grid p { margin-top: 0.75rem; color: var(--r-ink-3); }
+  .safe-grid code { font-size: 0.85em; color: var(--r-ink); }
+</style>

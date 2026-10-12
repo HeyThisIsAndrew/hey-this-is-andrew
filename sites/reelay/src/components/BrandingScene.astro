@@ -1,0 +1,95 @@
+---
+/**
+ * BrandingScene: per-profile branding (reelay/gui/branding.py). Each
+ * creator profile has a logo, a tagline and brand colours; the Custom theme
+ * builds the window from them, and the logo is the profile's icon
+ * everywhere, so it's always clear whose profile you're in.
+ */
+import AppWindow from './ui/AppWindow.astro';
+
+const profiles = [
+  { id: 'jl', name: 'Juniper Lane', tag: 'Travel, slowly', ini: 'JL', bg: '#1d1a17', side: '#25211d', accent: '#f0b44c', on: '#1a1205', logo: 'linear-gradient(135deg,#f5c56b,#d9653b)' },
+  { id: 'mr', name: 'Mesa Roasters', tag: 'Small-batch coffee', ini: 'MR', bg: '#12181f', side: '#18212b', accent: '#5eb1ff', on: '#06121f', logo: 'linear-gradient(135deg,#7cc4ff,#2f5fd0)' },
+  { id: 'hk', name: 'Harbor Kitchen', tag: 'Weeknight cooking', ini: 'HK', bg: '#f3f6f1', side: '#e7eee4', accent: '#2f7a4a', on: '#ffffff', logo: 'linear-gradient(135deg,#7fd89a,#1f8a4c)', light: true },
+];
+const first = profiles[0];
+---
+<div class="brs" data-branding>
+  <div class="brs-pick" role="group" aria-label="Choose a creator profile">
+    {profiles.map((p, i) => (
+      <button type="button" aria-pressed={i === 0 ? 'true' : 'false'} data-profile={JSON.stringify(p)}>
+        <span class="pav" style={`background:${p.logo}`} aria-hidden="true">{p.ini}</span>{p.name}
+      </button>
+    ))}
+  </div>
+  <div class="scale-stage">
+    <div class="bscene" data-bscene
+      style={`--b-bg:${first.bg};--b-side:${first.side};--b-accent:${first.accent};--b-on:${first.on};--b-logo:${first.logo};--b-ink:#f2f0ec;--b-ink-2:#a9a6a0`}>
+      <AppWindow title="Reelay" label="Reelay's window in a profile's Custom theme: its logo in the sidebar and its brand colours throughout.">
+        <div class="bwin">
+          <aside class="bside">
+            <div class="bprof"><span class="blogo" data-b-logo>{first.ini}</span><span><b data-b-name>{first.name}</b><small data-b-tag>{first.tag}</small></span></div>
+            <ul><li>Download</li><li class="on">Board</li><li>Automations</li><li>Accounts</li><li>Settings</li></ul>
+          </aside>
+          <div class="bmain">
+            <div class="bbar"><span class="bt">Board</span><span class="bbtn">Schedule</span></div>
+            <div class="bcols">
+              {['Backlog', 'Staging', 'Scheduled'].map((c, i) => (
+                <div class="bcol"><span class="bch">{c}</span><span class:list={['bcard', { sel: i === 1 }]}></span><span class="bcard"></span></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </AppWindow>
+    </div>
+  </div>
+</div>
+
+<style>
+  .brs-pick { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-bottom: 1.5rem; }
+  .brs-pick button { display: inline-flex; align-items: center; gap: 0.55rem; min-height: 44px; padding: 0.35rem 1rem 0.35rem 0.4rem; border: 0; border-radius: 999px; background: var(--r-fill-2); color: var(--r-ink-2); font-size: 0.92rem; font-weight: 500; cursor: pointer; }
+  .brs-pick button[aria-pressed='true'] { background: var(--r-ink); color: var(--r-on-ink); }
+  .pav { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; font-size: 0.72rem; font-weight: 800; color: #111; }
+  .scale-stage { container-type: inline-size; width: 100%; max-width: 860px; margin: 0 auto; }
+  .bscene { font-size: calc(100cqw / 44); --app-bg: var(--b-bg); --app-chrome: var(--b-side); --app-ink: var(--b-ink); --app-ink-2: var(--b-ink-2); --app-border: rgba(127, 127, 127, 0.25); }
+  .bscene, .bscene * { transition: background-color 0.5s ease, color 0.5s ease; }
+  .bwin { display: grid; grid-template-columns: 12em minmax(0, 1fr); height: 18em; background: var(--b-bg); color: var(--b-ink); }
+  .bside { padding: 1em 0.7em; background: var(--b-side); box-shadow: inset -0.25em 0 0 var(--b-accent); }
+  .bprof { display: flex; align-items: center; gap: 0.6em; padding: 0 0.3em 1em; }
+  .blogo { display: grid; place-items: center; flex: none; width: 2.3em; height: 2.3em; border-radius: 0.6em; background: var(--b-logo); font-size: 0.8em; font-weight: 800; color: #111; }
+  .bprof b { display: block; font-size: 0.82em; }
+  .bprof small { display: block; font-size: 0.66em; color: var(--b-ink-2); }
+  .bside ul { list-style: none; display: grid; gap: 0.15em; }
+  .bside li { font-size: 0.78em; padding: 0.5em 0.7em; border-radius: 0.5em; color: var(--b-ink-2); }
+  .bside li.on { background: var(--b-accent); color: var(--b-on); font-weight: 700; }
+  .bmain { padding: 1em; display: grid; grid-template-rows: auto 1fr; gap: 0.8em; }
+  .bbar { display: flex; align-items: center; justify-content: space-between; }
+  .bt { font-size: 1.05em; font-weight: 700; }
+  .bbtn { font-size: 0.72em; font-weight: 700; padding: 0.45em 1em; border-radius: 0.5em; background: var(--b-accent); color: var(--b-on); }
+  .bcols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6em; }
+  .bcol { display: grid; align-content: start; gap: 0.5em; padding: 0.5em; border-radius: 0.6em; background: color-mix(in srgb, var(--b-ink) 6%, transparent); }
+  .bch { font-size: 0.68em; font-weight: 700; }
+  .bcard { height: 4em; border-radius: 0.5em; background: color-mix(in srgb, var(--b-ink) 10%, transparent); }
+  .bcard.sel { box-shadow: 0 0 0 0.14em var(--b-accent); }
+  @container (max-width: 520px) { .bscene { font-size: calc(100cqw / 26); } .bwin { grid-template-columns: 1fr; } .bmain { display: none; } }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-branding]').forEach((root) => {
+    const scene = root.querySelector<HTMLElement>('[data-bscene]')!;
+    root.querySelectorAll<HTMLButtonElement>('[data-profile]').forEach((b) => b.addEventListener('click', () => {
+      const p = JSON.parse(b.dataset.profile || '{}');
+      root.querySelectorAll('[data-profile]').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+      scene.style.setProperty('--b-bg', p.bg);
+      scene.style.setProperty('--b-side', p.side);
+      scene.style.setProperty('--b-accent', p.accent);
+      scene.style.setProperty('--b-on', p.on);
+      scene.style.setProperty('--b-logo', p.logo);
+      scene.style.setProperty('--b-ink', p.light ? '#1c1f1a' : '#f2f0ec');
+      scene.style.setProperty('--b-ink-2', p.light ? '#545b51' : '#a9a6a0');
+      scene.querySelector('[data-b-logo]')!.textContent = p.ini;
+      scene.querySelector('[data-b-name]')!.textContent = p.name;
+      scene.querySelector('[data-b-tag]')!.textContent = p.tag;
+    }));
+  });
+</script>

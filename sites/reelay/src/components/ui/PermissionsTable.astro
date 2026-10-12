@@ -1,0 +1,55 @@
+---
+/**
+ * PermissionsTable: every permission Reelay requests, from
+ * src/data/permissions.json (the one place to change them). Optionally
+ * with each permission's screenshot and screencast slot, for reviewers.
+ */
+import perms from '../../data/permissions.json';
+import Screen from './Screen.astro';
+import VideoSlot from './VideoSlot.astro';
+interface Props { only?: string[]; media?: boolean; headingLevel?: 3 | 4 }
+const { only, media = false, headingLevel = 3 } = Astro.props;
+const platforms = perms.platforms.filter((p) => !only || only.includes(p.key));
+const H: 'h3' | 'h4' = headingLevel === 4 ? 'h4' : 'h3';
+---
+<div class="perms">
+  {platforms.map((p) => (
+    <section class="perm-pf" data-permissions={p.key}>
+      <H class="perm-h">{p.name} <span>{p.api}</span></H>
+      <dl class="perm-list">
+        {p.scopes.map((s) => (
+          <div class:list={['perm', { 'perm--unused': !s.used, 'perm--media': media }]}>
+            <dt><code>{s.name}</code></dt>
+            <dd>
+              <p>{s.purpose}</p>
+              <p class="perm-where"><span>Where in the app:</span> {s.where}</p>
+              {!s.used && <p class="perm-flag">Not used by a shipped feature in this version.</p>}
+              {media && (
+                <div class="perm-media">
+                  <Screen id={s.screen} />
+                  <VideoSlot id={s.video} />
+                </div>
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  ))}
+</div>
+
+<style>
+  .perm-pf + .perm-pf { margin-top: 2.5rem; }
+  .perm-h { font-size: 1.2rem; font-weight: 650; letter-spacing: -0.02em; padding-bottom: 0.75rem; border-bottom: 1px solid var(--hairline-strong); }
+  .perm-h span { font-size: 0.85rem; font-weight: 500; color: var(--r-ink-3); margin-left: 0.4rem; }
+  .perm-list { display: grid; }
+  .perm { display: grid; gap: 0.4rem 2rem; padding: 1rem 0; border-bottom: 1px solid var(--hairline); }
+  @media (min-width: 820px) { .perm:not(.perm--media) { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); } }
+  .perm dt code { font-size: 0.85rem; color: var(--r-amber-text); background: none; padding: 0; overflow-wrap: anywhere; }
+  .perm dd p { margin: 0; color: var(--r-ink-2); font-size: 0.97rem; }
+  .perm-where { margin-top: 0.4rem !important; font-size: 0.88rem !important; color: var(--r-ink-3) !important; }
+  .perm-where span { font-weight: 600; color: var(--r-ink); }
+  .perm-flag { margin-top: 0.4rem !important; font-size: 0.85rem !important; color: var(--r-warn-text) !important; font-weight: 600; }
+  .perm-media { display: grid; gap: 1rem; margin-top: 1rem; }
+  @media (min-width: 820px) { .perm-media { grid-template-columns: 1fr 1fr; } }
+</style>

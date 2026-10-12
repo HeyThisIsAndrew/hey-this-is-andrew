@@ -1,0 +1,90 @@
+---
+/**
+ * SignInDiagram: how each platform's sign-in reaches the Keychain, drawn
+ * from reelay/oauth.py and server/auth_broker.py. Three different paths:
+ * Google never touches Reelay's server; TikTok returns to the Mac and the
+ * app has the server swap the code; Meta returns to the server, which holds
+ * the result at most 10 minutes for a one-time key the browser carries back.
+ */
+interface Props { id?: string }
+const { id = 'sign-in-diagram' } = Astro.props;
+
+type Node = { k: 'you' | 'pf' | 'srv' | 'mac' | 'key'; t: string; s?: string };
+const lanes: { name: string; note: string; nodes: Node[] }[] = [
+  {
+    name: 'Google (YouTube)',
+    note: 'Reelay’s server is never involved.',
+    nodes: [
+      { k: 'you', t: 'Your browser', s: 'Google’s own sign-in page' },
+      { k: 'pf', t: 'Google', s: 'You approve the permissions' },
+      { k: 'mac', t: 'Reelay on your Mac', s: '127.0.0.1, one-time port, PKCE. Swaps the code itself.' },
+      { k: 'key', t: 'macOS Keychain', s: 'Tokens stored here only' },
+    ],
+  },
+  {
+    name: 'TikTok',
+    note: 'TikTok needs Reelay’s app secret to swap the code, so the server does that one step.',
+    nodes: [
+      { k: 'you', t: 'Your browser', s: 'TikTok’s own sign-in page' },
+      { k: 'pf', t: 'TikTok', s: 'You approve the permissions' },
+      { k: 'mac', t: 'Reelay on your Mac', s: '127.0.0.1, one-time port, PKCE' },
+      { k: 'srv', t: 'auth.reelay.app', s: 'Swaps the code and returns the tokens in the same request. Never stored.' },
+      { k: 'key', t: 'macOS Keychain', s: 'Tokens stored here only' },
+    ],
+  },
+  {
+    name: 'Instagram, Threads, Facebook',
+    note: 'Meta returns to the server, not to your Mac. There is no way to collect a sign-in by its state alone.',
+    nodes: [
+      { k: 'you', t: 'Your browser', s: 'Meta’s own sign-in page' },
+      { k: 'pf', t: 'Meta', s: 'You approve the permissions' },
+      { k: 'srv', t: 'auth.reelay.app', s: 'Swaps the code. Held at most 10 minutes for a one-time key, never stored.' },
+      { k: 'mac', t: 'Reelay on your Mac', s: 'Your browser brings the one-time key to 127.0.0.1; the app collects the result once.' },
+      { k: 'key', t: 'macOS Keychain', s: 'Tokens stored here only' },
+    ],
+  },
+];
+---
+<figure class="sid" id={id} aria-labelledby={`${id}-cap`}>
+  <figcaption id={`${id}-cap`} class="sr-only">How sign-in works for Google, TikTok and Meta: where the sign-in code goes and where tokens end up.</figcaption>
+  {lanes.map((lane) => (
+    <div class="lane">
+      <p class="lane-name">{lane.name}</p>
+      <ol class="flow">
+        {lane.nodes.map((n, i) => (
+          <li class={`node node--${n.k}`}>
+            <span class="n-t">{n.t}</span>
+            {n.s && <span class="n-s">{n.s}</span>}
+            {i < lane.nodes.length - 1 && <span class="arrow" aria-hidden="true"></span>}
+          </li>
+        ))}
+      </ol>
+      <p class="lane-note">{lane.note}</p>
+    </div>
+  ))}
+  <p class="sid-foot">Disconnect revokes access where the platform allows it (Google, TikTok and Facebook) and deletes the tokens from the Keychain. Instagram and Threads access is removed in their own settings.</p>
+</figure>
+
+<style>
+  .sid { margin: 0; display: grid; gap: clamp(1.75rem, 3vw, 2.5rem); }
+  .lane-name { font-weight: 650; color: var(--r-ink); font-size: 1.05rem; margin-bottom: 0.75rem; }
+  .flow { list-style: none; display: grid; gap: 0.6rem; }
+  @media (min-width: 900px) {
+    .flow { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 1.6rem; }
+  }
+  .node { position: relative; display: grid; align-content: start; gap: 0.3rem; padding: 0.9rem 1rem; border-radius: 16px; background: var(--r-tile); box-shadow: inset 0 0 0 1px var(--hairline); }
+  .stage--lift .node { background: var(--r-bg); }
+  .n-t { font-weight: 650; font-size: 0.95rem; color: var(--r-ink); }
+  .n-s { font-size: 0.82rem; line-height: 1.4; color: var(--r-ink-3); }
+  .node--srv { background: var(--r-amber-soft); box-shadow: inset 0 0 0 1px var(--r-amber-line); }
+  .node--srv .n-t { color: var(--r-amber-text); font-family: var(--font-mono); font-size: 0.9rem; }
+  .node--key { box-shadow: inset 0 0 0 1.5px var(--r-ok-text); }
+  .arrow { position: absolute; left: 50%; bottom: -0.6rem; width: 2px; height: 0.6rem; background: var(--hairline-strong); }
+  .arrow::after { content: ''; position: absolute; left: -3px; bottom: -1px; border: 4px solid transparent; border-top-color: var(--r-ink-4); border-bottom: 0; }
+  @media (min-width: 900px) {
+    .arrow { left: auto; right: -1.6rem; top: 50%; bottom: auto; width: 1.6rem; height: 2px; }
+    .arrow::after { left: auto; right: -1px; bottom: -3px; border: 4px solid transparent; border-left-color: var(--r-ink-4); border-right: 0; }
+  }
+  .lane-note { margin-top: 0.6rem; font-size: 0.88rem; color: var(--r-ink-3); }
+  .sid-foot { font-size: 0.92rem; color: var(--r-ink-2); max-width: 52rem; }
+</style>

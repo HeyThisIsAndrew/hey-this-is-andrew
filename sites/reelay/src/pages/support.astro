@@ -1,0 +1,138 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/ui/PageHero.astro';
+import Faq from '../components/ui/Faq.astro';
+import GatekeeperSteps from '../components/ui/GatekeeperSteps.astro';
+import PermissionsTable from '../components/ui/PermissionsTable.astro';
+import { SITE, DATA_PATHS, AGENT_API, href } from '../data/site';
+import { RELEASE } from '../data/release';
+import { CONTACTS } from '../data/operator';
+
+const faq = [
+  { q: 'Where are my videos and my database?', a: `<p>Videos go into the library folder you choose, by default <code>${DATA_PATHS.library}</code>. Everything else is in one database, <code>${DATA_PATHS.dbName}</code>, in <code>${DATA_PATHS.mac}</code>. You can move the database under <strong>Settings → Data</strong>.</p>` },
+  { q: 'Where do transcripts come from?', a: '<p>From the original post’s own captions: the creator’s subtitles first, otherwise the platform’s automatic captions. Use <strong>Get from Original Post</strong> on a ticket. Reelay doesn’t run speech recognition to make transcripts, so a video posted without captions has none to fetch.</p>' },
+  { q: 'Why doesn’t Reelay post to TikTok, Instagram or Snapchat for me?', a: '<p>Reelay prepares the caption and the file for them and you post in their own app, which keeps sounds, tags and Shop links. <strong>Prepare to Publish</strong> checks the file and caption, copies the caption, opens the uploader and shows the video in Finder; then you mark it posted.</p>' },
+  { q: 'How do I turn on Bluesky, Threads or Facebook posting?', a: '<p>Connect the account under <strong>Accounts</strong>, switch the platform on under <strong>Settings → Automatic posting</strong>, and restart Reelay. Bluesky and Threads posts go out at their time while Reelay is running and the Mac is awake; Facebook schedules them itself.</p>' },
+  { q: 'How do I disconnect an account?', a: `<p>Click <strong>Disconnect</strong> on its card under <strong>Accounts</strong>. Reelay revokes access where the platform allows it, deletes the token from your Keychain and removes the account. See <a href="${href('/data-deletion')}">Data Deletion</a> to remove everything.</p>` },
+  { q: 'Can I connect an AI agent?', a: `<p>Yes, through the Agent API on <code>${AGENT_API.host}:${AGENT_API.port}</code>. <strong>Settings → AI agents</strong> shows its address and the access key. See <a href="${href('/ai')}">Agents</a>. An MCP endpoint is planned but isn’t in the app yet.</p>` },
+  { q: 'What does Reelay run on?', a: '<p>A Mac with Apple silicon, on macOS 12 Monterey or later. It isn’t available for other computers yet.</p>' },
+];
+---
+
+<BaseLayout
+  title={`Support: ${SITE.fullName}`}
+  description="Help with Reelay: getting started on your Mac, opening it the first time, connecting YouTube, common questions, and how to reach us."
+>
+  <PageHero eyebrow="Support">
+    <Fragment slot="title">How can we help?</Fragment>
+    <Fragment slot="lede">Getting started, connecting YouTube, and answers to the questions people ask most. <strong>Reviewing Reelay for Google, TikTok or Meta?</strong> Start with the <a href={href('/reviewers')}>reviewer notes</a>.</Fragment>
+  </PageHero>
+
+  <section class="stage stage--flush-top" aria-label="Help topics">
+    <div class="wrap">
+      <div class="bento" data-reveal>
+        <a class="tile span-2 topic" href="#get-started"><h3>Get started</h3><p>Install, open and bring your first videos in.</p><span class="link-more">Start</span></a>
+        <a class="tile span-2 topic" href="#youtube-setup"><h3>Connect YouTube</h3><p>Sign in with Google, or bring your own project.</p><span class="link-more">Set up</span></a>
+        <a class="tile span-2 topic" href={href('/data-deletion')}><h3>Delete your data</h3><p>Disconnect one account, or remove everything.</p><span class="link-more">Instructions</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage stage--lift" id="get-started" aria-labelledby="start-title">
+    <div class="wrap">
+      <div class="split">
+        <div data-reveal>
+          <p class="eyebrow">Get started</p>
+          <h2 id="start-title" class="title">From download to your first ticket.</h2>
+          <div class="recommend">
+            <p class="rec-v">Reelay for Mac</p>
+            <a class="btn btn-primary" href={href('/download')}>Download</a>
+            <p class="fine">{RELEASE.requirements}</p>
+          </div>
+        </div>
+        <ol class="steps" data-reveal style="--reveal-delay:.08s">
+          <li><span class="step-n">1</span><span><strong>Install.</strong> Open the .dmg and drag Reelay to Applications.</span></li>
+          <li><span class="step-n">2</span><span><strong>Open it the first time</strong>, as shown below.</span></li>
+          <li><span class="step-n">3</span><span><strong>Bring videos in.</strong> In <strong>Download Sources</strong>, add an account you own or manage by @username or link, click List Videos, tick what you want and Download.</span></li>
+          <li><span class="step-n">4</span><span><strong>Open the Board.</strong> Every video is a ticket in Backlog, ready for its copy.</span></li>
+        </ol>
+      </div>
+      <div class="mt-3" data-reveal><GatekeeperSteps /></div>
+      <div class="selftest" data-reveal>
+        <p><strong>Something not working?</strong> Reelay has a built-in environment check that runs without opening a window. Send us what it prints.</p>
+        <pre><code>/Applications/Reelay.app/Contents/MacOS/Reelay --self-test</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage" id="youtube-setup" aria-labelledby="yt-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">Connecting YouTube</p>
+        <h2 id="yt-title" class="headline">Sign in with Google.<br /><span class="text-silver">Or bring your own project.</span></h2>
+        <p class="lede">Reelay’s one-click Google sign-in turns on once Google approves Reelay’s app. Until then, and whenever you prefer, connect through a free Google Cloud project you own: <strong>Accounts → Set Up YouTube…</strong> walks you through it.</p>
+      </header>
+      <ol class="steps steps--wide" data-reveal>
+        <li><span class="step-n">1</span><span>Create a project.</span></li>
+        <li><span class="step-n">2</span><span>Enable the YouTube Data API v3.</span></li>
+        <li><span class="step-n">3</span><span>Set up the sign-in screen as External, adding each Google account you’ll connect as a test user.</span></li>
+        <li><span class="step-n">4</span><span>Create a Desktop app client ID.</span></li>
+        <li><span class="step-n">5</span><span>Paste the client ID and secret into Reelay, or load the downloaded JSON.</span></li>
+      </ol>
+      <p class="lede mt-2" data-reveal>With your own project, three limits apply:</p>
+      <div class="feature-grid" data-reveal>
+        <div class="feature"><h3>Private until audited</h3><p>Uploads from a project that hasn’t passed YouTube’s API compliance audit are locked to private, so scheduled videos won’t go public. Reelay flags it on the card.</p></div>
+        <div class="feature"><h3>Weekly sign-in</h3><p>While the project is in Testing mode, Google expires sign-ins every seven days, so you’ll need to reconnect.</p></div>
+        <div class="feature"><h3>A daily upload limit</h3><p>YouTube’s default API quota caps uploads per day. You can ask Google for more.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage stage--lift" id="demo-verification" aria-labelledby="review-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">App review</p>
+        <h2 id="review-title" class="title">What Reelay asks each platform for.</h2>
+        <p class="lede">The full notes for Google, TikTok and Meta reviewers, with test steps and app IDs, are on the <a href={href('/reviewers')}>reviewer page</a>.</p>
+      </header>
+      <div data-reveal><PermissionsTable headingLevel={3} /></div>
+    </div>
+  </section>
+
+  <section class="stage" aria-labelledby="faq-title">
+    <div class="wrap-narrow">
+      <h2 id="faq-title" class="title" data-reveal>Questions</h2>
+      <div class="mt-2" data-reveal><Faq items={faq} /></div>
+    </div>
+  </section>
+
+  <section class="stage stage--tight" aria-labelledby="contact-title">
+    <div class="wrap">
+      <h2 id="contact-title" class="title center" data-reveal>Contact</h2>
+      <div class="spec-rail mt-2" data-reveal>
+        <div class="spec"><span class="spec-label"><strong>Help with the app</strong><a href={`mailto:${CONTACTS.support}`}>{CONTACTS.support}</a></span></div>
+        <div class="spec"><span class="spec-label"><strong>App review</strong><a href={`mailto:${CONTACTS.reviewers}`}>{CONTACTS.reviewers}</a></span></div>
+        <div class="spec"><span class="spec-label"><strong>Privacy</strong><a href={`mailto:${CONTACTS.privacy}`}>{CONTACTS.privacy}</a></span></div>
+        <div class="spec"><span class="spec-label"><strong>Security</strong><a href={`mailto:${CONTACTS.security}`}>{CONTACTS.security}</a></span></div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .topic { display: flex; flex-direction: column; color: var(--r-ink); transition: transform 0.4s var(--r-ease), background-color 0.3s ease; }
+  .topic:hover { color: var(--r-ink); background: var(--r-tile-2); transform: translateY(-3px); }
+  .topic p { color: var(--r-ink-3); flex: 1; }
+  .topic .link-more { margin-top: 1rem; }
+  .recommend { margin-top: 2rem; display: grid; justify-items: start; gap: 0.6rem; }
+  .rec-v { font-size: 1.25rem; font-weight: 600; color: var(--r-ink); }
+  .steps { list-style: none; display: grid; }
+  .steps li { display: flex; align-items: flex-start; gap: 1.1rem; padding: 1.15rem 0; border-top: 1px solid var(--hairline); font-size: 1.05rem; color: var(--r-ink-2); }
+  .steps li:last-child { border-bottom: 1px solid var(--hairline); }
+  .steps strong { color: var(--r-ink); }
+  .step-n { display: grid; place-items: center; flex: none; width: 2rem; height: 2rem; border-radius: 50%; background: var(--r-amber-soft); color: var(--r-amber-text); font-size: 0.9rem; font-weight: 700; }
+  .steps--wide { margin-bottom: 1rem; }
+  .selftest { margin-top: clamp(3rem, 6vw, 4.5rem); max-width: 46rem; }
+  .selftest pre { margin-top: 0.85rem; padding: 1rem 1.15rem; border-radius: 14px; background: var(--r-code-bg); overflow-x: auto; font-size: 0.88rem; color: var(--r-ink); }
+  .spec-label a { color: var(--r-amber-text); font-size: 1.05rem; }
+</style>

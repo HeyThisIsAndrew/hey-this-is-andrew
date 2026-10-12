@@ -1,0 +1,103 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/ui/PageHero.astro';
+import Faq from '../components/ui/Faq.astro';
+import { SITE, DOWNLOADS, href } from '../data/site';
+
+const included = [
+  'Bring in your media from TikTok, Instagram, YouTube and Snapchat',
+  'Unlimited profiles and tickets',
+  'Copy and live limits for six platforms',
+  'Readiness, the Ready gate and coverage map',
+  'YouTube upload and scheduling',
+  'Prepare to Publish for TikTok, Instagram and Snapchat',
+  'Automations',
+  'Archive search, transcripts included',
+  'Writing help with local models',
+  'Video tools',
+  'Agent API with approvals',
+  'Shared database',
+];
+
+const faq = [
+  { q: 'Do I need a Reelay account?', a: '<p>No. There’s nothing to sign up for. You connect your own platform accounts inside the app, and they stay connected on your computer.</p>' },
+  { q: 'What does it cost to run?', a: '<p>Reelay keeps your videos on your own disk and runs its writing help on a model on your own computer, so there’s no storage bill and no AI tokens to buy. Posting to YouTube uses YouTube’s free daily API quota.</p>' },
+  { q: 'What happens after the beta?', a: '<p>Pricing for version 1.0 hasn’t been set. Whatever happens, your library and database are files on your computer, so your work is always yours to keep.</p>' },
+  { q: 'Does it work offline?', a: '<p>The Board, your copy, search, the player, video tools and local writing help all work without a connection. Downloading, posting and signing in need one, of course.</p>' },
+  { q: 'What do I need to post to YouTube?', a: `<p>Until Reelay’s own Google sign-in is approved, you connect through a free Google Cloud project that you own. <strong>Accounts → Set Up YouTube…</strong> walks you through it in five steps. Uploads from a project Google hasn’t audited stay private, so see <a href="${href('/support')}#youtube-setup">Connecting YouTube</a> for the limits.</p>` },
+  { q: 'What does it run on?', a: '<p>A Mac with Apple silicon, on macOS 12 or later. Reelay isn’t available for other computers yet.</p>' },
+];
+---
+
+<BaseLayout
+  subnav
+  title={`Pricing: ${SITE.fullName}`}
+  description="Reelay Studio is free while it's in beta: every feature, no account and no subscription. Your videos and database stay on your computer."
+>
+  <PageHero eyebrow="Pricing">
+    <Fragment slot="title">Free while<br /><span class="text-glow">it’s in beta.</span></Fragment>
+    <Fragment slot="lede">Every feature, for as many creators as you manage. <strong>No account, no subscription, no storage fees.</strong> Your work lives on your computer, so there’s nothing for us to charge you rent on.</Fragment>
+  </PageHero>
+
+  <section class="stage stage--flush-top" aria-labelledby="plan-title">
+    <div class="wrap">
+      <div class="plan" data-reveal>
+        <div class="plan-price">
+          <h2 id="plan-title" class="sr-only">The beta</h2>
+          <p class="plan-name">Reelay Studio {SITE.version}</p>
+          <p class="plan-amount"><span>$0</span><small>during the beta</small></p>
+          <a class="btn btn-primary btn-lg" href={DOWNLOADS.macArm.href}>Download for Mac</a>
+          <p class="fine">{DOWNLOADS.macArm.requirements}</p>
+        </div>
+        <ul class="plan-list">
+          {included.map((i) => <li>{i}</li>)}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage stage--lift" aria-labelledby="costs-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">Why it can be</p>
+        <h2 id="costs-title" class="headline">No cloud.<br /><span class="text-silver">No cloud bill.</span></h2>
+      </header>
+      <div class="spec-rail" data-reveal>
+        <div class="spec"><span class="spec-value">$0</span><span class="spec-label"><strong>Storage</strong>Your videos and database are on your own disk.</span></div>
+        <div class="spec"><span class="spec-value">0</span><span class="spec-label"><strong>AI tokens</strong>Writing help runs on a model on your computer.</span></div>
+        <div class="spec"><span class="spec-value">0</span><span class="spec-label"><strong>Seats</strong>Share a database through a folder you already sync.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage" aria-labelledby="faq-title">
+    <div class="wrap-narrow">
+      <h2 id="faq-title" class="title" data-reveal>Questions</h2>
+      <div class="mt-2" data-reveal><Faq items={faq} /></div>
+      <p class="mt-3" data-reveal><a class="link-more" href={href('/download')}>Download, release notes and checksum</a></p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .plan {
+    display: grid;
+    gap: clamp(2rem, 5vw, 4rem);
+    padding: clamp(2rem, 5vw, 4rem);
+    border-radius: var(--radius-xl);
+    background:
+      radial-gradient(60% 80% at 0% 0%, rgba(240, 170, 60, 0.18), transparent 65%),
+      var(--r-panel);
+    box-shadow: var(--r-panel-shadow), 0 60px 140px -50px var(--r-glow-1);
+  }
+  @media (min-width: 860px) {
+    .plan { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); align-items: center; }
+  }
+  .plan-price { display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .plan-name { font-weight: 600; color: var(--r-amber-text); }
+  .plan-amount span { display: block; font-family: var(--font-display); font-size: clamp(5rem, 12vw, 8.5rem); font-weight: 700; line-height: 0.9; letter-spacing: -0.06em; color: var(--r-ink); }
+  .plan-amount small { display: block; margin-top: 0.5rem; font-size: 1.1rem; color: var(--r-ink-3); }
+  .plan-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 0 2rem; }
+  .plan-list li { position: relative; padding: 0.8rem 0 0.8rem 1.75rem; border-top: 1px solid var(--hairline); color: var(--r-ink); font-size: 0.98rem; }
+  .plan-list li::before { content: ''; position: absolute; left: 0.15rem; top: 1.2rem; width: 0.6rem; height: 0.32rem; border-left: 2px solid var(--r-amber-text); border-bottom: 2px solid var(--r-amber-text); transform: rotate(-45deg); }
+</style>

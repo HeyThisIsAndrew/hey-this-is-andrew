@@ -1,0 +1,213 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/ui/PageHero.astro';
+import NextUp from '../components/ui/NextUp.astro';
+import { SITE, AGENT_API, href } from '../data/site';
+import Screen from '../components/ui/Screen.astro';
+import SafetySection from '../components/SafetySection.astro';
+
+/* Requests and responses follow README "Agent API" (abbreviated). */
+const examples = [
+  {
+    id: 'board',
+    label: 'Read the board',
+    req: `GET ${AGENT_API.url}/v1/board?profile=Juniper%20Lane&stage=staging\nAuthorization: Bearer $TOKEN`,
+    status: '200 OK',
+    res: `{\n  "profile": "Juniper Lane",\n  "stage": "staging",\n  "total": 2,\n  "videos": [{\n    "id": 42,\n    "title": "Golden hour at Big Sur",\n    "ready": true,\n    "readiness": { … },\n    "coverage": { … }\n  }, …]\n}`,
+    note: 'Each video comes with its copy, readiness, coverage, ticket fields, provenance and publishing history.',
+  },
+  {
+    id: 'draft',
+    label: 'Draft copy',
+    req: `PATCH ${AGENT_API.url}/v1/videos/42\n{ "threads_text": "Ten minutes of gold on the Big Sur coast." }`,
+    status: '200 OK',
+    res: `{ "id": 42, "title": "Golden hour at Big Sur", "ready": true, … }`,
+    note: 'Draft edits apply at once, are checked against every limit first, and are logged as a change by an agent. Rate-limited.',
+  },
+  {
+    id: 'schedule',
+    label: 'Ask to schedule',
+    req: `POST ${AGENT_API.url}/v1/videos/42/schedule\n{ "scheduled_at": "2026-10-20T09:00:00-07:00", "platforms": ["youtube"] }`,
+    status: '202 Accepted',
+    res: `{ "approval_id": 17, "operation": "schedule", "status": "pending", … }`,
+    note: 'Nothing happens until a person approves it on the Mac. If the video changes first, the request goes stale and isn’t done.',
+  },
+  {
+    id: 'search',
+    label: 'Search',
+    req: `GET ${AGENT_API.url}/v1/search?profile=Juniper%20Lane&q=gold`,
+    status: '200 OK',
+    res: `{\n  "query": "gold",\n  "total": 1,\n  "results": [{\n    "spoken": true,\n    "snippet": "…it is completely «gold» right now.",\n    "video": { "id": 42, … }\n  }]\n}`,
+    note: 'Full-text search of the archive, transcripts included, best results first.',
+  },
+];
+
+const lifecycle = ['pending', 'approved', 'executed', 'failed', 'stale', 'rejected', 'expired'];
+---
+
+<BaseLayout
+  subnav
+  title={`Agents and the Agent API: ${SITE.fullName}`}
+  description={`Reelay's local Agent API lets AI agents read the board, draft copy and ask to schedule. Anything that posts, archives or changes many tickets waits for a person's approval. Writing help runs on a model on your own computer.`}
+>
+  <PageHero eyebrow="Agents">
+    <Fragment slot="title">Your agents can ask.<br /><span class="text-glow">You decide.</span></Fragment>
+    <Fragment slot="lede">Reelay includes a local API for AI agents and automations. An agent can read the board, draft copy and request a schedule. <strong>Nothing that posts happens until a person approves it.</strong></Fragment>
+  </PageHero>
+
+  <section class="stage stage--flush-top" aria-labelledby="ex-title">
+    <div class="wrap">
+      <h2 id="ex-title" class="sr-only">Example requests</h2>
+      <div class="ex" data-examples data-reveal>
+        <div class="ex-tabs" role="tablist" aria-label="Example requests">
+          {examples.map((e, i) => (
+            <button type="button" role="tab" class="ex-tab" id={`ex-tab-${e.id}`} aria-controls={`ex-panel-${e.id}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1}>{e.label}</button>
+          ))}
+        </div>
+        {examples.map((e, i) => (
+          <div class="ex-panel" role="tabpanel" id={`ex-panel-${e.id}`} aria-labelledby={`ex-tab-${e.id}`} hidden={i !== 0}>
+            <div class="ex-term">
+              <pre class="ex-req"><code>{e.req}</code></pre>
+              <p class:list={['ex-status', { wait: e.status.startsWith('202') }]}>{e.status}</p>
+              <pre class="ex-res"><code>{e.res}</code></pre>
+            </div>
+            <p class="ex-note">{e.note}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="stage stage--lift" aria-labelledby="connect-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">Connecting</p>
+        <h2 id="connect-title" class="headline">One address.<br /><span class="text-silver">On your machine.</span></h2>
+        <p class="lede">The API starts when Reelay opens and stops when it quits. Its machine-readable description is served at <code>/openapi.json</code> (OpenAPI 3.1), which agent frameworks such as Claude, Gemini and Antigravity can turn into tools directly.</p>
+      </header>
+      <div class="spec-rail" data-reveal>
+        <div class="spec"><span class="spec-value spec-value--sm">{AGENT_API.host}</span><span class="spec-label"><strong>Listens on your Mac</strong>Port {AGENT_API.port}, and it checks the Host header, so a web page can’t reach it by pretending to be local.</span></div>
+        <div class="spec"><span class="spec-value spec-value--sm">Bearer</span><span class="spec-label"><strong>A key from your keychain</strong>Settings → AI agents shows the address, Copy Access Key and Make a New Key….</span></div>
+        <div class="spec"><span class="spec-value spec-value--sm">3.1</span><span class="spec-label"><strong>OpenAPI</strong>The contract is generated from the code and tested against the live server.</span></div>
+      </div>
+      <div class="mt-4" data-reveal><Screen id="agents-settings" caption="Settings → AI agents in the app." /></div>
+      <div class="feature-grid mt-4" data-reveal>
+        <div class="feature"><h3>Without the window</h3><p>Run <code>python -m reelay.api</code> on a server or for testing. The scheduler that posts to Bluesky and Threads runs too.</p></div>
+        <div class="feature"><h3>Agents somewhere else</h3><p>Point a Cloudflare Tunnel at the API. Every call still needs the key, and Reelay sends no CORS headers: it’s for server-to-server calls.</p></div>
+        <div class="feature"><h3>Off switch</h3><p>Set <code>REELAY_API_DISABLED=1</code> and the API doesn’t start.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage" id="security-boundary" aria-labelledby="sec-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">Approvals</p>
+        <h2 id="sec-title" class="headline">A person holds<br /><span class="text-silver">the publish button.</span></h2>
+        <p class="lede">Anything that posts, archives, or changes many tickets at once <strong>needs a person’s approval</strong>. The request is checked straight away, stored, and answered with an approval ID. Agents can read what happened to it. They can’t approve it.</p>
+      </header>
+      <div class="lifecycle" data-reveal aria-label="Approval statuses">
+        {lifecycle.map((s) => <span class:list={['lc', `lc--${s}`]}>{s}</span>)}
+      </div>
+      <div class="feature-grid mt-4" data-reveal>
+        <div class="feature"><h3>Needs approval</h3><p>Scheduling, applying a sheet import, bulk updates, archiving, removing a source, ticking a platform as scheduled or posted, recording a manual post, and resolving an interrupted send.</p></div>
+        <div class="feature"><h3>Applies at once</h3><p>Draft edits, restoring an earlier value, filling from the original post, fetching a transcript, and saving a source. Rate-limited, and every change is logged with the agent as its author.</p></div>
+        <div class="feature"><h3>Approving, today</h3><p>A waiting request shows as an hourglass on its card. To decide it, run <code>python -m reelay.approvals list</code>, <code>show</code>, <code>approve</code> or <code>reject</code> from a copy of Reelay’s source on the Mac; the running app then carries it out. An Approve button in the app is still to come.</p></div>
+        <div class="feature"><h3>Captions are data</h3><p>Text from the internet is never treated as an instruction. A rule will not schedule copy an agent supplied; that waits for a person too.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage stage--lift" id="writing-help" aria-labelledby="wh-title">
+    <div class="wrap">
+      <div class="split">
+        <div data-reveal>
+          <p class="eyebrow">Writing help</p>
+          <h2 id="wh-title" class="title">AI that runs on your computer.</h2>
+          <p class="lede">The Assist menu on every caption checks spelling and grammar, and rewrites through a small model on your own machine: <strong>Ollama, or llama.cpp with a .gguf file.</strong> Brand-voice profiles set the tone, words to avoid and default hashtags.</p>
+          <p class="lede mt-1">Rewrites are suggestions. They’re never saved by themselves, and never shortened to fit. <strong>No paid AI, no tokens.</strong></p>
+        </div>
+        <ul class="wh-list" data-reveal style="--reveal-delay:.08s">
+          <li><strong>Spelling and grammar</strong><span>Built in, or LanguageTool fully offline when installed</span></li>
+          <li><strong>Rewrites</strong><span>Ollama at 127.0.0.1:11434, or llama.cpp</span></li>
+          <li><strong>Brand voice</strong><span>Tone, words to avoid, hashtags, guidance</span></li>
+          <li><strong>SEO suggestions</strong><span>From YouTube’s own search suggestions, with a score for the title and tags</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage stage--tight" aria-labelledby="mcp-title">
+    <div class="wrap-narrow center" data-reveal>
+      <p class="eyebrow">Coming later</p>
+      <h2 id="mcp-title" class="subtitle">Model Context Protocol</h2>
+      <p class="mt-1">An MCP endpoint is planned, built on the same approval boundary as the API so an MCP client gets exactly the same limits. It isn’t in the app yet; the Agent API is how agents connect today.</p>
+    </div>
+  </section>
+
+  <SafetySection id="agent-safety" />
+
+  <NextUp kicker="Next" title="Download" href={href('/download')} />
+</BaseLayout>
+
+<style>
+  .ex {
+    max-width: 58rem;
+    margin: 0 auto;
+    padding: clamp(1rem, 3vw, 2rem);
+    border-radius: var(--radius-xl);
+    background: var(--r-panel);
+    box-shadow: var(--r-panel-shadow);
+  }
+  .ex-tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.25rem; }
+  .ex-tab { min-height: 40px; padding: 0 1rem; border: 0; border-radius: 999px; background: var(--r-fill-2); color: var(--r-ink-2); font-size: 0.92rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; }
+  .ex-tab:hover { color: var(--r-ink); }
+  .ex-tab[aria-selected='true'] { background: var(--r-ink); color: var(--r-on-ink); }
+  .ex-panel[hidden] { display: none; }
+  .ex-term { border-radius: 18px; background: var(--r-code-bg); box-shadow: inset 0 0 0 1px var(--hairline); overflow: hidden; }
+  .ex-term pre { margin: 0; padding: 1.1rem 1.25rem; overflow-x: auto; font-size: 0.86rem; line-height: 1.65; }
+  .ex-req { color: var(--r-ink); }
+  .ex-res { color: var(--r-ink-2); border-top: 1px solid var(--r-fill-2); }
+  .ex-status { padding: 0.6rem 1.25rem 0; font-family: var(--font-mono); font-size: 0.82rem; color: var(--r-ok-text); border-top: 1px solid var(--r-fill-2); }
+  .ex-status.wait { color: var(--r-amber-text); }
+  .ex-note { margin-top: 1rem; font-size: 0.95rem; color: var(--r-ink-3); }
+
+  .spec-value--sm { font-size: clamp(1.6rem, 3vw, 2.4rem); letter-spacing: -0.03em; }
+  .lede code, .feature code, .wrap-narrow code { font-size: 0.85em; color: var(--r-ink); }
+
+  .lifecycle { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .lc { padding: 0.55rem 1rem; border-radius: 999px; font-family: var(--font-mono); font-size: 0.88rem; background: var(--r-fill-2); color: var(--r-ink-2); }
+  .lc--pending { background: rgba(240, 180, 76, 0.16); color: var(--r-amber-text); }
+  .lc--approved, .lc--executed { background: rgba(48, 209, 88, 0.14); color: var(--r-ok-text); }
+  .lc--failed, .lc--rejected { background: rgba(255, 69, 58, 0.14); color: var(--r-bad-text); }
+
+  .wh-list { list-style: none; }
+  .wh-list li { display: grid; gap: 0.25rem; padding: 1.1rem 0; border-top: 1px solid var(--hairline); }
+  .wh-list li:last-child { border-bottom: 1px solid var(--hairline); }
+  .wh-list strong { font-size: 1.1rem; }
+  .wh-list span { color: var(--r-ink-3); }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-examples]').forEach((root) => {
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('.ex-tab'));
+    const select = (i: number, focus = false) => {
+      tabs.forEach((t, j) => {
+        const on = i === j;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        const p = document.getElementById(t.getAttribute('aria-controls') || '');
+        if (p) p.hidden = !on;
+      });
+      if (focus) tabs[i].focus();
+    };
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => select(i));
+      t.addEventListener('keydown', (e) => {
+        const last = tabs.length - 1;
+        const next = e.key === 'ArrowRight' ? (i === last ? 0 : i + 1) : e.key === 'ArrowLeft' ? (i === 0 ? last : i - 1) : e.key === 'Home' ? 0 : e.key === 'End' ? last : -1;
+        if (next >= 0) { e.preventDefault(); select(next, true); }
+      });
+    });
+  });
+</script>

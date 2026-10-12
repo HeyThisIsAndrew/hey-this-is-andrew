@@ -1,0 +1,204 @@
+---
+/**
+ * DataFlowTopology: where everything Reelay touches actually lives, in four
+ * boundaries, including the one place a Reelay server is involved (the
+ * sign-in broker for TikTok and Meta). Written from reelay/paths.py,
+ * tokens.py, oauth.py and server/auth_broker.py.
+ *
+ * Test hooks: #data-topology, four .topology-tab with data-node-target,
+ * #panel-<target>, ArrowUp / ArrowDown on the vertical list.
+ */
+import { DATA_PATHS, AGENT_API, href } from '../data/site';
+
+const nodes = [
+  {
+    id: 'on-device',
+    label: 'On your computer',
+    short: 'Library and database',
+    title: 'Your archive lives where you put it.',
+    body: 'Videos download into the library folder you choose. Every ticket, its copy, transcript, change history and the search index live in one SQLite file. Preview and edited copies sit beside the originals, which Reelay never changes.',
+    rows: [
+      ['Videos', 'Your library folder'],
+      ['Tickets, copy, history', DATA_PATHS.dbName],
+      ['Database folder', DATA_PATHS.mac],
+      ['Logs', DATA_PATHS.logs],
+    ],
+  },
+  {
+    id: 'keychain',
+    label: 'In your keychain',
+    short: 'Sign-ins and keys',
+    title: 'Sign-ins never touch a file.',
+    body: 'Platform tokens, Bluesky App Passwords and the agent API key are kept by macOS, in the Keychain. Disconnect an account and Reelay deletes its token from the keychain, and revokes it with the platform where it can.',
+    rows: [
+      ['YouTube, TikTok, Meta tokens', 'macOS Keychain'],
+      ['Bluesky App Password', 'macOS Keychain'],
+      ['Agent API key', 'macOS Keychain'],
+      ['In Reelay’s database', 'Never'],
+    ],
+  },
+  {
+    id: 'platforms',
+    label: 'Straight to the platforms',
+    short: 'Uploads and posts',
+    title: 'From your computer to theirs.',
+    body: 'Uploads and posts go directly from your computer to YouTube, Facebook, Threads and Bluesky. Google sign-in happens entirely on your machine. For TikTok, Instagram, Threads and Facebook, Reelay’s sign-in server swaps the sign-in code for your tokens, hands them back, and keeps nothing longer than the few minutes a sign-in takes.',
+    rows: [
+      ['Video uploads', 'Your computer → the platform'],
+      ['Google sign-in', 'Loopback on 127.0.0.1'],
+      ['TikTok and Meta sign-in', 'Code exchanged by Reelay’s sign-in server'],
+      ['Copies of your videos on Reelay servers', 'None'],
+    ],
+  },
+  {
+    id: 'agents',
+    label: 'Agents you approve',
+    short: 'Local API and models',
+    title: 'Help that asks first.',
+    body: 'The agent API listens on your own machine and needs its key. Drafts can be edited straight away; anything that posts, archives or changes many tickets waits for a person’s approval. Writing help runs on a model on your computer.',
+    rows: [
+      ['Agent API', `${AGENT_API.host}:${AGENT_API.port}`],
+      ['Posting, archiving, bulk edits', 'Waits for approval'],
+      ['Writing help', 'Ollama or llama.cpp, on device'],
+      ['Paid AI services', 'None'],
+    ],
+  },
+];
+---
+<section id="data-topology" class="stage topo" aria-labelledby="topo-title">
+  <div class="topo-glow" aria-hidden="true"></div>
+  <div class="wrap">
+    <header class="chapter-head center topo-head" data-reveal>
+      <p class="eyebrow">Privacy</p>
+      <h2 id="topo-title" class="headline">Your computer<br />is the studio.</h2>
+      <p class="lede">There is no Reelay cloud holding your videos, your drafts or your sign-ins. <strong>Here is everything, and exactly where it lives.</strong></p>
+    </header>
+
+    <div class="topo-grid" data-reveal>
+      <div class="topo-tabs" role="tablist" aria-orientation="vertical" aria-label="Where your data lives">
+        {nodes.map((n, i) => (
+          <button
+            type="button"
+            role="tab"
+            class="topology-tab"
+            id={`ttab-${n.id}`}
+            data-node-target={n.id}
+            aria-selected={i === 0 ? 'true' : 'false'}
+            aria-controls={`panel-${n.id}`}
+            tabindex={i === 0 ? 0 : -1}
+          >
+            <span class="tt-num">{String(i + 1).padStart(2, '0')}</span>
+            <span class="tt-text"><strong>{n.label}</strong><small>{n.short}</small></span>
+          </button>
+        ))}
+      </div>
+
+      <div class="topo-panels">
+        {nodes.map((n, i) => (
+          <div class="topo-panel" role="tabpanel" id={`panel-${n.id}`} aria-labelledby={`ttab-${n.id}`} hidden={i !== 0} tabindex="0">
+            <h3 class="title">{n.title}</h3>
+            <p class="tp-body">{n.body}</p>
+            <dl class="ledger">
+              {n.rows.map(([k, v]) => (
+                <div><dt>{k}</dt><dd>{v}</dd></div>
+              ))}
+            </dl>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <p class="topo-links" data-reveal>
+      <a class="link-more" href={href('/privacy')}>Privacy Policy</a>
+      <a class="link-more" href={`${href('/privacy')}#google-limited-use`}>Google Limited Use</a>
+      <a class="link-more" href={href('/data-deletion')}>Deleting your data</a>
+    </p>
+  </div>
+</section>
+
+<style>
+  .topo { overflow: clip; }
+  .topo-glow {
+    position: absolute;
+    z-index: -1;
+    left: 50%;
+    top: 30%;
+    width: min(1200px, 150vw);
+    height: 900px;
+    transform: translateX(-50%);
+    background: radial-gradient(40% 40% at 50% 50%, rgba(240, 160, 50, 0.1), transparent 70%);
+    pointer-events: none;
+  }
+  .topo-head { align-items: center; }
+  .topo-head .lede { margin-inline: auto; }
+  .topo-grid { display: grid; gap: clamp(2rem, 5vw, 5rem); align-items: start; }
+  @media (min-width: 900px) {
+    .topo-grid { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); }
+  }
+  .topo-tabs { display: grid; }
+  .topology-tab {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    min-height: 72px;
+    padding: 1rem 0.25rem;
+    border: 0;
+    border-top: 1px solid var(--hairline);
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    color: var(--r-ink-3);
+    transition: color 0.25s ease;
+  }
+  .topology-tab:last-child { border-bottom: 1px solid var(--hairline); }
+  .tt-num { font-size: 0.8rem; font-variant-numeric: tabular-nums; color: var(--r-ink-4); width: 1.5rem; }
+  .tt-text strong { display: block; font-size: clamp(1.15rem, 1.8vw, 1.4rem); font-weight: 650; letter-spacing: -0.025em; color: inherit; }
+  .tt-text small { display: block; margin-top: 0.15rem; font-size: 0.88rem; color: var(--r-ink-4); }
+  .topology-tab:hover { color: var(--r-ink-2); }
+  .topology-tab[aria-selected='true'] { color: var(--r-ink); }
+  .topology-tab[aria-selected='true'] .tt-num { color: var(--r-amber-text); }
+
+  .topo-panel { padding: clamp(1.75rem, 3.5vw, 2.75rem); border-radius: var(--radius-xl); background: var(--r-panel); box-shadow: var(--r-panel-shadow); }
+  .topo-panel[hidden] { display: none; }
+  .topo-panel:not([hidden]) { animation: tp-in 0.55s var(--r-ease) both; }
+  @keyframes tp-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .topo-panel:not([hidden]) { animation: none; } }
+  .tp-body { margin-top: 1rem; font-size: 1.06rem; line-height: 1.55; color: var(--r-ink-2); }
+  .ledger { margin-top: 1.75rem; display: grid; }
+  .ledger div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 1rem; padding: 0.85rem 0; border-top: 1px solid var(--hairline); }
+  .ledger dt { color: var(--r-ink-3); font-size: 0.95rem; }
+  .ledger dd { color: var(--r-ink); font-size: 0.95rem; font-weight: 500; overflow-wrap: anywhere; }
+  .topo-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.25rem 2rem; margin-top: clamp(3rem, 6vw, 4.5rem); }
+  @media (max-width: 560px) {
+    .ledger div { grid-template-columns: 1fr; gap: 0.2rem; }
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('#data-topology').forEach((root) => {
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('.topology-tab'));
+    const select = (i: number, focus = false) => {
+      tabs.forEach((t, j) => {
+        const on = i === j;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        const panel = root.querySelector<HTMLElement>(`#panel-${t.dataset.nodeTarget}`);
+        if (panel) panel.hidden = !on;
+      });
+      if (focus) tabs[i].focus();
+    };
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => select(i));
+      t.addEventListener('keydown', (e) => {
+        const last = tabs.length - 1;
+        let next = -1;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') next = i === last ? 0 : i + 1;
+        else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') next = i === 0 ? last : i - 1;
+        else if (e.key === 'Home') next = 0;
+        else if (e.key === 'End') next = last;
+        if (next >= 0) { e.preventDefault(); select(next, true); }
+      });
+    });
+  });
+</script>
