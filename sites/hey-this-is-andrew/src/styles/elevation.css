@@ -54,11 +54,14 @@
   border-top-color: rgba(0, 0, 0, 0.08);
 }
 
-/* Glow sweep motion on accordion reveals */
+/* Glow sweep motion on accordion reveals. The highlight travels INSIDE the
+   line's own box (background-position), never past it: an open row does not
+   clip (an iframe inside must have no clipping ancestor on iOS), and a
+   translated line would widen the page while it ran. */
 @keyframes glowSweep {
-  0% { transform: translateX(-100%); opacity: 0; }
+  0% { background-position: -100% 0; opacity: 0; }
   50% { opacity: 0.5; }
-  100% { transform: translateX(100%); opacity: 0; }
+  100% { background-position: 200% 0; opacity: 0; }
 }
 .accordion-row.is-expanded::after {
   content: "";
@@ -67,9 +70,14 @@
   left: 0;
   width: 100%;
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent) no-repeat;
+  background-size: 50% 100%;
+  opacity: 0;
   animation: glowSweep 0.9s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .accordion-row.is-expanded::after { animation: none; }
 }
 
 /* Tracked-out uppercase display typography */

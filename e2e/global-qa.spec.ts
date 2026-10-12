@@ -126,23 +126,124 @@ test.describe('Global QA', () => {
     expect(await hidden('video')).toBe(0);
   });
 
-  test('/build: one accordion row per goal group, each opens and closes', async ({ page }) => {
+  test('/build: one accordion row per goal group, one open at a time', async ({ page }) => {
     await page.goto('./build/');
-    const headers = page.locator('.build-acc-header');
+    const rows = page.locator('#goals [data-accordion-row]');
+    const headers = page.locator('#goals [data-accordion-header]');
     expect(await headers.count()).toBeGreaterThanOrEqual(3);
-    await expect(page.locator('.build-acc-row').first()).toHaveClass(/expanded/);
+    await expect(rows.first()).toHaveClass(/is-expanded/);
     for (let i = 1; i < (await headers.count()); i++) {
       await headers.nth(i).click();
       await expect(headers.nth(i)).toHaveAttribute('aria-expanded', 'true');
-      await expect(page.locator('.build-acc-row.expanded')).toHaveCount(1);
-      await expect(page.locator('.build-acc-row').nth(i).locator('.build-acc-body')).toBeVisible();
+      await expect(page.locator('#goals [data-accordion-row].is-expanded')).toHaveCount(1);
+      await expect(rows.nth(i).locator('.accordion-body-inner')).toBeVisible();
     }
     await headers.last().click();
-    await expect(page.locator('.build-acc-row.expanded')).toHaveCount(0);
-    // A deep link opens its row.
+    await expect(page.locator('#goals [data-accordion-row].is-expanded')).toHaveCount(0);
+    // No empty anchor sections: every id on the page is unique.
+    const dupes = await page.evaluate(() => {
+      const seen = new Map<string, number>();
+      document.querySelectorAll('[id]').forEach((el) => seen.set(el.id, (seen.get(el.id) ?? 0) + 1));
+      return [...seen].filter(([, n]) => n > 1).map(([id]) => id);
+    });
+    expect(dupes).toEqual([]);
+    // A deep link opens its row, and its progress bar shows.
     await page.goto('./build/#content-engine');
-    await expect(page.locator('.build-acc-row[data-row="content-engine"]')).toHaveClass(/expanded/);
-    await expect(page.locator('#content-engine-panel [role="progressbar"]')).toBeVisible();
+    await expect(page.locator('#content-engine')).toHaveClass(/is-expanded/);
+    await expect(page.locator('#content-engine .accordion-progress-bar-bg')).toBeVisible();
+    await expect(page.locator('#content-engine .checklist-card').first()).toBeVisible();
+  });
+
+  test('Homepage goals expand in place, without leaving the page', async ({ page }) => {
+    await page.goto('./');
+    const url = page.url();
+    const header = page.locator('#goals [data-accordion-header]').first();
+    await header.scrollIntoViewIfNeeded();
+    const body = page.locator('#goals [data-accordion-row]').first().locator('.accordion-body');
+    await expect(header).toHaveAttribute('aria-expanded', 'false');
+    // Collapsed content is out of the tab order.
+    expect(await body.evaluate((b) => (b as HTMLElement).inert)).toBe(true);
+    await header.click();
+    await expect(header).toHaveAttribute('aria-expanded', 'true');
+    await expect(body.locator('.checklist-card').first()).toBeVisible();
+    expect(page.url()).toBe(url);
+    await header.click();
+    await expect(header).toHaveAttribute('aria-expanded', 'false');
+    // The one way out is the "View all goals" link.
+    await expect(page.locator('#goals a', { hasText: /View all goals/i })).toHaveAttribute('href', /\/build\/$/);
+  });
+
+  test('Creator intro: portrait and headline stay, the rest opens in panels', async ({ page }) => {
+    await page.goto('./');
+    const about = page.locator('#about');
+    await about.scrollIntoViewIfNeeded();
+    await expect(about.locator('.about-portrait')).toBeVisible();
+    await expect(about.locator('.about-headline')).toBeVisible();
+    const headers = about.locator('[data-accordion-header]');
+    await expect(headers).toHaveText([/What I.m building/i, /How I work/i, /Now/i]);
+    const url = page.url();
+    for (let i = 0; i < 3; i++) {
+      await expect(headers.nth(i)).toHaveAttribute('aria-expanded', 'false');
+      await headers.nth(i).click();
+      await expect(headers.nth(i)).toHaveAttribute('aria-expanded', 'true');
+      await expect(about.locator('[data-accordion-row]').nth(i).locator('.accordion-body-inner')).toBeVisible();
+    }
+    expect(page.url()).toBe(url);
+  });
+
+  test('Selected Work: a video loads nothing from YouTube until play, and unloads on close', async ({ page }) => {
+    const embeds: string[] = [];
+    page.on('request', (r) => { if (/youtube(-nocookie)?\.com\/embed\//.test(r.url())) embeds.push(r.url()); });
+    await page.goto('./');
+    const row = page.locator('#work [data-accordion-row]:has([data-inline-video])').first();
+    test.skip((await row.count()) === 0, 'no archive video in this build');
+    await row.scrollIntoViewIfNeeded();
+    await expect(page.locator('#work iframe')).toHaveCount(0);
+    await row.locator('[data-accordion-header]').click();
+    await expect(row).toHaveClass(/is-expanded/);
+    await expect(page.locator('#work iframe')).toHaveCount(0);
+    expect(embeds).toEqual([]);
+    await row.locator('.iv-poster').click();
+    const frame = row.locator('iframe');
+    await expect(frame).toHaveCount(1);
+    const src = await frame.getAttribute('src');
+    expect(src).toMatch(/^https:\/\/www\.youtube-nocookie\.com\/embed\//);
+    expect(src).not.toMatch(/autoplay=1/);
+    expect(await frame.getAttribute('allow')).toMatch(/fullscreen/);
+    // Once the row has finished opening, nothing above the frame clips it
+    // (iOS paints a YouTube frame under a clipping ancestor black).
+    await expect(row).toHaveClass(/is-settled/);
+    const clipped = await frame.evaluate((f) => {
+      for (let e = f.parentElement; e && e !== document.body; e = e.parentElement) {
+        if (getComputedStyle(e).overflow !== 'visible') return e.className;
+      }
+      return null;
+    });
+    expect(clipped).toBeNull();
+    await row.locator('[data-accordion-header]').click();
+    await expect(page.locator('#work iframe')).toHaveCount(0);
+  });
+
+  test('Search: the nav button opens it, and the index loads under the base path', async ({ page, isMobile }) => {
+    const index = page.waitForResponse((r) => r.url().endsWith('/hey-this-is-andrew/api/search.json'));
+    await page.goto('./');
+    if (isMobile) {
+      await page.locator('.menu-btn').click();
+      await page.locator('#mobile-search-trigger').click();
+    } else {
+      await page.locator('#nav-search-trigger').click();
+    }
+    await expect(page.locator('#command-palette')).toHaveAttribute('open', '');
+    expect((await index).status()).toBe(200);
+    await page.keyboard.type('sony');
+    await expect(page.locator('#command-palette a[href^="/hey-this-is-andrew/"]').first()).toBeVisible();
+  });
+
+  test('About quote: left aligned, all caps', async ({ page }) => {
+    await page.goto('./about/');
+    const q = page.locator('.quote-band blockquote p');
+    await expect(q).toHaveCSS('text-align', 'left');
+    await expect(q).toHaveCSS('text-transform', 'uppercase');
   });
 
   test('Gear is its own page, reached from the nav', async ({ page, isMobile }) => {
@@ -172,5 +273,24 @@ test.describe('Global QA', () => {
     if (await btn.count() > 0) {
       await expect(btn).toHaveAttribute('aria-expanded', 'true');
     }
+  });
+});
+
+test.describe('Phone landscape', () => {
+  test.use({ viewport: { width: 667, height: 375 }, hasTouch: true, isMobile: true });
+
+  test('Shot on the job fits under the header', async ({ page }) => {
+    await page.goto('./');
+    const wall = page.locator('.photo-wall');
+    test.skip((await wall.count()) === 0, 'no synced Instagram photos in this build');
+    await wall.scrollIntoViewIfNeeded();
+    const { wallH, room, cols } = await page.evaluate(() => {
+      const nav = document.querySelector('.site-nav')!.getBoundingClientRect().height;
+      const w = document.querySelector('.photo-wall')!.getBoundingClientRect().height;
+      const c = [...document.querySelectorAll('.photo-column')].filter((e) => getComputedStyle(e).display !== 'none').length;
+      return { wallH: w, room: window.innerHeight - nav, cols: c };
+    });
+    expect(wallH).toBeLessThanOrEqual(room);
+    expect(cols).toBe(4);
   });
 });

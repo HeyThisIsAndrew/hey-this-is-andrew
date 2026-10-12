@@ -451,6 +451,38 @@ const SETS = [0, 1];
     }
   }
 
+  /* A phone on its side (landscape, at most 500px tall). The wall was a
+     fixed 480 to 540px, taller than the whole screen (375 to 430px), and
+     the 900px two-column grid either showed two reels whose every photo was
+     taller than the screen or wrapped four reels into a 2x2 grid of
+     half-height rows. Here: all four reels side by side, each photo a
+     quarter of the width, and the wall sized to what the header leaves.
+     Portrait phones, tablets, desktop and 4K are untouched. */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .photo-wall {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      padding-top: 0.75rem;
+    }
+    .photo-column:nth-child(2),
+    .photo-column:nth-child(4) {
+      display: block;
+    }
+    .photo-set {
+      gap: 10px;
+      padding-bottom: 10px;
+    }
+  }
+  /* The height only while the reels move: with reduced motion the wall is
+     static and shows every photo at its own height (rule above). */
+  @media (orientation: landscape) and (max-height: 500px) and (prefers-reduced-motion: no-preference) {
+    .photo-wall {
+      height: calc(100vh - var(--nav-bar-h, 76px) - 1.5rem);
+      height: calc(100svh - var(--nav-bar-h, 76px) - 1.5rem);
+      min-height: 0;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .camera-stage {
       transition-duration: 0.01ms !important;

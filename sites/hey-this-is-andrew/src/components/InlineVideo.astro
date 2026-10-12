@@ -1,0 +1,149 @@
+---
+/**
+ * InlineVideo: a YouTube video that plays where it sits (a Selected Work
+ * panel), not in the fullscreen player.
+ *
+ * Nothing from YouTube loads until the reader presses play: the page ships
+ * a poster and a button, and the press builds the iframe. It starts through
+ * playWhenReady (src/lib/youtube-start.ts), never `autoplay=1`, so it is one
+ * press and not a bot-check wall. When the panel around it closes, the frame
+ * goes to about:blank (never '', which reloads this page inside it) and is
+ * removed, so a collapsed panel never plays on behind the reader.
+ */
+interface Props {
+  videoId: string;
+  title: string;
+  poster?: string | null;
+  posterSrcset?: string;
+}
+const { videoId, title, poster, posterSrcset } = Astro.props;
+const posterSrc = poster || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+---
+<div class="inline-video" data-inline-video data-video-id={videoId} data-video-title={title}>
+  <button type="button" class="iv-poster" aria-label={`Play ${title}`}>
+    <img src={posterSrc} srcset={posterSrcset} sizes="(max-width: 767px) 100vw, 60vw" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" />
+    <span class="iv-play" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+    </span>
+  </button>
+</div>
+
+<script>
+  import { playWhenReady } from '../lib/youtube-start.ts';
+
+  const EMBED = 'https://www.youtube-nocookie.com/embed/';
+
+  function initInlineVideos() {
+    document.querySelectorAll<HTMLElement>('[data-inline-video]').forEach((box) => {
+      if (box.dataset.ready) return;
+      box.dataset.ready = '1';
+      const id = box.dataset.videoId ?? '';
+      const poster = box.querySelector<HTMLButtonElement>('.iv-poster');
+      let frame: HTMLIFrameElement | null = null;
+      let cancelStart: (() => void) | null = null;
+
+      const unload = () => {
+        cancelStart?.();
+        cancelStart = null;
+        if (frame) {
+          frame.src = 'about:blank';
+          frame.remove();
+          frame = null;
+        }
+        box.classList.remove('is-playing');
+        if (poster) poster.hidden = false;
+      };
+
+      poster?.addEventListener('click', () => {
+        if (frame || !id) return;
+        frame = document.createElement('iframe');
+        frame.className = 'iv-frame';
+        frame.title = box.dataset.videoTitle || 'YouTube video player';
+        frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen';
+        frame.allowFullscreen = true;
+        frame.referrerPolicy = 'strict-origin-when-cross-origin';
+        frame.src = `${EMBED}${encodeURIComponent(id)}?rel=0&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
+        box.append(frame);
+        box.classList.add('is-playing');
+        poster.hidden = true;
+        cancelStart = playWhenReady(frame);
+        frame.focus({ preventScroll: true });
+      });
+
+      // Closing the panel around it stops and unloads the video.
+      box.closest('[data-accordion-row]')?.addEventListener('accordion:toggle', (e) => {
+        if (e.target !== box.closest('[data-accordion-row]')) return;
+        if (!(e as CustomEvent<{ open: boolean }>).detail?.open) unload();
+      });
+    });
+  }
+
+  initInlineVideos();
+  document.addEventListener('astro:page-load', initInlineVideos);
+</script>
+
+<style>
+  .inline-video {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border: 1px solid var(--line);
+  }
+  .iv-poster {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: #000;
+    cursor: pointer;
+  }
+  .iv-poster[hidden] {
+    display: none;
+  }
+  .iv-poster img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.85;
+    transition: opacity 0.25s ease;
+  }
+  .iv-poster:hover img,
+  .iv-poster:focus-visible img {
+    opacity: 1;
+  }
+  .iv-poster:focus-visible {
+    outline: 2px solid var(--focus-ring, #f0f0f0);
+    outline-offset: 2px;
+  }
+  .iv-play {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 64px;
+    height: 64px;
+    margin: -32px 0 0 -32px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    color: #fff;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+  }
+  .iv-poster:hover .iv-play,
+  .iv-poster:focus-visible .iv-play {
+    transform: scale(1.06);
+    background: rgba(0, 0, 0, 0.85);
+  }
+  .inline-video :global(.iv-frame) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+</style>

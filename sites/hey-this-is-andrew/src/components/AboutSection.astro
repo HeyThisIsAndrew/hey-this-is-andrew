@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
-import ExpandSection from '@andrew/ui/ExpandSection.astro';
+import Accordion from '@andrew/ui/Accordion.astro';
+import AccordionRow from '@andrew/ui/AccordionRow.astro';
 import portraitImg from '../assets/hero-media/portrait.jpg';
 import { SUBSTACK_URL } from '../lib/latest-content';
 import { NOW_MONTH, NOW_ITEMS } from '../data/now';
@@ -10,6 +11,18 @@ interface Props {
   full?: boolean;
 }
 const { full = false } = Astro.props;
+
+/* The approved About copy, with the YouTube channel's own description of
+   the work folded in. The About page tells it in full; the homepage keeps
+   one line visible and folds these into panels (What I'm building, How I
+   work), so the two can never disagree. */
+const STORY = {
+  building: "If you want to build something real, you have to show the work. Hey This Is Andrew is an independent hub for the creative process, where building three brands, commercial beverage photography, and creative automation happen out in the open. No shortcuts, no artificial templates: just honest documentation of the messy middle.",
+  how: [
+    "Documenting the messy reality of building a brand means pushing past perfectionism, learning new technical workflows (Sony Alpha, DaVinci Resolve, AI tools), and building a creative ecosystem in public. No hyper-polished fake expertise, just raw behind-the-scenes progress, figured out along the way.",
+    "Founded and documented by Andrew Baxter. More than a decade across technology, creative production, and hospitality photography gives him a grounded, working knowledge of how ideas are actually built, tested, and shipped.",
+  ],
+};
 ---
 <section id="about" aria-labelledby="about-heading" class="section-hairline about-section">
   <div class="container">
@@ -42,36 +55,41 @@ const { full = false } = Astro.props;
       <div class="about-copy">
         <h3 class="display about-headline">WHERE THE MESSY MIDDLE<br />GETS BUILT IN PUBLIC</h3>
         {full ? (
-          /* The fuller telling (About page): the approved copy, with the
-             YouTube channel's own description of the work folded in. */
+          /* The fuller telling (About page). */
           <>
-            <p class="about-body">If you want to build something real, you have to show the work. Hey This Is Andrew is an independent hub for the creative process, where building three brands, commercial beverage photography, and creative automation happen out in the open. No shortcuts, no artificial templates: just honest documentation of the messy middle.</p>
-            <p class="about-body">Documenting the messy reality of building a brand means pushing past perfectionism, learning new technical workflows (Sony Alpha, DaVinci Resolve, AI tools), and building a creative ecosystem in public. No hyper-polished fake expertise, just raw behind-the-scenes progress, figured out along the way.</p>
-            <p class="about-body">Founded and documented by Andrew Baxter. More than a decade across technology, creative production, and hospitality photography gives him a grounded, working knowledge of how ideas are actually built, tested, and shipped.</p>
+            <p class="about-body">{STORY.building}</p>
+            {STORY.how.map((para) => <p class="about-body">{para}</p>)}
           </>
         ) : (
-          /* The homepage preview: short, so "More about me" earns the
-             click. Drawn from Andrew's Instagram and YouTube bios and the
-             approved About copy (draft, 2026-10-04; Andrew to revise). */
+          /* The homepage preview: one line, then the panels below. Drawn
+             from Andrew's Instagram and YouTube bios and the approved About
+             copy (draft, 2026-10-04; Andrew to revise). */
           <p class="about-body">I'm building three brands and the creative automation behind them, out in the open. No polished fake expertise, just the messy, behind-the-scenes progress of pushing past perfectionism and figuring it out as I go.</p>
         )}
         <p class="about-punchline">BUILDING IN PUBLIC.</p>
         {!full && (
-          /* The Now band, folded in as one line (full list at /now). */
-          <div class="about-now">
-            <h3 class="about-now-label font-mono">Now <span class="about-now-month">{NOW_MONTH}</span></h3>
-            <span class="about-now-items">
-              {NOW_ITEMS.slice(0, 2).map((n) => (
-                <span class="about-now-item"><span class="about-now-key">{n.label}:</span> <span class="about-now-val">{n.value.replace(/\.$/, '')}</span> <span class="about-now-sep" aria-hidden="true"> / </span></span>
-              ))}
-            </span>
-            <ExpandSection id="now" expandLabel="Show more" collapseLabel="Show less">
-              <span class="about-now-items">
-                {NOW_ITEMS.slice(2).map((n, i) => (
-                  <span class="about-now-item"><span class="about-now-key">{n.label}:</span> <span class="about-now-val">{n.value.replace(/\.$/, '')}</span>{i < NOW_ITEMS.length - 3 && <span class="about-now-sep" aria-hidden="true"> / </span>}</span>
-                ))}
-              </span>
-            </ExpandSection>
+          /* The intro, folded: each panel opens in place. The Now panel is
+             the former Now band and keeps its #now anchor (the /now
+             redirect lands on #about). */
+          <div class="about-panels">
+            <Accordion>
+              <AccordionRow id="about-building" kicker="01" title="What I'm building" level={3} size="md">
+                <p class="about-body">{STORY.building}</p>
+              </AccordionRow>
+              <AccordionRow id="about-how" kicker="02" title="How I work" level={3} size="md">
+                {STORY.how.map((para) => <p class="about-body">{para}</p>)}
+              </AccordionRow>
+              <AccordionRow id="now" kicker={NOW_MONTH} title="Now" level={3} size="md">
+                <ul class="about-now-list">
+                  {NOW_ITEMS.map((n) => (
+                    <li class="about-now-item">
+                      <span class="about-now-key">{n.label}</span>
+                      <span class="about-now-val">{n.value.replace(/\.$/, '')}</span>
+                    </li>
+                  ))}
+                </ul>
+              </AccordionRow>
+            </Accordion>
           </div>
         )}
 
@@ -342,68 +360,45 @@ const { full = false } = Astro.props;
     .about-portrait figcaption { padding-top: 1rem; }
     .about-portrait figcaption span { margin-top: 0.25rem; }
   }
-  /* Now line (the former Now band, folded into Meet the Creator). */
-  .about-now {
-    margin: 2rem 0 0;
-    padding: 0.9rem 0 0;
+  /* The intro panels (homepage). They sit in the copy column, under the
+     tagline; the shared rows bring their own rules and chevrons. */
+  .about-panels {
+    margin-top: 2rem;
+  }
+  .about-panels .about-body:first-child {
+    margin-top: 0;
+  }
+  .about-now-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+  .about-now-item {
+    display: grid;
+    grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr);
+    gap: 1rem;
+    padding: 0.6rem 0;
     border-top: 1px solid var(--line);
-    font-size: 0.85rem;
-    line-height: 1.7;
-    color: var(--muted);
   }
-  .about-now-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    min-height: var(--tap-min);
-    margin-right: 0.75rem;
-    font-size: 0.7rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--ink);
-    text-decoration: none;
-  }
-  .about-now-label:hover,
-  .about-now-label:focus-visible {
-    text-decoration: underline;
-    text-underline-offset: 4px;
-  }
-  .about-now-month {
-    color: var(--muted);
+  .about-now-item:first-child {
+    border-top: 0;
+    padding-top: 0;
   }
   .about-now-key {
     color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding-top: 0.15rem;
   }
-  .about-now-sep {
-    color: var(--line);
-  }
-  /* Phones: one item per row, label and value on the same row, hairlines
-     between, no slashes (inline, the five items wrapped into a ragged
-     block). Desktop stays inline. */
-  @media (max-width: 767px) {
-    .about-now-items {
-      display: block;
-      margin-top: 0.35rem;
-    }
+  @media (max-width: 480px) {
     .about-now-item {
-      display: flex;
-      align-items: baseline;
-      gap: 0.75rem;
-      padding: 0.6rem 0;
-      border-top: 1px solid var(--line);
-    }
-    .about-now-item:first-child {
-      border-top: 0;
-    }
-    .about-now-key {
-      flex: none;
-      min-width: 8.5rem;
-    }
-    .about-now-val {
-      min-width: 0;
-    }
-    .about-now-sep {
-      display: none;
+      grid-template-columns: 1fr;
+      gap: 0.2rem;
     }
   }
   .about-ctas {
@@ -422,8 +417,3 @@ const { full = false } = Astro.props;
   }
 </style>
 
-<style>
-  .about-now-full {
-    margin-top: 1.5rem;
-  }
-</style>

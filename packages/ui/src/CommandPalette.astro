@@ -2,7 +2,12 @@
 interface Props {
   endpoint?: string;
 }
-const { endpoint = '/api/search-index.json' } = Astro.props;
+const { endpoint: endpointProp = '/api/search-index.json' } = Astro.props;
+/* A root-relative endpoint is resolved against the site's base, so a site
+   served from a subpath (the personal site on GitHub Pages, /hey-this-is-
+   andrew/) fetches its own index and not the domain root's. */
+const siteBase = import.meta.env.BASE_URL.replace(/\/$/, '');
+const endpoint = endpointProp.startsWith('/') && siteBase && !endpointProp.startsWith(`${siteBase}/`) ? `${siteBase}${endpointProp}` : endpointProp;
 
 // src/components/CommandPalette.astro
 import { getImage } from 'astro:assets';
@@ -24,7 +29,7 @@ import logoMark from './assets/logo-mark.webp';
 const fallbackImage = await getImage({ src: logoMark, format: 'webp', width: 192 });
 ---
 
-<dialog id="command-palette" class="cmd-palette" aria-label="Search content" transition:persist="command-palette" data-fallback-src={fallbackImage.src}>
+<dialog id="command-palette" class="cmd-palette" aria-label="Search content" transition:persist="command-palette" data-fallback-src={fallbackImage.src} data-endpoint={endpoint}>
   <div class="cmd-palette-content">
     <div class="cmd-palette-header">
       <label for="cmd-palette-input" class="search-icon-label" aria-hidden="true">
@@ -169,7 +174,10 @@ const fallbackImage = await getImage({ src: logoMark, format: 'webp', width: 192
     try {
       const [fuseModule, res] = await Promise.all([
         import('fuse.js'),
-        fetch(document.getElementById('cmd-palette-backdrop').dataset.endpoint || '/api/search-index.json')
+        // The endpoint rides on the dialog itself. It was read from a
+        // #cmd-palette-backdrop that is not in the markup, which threw, so no
+        // search ever had data.
+        fetch(document.getElementById('command-palette')?.dataset.endpoint || '/api/search-index.json')
       ]);
       if (!res.ok) {
         throw new Error(`Failed to fetch search index: HTTP ${res.status}`);
