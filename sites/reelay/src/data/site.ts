@@ -159,6 +159,7 @@ export const NAV_LINKS: NavItem[] = [
       { label: 'The Studio', href: `${homeUrl}#studio-preview`, kicker: 'Tour' },
       { label: 'Works with', href: `${homeUrl}#works-with`, kicker: 'Platforms' },
       { label: 'Privacy by design', href: `${homeUrl}#data-topology`, kicker: 'Data' },
+      { label: 'Tech Specs', href: `${homeUrl}#tech-specs`, kicker: 'Specs' },
     ],
   },
   {
