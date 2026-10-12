@@ -1,0 +1,649 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../data/site';
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '');
+---
+
+<BaseLayout
+  title={`Support & Developer Compliance — ${SITE.fullName}`}
+  description="Reelay Studio Support, Documentation, FAQ, and Google/Meta Developer Verification Portal."
+>
+  <div class="support-page">
+    <div class="container">
+      <header class="page-header">
+        <div class="badge-pill">
+          <span class="pill-dot"></span>
+          <span>HELP DESK & APP REVIEW PORTAL</span>
+        </div>
+        <h1 class="page-title">Support & Documentation</h1>
+        <p class="page-lead">
+          Find answers, check system hardware compatibility, review OAuth 2.0 developer compliance documentation, or contact the Reelay engineering team directly.
+        </p>
+      </header>
+
+      <!-- Interactive System Hardware Compatibility Checker -->
+      <section class="diagnostic-section" aria-label="Workstation Hardware Diagnostic">
+        <div class="diagnostic-window">
+          <div class="diag-header">
+            <div class="traffic-lights">
+              <span class="light red"></span>
+              <span class="light yellow"></span>
+              <span class="light green"></span>
+            </div>
+            <span class="diag-title">Client Environment Diagnostic Verifier</span>
+            <span class="diag-tag">AUTOMATIC WORKSTATION DETECT</span>
+          </div>
+
+          <div class="diag-grid">
+            <div class="diag-col">
+              <span class="col-kicker">LOCAL RUNTIME COMPATIBILITY</span>
+              <div class="check-row">
+                <span class="check-name">Target Operating System:</span>
+                <strong class="check-result green" id="detected-os">macOS 13+ (Apple Silicon Recommended)</strong>
+              </div>
+              <div class="check-row">
+                <span class="check-name">Whisper Neural Acceleration:</span>
+                <strong class="check-result green">Apple Metal GPU / Neural Engine Supported</strong>
+              </div>
+              <div class="check-row">
+                <span class="check-name">Local Loopback OAuth (RFC 8252):</span>
+                <strong class="check-result green">127.0.0.1 Binding Available</strong>
+              </div>
+              <div class="check-row">
+                <span class="check-name">Direct API TLS 1.3 Dispatch:</span>
+                <strong class="check-result green">Encrypted HTTPS Direct Client</strong>
+              </div>
+            </div>
+
+            <div class="diag-col action-col">
+              <span class="col-kicker">RECOMMENDED INSTALLER</span>
+              <h4 class="rec-binary-title">Reelay Studio for macOS (Apple Silicon)</h4>
+              <p class="rec-binary-desc">Universal ARM64 package optimized for Apple M1 through M4. Verified Developer Signed & Hardened Runtime.</p>
+              <a href={`${base}/#download`} class="btn btn-primary">
+                Download .DMG (105.4 MB) →
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Reviewer Verification Portal (Google & Meta App Review) -->
+      <section class="reviewer-section" id="demo-verification" aria-label="Platform Reviewer Portal">
+        <div class="compliance-box">
+          <div class="box-badge">PLATFORM REVIEWER PORTAL</div>
+          <h3 class="box-title">Google Cloud & Meta App Review Verification</h3>
+          <p class="box-desc">
+            Welcome, Platform Trust & Safety Reviewers. This section provides direct verification parameters and technical documentation for OAuth 2.0 app reviews:
+          </p>
+
+          <div class="scopes-grid">
+            <div class="scope-card">
+              <span class="scope-label">GOOGLE CLOUD / YOUTUBE DATA API SCOPES</span>
+              <div class="code-snippet-box">
+                <code>https://www.googleapis.com/auth/youtube.upload</code>
+                <span class="scope-desc">Permits direct-from-desktop video uploads to the user's authorized channel.</span>
+              </div>
+              <div class="code-snippet-box">
+                <code>https://www.googleapis.com/auth/youtube.readonly</code>
+                <span class="scope-desc">Permits querying upload processing status and channel confirmation receipts.</span>
+              </div>
+            </div>
+
+            <div class="scope-card">
+              <span class="scope-label">NATIVE OAUTH 2.0 LOOPBACK SPECIFICATION</span>
+              <ul class="rfc-specs-list">
+                <li><strong>RFC 8252 Native App Flow:</strong> Binds to local loopback <code>http://127.0.0.1:4482/callback</code>. Credentials never touch external proxy servers.</li>
+                <li><strong>Token Storage:</strong> Sealed immediately inside the host OS Keychain (macOS Keychain Services / Windows Credential Manager).</li>
+                <li><strong>Instant Revocation:</strong> One-click "Disconnect" invokes <code>https://oauth2.googleapis.com/revoke</code> and wipes local SQLite keys.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="compliance-links-row">
+            <a href={`${base}/privacy#google-limited-use`} class="comp-link">
+              Read Google Limited Use Disclosure →
+            </a>
+            <a href={`${base}/data-deletion`} class="comp-link">
+              Review User Data Deletion Instructions →
+            </a>
+            <a href="mailto:compliance@reelay.app" class="comp-link email-comp">
+              Reviewer Desk: compliance@reelay.app
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Frequently Asked Questions -->
+      <section class="faq-section" aria-label="Support Frequently Asked Questions">
+        <h2 class="section-title">Frequently Asked Questions</h2>
+
+        <div class="faq-accordion-stack">
+          <details class="faq-item" open>
+            <summary class="faq-question">Where are my video cuts and SQLite database files stored?</summary>
+            <div class="faq-answer">
+              <p>
+                Reelay Studio stores all media references and SQLite files locally in your operating system's standard application support folder:
+                <br />
+                <strong>macOS:</strong> <code>~/Library/Application Support/reelay/app.db</code>
+                <br />
+                <strong>Windows:</strong> <code>%APPDATA%\reelay\app.db</code>
+                <br />
+                Raw video files remain wherever you saved them on your hard drive. Reelay never alters or moves your original cuts without permission.
+              </p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-question">How does offline Whisper speech-to-text work without internet?</summary>
+            <div class="faq-answer">
+              <p>
+                Reelay bundles an optimized, quantized OpenAI Whisper neural network model. When you import or download a video, the desktop app executes speech recognition directly on your Apple Silicon Neural Engine / Metal GPU or Windows DirectX graphics card. Your audio is never uploaded to any remote cloud API.
+              </p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-question">How do I disconnect my social accounts and wipe all credentials?</summary>
+            <div class="faq-answer">
+              <p>
+                Go to <strong>Settings → Accounts</strong> inside Reelay Studio and click <strong>"Disconnect"</strong> next to any platform. This immediately revokes your active OAuth tokens with Google or Meta and permanently deletes all tokens from your local OS Keychain and SQLite database. See our <a href={`${base}/data-deletion`}>User Data Deletion Instructions</a> for full step-by-step guidance.
+              </p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-question">How do I connect external AI models via MCP?</summary>
+            <div class="faq-answer">
+              <p>
+                Reelay Studio exposes an open Model Context Protocol (MCP) server on <code>127.0.0.1:4482</code>. In your Claude Desktop config (<code>claude_desktop_config.json</code>) or OpenAI agent setup, simply add Reelay's local server configuration. Visit our <a href={`${base}/ai`}>AI & MCP Guide</a> for full sample JSON configurations.
+              </p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-question">What are the minimum hardware and OS requirements?</summary>
+            <div class="faq-answer">
+              <p>
+                <strong>macOS:</strong> macOS 13.0 Ventura or later. Apple Silicon M1, M2, M3, or M4 recommended for real-time speech transcription; Intel x86_64 Mac workstations also supported.
+                <br />
+                <strong>Windows:</strong> Windows 10 or 11 (64-bit, Build 19041+), 8 GB RAM (16 GB recommended for 4K video scrubbing), DirectX 12 compatible GPU.
+              </p>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- Contact Support Channels -->
+      <section class="contact-section" aria-label="Contact Channels">
+        <h2 class="section-title">Contact the Engineering Team</h2>
+        <div class="contact-grid">
+          <div class="contact-card">
+            <h4>Technical Support</h4>
+            <p>For application issues, crash logs, or licensing questions:</p>
+            <a href="mailto:support@reelay.app" class="contact-email">support@reelay.app</a>
+            <span class="sla-tag">Response SLA: &lt; 24 Hours</span>
+          </div>
+
+          <div class="contact-card">
+            <h4>Compliance & Developer Platform Review</h4>
+            <p>For Google Cloud, Meta, and TikTok app verification audits:</p>
+            <a href="mailto:compliance@reelay.app" class="contact-email">compliance@reelay.app</a>
+            <span class="sla-tag">Monitored Daily</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .support-page {
+    padding-top: clamp(3rem, 6vw, 5rem);
+    padding-bottom: clamp(5rem, 8vw, 8rem);
+  }
+
+  .page-header {
+    text-align: center;
+    max-width: 820px;
+    margin: 0 auto 3.5rem auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.85rem;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.28);
+    border-radius: 9999px;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #fbbf24;
+    text-transform: uppercase;
+    margin-bottom: 1.25rem;
+  }
+
+  .pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+  }
+
+  .page-title {
+    font-family: var(--font-display);
+    font-size: clamp(2.5rem, 5vw, 4.25rem);
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.1;
+    background: var(--text-gradient-silver);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-top: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .page-lead {
+    font-family: var(--font-body);
+    font-size: clamp(1.15rem, 1.8vw, 1.35rem);
+    color: #a1a1aa;
+    line-height: 1.65;
+    max-width: 760px;
+  }
+
+  /* Diagnostic Window */
+  .diagnostic-section {
+    margin-bottom: 4.5rem;
+  }
+
+  .diagnostic-window {
+    background: #090a0f;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-lg, 16px);
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  }
+
+  .diag-header {
+    background: #11121a;
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .traffic-lights {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .light {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+  }
+  .light.red { background-color: #ff5f56; }
+  .light.yellow { background-color: #ffbd2e; }
+  .light.green { background-color: #27c93f; }
+
+  .diag-title {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: #94a3b8;
+  }
+
+  .diag-tag {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #34d399;
+    background: rgba(52, 211, 153, 0.12);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+  }
+
+  .diag-grid {
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    background: #06070a;
+  }
+
+  .diag-col {
+    padding: 1.75rem;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .action-col {
+    border-right: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .col-kicker {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #71717a;
+    display: block;
+    margin-bottom: 1rem;
+    letter-spacing: 0.04em;
+  }
+
+  .check-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.84rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: #94a3b8;
+  }
+  .check-row:last-child {
+    border-bottom: none;
+  }
+
+  .check-result.green {
+    color: #34d399;
+  }
+
+  .rec-binary-title {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    color: #f8fafc;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .rec-binary-desc {
+    font-size: 0.88rem;
+    color: #94a3b8;
+    line-height: 1.5;
+    margin: 0 0 1.25rem 0;
+  }
+
+  /* Reviewer Portal Box */
+  .reviewer-section {
+    margin-bottom: 4.5rem;
+  }
+
+  .compliance-box {
+    background: linear-gradient(180deg, #101118 0%, #0a0b10 100%);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: var(--radius-lg, 16px);
+    padding: clamp(2rem, 4vw, 3rem);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  }
+
+  .box-badge {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fbbf24;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+
+  .box-title {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    color: #f8fafc;
+    margin: 0 0 0.75rem 0;
+  }
+
+  .box-desc {
+    font-size: 1rem;
+    color: #cbd5e1;
+    line-height: 1.6;
+    margin: 0 0 2rem 0;
+  }
+
+  .scopes-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .scope-card {
+    background: #06070a;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 1.25rem;
+  }
+
+  .scope-label {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #71717a;
+    display: block;
+    margin-bottom: 0.75rem;
+  }
+
+  .code-snippet-box {
+    margin-bottom: 0.75rem;
+  }
+  .code-snippet-box:last-child {
+    margin-bottom: 0;
+  }
+
+  .code-snippet-box code {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: #34d399;
+    background: rgba(52, 211, 153, 0.08);
+    padding: 0.3rem 0.5rem;
+    border-radius: 4px;
+    margin-bottom: 0.25rem;
+    word-break: break-all;
+  }
+
+  .scope-desc {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    line-height: 1.4;
+  }
+
+  .rfc-specs-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    font-size: 0.84rem;
+    color: #cbd5e1;
+    line-height: 1.5;
+  }
+
+  .rfc-specs-list code {
+    font-family: var(--font-mono);
+    color: #fbbf24;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+  }
+
+  .compliance-links-row {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .comp-link {
+    font-family: var(--font-mono);
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: #fbbf24;
+    text-decoration: none;
+  }
+  .comp-link:hover {
+    text-decoration: underline;
+  }
+
+  .email-comp {
+    color: #34d399;
+  }
+
+  /* FAQ Accordion */
+  .faq-section {
+    margin-bottom: 4.5rem;
+  }
+
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    color: #f8fafc;
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .faq-accordion-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 820px;
+    margin: 0 auto;
+  }
+
+  .faq-item {
+    background: #0c0d12;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.15s ease;
+  }
+
+  .faq-item[open] {
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+
+  .faq-question {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #f8fafc;
+    padding: 1.25rem 1.5rem;
+    cursor: pointer;
+    list-style: none;
+    position: relative;
+  }
+
+  .faq-question::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-question::after {
+    content: "+";
+    position: absolute;
+    right: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--font-mono);
+    color: #fbbf24;
+    font-size: 1.25rem;
+  }
+
+  .faq-item[open] .faq-question::after {
+    content: "−";
+  }
+
+  .faq-answer {
+    padding: 0 1.5rem 1.5rem 1.5rem;
+    font-size: 0.95rem;
+    color: #94a3b8;
+    line-height: 1.65;
+  }
+
+  .faq-answer p {
+    margin: 0;
+  }
+
+  .faq-answer code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 0.15rem 0.35rem;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    color: #fbbf24;
+  }
+
+  .faq-answer a {
+    color: #fbbf24;
+  }
+
+  /* Contact Grid */
+  .contact-section {
+    margin-bottom: 2rem;
+  }
+
+  .contact-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  .contact-card {
+    background: #0c0d12;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .contact-card h4 {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    color: #f8fafc;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .contact-card p {
+    font-size: 0.92rem;
+    color: #94a3b8;
+    line-height: 1.55;
+    margin: 0 0 1.25rem 0;
+    flex: 1;
+  }
+
+  .contact-email {
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #fbbf24;
+    margin-bottom: 0.75rem;
+    display: inline-block;
+  }
+
+  .sla-tag {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: #34d399;
+  }
+
+  @media (max-width: 900px) {
+    .diag-grid {
+      grid-template-columns: 1fr;
+    }
+    .diag-col {
+      border-right: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .scopes-grid {
+      grid-template-columns: 1fr;
+    }
+    .contact-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

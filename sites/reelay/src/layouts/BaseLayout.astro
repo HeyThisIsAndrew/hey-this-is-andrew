@@ -1,0 +1,83 @@
+---
+/**
+ * BaseLayout: Utilizes @andrew/ui shared building blocks (Nav, Footer, ChromeMeta, PageNav)
+ * layered on top of @andrew/tokens and site theme overrides.
+ */
+import '@andrew/tokens/tokens.css';
+import '../styles/theme.css';
+import '@andrew/ui/styles/base.css';
+import '@andrew/ui/styles/chips.css';
+import '@andrew/ui/styles/cta.css';
+import '../styles/global.css';
+import Nav from '@andrew/ui/Nav.astro';
+import Footer from '@andrew/ui/Footer.astro';
+import ChromeMeta from '@andrew/ui/ChromeMeta.astro';
+import logo from '../assets/logo.svg';
+import { SITE, NAV_LINKS, FOOTER_EXPLORE, UTILITY_LINKS, SOCIALS, homeUrl } from '../data/site';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = `${SITE.fullName} — ${SITE.tagline}`,
+  description = SITE.description,
+} = Astro.props;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const canonicalURL = new URL(Astro.url.pathname, Astro.site || 'https://reelay.app');
+const logoAsset = { src: logo.src, width: 170, height: 34, alt: SITE.fullName };
+const privacyHref = `${base}privacy`;
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <ChromeMeta color="#101014" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalURL} />
+
+    <!-- Open Graph & Meta Platform Tags -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:site_name" content={SITE.fullName} />
+    <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body id="top">
+    <Nav logo={logoAsset} homeHref={homeUrl} links={NAV_LINKS} />
+    <main id="main-content">
+      <slot />
+    </main>
+    <Footer
+      logo={logoAsset}
+      homeHref={homeUrl}
+      tagline={SITE.tagline}
+      explore={FOOTER_EXPLORE}
+      socials={SOCIALS}
+      copyright={SITE.copyright}
+      privacyHref={privacyHref}
+      utility={UTILITY_LINKS}
+      notes={[
+        "Google API Limited Use Disclosure: Reelay adheres to the Google API Services User Data Policy, including Limited Use requirements.",
+        "Local-First Architecture: Video assets, drafts, and OAuth credentials reside on your workstation in SQLite and OS Keychain."
+      ]}
+    />
+    <script>
+      import { initSectionAnchors } from '@andrew/ui/scripts/section-anchors.ts';
+      initSectionAnchors();
+    </script>
+  </body>
+</html>
