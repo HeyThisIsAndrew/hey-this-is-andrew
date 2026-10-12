@@ -1,696 +1,129 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { SITE } from '../../data/site';
+import PageHero from '../../components/ui/PageHero.astro';
+import NextUp from '../../components/ui/NextUp.astro';
+import BoardScene from '../../components/BoardScene.astro';
+import ImportScene from '../../components/ImportScene.astro';
+import SearchScene from '../../components/SearchScene.astro';
+import { SITE, href } from '../../data/site';
 
-const base = import.meta.env.BASE_URL.replace(/\/?$/, '');
+const all = [
+  ['Watermark-free TikTok downloads', 'The clean stream with the creator’s own audio.'],
+  ['Saved sources', 'One click for the profiles you use most; connected YouTube channels appear by themselves.'],
+  ['Provenance on every video', 'Platform, link, dates, creator and permission.'],
+  ['A player beside your captions', 'Real keyboard shortcuts, and a preview copy for formats it can’t decode.'],
+  ['Transcripts from the original post', 'Searchable, with the quote shown on the card.'],
+  ['Copy for six platforms', 'Live counts against each platform’s own limits. Never cut short.'],
+  ['Readiness and the Ready gate', 'Scheduling refuses what isn’t ready, and says why.'],
+  ['Coverage map', 'Six platforms on every card, coloured by where each stands.'],
+  ['Prepare to Publish', 'Everything up to the button for TikTok and Instagram.'],
+  ['YouTube upload and schedule', 'Publishes on time even when Reelay is closed.'],
+  ['Durable sends', 'Recorded before they run; interrupted ones wait for you.'],
+  ['Change history', 'Every saved change, who made it, and a one-click restore.'],
+  ['Automations', 'When, if, then. Fill, tag, route and schedule, safely.'],
+  ['Import Sheet', 'CSV or a shared Google Sheet, previewed row by row.'],
+  ['Writing help on your computer', 'Spelling, local-model rewrites and brand voice. No tokens.'],
+  ['Video tools', 'Remove or replace sound, burn in captions. Originals untouched.'],
+  ['Profiles', 'One per creator, each with its own folder, board and channels.'],
+  ['Shared database', 'Drive, Dropbox, iCloud Drive or OneDrive; one editor at a time.'],
+  ['Agent API', 'Local, documented, and approval-gated.'],
+  ['Four themes', 'Light, Dark, Black, or Custom in a profile’s brand colours.'],
+];
 ---
 
 <BaseLayout
-  title={`Core Features & Architecture — ${SITE.fullName}`}
-  description="Explore the Reelay Studio feature matrix: In-app video player, local Whisper AI transcripts, cross-platform Kanban pipeline, and safe automation rules."
+  title={`Features: ${SITE.fullName}`}
+  description="Everything in Reelay: a library that brings your videos home, a board of tickets with copy for six platforms and a readiness check, safe automations, and a local Agent API."
 >
-  <div class="features-index-page">
-    <div class="container">
-      <header class="page-header">
-        <div class="badge-pill">
-          <span class="pill-dot"></span>
-          <span>CREATIVE ENGINE CAPABILITIES</span>
-        </div>
-        <h1 class="page-title">The Local-First Creator Toolkit</h1>
-        <p class="page-subtitle">
-          Everything required to ingest, inspect, organize, and publish high-converting video across every major platform without surrendering data sovereignty.
-        </p>
+  <PageHero eyebrow="Features">
+    <Fragment slot="title">Everything a video needs<br /><span class="text-glow">before it leaves.</span></Fragment>
+    <Fragment slot="lede">Reelay does three jobs, in order. <strong>Bring it in. Get it ready. Send it out.</strong> Each one is built to be careful with your work.</Fragment>
+  </PageHero>
+
+  <section class="stage stage--flush-top" id="library" aria-labelledby="f1-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">01 · Bring it in</p>
+        <h2 id="f1-title" class="headline">Library and Player</h2>
+        <p class="lede">List, pick and download from TikTok, Instagram and YouTube profiles you own or manage, with the facts of where each video came from. <strong>Then watch it right beside the words you’re writing for it.</strong></p>
+        <a class="link-more mt-1" href={href('/features/library')}>Explore Library and Player</a>
       </header>
+    </div>
+    <div class="wrap-wide" data-reveal><div class="f-stage"><ImportScene /></div></div>
+  </section>
 
-      <!-- Architecture Highlight Spec Rail -->
-      <div class="specs-rail">
-        <div class="spec-cell">
-          <span class="spec-num">60 FPS</span>
-          <span class="spec-label">Qt Hardware Decode</span>
-        </div>
-        <div class="spec-cell">
-          <span class="spec-num">100%</span>
-          <span class="spec-label">Local NVMe Custody</span>
-        </div>
-        <div class="spec-cell">
-          <span class="spec-num">5 Platforms</span>
-          <span class="spec-label">Unified Publishing</span>
-        </div>
-        <div class="spec-cell">
-          <span class="spec-num">&lt; 100ms</span>
-          <span class="spec-label">FTS5 SQLite Retrieval</span>
-        </div>
-      </div>
+  <section class="stage stage--lift" id="pipeline" aria-labelledby="f2-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">02 · Get it ready</p>
+        <h2 id="f2-title" class="headline">Board and Tickets</h2>
+        <p class="lede">Every video is a ticket with copy for six platforms, a readiness checklist and a coverage map. <strong>Scheduling refuses anything that isn’t ready, and cards move themselves as platforms go live.</strong></p>
+        <a class="link-more mt-1" href={href('/features/pipeline')}>Explore Board and Tickets</a>
+      </header>
+    </div>
+    <div class="wrap-wide" data-reveal><div class="f-stage"><BoardScene /></div></div>
+  </section>
 
-      <div class="feature-pillars-list">
-        <!-- Pillar 1 Card: Media Library & In-App Player -->
-        <div class="feature-pillar-row">
-          <div class="pillar-text">
-            <span class="pillar-tag">Pillar 01 • Core Workstation</span>
-            <h2>Reelay Studio: Media Library & In-App Player</h2>
-            <p>
-              Organizing 4K video cuts and 9:16 vertical shorts in generic operating system folders or fragmented spreadsheets leads to lost assets and publishing errors. Reelay provides a dedicated local media workstation with hardware-accelerated playback and instant speech search.
-            </p>
-            <ul class="feature-bullets">
-              <li><strong>High-Resolution Downloads:</strong> Direct ingestion from TikTok, Instagram, and YouTube via built-in, sandboxed <code>yt-dlp</code>.</li>
-              <li><strong>Intelligent Aspect Orientation:</strong> Automated detection and instantaneous layout switching between 9:16 vertical shorts and 16:9 widescreen footage.</li>
-              <li><strong>Hardware-Accelerated Playback:</strong> 60 FPS timeline scrubbing with variable speed control (0.5x–2.0x) and automatic VP9/AV1 lightweight proxies.</li>
-              <li><strong>Offline Whisper Speech-to-Text:</strong> On-device neural transcription with full-text search (SQLite FTS5) across every spoken sentence.</li>
-            </ul>
-            <div class="pillar-action">
-              <a href={`${base}/features/library`} class="btn btn-secondary">
-                Deep Dive: Studio Player & Library →
-              </a>
-            </div>
-          </div>
-          <div class="pillar-preview-box">
-            <div class="preview-mini-header">
-              <div class="window-lights">
-                <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
-              </div>
-              <span class="mini-title">Hardware Decode • AV1 / VP9</span>
-              <span class="status-indicator">60 FPS</span>
-            </div>
-            <div class="preview-mini-body">
-              <div class="mini-player-rep">
-                <div class="mini-phone-frame">
-                  <div class="mini-screen-header">
-                    <span class="app-tag">REELAY PREVIEW</span>
-                    <span class="tag-res">1080×1920</span>
-                  </div>
-                  <div class="mini-wave">
-                    <span class="bar b1"></span>
-                    <span class="bar b2"></span>
-                    <span class="bar b3"></span>
-                    <span class="bar b4"></span>
-                    <span class="bar b5"></span>
-                  </div>
-                  <span class="mini-caption-pill">Offline Whisper Active</span>
-                </div>
-              </div>
-              <div class="mini-meta-rows">
-                <div class="meta-row"><span>Codec:</span> <strong>AV1 1080×1920 (60 fps)</strong></div>
-                <div class="meta-row"><span>Audio FTS5:</span> <strong>12,410 Words Indexed</strong></div>
-                <div class="meta-row"><span>Storage:</span> <strong>Local NVMe Disk</strong></div>
-                <div class="meta-row"><span>Cloud Leakage:</span> <strong class="green-text">0 Bytes Transmitted</strong></div>
-              </div>
-            </div>
-          </div>
+  <section class="stage" id="automations" aria-labelledby="f3-title">
+    <div class="wrap">
+      <div class="split">
+        <div data-reveal>
+          <p class="eyebrow">03 · Do it once</p>
+          <h2 id="f3-title" class="headline">Automations</h2>
+          <p class="lede mt-2">When a video arrives, if it matches, then fill its empty copy from a template, add hashtags, choose platforms or schedule it. <strong>Once per video, never over your own words, and all of it logged.</strong></p>
+          <a class="link-more mt-1" href={href('/features/automations')}>Explore Automations</a>
         </div>
-
-        <!-- Pillar 2 Card: Kanban Pipeline -->
-        <div class="feature-pillar-row reverse">
-          <div class="pillar-text">
-            <span class="pillar-tag">Pillar 02 • Editorial Flow</span>
-            <h2>Cross-Platform Pipeline: The Kanban Board</h2>
-            <p>
-              Take each video from raw concept to published status across YouTube Shorts, Instagram Reels, TikTok, and Threads with an intuitive visual board and multi-platform coverage map.
-            </p>
-            <ul class="feature-bullets">
-              <li><strong>5 Strict Lifecycle Stages:</strong> <code>Backlog</code> → <code>Staging</code> → <code>Ready</code> → <code>Scheduled</code> → <code>Published</code>.</li>
-              <li><strong>Dynamic Coverage Maps:</strong> Real-time indicators on every card verify which platforms have validated captions, aspect ratios, and tags.</li>
-              <li><strong>Prepare to Publish:</strong> Frictionless one-click export bundle with media and formatted copy for restricted mobile apps.</li>
-              <li><strong>Unified Metadata Studio:</strong> Edit platform-specific descriptions and hashtag groups in one synchronized interface.</li>
-            </ul>
-            <div class="pillar-action">
-              <a href={`${base}/features/pipeline`} class="btn btn-secondary">
-                Deep Dive: Kanban Pipeline →
-              </a>
-            </div>
-          </div>
-          <div class="pillar-preview-box">
-            <div class="preview-mini-header">
-              <div class="window-lights">
-                <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
-              </div>
-              <span class="mini-title">Kanban Lifecycle Pipeline</span>
-              <span class="status-indicator">5 Stages</span>
-            </div>
-            <div class="preview-mini-body">
-              <div class="kanban-mini-cols">
-                <div class="mini-col">
-                  <span class="col-head">STAGING</span>
-                  <div class="mini-card">
-                    <p class="card-clip-title">Hook #4 Test</p>
-                    <div class="tags"><span class="t-yt">YT</span><span class="t-ig">IG</span></div>
-                  </div>
-                </div>
-                <div class="mini-col active-col">
-                  <span class="col-head">READY</span>
-                  <div class="mini-card highlight">
-                    <p class="card-clip-title">Local AI Guide</p>
-                    <div class="tags"><span class="t-ready">5/5 Ready</span></div>
-                  </div>
-                </div>
-                <div class="mini-col">
-                  <span class="col-head">PUBLISHED</span>
-                  <div class="mini-card done">
-                    <p class="card-clip-title">Studio Intro</p>
-                    <div class="tags"><span class="t-live">Live</span></div>
-                  </div>
-                </div>
-              </div>
-              <div class="mini-meta-rows mt-1">
-                <div class="meta-row"><span>Active Deck:</span> <strong>14 Video Cuts</strong></div>
-                <div class="meta-row"><span>Ready for Push:</span> <strong class="amber-text">YouTube & Meta OK</strong></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Pillar 3 Card: Automations Engine -->
-        <div class="feature-pillar-row">
-          <div class="pillar-text">
-            <span class="pillar-tag">Pillar 03 • Deterministic Logic</span>
-            <h2>Automations & Safe Rules Engine</h2>
-            <p>
-              Automate repetitive metadata, tagging, and publishing workflows with deterministic When / If / Then rules that execute locally on your machine with strict safety gates.
-            </p>
-            <ul class="feature-bullets">
-              <li><strong>Local Event Triggers:</strong> Fire rules when clips enter specific columns or when Whisper finishes transcription.</li>
-              <li><strong>Dynamic Token Templating:</strong> Format templates using <code>{`{hook}`}</code>, <code>{`{caption}`}</code>, <code>{`{hashtags}`}</code>, and <code>{`{creator}`}</code>.</li>
-              <li><strong>Non-Destructive Safety Gates:</strong> Hard rules prevent accidental double-publishing or overwriting manual creator edits.</li>
-              <li><strong>Brand Voice Presets:</strong> Maintain channel personas and custom signatory tags without sending prompts to third-party clouds.</li>
-            </ul>
-            <div class="pillar-action">
-              <a href={`${base}/features/automations`} class="btn btn-secondary">
-                Deep Dive: Rules & Automations →
-              </a>
-            </div>
-          </div>
-          <div class="pillar-preview-box">
-            <div class="preview-mini-header">
-              <div class="window-lights">
-                <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
-              </div>
-              <span class="mini-title">Deterministic Local Rules</span>
-              <span class="status-indicator">Safety Gate Active</span>
-            </div>
-            <div class="preview-mini-body">
-              <div class="rule-box">
-                <div class="rule-line"><span class="k">WHEN:</span> Video enters <code>Ready</code></div>
-                <div class="rule-line"><span class="k">IF:</span> Platform includes <code>YouTube Shorts</code></div>
-                <div class="rule-line"><span class="k">THEN:</span> Append <code>#Shorts #Creator</code> & Stage Upload</div>
-                <div class="rule-status">
-                  <span class="status-dot green"></span>
-                  <span>Safety Gate: Never overwrite creator edits [ENFORCED]</span>
-                </div>
-              </div>
-              <div class="mini-meta-rows mt-1">
-                <div class="meta-row"><span>Execution Engine:</span> <strong>Local SQLite Triggers</strong></div>
-                <div class="meta-row"><span>Rate Limit Guard:</span> <strong class="green-text">Backoff & Retry Enabled</strong></div>
-              </div>
-            </div>
-          </div>
+        <div class="rule-vis" data-reveal style="--reveal-delay:.08s" aria-hidden="true">
+          <p><b>When</b> a video is added to the board</p>
+          <p><b>If</b> it came from TikTok</p>
+          <p><b>Then</b> set its platforms to YouTube, Instagram and Threads</p>
+          <p><b>And</b> fill the Threads text from <code>{'{hook}'}</code></p>
         </div>
       </div>
     </div>
-  </div>
+  </section>
+
+  <section class="stage stage--lift" id="search" aria-labelledby="f4-title">
+    <div class="wrap">
+      <div class="split split--flip">
+        <div data-reveal>
+          <p class="eyebrow">04 · Find anything</p>
+          <h2 id="f4-title" class="headline">Search</h2>
+          <p class="lede mt-2">One search across titles, captions, every platform’s copy, tags, notes and transcripts. <strong>A video found by what was said in it shows you the quote.</strong></p>
+          <a class="link-more mt-1" href={`${href('/features/library')}#transcripts`}>How transcripts work</a>
+        </div>
+        <div data-reveal style="--reveal-delay:.08s"><SearchScene /></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage" id="all-features" aria-labelledby="all-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <h2 id="all-title" class="headline">All the features.</h2>
+      </header>
+      <div class="feature-grid" data-reveal>
+        {all.map(([t, d]) => <div class="feature"><h3>{t}</h3><p>{d}</p></div>)}
+      </div>
+    </div>
+  </section>
+
+  <NextUp kicker="Start with" title="Library and Player" href={href('/features/library')} />
 </BaseLayout>
 
 <style>
-  .features-index-page {
-    padding-top: clamp(3rem, 6vw, 5rem);
-    padding-bottom: clamp(5rem, 8vw, 8rem);
-  }
-
-  .page-header {
-    text-align: center;
-    max-width: 820px;
-    margin: 0 auto 3.5rem auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .badge-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.85rem;
-    background: rgba(245, 158, 11, 0.08);
-    border: 1px solid rgba(245, 158, 11, 0.28);
-    border-radius: 9999px;
-    font-family: var(--font-mono, monospace);
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: #fbbf24;
-    text-transform: uppercase;
-    margin-bottom: 1.25rem;
-  }
-
-  .pill-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #f59e0b;
-    box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
-  }
-
-  .page-title {
-    font-family: var(--font-display);
-    font-size: clamp(2.5rem, 5vw, 4.25rem);
-    font-weight: 700;
-    letter-spacing: -0.035em;
-    line-height: 1.1;
-    background: var(--text-gradient-silver);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-top: 0.5rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .page-subtitle {
-    font-family: var(--font-body);
-    font-size: clamp(1.1rem, 1.8vw, 1.28rem);
-    color: var(--text-secondary);
-    line-height: 1.6;
-    max-width: 720px;
-  }
-
-  /* Specs Rail */
-  .specs-rail {
+  .f-stage { max-width: 1240px; margin: 0 auto; }
+  .chapter-head .link-more { display: inline-flex; }
+  .rule-vis {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    background: #0c0d12;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-lg, 16px);
-    margin-bottom: 4.5rem;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-    overflow: hidden;
-  }
-
-  .spec-cell {
-    padding: 1.75rem 1.5rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    border-right: 1px solid rgba(255, 255, 255, 0.07);
-  }
-
-  .spec-cell:last-child {
-    border-right: none;
-  }
-
-  .spec-num {
-    font-family: var(--font-display);
-    font-size: 1.85rem;
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    color: #f1f2f6;
-    margin-bottom: 0.35rem;
-  }
-
-  .spec-label {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: #9496a1;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .feature-pillars-list {
-    display: flex;
-    flex-direction: column;
-    gap: 4.5rem;
-  }
-
-  .feature-pillar-row {
-    display: grid;
-    grid-template-columns: 1.15fr 1fr;
-    gap: 3.5rem;
-    align-items: center;
-    background: linear-gradient(180deg, #0e0f15 0%, #090a0d 100%);
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    border-radius: var(--radius-lg, 18px);
-    padding: clamp(2rem, 4vw, 3.5rem);
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
-  }
-
-  .feature-pillar-row.reverse {
-    grid-template-columns: 1fr 1.15fr;
-  }
-  .feature-pillar-row.reverse .pillar-text {
-    order: 2;
-  }
-  .feature-pillar-row.reverse .pillar-preview-box {
-    order: 1;
-  }
-
-  .pillar-tag {
-    font-family: var(--font-mono);
-    font-size: 0.76rem;
-    font-weight: 700;
-    color: #fbbf24;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    display: inline-block;
-    margin-bottom: 0.75rem;
-  }
-
-  .pillar-text h2 {
-    font-family: var(--font-display);
-    font-size: clamp(1.8rem, 2.5vw, 2.25rem);
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    line-height: 1.2;
-    color: #f8fafc;
-    margin-bottom: 1.15rem;
-  }
-
-  .pillar-text p {
-    font-family: var(--font-body);
-    font-size: 1.02rem;
-    color: #a1a1aa;
-    line-height: 1.65;
-    margin-bottom: 1.75rem;
-  }
-
-  .feature-bullets {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 0.85rem;
-    margin-bottom: 2.25rem;
-    padding: 0;
-  }
-
-  .feature-bullets li {
-    font-size: 0.94rem;
-    color: #d4d4d8;
-    line-height: 1.55;
-    position: relative;
-    padding-left: 1.5rem;
-  }
-
-  .feature-bullets li::before {
-    content: "✓";
-    position: absolute;
-    left: 0;
-    color: #fbbf24;
-    font-weight: 700;
-  }
-
-  .feature-bullets strong {
-    color: #ffffff;
-  }
-
-  .feature-bullets code {
-    background-color: rgba(255, 255, 255, 0.08);
-    padding: 0.15rem 0.4rem;
-    border-radius: 4px;
-    color: #f3f4f6;
-    font-family: var(--font-mono);
-    font-size: 0.88em;
-  }
-
-  .pillar-action {
-    display: flex;
-  }
-
-  /* Hardware preview box */
-  .pillar-preview-box {
-    background-color: #08090d;
-    border: 1px solid rgba(255, 255, 255, 0.11);
-    border-radius: var(--radius-lg, 16px);
-    overflow: hidden;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-  }
-
-  .preview-mini-header {
-    background-color: #101117;
-    padding: 0.75rem 1.15rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .window-lights {
-    display: flex;
-    gap: 0.4rem;
-  }
-
-  .dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-  }
-  .dot.red { background-color: #ff5f56; }
-  .dot.yellow { background-color: #ffbd2e; }
-  .dot.green { background-color: #27c93f; }
-
-  .mini-title {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    color: #94a3b8;
-    letter-spacing: 0.03em;
-  }
-
-  .status-indicator {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: #fbbf24;
-    background: rgba(245, 158, 11, 0.12);
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-  }
-
-  .preview-mini-body {
-    padding: 1.75rem;
-  }
-
-  .mini-player-rep {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 1.5rem;
-  }
-
-  .mini-phone-frame {
-    width: 170px;
-    height: 200px;
-    background: linear-gradient(180deg, #12131b 0%, #0a0b10 100%);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 14px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.85rem;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-  }
-
-  .mini-screen-header {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .app-tag {
-    font-family: var(--font-mono);
-    font-size: 0.58rem;
-    font-weight: 700;
-    color: #71717a;
-    letter-spacing: 0.04em;
-  }
-
-  .tag-res {
-    font-family: var(--font-mono);
-    font-size: 0.58rem;
-    color: #fbbf24;
-  }
-
-  .mini-wave {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .mini-wave .bar {
-    width: 4px;
-    background: #f59e0b;
-    border-radius: 2px;
-  }
-  .b1 { height: 18px; }
-  .b2 { height: 32px; }
-  .b3 { height: 24px; }
-  .b4 { height: 40px; }
-  .b5 { height: 14px; }
-
-  .mini-caption-pill {
-    font-size: 0.68rem;
-    font-weight: 600;
-    color: #fbbf24;
-    background-color: rgba(245, 158, 11, 0.12);
-    border: 1px solid rgba(245, 158, 11, 0.25);
-    padding: 0.25rem 0.6rem;
-    border-radius: 6px;
-    font-family: var(--font-mono);
-  }
-
-  .meta-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.84rem;
-    padding: 0.45rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    color: #828594;
-  }
-  .meta-row strong {
-    color: #e2e8f0;
-  }
-  .green-text {
-    color: #34d399 !important;
-  }
-  .amber-text {
-    color: #fbbf24 !important;
-  }
-  .mt-1 {
-    margin-top: 1rem;
-  }
-
-  .kanban-mini-cols {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
     gap: 0.75rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border-radius: var(--radius-xl);
+    background: radial-gradient(70% 60% at 50% 0%, rgba(240, 170, 60, 0.14), transparent 70%), linear-gradient(180deg, #151517, #0b0b0c);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
-
-  .mini-col {
-    background-color: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 8px;
-    padding: 0.65rem;
-  }
-
-  .col-head {
-    display: block;
-    font-size: 0.68rem;
-    font-family: var(--font-mono);
-    color: #71717a;
-    margin-bottom: 0.5rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-  }
-
-  .mini-card {
-    background-color: #12131a;
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    border-radius: 6px;
-    padding: 0.6rem;
-    font-size: 0.76rem;
-  }
-  .mini-card.highlight {
-    border-color: rgba(245, 158, 11, 0.45);
-    background-color: rgba(245, 158, 11, 0.08);
-  }
-  .mini-card.done {
-    opacity: 0.65;
-  }
-
-  .card-clip-title {
-    font-weight: 600;
-    color: #f1f5f9;
-    margin-bottom: 0.4rem;
-  }
-
-  .tags {
-    display: flex;
-    gap: 4px;
-  }
-  .t-yt, .t-ig, .t-ready, .t-live {
-    font-size: 0.62rem;
-    font-family: var(--font-mono);
-    padding: 0.15rem 0.35rem;
-    border-radius: 3px;
-    font-weight: 700;
-  }
-  .t-yt { background: rgba(255, 255, 255, 0.08); color: #cbd5e1; }
-  .t-ig { background: rgba(255, 255, 255, 0.08); color: #cbd5e1; }
-  .t-ready { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-  .t-live { background: rgba(52, 211, 153, 0.2); color: #34d399; }
-
-  .rule-box {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    font-family: var(--font-mono);
-    font-size: 0.82rem;
-    background: #06070a;
-    padding: 1rem;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.07);
-  }
-
-  .rule-line {
-    color: #cbd5e1;
-  }
-  .rule-line .k {
-    color: #fbbf24;
-    font-weight: 700;
-    margin-right: 0.35rem;
-  }
-
-  .rule-status {
-    margin-top: 0.5rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    font-size: 0.74rem;
-    color: #34d399;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .status-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-  }
-  .status-dot.green {
-    background-color: #34d399;
-    box-shadow: 0 0 6px #34d399;
-  }
-
-  @media (max-width: 960px) {
-    .specs-rail {
-      grid-template-columns: repeat(2, 1fr);
-    }
-    .spec-cell:nth-child(2) {
-      border-right: none;
-    }
-    .spec-cell:nth-child(3) {
-      border-top: 1px solid rgba(255, 255, 255, 0.07);
-    }
-    .spec-cell:nth-child(4) {
-      border-top: 1px solid rgba(255, 255, 255, 0.07);
-    }
-    .feature-pillar-row, .feature-pillar-row.reverse {
-      grid-template-columns: 1fr;
-      gap: 2.5rem;
-    }
-    .feature-pillar-row.reverse .pillar-text {
-      order: 1;
-    }
-    .feature-pillar-row.reverse .pillar-preview-box {
-      order: 2;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .specs-rail {
-      grid-template-columns: 1fr;
-    }
-    .spec-cell {
-      border-right: none;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-    }
-    .spec-cell:last-child {
-      border-bottom: none;
-    }
-  }
+  .rule-vis p { padding: 0.9rem 1.1rem; border-radius: 14px; background: rgba(255, 255, 255, 0.05); color: var(--r-ink); font-size: 1.08rem; }
+  .rule-vis b { display: inline-block; min-width: 3.4rem; color: var(--r-amber-text); }
+  @media (max-width: 560px) { .rule-vis b { display: block; min-width: 0; margin-bottom: 0.15rem; } }
+  .rule-vis code { color: #ffd9a0; }
 </style>

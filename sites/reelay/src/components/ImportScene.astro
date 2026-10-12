@@ -1,0 +1,93 @@
+---
+/**
+ * ImportScene: the Download page as the app lays it out (reelay/gui/
+ * download_page.py): saved sources by platform, the listed videos with
+ * cover, date, caption, length and views, and the selection strip that
+ * always says what is selected.
+ */
+import AppWindow from './ui/AppWindow.astro';
+import PlatformIcon from './ui/PlatformIcon.astro';
+
+const rows = [
+  { still: 'dusk', date: 'Oct 8', caption: 'golden hour at big sur, the turnout everyone drives past', len: '0:22', views: '18.4K', state: 'done' },
+  { still: 'neon', date: 'Oct 6', caption: 'tokyo after midnight is a different city', len: '0:57', views: '9,210', state: 'pick' },
+  { still: 'desert', date: 'Oct 3', caption: 'day four. no signal, no plan, no complaints', len: '0:39', views: '12.1K', state: 'pick' },
+  { still: 'snow', date: 'Sep 29', caption: 'first snow and I was not ready', len: '0:18', views: '4,877', state: 'pick' },
+  { still: 'kitchen', date: 'Sep 24', caption: 'three knife skills that changed my cooking', len: '0:48', views: '31.6K', state: 'done' },
+];
+---
+<div class="scale-stage">
+  <div class="iscene">
+    <AppWindow title="Reelay: Download" label="Reelay's Download page listing videos from a saved TikTok source, three of them ticked for download.">
+      <div class="ibody">
+        <div class="sources">
+          <span class="slabel">Saved sources</span>
+          <span class="src on"><PlatformIcon name="tiktok" /> Juniper Lane <em>mine</em></span>
+          <span class="src"><PlatformIcon name="instagram" /> juniperlane <em>mine</em></span>
+          <span class="src"><PlatformIcon name="youtube" /> Juniper Lane <em>connected</em></span>
+        </div>
+        <div class="strip">
+          <span><b>3 selected</b> of 24 · 2 already downloaded</span>
+          <span class="sbtn">Select All</span>
+          <span class="sbtn">More</span>
+        </div>
+        <div class="table">
+          <div class="tr th"><span></span><span></span><span>Date</span><span>Caption</span><span>Length</span><span>Views</span><span>Status</span></div>
+          {rows.map((r) => (
+            <div class:list={['tr', { picked: r.state === 'pick' }]}>
+              <span class:list={['box', { ticked: r.state === 'pick' }]}>{r.state === 'pick' ? '✓' : ''}</span>
+              <span class={`cover still still--${r.still}`}></span>
+              <span class="muted">{r.date}</span>
+              <span class="cap">{r.caption}</span>
+              <span class="muted num">{r.len}</span>
+              <span class="muted num">{r.views}</span>
+              <span class:list={['st', r.state === 'done' ? 'st--done' : 'st--pick']}>{r.state === 'done' ? '✓ Downloaded' : 'Selected'}</span>
+            </div>
+          ))}
+        </div>
+        <div class="foot">
+          <span class="muted">Name files: Platform, date and video ID</span>
+          <span class="dl">Download 3</span>
+        </div>
+      </div>
+    </AppWindow>
+  </div>
+</div>
+
+<style>
+  .scale-stage { container-type: inline-size; width: 100%; }
+  .iscene { font-size: calc(100cqw / 52); }
+  .ibody { padding: 1.1em 1.2em 1em; background: #0f0f11; display: grid; gap: 0.9em; }
+  .sources { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5em; }
+  .slabel { font-size: 0.72em; font-weight: 600; color: rgba(245, 245, 247, 0.5); margin-right: 0.3em; }
+  .src { display: inline-flex; align-items: center; gap: 0.45em; font-size: 0.74em; font-weight: 600; padding: 0.5em 0.8em; border-radius: 0.6em; background: rgba(255, 255, 255, 0.06); }
+  .src :global(svg) { width: 1.05em; height: 1.05em; }
+  .src em { font-style: normal; font-weight: 500; color: rgba(245, 245, 247, 0.45); }
+  .src.on { background: rgba(240, 180, 76, 0.16); color: #f5c56b; }
+  .strip { display: flex; align-items: center; gap: 0.6em; padding: 0.6em 0.8em; border-radius: 0.7em; background: rgba(255, 255, 255, 0.04); font-size: 0.74em; }
+  .strip > span:first-child { flex: 1; color: rgba(245, 245, 247, 0.65); }
+  .strip b { color: #fff; }
+  .sbtn { padding: 0.35em 0.75em; border-radius: 0.5em; background: rgba(255, 255, 255, 0.08); font-weight: 600; }
+  .table { display: grid; }
+  .tr { display: grid; grid-template-columns: 1.3em 2.4em 3.6em minmax(0, 1fr) 4.2em 4.2em 6.4em; align-items: center; gap: 0.7em; padding: 0.4em 0.5em; border-radius: 0.55em; font-size: 0.74em; }
+  .tr + .tr { box-shadow: inset 0 0.0625em 0 rgba(255, 255, 255, 0.05); }
+  .th { font-size: 0.62em; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(245, 245, 247, 0.4); }
+  .picked { background: rgba(240, 180, 76, 0.07); }
+  .box { display: grid; place-items: center; width: 1.2em; height: 1.2em; border-radius: 0.3em; box-shadow: inset 0 0 0 0.09em rgba(255, 255, 255, 0.3); font-size: 0.9em; font-weight: 800; color: #000; }
+  .box.ticked { background: #f0b44c; box-shadow: none; }
+  .cover { width: 2.4em; height: 3.2em; border-radius: 0.35em; }
+  .cap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: rgba(245, 245, 247, 0.9); }
+  .muted { color: rgba(245, 245, 247, 0.5); }
+  .num { font-variant-numeric: tabular-nums; }
+  .st { font-weight: 600; white-space: nowrap; }
+  .st--done { color: #5fe08a; }
+  .st--pick { color: #f5c56b; }
+  .foot { display: flex; align-items: center; justify-content: space-between; font-size: 0.74em; }
+  .dl { padding: 0.55em 1.1em; border-radius: 0.6em; background: #f5f5f7; color: #000; font-weight: 700; }
+  @container (max-width: 560px) {
+    .iscene { font-size: calc(100cqw / 26); }
+    .tr { grid-template-columns: 1.3em 2.4em minmax(0, 1fr) 6.2em; }
+    .tr > :nth-child(3), .tr > :nth-child(5), .tr > :nth-child(6) { display: none; }
+    .strip .sbtn:last-child { display: none; }
+  }
+</style>

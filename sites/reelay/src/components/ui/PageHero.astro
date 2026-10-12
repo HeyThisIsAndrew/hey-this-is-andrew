@@ -1,0 +1,25 @@
+---
+/** The opening of an inner page: product line, headline, one paragraph. */
+interface Props {
+  eyebrow: string;
+  id?: string;
+}
+const { eyebrow, id = 'page-title' } = Astro.props;
+---
+<header class="page-hero">
+  <div class="wrap">
+    <p class="eyebrow eyebrow--glow ph-in" style="--d:0s">{eyebrow}</p>
+    <h1 id={id} class="display ph-in" style="--d:.08s"><slot name="title" /></h1>
+    <p class="lede ph-in" style="--d:.16s"><slot name="lede" /></p>
+    {Astro.slots.has('actions') && <div class="cta-row ph-in" style="--d:.24s"><slot name="actions" /></div>}
+  </div>
+  <slot />
+</header>
+
+<style>
+  .page-hero .display { font-size: clamp(2.9rem, 8vw, 6.5rem); }
+  @media (prefers-reduced-motion: no-preference) {
+    .ph-in { animation: ph-rise 1s var(--r-ease) both; animation-delay: var(--d, 0s); }
+    @keyframes ph-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  }
+</style>

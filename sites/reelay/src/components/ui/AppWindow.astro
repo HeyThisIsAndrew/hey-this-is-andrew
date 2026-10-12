@@ -1,0 +1,55 @@
+---
+/**
+ * A macOS window frame for product renderings. Everything inside is sized
+ * in em, so a scene scales by changing one font-size (see .scale-stage).
+ */
+interface Props {
+  title?: string;
+  class?: string;
+  label?: string;
+}
+const { title = 'Reelay', class: cls, label } = Astro.props;
+---
+<figure class:list={['app-window', cls]} aria-label={label} role={label ? 'img' : undefined}>
+  <div class="aw-bar" aria-hidden="true">
+    <span class="aw-lights"><i></i><i></i><i></i></span>
+    <span class="aw-title">{title}</span>
+    <span class="aw-spacer"></span>
+  </div>
+  <div class="aw-body">
+    <slot />
+  </div>
+</figure>
+
+<style>
+  .app-window {
+    position: relative;
+    border-radius: 0.85em;
+    background: #161618;
+    box-shadow:
+      0 0 0 0.0625em rgba(255, 255, 255, 0.14),
+      0 0 0 0.125em rgba(0, 0, 0, 0.9),
+      0 2.5em 6em -1em rgba(0, 0, 0, 0.9),
+      0 1em 2.5em rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    color: #f5f5f7;
+    font-family: var(--font-body);
+    letter-spacing: -0.01em;
+    text-align: left;
+  }
+  .aw-bar {
+    display: flex;
+    align-items: center;
+    height: 2.1em;
+    padding: 0 0.85em;
+    background: linear-gradient(180deg, #2a2a2d, #212124);
+    box-shadow: inset 0 -0.0625em 0 rgba(0, 0, 0, 0.6), inset 0 0.0625em 0 rgba(255, 255, 255, 0.08);
+  }
+  .aw-lights { display: flex; gap: 0.5em; flex: 1; }
+  .aw-lights i { width: 0.75em; height: 0.75em; border-radius: 50%; background: #ff5f57; box-shadow: inset 0 0 0 0.04em rgba(0, 0, 0, 0.25); }
+  .aw-lights i:nth-child(2) { background: #febc2e; }
+  .aw-lights i:nth-child(3) { background: #28c840; }
+  .aw-title { font-size: 0.8em; font-weight: 600; color: rgba(245, 245, 247, 0.7); }
+  .aw-spacer { flex: 1; }
+  .aw-body { position: relative; }
+</style>

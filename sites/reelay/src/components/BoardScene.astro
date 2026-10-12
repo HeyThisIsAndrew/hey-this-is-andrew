@@ -1,0 +1,231 @@
+---
+/**
+ * BoardScene: a faithful rendering of Reelay's main window. Sidebar, the
+ * four-column Board of media-first tickets with their coverage maps, and the
+ * inspector with the player, readiness and a copy block. The layout follows
+ * the real app (reelay/gui: main_window, board_page, inspector, player).
+ *
+ * Sized in em off one container-relative font-size, so the whole window
+ * scales like a screenshot. On a phone the inspector is shown on its own,
+ * large enough to read, instead of a shrunken desktop.
+ */
+import AppWindow from './ui/AppWindow.astro';
+import Coverage from './ui/Coverage.astro';
+import PlatformIcon from './ui/PlatformIcon.astro';
+import { DEMO_CARDS, OPEN_TICKET, CREATOR } from '../data/demo';
+import { STAGES, SITE } from '../data/site';
+
+const open = OPEN_TICKET.card;
+const readiness = [
+  { p: 'youtube', name: 'YouTube', state: 'ok', note: 'Title and description written' },
+  { p: 'tiktok', name: 'TikTok', state: 'ok', note: 'Caption within 4,000' },
+  { p: 'instagram', name: 'Instagram', state: 'ok', note: '3 of 30 hashtags' },
+  { p: 'threads', name: 'Threads', state: 'ok', note: 'Within 500' },
+  { p: 'bluesky', name: 'Bluesky', state: 'skip', note: 'Not posting' },
+] as const;
+const captionLength = [...OPEN_TICKET.caption].length;
+---
+<div class="scale-stage">
+  <div class="scene">
+    <AppWindow title="Reelay" label="Reelay's Board: four columns of video tickets, each with a coverage map, and an inspector showing the selected video, its readiness checklist and its TikTok caption.">
+      <div class="layout">
+        <aside class="side">
+          <div class="profile">
+            <span class="avatar">{CREATOR.initials}</span>
+            <span class="pname">{CREATOR.name}</span>
+          </div>
+          <ul class="snav">
+            <li>Download</li>
+            <li class="on">Board</li>
+            <li>Automations</li>
+            <li>Accounts</li>
+            <li>Settings</li>
+          </ul>
+          <div class="side-foot">
+            <span>Help</span>
+            <span class="ver">Reelay {SITE.versionNumber}</span>
+          </div>
+        </aside>
+
+        <section class="board">
+          <header class="bhead">
+            <span class="bname">Board</span>
+            <span class="search">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5 14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              Search captions, transcripts, tags
+            </span>
+            <span class="bchip">Show: All</span>
+            <span class="bchip">All hashtags</span>
+          </header>
+          <div class="cols">
+            {STAGES.map((stage) => {
+              const cards = DEMO_CARDS.filter((d) => d.stage === stage);
+              return (
+                <div class="col">
+                  <div class="col-head"><span>{stage}</span><b>{cards.length}</b></div>
+                  {cards.map((card) => (
+                    <div class:list={['card', { selected: card.id === open.id }]}>
+                      <div class={`thumb still still--${card.still}`}><span class="len">{card.length}</span></div>
+                      <div class="card-body">
+                        <span class="ctitle">{card.title}</span>
+                        <Coverage coverage={card.coverage} class="ccov" />
+                        <span class={`cstatus tone-${card.tone}`}>{card.status}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <aside class="inspector">
+          <div class={`player still still--${open.still}`}>
+            <span class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg></span>
+            <div class="scrub"><i style="width:41%"></i></div>
+            <span class="time">0:09 / {open.length}</span>
+          </div>
+          <div class="ititle">
+            <span>{open.title}</span>
+            <span class="ready-badge">READY</span>
+          </div>
+          <div class="checks">
+            {readiness.map((r) => (
+              <div class:list={['check', `check--${r.state}`]}>
+                <PlatformIcon name={r.p} />
+                <span class="cname">{r.name}</span>
+                <span class="cnote">{r.note}</span>
+                <span class="cmark">{r.state === 'ok' ? '✓' : '–'}</span>
+              </div>
+            ))}
+          </div>
+          <div class="copyblock">
+            <div class="cb-head">
+              <PlatformIcon name="tiktok" />
+              <span>TikTok caption</span>
+              <span class="count">{captionLength} / 4,000</span>
+            </div>
+            <p class="cb-text">{OPEN_TICKET.caption}</p>
+            <span class="copy-btn">Copy</span>
+          </div>
+        </aside>
+      </div>
+    </AppWindow>
+  </div>
+</div>
+
+<style>
+  .scale-stage { container-type: inline-size; width: 100%; }
+  .scene { font-size: calc(100cqw / 76); }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 11.5em minmax(0, 1fr) 18.5em;
+    height: 36em;
+    background: #0f0f11;
+  }
+
+  /* Sidebar */
+  .side {
+    display: flex;
+    flex-direction: column;
+    padding: 1em 0.7em;
+    background: linear-gradient(180deg, #19191c, #141416);
+    box-shadow: inset -0.0625em 0 0 rgba(255, 255, 255, 0.06);
+  }
+  .profile { display: flex; align-items: center; gap: 0.6em; padding: 0.2em 0.4em 1em; }
+  .avatar {
+    display: grid; place-items: center;
+    width: 1.9em; height: 1.9em; border-radius: 50%;
+    background: linear-gradient(135deg, #f5c56b, #d9653b);
+    color: #1a0f04; font-size: 0.72em; font-weight: 700;
+  }
+  .pname { font-size: 0.82em; font-weight: 600; }
+  .snav { list-style: none; display: grid; gap: 0.15em; }
+  .snav li { font-size: 0.82em; padding: 0.55em 0.75em; border-radius: 0.55em; color: rgba(245, 245, 247, 0.62); }
+  .snav li.on { background: rgba(255, 255, 255, 0.09); color: #fff; font-weight: 600; }
+  .side-foot { margin-top: auto; display: grid; gap: 0.35em; padding: 0 0.75em; font-size: 0.75em; color: rgba(245, 245, 247, 0.55); }
+  .ver { font-size: 0.9em; color: rgba(245, 245, 247, 0.35); }
+
+  /* Board */
+  .board { display: flex; flex-direction: column; min-width: 0; padding: 0.9em 1em 0; }
+  .bhead { display: flex; align-items: center; gap: 0.6em; margin-bottom: 0.9em; }
+  .bname { font-size: 1.15em; font-weight: 700; letter-spacing: -0.02em; margin-right: 0.4em; }
+  .search {
+    flex: 1;
+    display: flex; align-items: center; gap: 0.5em;
+    height: 2.1em; padding: 0 0.75em;
+    border-radius: 0.6em;
+    background: rgba(255, 255, 255, 0.06);
+    font-size: 0.74em; color: rgba(245, 245, 247, 0.4);
+    white-space: nowrap; overflow: hidden;
+  }
+  .search svg { width: 1em; height: 1em; flex: none; }
+  .bchip { font-size: 0.72em; padding: 0.5em 0.8em; border-radius: 0.6em; background: rgba(255, 255, 255, 0.06); color: rgba(245, 245, 247, 0.75); white-space: nowrap; }
+  .cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.7em; flex: 1; min-height: 0; }
+  .col { display: flex; flex-direction: column; gap: 0.6em; padding: 0.55em; border-radius: 0.8em 0.8em 0 0; background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01)); min-width: 0; overflow: hidden; }
+  .col-head { display: flex; justify-content: space-between; align-items: center; padding: 0.15em 0.25em 0.2em; font-size: 0.74em; font-weight: 600; color: rgba(245, 245, 247, 0.8); }
+  .col-head b { font-weight: 600; color: rgba(245, 245, 247, 0.4); }
+  .card { border-radius: 0.7em; background: #1b1b1e; overflow: hidden; box-shadow: 0 0.3em 0.9em rgba(0, 0, 0, 0.35), inset 0 0.0625em 0 rgba(255, 255, 255, 0.06); }
+  .card.selected { box-shadow: 0 0 0 0.14em #f0b44c, 0 0.6em 2em rgba(240, 160, 50, 0.3); }
+  .thumb { aspect-ratio: 16 / 9.5; }
+  .len { position: absolute; z-index: 1; right: 0.45em; bottom: 0.4em; font-size: 0.6em; font-weight: 600; padding: 0.15em 0.4em; border-radius: 0.35em; background: rgba(0, 0, 0, 0.6); }
+  .card-body { display: grid; gap: 0.45em; padding: 0.55em 0.6em 0.65em; }
+  .ctitle { font-size: 0.7em; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card-body :global(.ccov) { font-size: 0.72em; }
+  .cstatus { font-size: 0.6em; color: rgba(245, 245, 247, 0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tone-needs { color: #ff7a70; }
+  .tone-ready { color: #ffb648; }
+  .tone-sched { color: #5eb1ff; }
+  .tone-live { color: #5fe08a; }
+
+  /* Inspector */
+  .inspector {
+    display: flex; flex-direction: column; gap: 0.8em;
+    padding: 0.9em;
+    background: linear-gradient(180deg, #18181b, #131315);
+    box-shadow: inset 0.0625em 0 0 rgba(255, 255, 255, 0.06);
+    min-width: 0;
+  }
+  .player { position: relative; height: 16.5em; border-radius: 0.7em; }
+  .play {
+    position: absolute; z-index: 2; left: 50%; top: 45%;
+    display: grid; place-items: center;
+    width: 3em; height: 3em; margin: -1.5em 0 0 -1.5em;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    color: #fff;
+  }
+  .play svg { width: 1.3em; height: 1.3em; margin-left: 0.15em; }
+  .scrub { position: absolute; z-index: 2; left: 0.8em; right: 0.8em; bottom: 2em; height: 0.25em; border-radius: 1em; background: rgba(255, 255, 255, 0.25); }
+  .scrub i { display: block; height: 100%; border-radius: inherit; background: #fff; position: relative; }
+  .scrub i::after { content: ''; position: absolute; right: -0.4em; top: 50%; width: 0.8em; height: 0.8em; margin-top: -0.4em; border-radius: 50%; background: #fff; box-shadow: 0 0 0.6em rgba(0, 0, 0, 0.5); }
+  .time { position: absolute; z-index: 2; left: 0.8em; bottom: 0.6em; font-size: 0.66em; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ititle { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.6em; }
+  .ititle > span:first-child { font-size: 0.92em; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+  .ready-badge { flex: none; font-size: 0.58em; font-weight: 800; letter-spacing: 0.08em; padding: 0.35em 0.6em; border-radius: 0.4em; background: rgba(48, 209, 88, 0.16); color: #5fe08a; }
+  .checks { display: grid; gap: 0.1em; padding: 0.4em 0.55em; border-radius: 0.7em; background: rgba(255, 255, 255, 0.035); }
+  .check { display: grid; grid-template-columns: 1.1em 4.6em minmax(0, 1fr) 1em; align-items: center; gap: 0.5em; padding: 0.38em 0; font-size: 0.68em; }
+  .check + .check { box-shadow: inset 0 0.0625em 0 rgba(255, 255, 255, 0.05); }
+  .check :global(svg) { width: 1.05em; height: 1.05em; color: rgba(245, 245, 247, 0.8); }
+  .cname { font-weight: 600; }
+  .cnote { color: rgba(245, 245, 247, 0.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cmark { text-align: right; color: #5fe08a; font-weight: 700; }
+  .check--skip { opacity: 0.5; }
+  .check--skip .cmark { color: rgba(245, 245, 247, 0.5); }
+  .copyblock { position: relative; padding: 0.7em 0.75em 0.8em; border-radius: 0.7em; background: rgba(255, 255, 255, 0.035); }
+  .cb-head { display: flex; align-items: center; gap: 0.45em; font-size: 0.68em; font-weight: 600; margin-bottom: 0.5em; }
+  .cb-head :global(svg) { width: 1.05em; height: 1.05em; }
+  .count { margin-left: auto; color: #5fe08a; font-variant-numeric: tabular-nums; font-weight: 500; }
+  .cb-text { font-size: 0.66em; line-height: 1.45; color: rgba(245, 245, 247, 0.75); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .copy-btn { display: inline-block; margin-top: 0.6em; font-size: 0.62em; font-weight: 600; padding: 0.4em 0.9em; border-radius: 0.5em; background: #f5f5f7; color: #000; }
+
+  /* Phone: the inspector on its own, readable, like a cropped close-up. */
+  @container (max-width: 620px) {
+    .scene { font-size: calc(100cqw / 21); }
+    .layout { grid-template-columns: minmax(0, 1fr); height: auto; }
+    .side, .board { display: none; }
+    .player { height: 22em; }
+  }
+</style>

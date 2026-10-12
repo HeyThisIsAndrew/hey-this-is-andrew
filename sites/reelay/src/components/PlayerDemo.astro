@@ -1,0 +1,164 @@
+---
+/**
+ * PlayerDemo: the inspector's player and its real keyboard shortcuts
+ * (reelay/gui/player.py): Space or K plays and pauses, J and L skip 10 s,
+ * the arrow keys skip 5 s, M mutes. It plays a still, not a video: the point
+ * is the controls. Shows the cover until you press play, never autoplays.
+ */
+interface Props { still?: string; duration?: number }
+const { still = 'neon', duration = 57 } = Astro.props;
+const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+---
+<div class="pd" data-player-demo data-duration={duration}>
+  <div class="pd-keys" aria-hidden="true">
+    <p><span class="kbd">Space</span> or <span class="kbd">K</span> Play and pause</p>
+    <p><span class="kbd">J</span> <span class="kbd">L</span> Back or forward 10 s</p>
+    <p><span class="kbd">←</span> <span class="kbd">→</span> Back or forward 5 s</p>
+    <p><span class="kbd">M</span> Mute</p>
+  </div>
+
+  <div
+    class={`pd-screen still still--${still}`}
+    tabindex="0"
+    role="group"
+    aria-label="Player demo. Press Space or K to play, J or L to skip 10 seconds, the arrow keys to skip 5 seconds, M to mute."
+    data-pd-screen
+  >
+    <span class="pd-cover-label">Cover</span>
+    <button type="button" class="pd-play" data-pd-play aria-label="Play">
+      <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>
+      <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/></svg>
+    </button>
+    <span class="pd-toast" data-pd-toast aria-live="polite"></span>
+    <div class="pd-bar">
+      <span class="pd-time" data-pd-time>0:00</span>
+      <label class="sr-only" for="pd-range">Position</label>
+      <input id="pd-range" class="pd-range" type="range" min="0" max={duration} step="0.1" value="0" data-pd-range />
+      <span class="pd-time">{fmt(duration)}</span>
+      <span class="pd-mute" data-pd-mute aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path class="wave" d="M15.5 9a4.2 4.2 0 0 1 0 6M17.8 6.8a7.4 7.4 0 0 1 0 10.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path class="cross" d="M15.5 9.5 20 14m0-4.5L15.5 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </span>
+    </div>
+  </div>
+  <p class="pd-hint">Click the picture, then try the keys. A demonstration of the controls, not a real video.</p>
+</div>
+
+<style>
+  .pd { display: grid; gap: 2rem 4rem; align-items: center; max-width: 760px; margin: 0 auto; }
+  @media (min-width: 760px) {
+    .pd { grid-template-columns: minmax(0, 1fr) 300px; }
+    .pd-hint { grid-column: 1 / -1; }
+  }
+  .pd-keys { display: grid; gap: 1.1rem; }
+  .pd-keys p { display: flex; align-items: center; gap: 0.5rem; color: var(--r-ink-2); font-size: 1rem; }
+  .pd-keys p .kbd:last-of-type { margin-right: 0.5rem; }
+  .pd-screen {
+    position: relative;
+    aspect-ratio: 9 / 16;
+    width: 100%;
+    max-width: 300px;
+    margin-inline: auto;
+    border-radius: 28px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 40px 90px -20px rgba(0, 0, 0, 0.9), 0 0 120px rgba(255, 61, 154, 0.12);
+    cursor: pointer;
+    isolation: isolate;
+  }
+  .pd-screen:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 6px; border-radius: 28px; }
+  .pd-screen::after { z-index: 0; }
+  .pd-cover-label { position: absolute; z-index: 1; top: 1rem; left: 1rem; font-size: 0.72rem; font-weight: 600; padding: 0.25rem 0.55rem; border-radius: 6px; background: rgba(0, 0, 0, 0.5); transition: opacity 0.3s ease; }
+  .is-started .pd-cover-label { opacity: 0; }
+  .pd-play {
+    position: absolute;
+    z-index: 2;
+    left: 50%;
+    top: 46%;
+    display: grid;
+    place-items: center;
+    width: 4.25rem;
+    height: 4.25rem;
+    margin: -2.125rem 0 0 -2.125rem;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #fff;
+    cursor: pointer;
+    transition: opacity 0.3s ease, transform 0.3s var(--r-ease);
+  }
+  .pd-play svg { width: 1.7rem; height: 1.7rem; }
+  .pd-play .i-play { margin-left: 0.2rem; }
+  .pd-play .i-pause, .is-playing .pd-play .i-play { display: none; }
+  .is-playing .pd-play .i-pause { display: block; }
+  .is-playing .pd-play { opacity: 0; }
+  .is-playing:hover .pd-play, .is-playing:focus-within .pd-play { opacity: 1; }
+  .pd-toast { position: absolute; z-index: 2; left: 50%; top: 30%; transform: translateX(-50%); padding: 0.35rem 0.8rem; border-radius: 999px; background: rgba(0, 0, 0, 0.6); font-size: 0.85rem; font-weight: 600; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; white-space: nowrap; }
+  .pd-toast.show { opacity: 1; }
+  .pd-bar { position: absolute; z-index: 2; left: 0.9rem; right: 0.9rem; bottom: 0.9rem; display: flex; align-items: center; gap: 0.5rem; }
+  .pd-time { font-size: 0.72rem; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 2.2rem; }
+  .pd-range { flex: 1; min-width: 0; height: 24px; accent-color: #fff; cursor: pointer; background: transparent; }
+  .pd-mute svg { width: 1.1rem; height: 1.1rem; }
+  .pd-mute .cross { display: none; }
+  .is-muted .pd-mute .cross { display: inline; }
+  .is-muted .pd-mute .wave { display: none; }
+  .pd-hint { font-size: 0.82rem; color: var(--r-ink-4); text-align: center; }
+</style>
+
+<script>
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  document.querySelectorAll<HTMLElement>('[data-player-demo]').forEach((root) => {
+    const screen = root.querySelector<HTMLElement>('[data-pd-screen]')!;
+    const play = root.querySelector<HTMLButtonElement>('[data-pd-play]')!;
+    const range = root.querySelector<HTMLInputElement>('[data-pd-range]')!;
+    const time = root.querySelector<HTMLElement>('[data-pd-time]')!;
+    const toast = root.querySelector<HTMLElement>('[data-pd-toast]')!;
+    const duration = Number(root.dataset.duration || 60);
+    let t = 0;
+    let playing = false;
+    let last = 0;
+    let toastTimer = 0;
+
+    const show = (msg: string) => {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => toast.classList.remove('show'), 700);
+    };
+    const paint = () => { range.value = String(t); time.textContent = fmt(t); };
+    const seek = (d: number) => { t = Math.min(duration, Math.max(0, t + d)); screen.classList.add('is-started'); paint(); show(`${d > 0 ? '+' : '−'}${Math.abs(d)} s`); };
+    const tick = (now: number) => {
+      if (!playing) return;
+      t += (now - last) / 1000;
+      last = now;
+      if (t >= duration) { t = duration; setPlaying(false); }
+      paint();
+      if (playing) requestAnimationFrame(tick);
+    };
+    const setPlaying = (on: boolean) => {
+      playing = on;
+      screen.classList.toggle('is-playing', on);
+      screen.classList.add('is-started');
+      play.setAttribute('aria-label', on ? 'Pause' : 'Play');
+      if (on) {
+        if (t >= duration) t = 0;
+        last = performance.now();
+        requestAnimationFrame(tick);
+      }
+    };
+
+    play.addEventListener('click', (e) => { e.stopPropagation(); setPlaying(!playing); });
+    screen.addEventListener('click', (e) => { if (!(e.target as HTMLElement).closest('.pd-bar')) { screen.focus(); setPlaying(!playing); } });
+    range.addEventListener('input', () => { t = Number(range.value); screen.classList.add('is-started'); paint(); });
+    screen.addEventListener('keydown', (e) => {
+      if ((e.target as HTMLElement) === range && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return;
+      const k = e.key.toLowerCase();
+      if (k === ' ' || k === 'k') { e.preventDefault(); setPlaying(!playing); show(playing ? 'Play' : 'Pause'); }
+      else if (k === 'j') { e.preventDefault(); seek(-10); }
+      else if (k === 'l') { e.preventDefault(); seek(10); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); seek(-5); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); seek(5); }
+      else if (k === 'm') { e.preventDefault(); const m = screen.classList.toggle('is-muted'); show(m ? 'Muted' : 'Sound on'); }
+    });
+    paint();
+  });
+</script>

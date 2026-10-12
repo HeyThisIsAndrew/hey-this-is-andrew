@@ -1,0 +1,92 @@
+---
+/**
+ * PublishSection: how a ticket leaves the building, platform by platform,
+ * exactly as the app does it today (README, "Platform status" and
+ * "Automatic posting"). No platform is claimed as automatic that isn't.
+ */
+import PlatformIcon from './ui/PlatformIcon.astro';
+
+const lanes = [
+  {
+    icons: ['youtube'],
+    label: 'Automatic',
+    title: 'YouTube uploads and schedules itself.',
+    body: 'A resumable upload with progress and a publish time, so YouTube publishes it on schedule even when Reelay is closed. Closing mid-upload pauses it; it carries on next launch.',
+  },
+  {
+    icons: ['tiktok', 'instagram'],
+    label: 'Prepare to Publish',
+    title: 'TikTok and Instagram, in their own uploaders.',
+    body: 'Reelay checks the file and caption, copies the caption, opens the platform’s uploader and selects the .mp4 in Finder or Explorer. You post, keeping sounds, tags and Shop links, then paste the link back.',
+  },
+  {
+    icons: ['bluesky', 'threads', 'facebook'],
+    label: 'When you turn it on',
+    title: 'Bluesky, Threads and Facebook.',
+    body: 'Copy and paste by default. Their publishers are built and tested, and off until you switch them on in Settings. Facebook schedules natively; Bluesky and Threads post at the time you set while Reelay is running.',
+  },
+] as const;
+---
+<section class="stage publish" id="publishing" aria-labelledby="pub-title">
+  <div class="wrap">
+    <header class="chapter-head" data-reveal>
+      <p class="eyebrow">Publishing</p>
+      <h2 id="pub-title" class="headline">Six platforms.<br /><span class="text-silver">Each one, the right way.</span></h2>
+      <p class="lede">Reelay is a ticket system first. Every block of copy is ready to paste, and where a platform allows it, <strong>Reelay posts for you</strong>. Where it doesn’t, Reelay does everything up to the button.</p>
+    </header>
+
+    <div class="lanes">
+      {lanes.map((l, i) => (
+        <article class="lane" data-reveal style={`--reveal-delay:${i * 0.08}s`}>
+          <div class="lane-icons" aria-hidden="true">
+            {l.icons.map((ic) => <span class="lane-icon"><PlatformIcon name={ic} /></span>)}
+          </div>
+          <p class="lane-label">{l.label}</p>
+          <h3>{l.title}</h3>
+          <p>{l.body}</p>
+        </article>
+      ))}
+    </div>
+
+    <p class="pub-foot" data-reveal>
+      <strong>Durable sends.</strong> Every send is written down before it runs. One cut off by a crash, a power cut or a sleeping Mac becomes <em>interrupted</em> and waits for you: Try Again, It Was Posted, or Cancel. Never retried blindly.
+    </p>
+  </div>
+</section>
+
+<style>
+  .lanes {
+    display: grid;
+    gap: clamp(2.5rem, 4vw, 3.5rem) clamp(2rem, 4vw, 4rem);
+  }
+  @media (min-width: 880px) {
+    .lanes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  .lane { border-top: 1px solid var(--hairline-strong); padding-top: 1.75rem; }
+  .lane-icons { display: flex; gap: 0.6rem; margin-bottom: 1.5rem; }
+  .lane-icon {
+    display: grid;
+    place-items: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #232326, #141416);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 10px 30px rgba(0, 0, 0, 0.5);
+    color: var(--r-ink);
+  }
+  .lane:first-child .lane-icon { color: #fff; background: linear-gradient(180deg, #ff4d43, #c4170f); }
+  .lane-icon :global(svg) { width: 1.55rem; height: 1.55rem; }
+  .lane:first-child .lane-icon :global(path[fill='#000']) { fill: #c4170f; fill-opacity: 1; }
+  .lane-label { font-size: 0.9rem; font-weight: 600; color: var(--r-amber-text); margin-bottom: 0.5rem; }
+  .lane h3 { font-size: clamp(1.35rem, 2vw, 1.6rem); font-weight: 650; letter-spacing: -0.025em; line-height: 1.15; }
+  .lane p:last-child { margin-top: 0.85rem; font-size: 1rem; line-height: 1.55; color: var(--r-ink-3); }
+  .pub-foot {
+    margin-top: clamp(3.5rem, 7vw, 5.5rem);
+    max-width: 52rem;
+    font-size: clamp(1.1rem, 1.6vw, 1.35rem);
+    line-height: 1.45;
+    color: var(--r-ink-3);
+    font-weight: 500;
+  }
+  .pub-foot em { font-style: normal; color: var(--r-ink); }
+</style>

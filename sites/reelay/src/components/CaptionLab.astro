@@ -1,0 +1,190 @@
+---
+/**
+ * CaptionLab: type a caption and watch six platforms count it the way
+ * Reelay does (README, "Board (content tickets)"): YouTube's description in
+ * bytes, Bluesky in graphemes and bytes, Threads with emoji counted as their
+ * UTF-8 bytes, Instagram's hashtag cap. Over a limit is reported, never cut.
+ */
+import PlatformIcon from './ui/PlatformIcon.astro';
+import { OPEN_TICKET } from '../data/demo';
+
+const rules = [
+  { key: 'youtube', name: 'YouTube', rule: 'Description, 5,000 bytes', limit: 5000, unit: 'bytes' },
+  { key: 'tiktok', name: 'TikTok', rule: '4,000 characters', limit: 4000, unit: 'chars' },
+  { key: 'instagram', name: 'Instagram', rule: '2,200 characters, 30 hashtags', limit: 2200, unit: 'chars', tags: 30 },
+  { key: 'bluesky', name: 'Bluesky', rule: '300 characters, an emoji counts once', limit: 300, unit: 'graphemes' },
+  { key: 'threads', name: 'Threads', rule: '500 characters, an emoji counts as its bytes', limit: 500, unit: 'threads' },
+  { key: 'facebook', name: 'Facebook', rule: '63,206 characters', limit: 63206, unit: 'chars' },
+] as const;
+
+// The first paint is counted at build time, so the numbers are right before
+// (or without) the script.
+const enc = new TextEncoder();
+const seg = new Intl.Segmenter('en', { granularity: 'grapheme' });
+const graphemes = (t: string) => Array.from(seg.segment(t), (x) => x.segment);
+const measure = (t: string, unit: string) =>
+  unit === 'bytes' ? enc.encode(t).length
+  : unit === 'graphemes' ? graphemes(t).length
+  : unit === 'threads' ? graphemes(t).reduce((n, g) => n + (/\p{Extended_Pictographic}/u.test(g) ? enc.encode(g).length : 1), 0)
+  : Array.from(t).length;
+const initial = rules.map((r) => measure(OPEN_TICKET.caption, r.unit));
+
+const LONG =
+  'The last ten minutes of light on the Big Sur coast 🌅 Shot handheld from the turnout at mile 45, the one everybody drives straight past on the way to the famous bridge. We pulled over on a hunch and the water went completely gold for about four minutes. No drone, no filter, just a phone and a lot of luck. Full drive and every stop in the video on my channel. #bigsur #goldenhour #roadtrip #pch #california';
+---
+<div class="lab" data-caption-lab data-long={LONG}>
+  <div class="lab-editor">
+    <div class="lab-editor-head">
+      <span>Caption</span>
+      <button type="button" class="lab-swap" data-lab-swap aria-pressed="false">Try a longer caption</button>
+    </div>
+    <label class="sr-only" for="lab-input">Caption to count</label>
+    <textarea id="lab-input" class="lab-input" rows="6" spellcheck="false" data-lab-input>{OPEN_TICKET.caption}</textarea>
+    <p class="lab-note">Interactive demo. Type anything: the counts follow each platform's rules the way Reelay applies them.</p>
+  </div>
+
+  <ul class="lab-meters" aria-live="polite">
+    {rules.map((r, i) => (
+      <li class="meter" data-meter data-limit={r.limit} data-unit={r.unit} data-tags={'tags' in r ? r.tags : undefined}>
+        <span class="m-icon"><PlatformIcon name={r.key} /></span>
+        <span class="m-name">{r.name}<small>{r.rule}</small></span>
+        <span class="m-count"><b data-count>{initial[i].toLocaleString('en-US')}</b> / {r.limit.toLocaleString('en-US')}</span>
+        <span class="m-bar" aria-hidden="true"><i data-bar style={`width:${Math.max(1.5, (initial[i] / r.limit) * 100)}%`}></i></span>
+        <span class="m-flag" data-flag hidden></span>
+      </li>
+    ))}
+  </ul>
+</div>
+
+<style>
+  .lab {
+    display: grid;
+    gap: clamp(1.5rem, 3vw, 3rem);
+    align-items: start;
+  }
+  @media (min-width: 900px) {
+    .lab { grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); }
+  }
+  .lab-editor {
+    padding: clamp(1.25rem, 2.5vw, 1.75rem);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(180deg, #17171a, #111113);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 30px 80px -20px rgba(0, 0, 0, 0.8);
+  }
+  .lab-editor-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; font-size: 0.9rem; font-weight: 600; }
+  .lab-swap {
+    min-height: 36px;
+    padding: 0.4rem 0.9rem;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--r-ink);
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  .lab-swap:hover { background: rgba(255, 255, 255, 0.14); }
+  .lab-swap[aria-pressed='true'] { background: var(--r-amber-soft); color: var(--r-amber-text); }
+  .lab-input {
+    width: 100%;
+    min-height: 11rem;
+    resize: vertical;
+    padding: 1rem 1.1rem;
+    border: 0;
+    border-radius: 14px;
+    background: #0a0a0b;
+    color: var(--r-ink);
+    font: 400 1.02rem/1.55 var(--font-body);
+    letter-spacing: -0.01em;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    transition: box-shadow 0.2s ease;
+  }
+  .lab-input:focus { outline: none; box-shadow: inset 0 0 0 1px rgba(245, 197, 107, 0.6), 0 0 0 4px rgba(240, 180, 76, 0.12); }
+  .lab-note { margin-top: 0.85rem; font-size: 0.8rem; color: var(--r-ink-4); }
+
+  .lab-meters { list-style: none; display: grid; }
+  .meter {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+    grid-template-areas: 'icon name count' 'icon bar bar' 'icon flag flag';
+    align-items: center;
+    column-gap: 0.9rem;
+    padding: 1rem 0;
+    border-top: 1px solid var(--hairline);
+  }
+  .meter:last-child { border-bottom: 1px solid var(--hairline); }
+  .m-icon { grid-area: icon; align-self: start; padding-top: 0.15rem; color: var(--r-ink-2); }
+  .m-icon :global(svg) { width: 1.35rem; height: 1.35rem; }
+  .m-name { grid-area: name; font-weight: 600; font-size: 1rem; }
+  .m-name small { display: block; font-weight: 400; font-size: 0.82rem; color: var(--r-ink-3); margin-top: 0.1rem; }
+  .m-count { grid-area: count; font-size: 0.9rem; color: var(--r-ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .m-count b { color: var(--r-live); font-weight: 600; }
+  .m-bar { grid-area: bar; height: 3px; margin-top: 0.7rem; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+  .m-bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--r-live); transition: width 0.35s var(--r-ease), background-color 0.3s ease; }
+  .m-flag { grid-area: flag; margin-top: 0.55rem; font-size: 0.82rem; color: #ff7a70; }
+  .meter.is-near .m-count b { color: var(--r-ready); }
+  .meter.is-near .m-bar i { background: var(--r-ready); }
+  .meter.is-over .m-count b { color: var(--r-needs); }
+  .meter.is-over .m-bar i { background: var(--r-needs); }
+</style>
+
+<script>
+  const enc = new TextEncoder();
+  const seg = 'Segmenter' in Intl ? new Intl.Segmenter('en', { granularity: 'grapheme' }) : null;
+  const graphemes = (s: string) => (seg ? Array.from(seg.segment(s), (x) => x.segment) : Array.from(s));
+  const isEmoji = (g: string) => /\p{Extended_Pictographic}/u.test(g);
+
+  function measure(text: string, unit: string): number {
+    switch (unit) {
+      case 'bytes': return enc.encode(text).length;
+      case 'graphemes': return graphemes(text).length;
+      case 'threads': return graphemes(text).reduce((n, g) => n + (isEmoji(g) ? enc.encode(g).length : 1), 0);
+      default: return Array.from(text).length;
+    }
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-caption-lab]').forEach((lab) => {
+    const input = lab.querySelector<HTMLTextAreaElement>('[data-lab-input]')!;
+    const swap = lab.querySelector<HTMLButtonElement>('[data-lab-swap]')!;
+    const meters = Array.from(lab.querySelectorAll<HTMLElement>('[data-meter]'));
+    const original = input.value;
+    const long = lab.dataset.long || '';
+
+    const render = () => {
+      const text = input.value;
+      const hashtags = (text.match(/(^|\s)#[\p{L}\p{N}_]+/gu) || []).length;
+      for (const m of meters) {
+        const limit = Number(m.dataset.limit);
+        const n = measure(text, m.dataset.unit || 'chars');
+        const tagLimit = m.dataset.tags ? Number(m.dataset.tags) : 0;
+        const overTags = tagLimit > 0 && hashtags > tagLimit;
+        const over = n > limit || overTags;
+        m.querySelector('[data-count]')!.textContent = n.toLocaleString('en-US');
+        const bar = m.querySelector<HTMLElement>('[data-bar]')!;
+        bar.style.width = `${Math.min(100, Math.max(n ? 1.5 : 0, (n / limit) * 100))}%`;
+        m.classList.toggle('is-over', over);
+        m.classList.toggle('is-near', !over && n > limit * 0.85);
+        const flag = m.querySelector<HTMLElement>('[data-flag]')!;
+        if (over) {
+          flag.hidden = false;
+          flag.textContent = overTags
+            ? `${hashtags} hashtags, ${hashtags - tagLimit} over the limit. Reelay won't save it, and never cuts it short.`
+            : `Over by ${(n - limit).toLocaleString('en-US')}. Reelay won't save it, and never cuts it short.`;
+        } else {
+          flag.hidden = true;
+        }
+      }
+    };
+
+    swap.addEventListener('click', () => {
+      const pressed = swap.getAttribute('aria-pressed') === 'true';
+      input.value = pressed ? original : long;
+      swap.setAttribute('aria-pressed', String(!pressed));
+      swap.textContent = pressed ? 'Try a longer caption' : 'Back to the short one';
+      render();
+    });
+    input.addEventListener('input', render);
+    render();
+  });
+</script>

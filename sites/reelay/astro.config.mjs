@@ -5,6 +5,7 @@ export default defineConfig({
   site: process.env.SITE_URL || 'https://reelay.app',
   base: process.env.BASE_PATH || '/',
   trailingSlash: 'ignore',
+  compressHTML: false,
   devToolbar: {
     enabled: false,
   },

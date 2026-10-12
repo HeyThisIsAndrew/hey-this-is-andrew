@@ -84,7 +84,9 @@ async function runVerification() {
   }
 
   console.log('🌐 Launching Headless Chromium Browser...');
-  const browser = await chromium.launch();
+  // PW_EXECUTABLE_PATH lets a machine with a different pinned Chromium run the suite.
+  const executablePath = process.env.PW_EXECUTABLE_PATH;
+  const browser = await chromium.launch(executablePath ? { executablePath } : {});
   const failures = [];
   const passedChecks = [];
 

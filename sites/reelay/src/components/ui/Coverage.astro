@@ -1,0 +1,44 @@
+---
+/**
+ * The coverage map every ticket shows: all six platforms in the app's fixed
+ * order, coloured by state (coverage.py): published, scheduled, ready,
+ * needs work, or faint for "not going there".
+ */
+import PlatformIcon from './PlatformIcon.astro';
+import { PLATFORM_ORDER, type Cover, type PlatformKey } from '../../data/demo';
+
+interface Props {
+  coverage: Record<PlatformKey, Cover>;
+  class?: string;
+}
+const { coverage, class: cls } = Astro.props;
+const labels: Record<Cover, string> = {
+  live: 'published', sched: 'scheduled', ready: 'ready to publish', needs: 'needs work', off: 'not going',
+};
+---
+<span class:list={['coverage', cls]}>
+  {PLATFORM_ORDER.map((p) => (
+    <span class={`cv cv--${coverage[p]}`} title={`${p}: ${labels[coverage[p]]}`}>
+      <PlatformIcon name={p} />
+    </span>
+  ))}
+</span>
+
+<style>
+  .coverage { display: inline-flex; gap: 0.32em; align-items: center; }
+  .cv {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 1.35em;
+    height: 1.35em;
+    border-radius: 0.4em;
+    font-size: 1em;
+  }
+  .cv :global(svg) { width: 0.8em; height: 0.8em; }
+  .cv--live { color: var(--r-live); background: rgba(48, 209, 88, 0.14); }
+  .cv--sched { color: var(--r-sched); background: rgba(10, 132, 255, 0.16); }
+  .cv--ready { color: var(--r-ready); background: rgba(255, 159, 10, 0.15); }
+  .cv--needs { color: var(--r-needs); background: rgba(255, 69, 58, 0.15); }
+  .cv--off { color: rgba(255, 255, 255, 0.18); }
+</style>

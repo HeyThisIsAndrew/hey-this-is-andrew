@@ -1,887 +1,102 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { SITE } from '../data/site';
+import PageHero from '../components/ui/PageHero.astro';
+import Faq from '../components/ui/Faq.astro';
+import { SITE, DOWNLOADS, href, homeUrl } from '../data/site';
 
-const base = import.meta.env.BASE_URL.replace(/\/?$/, '');
+const included = [
+  'Download from TikTok, Instagram and YouTube',
+  'Unlimited profiles and tickets',
+  'Copy and live limits for six platforms',
+  'Readiness, the Ready gate and coverage map',
+  'YouTube upload and scheduling',
+  'Prepare to Publish for TikTok and Instagram',
+  'Automations',
+  'Archive search, transcripts included',
+  'Writing help with local models',
+  'Video tools',
+  'Agent API with approvals',
+  'Shared database',
+];
+
+const faq = [
+  { q: 'Do I need a Reelay account?', a: '<p>No. There’s nothing to sign up for. You connect your own platform accounts inside the app, and they stay connected on your computer.</p>' },
+  { q: 'What does it cost to run?', a: '<p>Reelay keeps your videos on your own disk and runs its writing help on a model on your own computer, so there’s no storage bill and no AI tokens to buy. Posting to YouTube uses YouTube’s free daily API quota.</p>' },
+  { q: 'What happens after the beta?', a: '<p>Pricing for version 1.0 hasn’t been set. Whatever happens, your library and database are files on your computer, so your work is always yours to keep.</p>' },
+  { q: 'Does it work offline?', a: '<p>The Board, your copy, search, the player, video tools and local writing help all work without a connection. Downloading, posting and signing in need one, of course.</p>' },
+  { q: 'What do I need to post to YouTube?', a: `<p>Until Reelay’s own Google sign-in is approved, you connect through a free Google Cloud project that you own. <strong>Accounts → Set Up YouTube…</strong> walks you through it in five steps. Uploads from a project Google hasn’t audited stay private, so see <a href="${href('/support')}#youtube-setup">Connecting YouTube</a> for the limits.</p>` },
+  { q: 'Is there a Windows version?', a: '<p>Reelay builds for Windows 10 and 11 (64-bit), but that build isn’t published yet. The Mac version for Apple silicon is available now.</p>' },
+];
 ---
 
 <BaseLayout
-  title={`Pricing & Fair Licensing — ${SITE.fullName}`}
-  description="Transparent, creator-friendly desktop software pricing. Zero cloud database fees, zero AI token markups. Free Community edition and Pro Studio licensing."
+  title={`Pricing: ${SITE.fullName}`}
+  description="Reelay Studio is free while it's in beta: every feature, no account and no subscription. Your videos and database stay on your computer."
 >
-  <div class="pricing-page">
-    <div class="container">
-      <header class="page-header">
-        <div class="badge-pill">
-          <span class="pill-dot"></span>
-          <span>FAIR LOCAL-FIRST LICENSING</span>
-        </div>
-        <h1 class="page-title">Own Your Software.<br />Never Pay Cloud Rent.</h1>
-        <p class="page-lead">
-          Why pay $50–$150 every single month to manage videos that already live on your hard drive? Reelay is native desktop software with zero recurring cloud storage markups.
-        </p>
-      </header>
+  <PageHero eyebrow="Pricing">
+    <Fragment slot="title">Free while<br /><span class="text-glow">it’s in beta.</span></Fragment>
+    <Fragment slot="lede">Every feature, for as many creators as you manage. <strong>No account, no subscription, no storage fees.</strong> Your work lives on your computer, so there’s nothing for us to charge you rent on.</Fragment>
+  </PageHero>
 
-      <!-- Architecture Highlight Spec Rail -->
-      <div class="specs-rail">
-        <div class="spec-cell">
-          <span class="spec-num">$0</span>
-          <span class="spec-label">Monthly Cloud Database Rent</span>
+  <section class="stage stage--flush-top" aria-labelledby="plan-title">
+    <div class="wrap">
+      <div class="plan" data-reveal>
+        <div class="plan-price">
+          <h2 id="plan-title" class="sr-only">The beta</h2>
+          <p class="plan-name">Reelay Studio {SITE.version}</p>
+          <p class="plan-amount"><span>$0</span><small>during the beta</small></p>
+          <a class="btn btn-primary btn-lg" href={DOWNLOADS.macArm.href}>Download for Mac</a>
+          <p class="fine">{DOWNLOADS.macArm.requirements}</p>
         </div>
-        <div class="spec-cell">
-          <span class="spec-num">Perpetual</span>
-          <span class="spec-label">One-Time License Ownership</span>
-        </div>
-        <div class="spec-cell">
-          <span class="spec-num">100%</span>
-          <span class="spec-label">Local Offline Usability</span>
-        </div>
-        <div class="spec-cell">
-          <span class="spec-num">30-Day</span>
-          <span class="spec-label">Money-Back Guarantee</span>
-        </div>
+        <ul class="plan-list">
+          {included.map((i) => <li>{i}</li>)}
+        </ul>
       </div>
-
-      <!-- Pricing Cards Grid -->
-      <div class="pricing-cards-grid">
-        <!-- Free Community Tier -->
-        <div class="pricing-card">
-          <div class="tier-badge">OPEN & LOCAL</div>
-          <h3 class="tier-name">Community Edition</h3>
-          <p class="tier-desc">Perfect for solo video editors and creators getting started with local media management and Whisper speech search.</p>
-          <div class="tier-price">
-            <span class="price-val">$0</span>
-            <span class="price-sub">Free Forever • Open SQLite Storage</span>
-          </div>
-
-          <ul class="tier-features">
-            <li>Reelay Studio hardware player (60 FPS Metal/DirectX)</li>
-            <li>Offline Whisper AI speech-to-text (On-device)</li>
-            <li>Local SQLite video archive & sub-second FTS5 search</li>
-            <li>5-stage visual Kanban publishing pipeline</li>
-            <li>Prepare to Publish manual export handoff</li>
-            <li>Standard Model Context Protocol (MCP) server</li>
-          </ul>
-
-          <a href={`${base}/#download`} class="btn btn-secondary w-full">Download Free</a>
-        </div>
-
-        <!-- Creator Studio Tier (Featured) -->
-        <div class="pricing-card featured">
-          <div class="featured-ribbon">MOST POPULAR</div>
-          <div class="tier-badge brand">PRO WORKFLOW</div>
-          <h3 class="tier-name">Creator Studio</h3>
-          <p class="tier-desc">For active creators publishing multiple short-form and long-form video cuts weekly across social platforms.</p>
-          <div class="tier-price">
-            <span class="price-val">$79</span>
-            <span class="price-sub">One-time license • Includes 1 year of updates</span>
-          </div>
-
-          <ul class="tier-features">
-            <li><strong>Everything in Community, plus:</strong></li>
-            <li>Direct API publishing to YouTube Data API v3</li>
-            <li>Direct API publishing to Meta (Instagram, FB, Threads)</li>
-            <li>Unlimited When / If / Then deterministic rules</li>
-            <li>Dynamic token templating (<code>{`{hook}`}</code>, <code>{`{caption}`}</code>)</li>
-            <li>ScopedPipeline durable approval gate requests</li>
-            <li>Hardware proxy generation for 4K AV1 & VP9</li>
-          </ul>
-
-          <a href={`${base}/#download`} class="btn btn-primary w-full">Get Creator Studio</a>
-        </div>
-
-        <!-- Studio / Agency Tier -->
-        <div class="pricing-card">
-          <div class="tier-badge amber">AGENCIES & TEAMS</div>
-          <h3 class="tier-name">Studio License</h3>
-          <p class="tier-desc">For production agencies, video teams, and managers running multiple creator channels with dedicated seats.</p>
-          <div class="tier-price">
-            <span class="price-val">$199</span>
-            <span class="price-sub">Perpetual license • 3 Workstation Seats</span>
-          </div>
-
-          <ul class="tier-features">
-            <li><strong>Everything in Creator Studio, plus:</strong></li>
-            <li>Unlimited client channel brand profiles</li>
-            <li>Bespoke brand theming engine (QSS color extractor)</li>
-            <li>Multi-channel ScopedPipeline audit logs in SQLite</li>
-            <li>Priority feature requests & compliance desk support</li>
-            <li>Custom MCP tool extensions & webhook dispatches</li>
-          </ul>
-
-          <a href="mailto:sales@reelay.app" class="btn btn-secondary w-full">Contact Studio Sales</a>
-        </div>
-      </div>
-
-      <!-- Interactive Local Savings Calculator -->
-      <section class="calculator-section" aria-label="Cloud SaaS vs Local Savings Calculator">
-        <div class="calc-box">
-          <div class="calc-header">
-            <span class="calc-badge">COST BENEFIT ANALYSIS</span>
-            <h3>How Much Are Cloud Subscriptions Costing You?</h3>
-            <p>Traditional social media dashboards charge recurring SaaS monthly fees just to hold your video cards hostage.</p>
-          </div>
-
-          <div class="calc-grid">
-            <div class="calc-col cloud-saas">
-              <span class="calc-col-title">Traditional Cloud SaaS (Buffer / Hootsuite)</span>
-              <div class="cost-figure red-text">$600 – $1,800</div>
-              <span class="cost-timeframe">EVERY YEAR • RECURRING BILLING</span>
-              <ul class="calc-points">
-                <li>✕ Videos stored in remote third-party databases</li>
-                <li>✕ 300%–500% AI token markups billed to your card</li>
-                <li>✕ Lose all catalog access the second you cancel</li>
-              </ul>
-            </div>
-
-            <div class="calc-divider">
-              <span class="vs-circle">VS</span>
-            </div>
-
-            <div class="calc-col local-reelay">
-              <span class="calc-col-title">Reelay Studio One-Time License</span>
-              <div class="cost-figure green-text">$79</div>
-              <span class="cost-timeframe">PAY ONCE • KEEP FOREVER</span>
-              <ul class="calc-points">
-                <li>✓ 100% of media and metadata stay on local NVMe disk</li>
-                <li>✓ $0 AI token markups (Bring your own API keys)</li>
-                <li>✓ Software continues working offline permanently</li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="calc-summary-banner">
-            <strong>3-Year Creator Savings: $1,721 – $5,321 saved</strong> with zero cloud database lock-in.
-          </div>
-        </div>
-      </section>
-
-      <!-- Comprehensive Feature Comparison Matrix -->
-      <section class="matrix-section" aria-label="Feature Comparison Matrix">
-        <h3 class="matrix-title">Full Capability Comparison</h3>
-        <div class="matrix-table-frame">
-          <table class="comparison-table">
-            <thead>
-              <tr>
-                <th class="th-feat">Feature / Capability</th>
-                <th class="th-tier">Community ($0)</th>
-                <th class="th-tier featured-th">Creator Studio ($79)</th>
-                <th class="th-tier">Studio License ($199)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="td-cat" colspan="4">Playback & Media Engine</td>
-              </tr>
-              <tr>
-                <td class="td-feat">60 FPS Hardware Player (Metal / DirectX)</td>
-                <td class="td-val">✓</td>
-                <td class="td-val active-val">✓</td>
-                <td class="td-val">✓</td>
-              </tr>
-              <tr>
-                <td class="td-feat">16:9 Widescreen & 9:16 Vertical Preview Modes</td>
-                <td class="td-val">✓</td>
-                <td class="td-val active-val">✓</td>
-                <td class="td-val">✓</td>
-              </tr>
-              <tr>
-                <td class="td-feat">AV1 & VP9 Lightweight Proxy Generation</td>
-                <td class="td-val">Basic</td>
-                <td class="td-val active-val">✓ Hardware Auto</td>
-                <td class="td-val">✓ Hardware Auto</td>
-              </tr>
-              <tr>
-                <td class="td-feat">yt-dlp Ingestion Engine (YT, TikTok, IG)</td>
-                <td class="td-val">✓</td>
-                <td class="td-val active-val">✓</td>
-                <td class="td-val">✓</td>
-              </tr>
-
-              <tr>
-                <td class="td-cat" colspan="4">Speech Recognition & Search</td>
-              </tr>
-              <tr>
-                <td class="td-feat">Offline OpenAI Whisper Transcription (On-Device)</td>
-                <td class="td-val">✓</td>
-                <td class="td-val active-val">✓</td>
-                <td class="td-val">✓</td>
-              </tr>
-              <tr>
-                <td class="td-feat">SQLite FTS5 Sub-Second Spoken Search</td>
-                <td class="td-val">✓</td>
-                <td class="td-val active-val">✓</td>
-                <td class="td-val">✓</td>
-              </tr>
-              <tr>
-                <td class="td-feat">Click-to-Seek Transcript Interactive Scrubbing</td>
-                <td class="td-val">✓</td>
-                <td class="td-val active-val">✓</td>
-                <td class="td-val">✓</td>
-              </tr>
-
-              <tr>
-                <td class="td-cat" colspan="4">Pipeline & Multi-Platform Publishing</td>
-              </tr>
-              <tr>
-                <td class="td-feat">5-Stage Visual Kanban Board</td>
-                <td class="td-val">✓</td>
-                <td class="td-val active-val">✓</td>
-                <td class="td-val">✓</td>
-              </tr>
-              <tr>
-                <td class="td-feat">Prepare to Publish Manual Handoff Bundle</td>
-                <td class="td-val">✓</td>
-                <td class="td-val active-val">✓</td>
-                <td class="td-val">✓</td>
-              </tr>
-              <tr>
-                <td class="td-feat">Direct API Publishing (YouTube Data API v3)</td>
-                <td class="td-val">—</td>
-                <td class="td-val active-val">✓</td>
-                <td class="td-val">✓</td>
-              </tr>
-              <tr>
-                <td class="td-feat">Direct API Publishing (Meta Graph & TikTok)</td>
-                <td class="td-val">—</td>
-                <td class="td-val active-val">✓</td>
-                <td class="td-val">✓</td>
-              </tr>
-
-              <tr>
-                <td class="td-cat" colspan="4">Automations & AI Security</td>
-              </tr>
-              <tr>
-                <td class="td-feat">When / If / Then Local Rules Engine</td>
-                <td class="td-val">3 Rules</td>
-                <td class="td-val active-val">Unlimited</td>
-                <td class="td-val">Unlimited</td>
-              </tr>
-              <tr>
-                <td class="td-feat">Dynamic Token Templating ({`{hook}`}, {`{caption}`})</td>
-                <td class="td-val">—</td>
-                <td class="td-val active-val">✓</td>
-                <td class="td-val">✓</td>
-              </tr>
-              <tr>
-                <td class="td-feat">Local MCP Server (Claude, ChatGPT, Gemini)</td>
-                <td class="td-val">✓</td>
-                <td class="td-val active-val">✓</td>
-                <td class="td-val">✓</td>
-              </tr>
-              <tr>
-                <td class="td-feat">ScopedPipeline Durable Approval Gates</td>
-                <td class="td-val">—</td>
-                <td class="td-val active-val">✓</td>
-                <td class="td-val">✓</td>
-              </tr>
-              <tr>
-                <td class="td-feat">Workstation Seats Included</td>
-                <td class="td-val">1 Seat</td>
-                <td class="td-val active-val">1 Seat</td>
-                <td class="td-val">3 Seats</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- Pricing FAQ Accordion -->
-      <section class="faq-section" aria-label="Pricing Frequently Asked Questions">
-        <h3 class="faq-title">Frequently Asked Questions</h3>
-        <div class="faq-accordion-stack">
-          <details class="faq-item" open>
-            <summary class="faq-question">What does "one-time license" mean? Will I be charged monthly?</summary>
-            <div class="faq-answer">
-              <p>No. You will never be charged a monthly or annual subscription. You pay once for Creator Studio or Studio License and own that software version forever. Your license includes 1 full year of major feature updates, and the version you have will continue working offline on your computer indefinitely.</p>
-            </div>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-question">What happens if I work on an airplane without Wi-Fi?</summary>
-            <div class="faq-answer">
-              <p>Reelay Studio is 100% local-first. Your video library, transcripts, metadata, rules, and Kanban boards reside directly in your local SQLite database on your NVMe hard drive. You can scrub video, edit captions, and run Whisper AI speech recognition with zero internet connection.</p>
-            </div>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-question">How does the 30-day money-back guarantee work?</summary>
-            <div class="faq-answer">
-              <p>If Reelay Studio does not save you hours of video operations work within your first 30 days of purchase, send a one-line email to <code>support@reelay.app</code> and we will issue a complete 100% refund immediately, no questions asked.</p>
-            </div>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-question">Do I need to pay Reelay for Claude or ChatGPT AI tokens?</summary>
-            <div class="faq-answer">
-              <p>Never. Reelay never acts as a middle-man token vendor. Reelay provides an open Model Context Protocol (MCP) server running on your computer. You connect your existing Anthropic or OpenAI subscriptions or direct API keys with zero markup.</p>
-            </div>
-          </details>
-        </div>
-      </section>
     </div>
-  </div>
+  </section>
+
+  <section class="stage stage--lift" aria-labelledby="costs-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">Why it can be</p>
+        <h2 id="costs-title" class="headline">No cloud.<br /><span class="text-silver">No cloud bill.</span></h2>
+      </header>
+      <div class="spec-rail" data-reveal>
+        <div class="spec"><span class="spec-value">$0</span><span class="spec-label"><strong>Storage</strong>Your videos and database are on your own disk.</span></div>
+        <div class="spec"><span class="spec-value">0</span><span class="spec-label"><strong>AI tokens</strong>Writing help runs on a model on your computer.</span></div>
+        <div class="spec"><span class="spec-value">0</span><span class="spec-label"><strong>Seats</strong>Share a database through a folder you already sync.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage" aria-labelledby="faq-title">
+    <div class="wrap-narrow">
+      <h2 id="faq-title" class="title" data-reveal>Questions</h2>
+      <div class="mt-2" data-reveal><Faq items={faq} /></div>
+      <p class="mt-3" data-reveal><a class="link-more" href={`${homeUrl}#download`}>All downloads</a></p>
+    </div>
+  </section>
 </BaseLayout>
 
 <style>
-  .pricing-page {
-    padding-top: clamp(3rem, 6vw, 5rem);
-    padding-bottom: clamp(5rem, 8vw, 8rem);
-  }
-
-  .page-header {
-    text-align: center;
-    max-width: 820px;
-    margin: 0 auto 3.5rem auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .badge-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.85rem;
-    background: rgba(245, 158, 11, 0.08);
-    border: 1px solid rgba(245, 158, 11, 0.28);
-    border-radius: 9999px;
-    font-family: var(--font-mono, monospace);
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: #fbbf24;
-    text-transform: uppercase;
-    margin-bottom: 1.25rem;
-  }
-
-  .pill-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #f59e0b;
-    box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
-  }
-
-  .page-title {
-    font-family: var(--font-display);
-    font-size: clamp(2.5rem, 5vw, 4.25rem);
-    font-weight: 700;
-    letter-spacing: -0.035em;
-    line-height: 1.1;
-    background: var(--text-gradient-silver);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-top: 0.5rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .page-lead {
-    font-family: var(--font-body);
-    font-size: clamp(1.15rem, 1.8vw, 1.35rem);
-    color: #a1a1aa;
-    line-height: 1.65;
-    max-width: 760px;
-  }
-
-  /* Specs Rail */
-  .specs-rail {
+  .plan {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    background: #0c0d12;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-lg, 16px);
-    margin-bottom: 4.5rem;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-    overflow: hidden;
+    gap: clamp(2rem, 5vw, 4rem);
+    padding: clamp(2rem, 5vw, 4rem);
+    border-radius: var(--radius-xl);
+    background:
+      radial-gradient(60% 80% at 0% 0%, rgba(240, 170, 60, 0.18), transparent 65%),
+      linear-gradient(180deg, #151517, #0b0b0c);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 60px 140px -50px rgba(240, 150, 40, 0.35);
   }
-
-  .spec-cell {
-    padding: 1.75rem 1.5rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    border-right: 1px solid rgba(255, 255, 255, 0.07);
+  @media (min-width: 860px) {
+    .plan { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); align-items: center; }
   }
-  .spec-cell:last-child {
-    border-right: none;
-  }
-
-  .spec-num {
-    font-family: var(--font-display);
-    font-size: 1.65rem;
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    color: #f1f2f6;
-    margin-bottom: 0.35rem;
-  }
-
-  .spec-label {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: #9496a1;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  /* Pricing Cards Grid */
-  .pricing-cards-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2rem;
-    margin-bottom: 5rem;
-  }
-
-  .pricing-card {
-    background: linear-gradient(180deg, #0e0f15 0%, #08090d 100%);
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    border-radius: var(--radius-lg, 18px);
-    padding: 2.5rem 2.25rem;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
-    transition: transform 0.2s ease, border-color 0.2s ease;
-  }
-
-  .pricing-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.2);
-  }
-
-  .pricing-card.featured {
-    border-color: rgba(245, 158, 11, 0.45);
-    background: linear-gradient(180deg, rgba(245, 158, 11, 0.06) 0%, #090a0f 100%);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(245, 158, 11, 0.12);
-  }
-
-  .featured-ribbon {
-    position: absolute;
-    top: 1.25rem;
-    right: 1.5rem;
-    background-color: #f59e0b;
-    color: #07080a;
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 0.25rem 0.65rem;
-    border-radius: 9999px;
-  }
-
-  .tier-badge {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    font-family: var(--font-mono);
-    color: #71717a;
-    letter-spacing: 0.04em;
-    margin-bottom: 0.5rem;
-  }
-  .tier-badge.brand { color: #fbbf24; }
-  .tier-badge.amber { color: #60a5fa; }
-
-  .tier-name {
-    font-family: var(--font-display);
-    font-size: 1.85rem;
-    font-weight: 700;
-    color: #f8fafc;
-    margin-bottom: 0.5rem;
-  }
-
-  .tier-desc {
-    font-size: 0.92rem;
-    color: #94a3b8;
-    line-height: 1.55;
-    margin-bottom: 1.75rem;
-    min-height: 48px;
-  }
-
-  .tier-price {
-    margin-bottom: 2rem;
-    padding-bottom: 1.75rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .price-val {
-    font-size: 3.5rem;
-    font-weight: 800;
-    color: #ffffff;
-    font-family: var(--font-display);
-    letter-spacing: -0.04em;
-    line-height: 1;
-    display: block;
-    margin-bottom: 0.35rem;
-  }
-
-  .price-sub {
-    display: block;
-    font-size: 0.8rem;
-    color: #71717a;
-    font-family: var(--font-mono);
-  }
-
-  .tier-features {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 0.85rem;
-    margin-bottom: 2.5rem;
-    flex: 1;
-    padding: 0;
-  }
-
-  .tier-features li {
-    font-size: 0.92rem;
-    color: #cbd5e1;
-    position: relative;
-    padding-left: 1.35rem;
-    line-height: 1.5;
-  }
-
-  .tier-features li::before {
-    content: "✓";
-    position: absolute;
-    left: 0;
-    color: #fbbf24;
-    font-weight: bold;
-  }
-
-  .tier-features code {
-    background-color: rgba(255, 255, 255, 0.08);
-    padding: 0.15rem 0.35rem;
-    border-radius: 4px;
-    font-family: var(--font-mono);
-    font-size: 0.88em;
-  }
-
-  .w-full {
-    width: 100%;
-    text-align: center;
-  }
-
-  /* Savings Calculator */
-  .calculator-section {
-    margin-bottom: 5rem;
-  }
-
-  .calc-box {
-    background: #0a0b10;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-lg, 18px);
-    padding: clamp(2rem, 4vw, 3.5rem);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-  }
-
-  .calc-header {
-    text-align: center;
-    max-width: 640px;
-    margin: 0 auto 3rem auto;
-  }
-
-  .calc-badge {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #fbbf24;
-    letter-spacing: 0.05em;
-  }
-
-  .calc-header h3 {
-    font-family: var(--font-display);
-    font-size: 2rem;
-    color: #f8fafc;
-    margin: 0.5rem 0 0.75rem 0;
-  }
-
-  .calc-header p {
-    font-size: 1rem;
-    color: #94a3b8;
-    margin: 0;
-  }
-
-  .calc-grid {
-    display: grid;
-    grid-template-columns: 1fr 60px 1fr;
-    gap: 1.5rem;
-    align-items: center;
-    margin-bottom: 2.5rem;
-  }
-
-  .calc-col {
-    background: #0f1017;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    padding: 2rem;
-    text-align: center;
-  }
-
-  .calc-col-title {
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: #94a3b8;
-    display: block;
-    margin-bottom: 1rem;
-  }
-
-  .cost-figure {
-    font-family: var(--font-display);
-    font-size: 3rem;
-    font-weight: 800;
-    letter-spacing: -0.04em;
-    margin-bottom: 0.25rem;
-  }
-  .red-text { color: #f87171; }
-  .green-text { color: #34d399; }
-
-  .cost-timeframe {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: #71717a;
-    display: block;
-    margin-bottom: 1.5rem;
-  }
-
-  .calc-points {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.65rem;
-    text-align: left;
-    font-size: 0.88rem;
-    color: #cbd5e1;
-  }
-
-  .calc-divider {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
-  .vs-circle {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: #14151f;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #fbbf24;
-  }
-
-  .calc-summary-banner {
-    background: rgba(52, 211, 153, 0.08);
-    border: 1px solid rgba(52, 211, 153, 0.25);
-    border-radius: 8px;
-    padding: 1rem;
-    text-align: center;
-    font-size: 1rem;
-    color: #34d399;
-  }
-
-  /* Matrix Section */
-  .matrix-section {
-    margin-bottom: 5rem;
-  }
-
-  .matrix-title {
-    font-family: var(--font-display);
-    font-size: 2rem;
-    color: #f8fafc;
-    text-align: center;
-    margin-bottom: 2rem;
-  }
-
-  .matrix-table-frame {
-    background: #090a0f;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-lg, 16px);
-    overflow: hidden;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
-  }
-
-  .comparison-table {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
-  }
-
-  .comparison-table th {
-    padding: 1.25rem 1.5rem;
-    font-family: var(--font-mono);
-    font-size: 0.82rem;
-    background: #11121a;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    color: #94a3b8;
-  }
-
-  .featured-th {
-    color: #fbbf24 !important;
-    background: #151622 !important;
-  }
-
-  .comparison-table td {
-    padding: 1rem 1.5rem;
-    font-size: 0.92rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    color: #cbd5e1;
-  }
-
-  .td-cat {
-    background: rgba(255, 255, 255, 0.02);
-    font-family: var(--font-mono);
-    font-size: 0.74rem;
-    font-weight: 700;
-    color: #fbbf24;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .td-feat {
-    font-weight: 500;
-    color: #f8fafc;
-  }
-
-  .td-val {
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    color: #94a3b8;
-  }
-
-  .td-val.active-val {
-    color: #fbbf24;
-    font-weight: 700;
-    background: rgba(245, 158, 11, 0.03);
-  }
-
-  /* FAQ Accordion */
-  .faq-section {
-    margin-bottom: 3rem;
-  }
-
-  .faq-title {
-    font-family: var(--font-display);
-    font-size: 2rem;
-    color: #f8fafc;
-    text-align: center;
-    margin-bottom: 2rem;
-  }
-
-  .faq-accordion-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    max-width: 820px;
-    margin: 0 auto;
-  }
-
-  .faq-item {
-    background: #0c0d12;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    overflow: hidden;
-    transition: border-color 0.15s ease;
-  }
-
-  .faq-item[open] {
-    border-color: rgba(245, 158, 11, 0.3);
-  }
-
-  .faq-question {
-    font-family: var(--font-display);
-    font-size: 1.15rem;
-    font-weight: 600;
-    color: #f8fafc;
-    padding: 1.25rem 1.5rem;
-    cursor: pointer;
-    list-style: none;
-    position: relative;
-  }
-
-  .faq-question::-webkit-details-marker {
-    display: none;
-  }
-
-  .faq-question::after {
-    content: "+";
-    position: absolute;
-    right: 1.5rem;
-    top: 50%;
-    transform: translateY(-50%);
-    font-family: var(--font-mono);
-    color: #fbbf24;
-    font-size: 1.25rem;
-  }
-
-  .faq-item[open] .faq-question::after {
-    content: "−";
-  }
-
-  .faq-answer {
-    padding: 0 1.5rem 1.5rem 1.5rem;
-    font-size: 0.95rem;
-    color: #94a3b8;
-    line-height: 1.65;
-  }
-
-  .faq-answer p {
-    margin: 0;
-  }
-  .faq-answer code {
-    background: rgba(255, 255, 255, 0.08);
-    padding: 0.15rem 0.35rem;
-    border-radius: 3px;
-    font-family: var(--font-mono);
-    color: #fbbf24;
-  }
-
-  @media (max-width: 960px) {
-    .specs-rail {
-      grid-template-columns: repeat(2, 1fr);
-    }
-    .spec-cell:nth-child(2) {
-      border-right: none;
-    }
-    .spec-cell:nth-child(3) {
-      border-top: 1px solid rgba(255, 255, 255, 0.07);
-    }
-    .spec-cell:nth-child(4) {
-      border-top: 1px solid rgba(255, 255, 255, 0.07);
-    }
-    .pricing-cards-grid {
-      grid-template-columns: 1fr;
-    }
-    .calc-grid {
-      grid-template-columns: 1fr;
-    }
-    .calc-divider {
-      display: none;
-    }
-    .matrix-table-frame {
-      overflow-x: auto;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .specs-rail {
-      grid-template-columns: 1fr;
-    }
-    .spec-cell {
-      border-right: none;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-    }
-    .spec-cell:last-child {
-      border-bottom: none;
-    }
-  }
+  .plan-price { display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .plan-name { font-weight: 600; color: var(--r-amber-text); }
+  .plan-amount span { display: block; font-family: var(--font-display); font-size: clamp(5rem, 12vw, 8.5rem); font-weight: 700; line-height: 0.9; letter-spacing: -0.06em; color: var(--r-ink); }
+  .plan-amount small { display: block; margin-top: 0.5rem; font-size: 1.1rem; color: var(--r-ink-3); }
+  .plan-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 0 2rem; }
+  .plan-list li { position: relative; padding: 0.8rem 0 0.8rem 1.75rem; border-top: 1px solid var(--hairline); color: var(--r-ink); font-size: 0.98rem; }
+  .plan-list li::before { content: ''; position: absolute; left: 0.15rem; top: 1.2rem; width: 0.6rem; height: 0.32rem; border-left: 2px solid var(--r-amber-text); border-bottom: 2px solid var(--r-amber-text); transform: rotate(-45deg); }
 </style>

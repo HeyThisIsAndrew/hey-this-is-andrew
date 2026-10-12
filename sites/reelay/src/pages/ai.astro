@@ -1,843 +1,207 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { SITE } from '../data/site';
+import PageHero from '../components/ui/PageHero.astro';
+import NextUp from '../components/ui/NextUp.astro';
+import { SITE, AGENT_API, href } from '../data/site';
 
-const base = import.meta.env.BASE_URL.replace(/\/?$/, '');
+/* Requests and responses follow README "Agent API" (abbreviated). */
+const examples = [
+  {
+    id: 'board',
+    label: 'Read the board',
+    req: `GET ${AGENT_API.url}/v1/board?profile=Juniper%20Lane&stage=staging\nAuthorization: Bearer $TOKEN`,
+    status: '200 OK',
+    res: `{\n  "profile": "Juniper Lane",\n  "stage": "staging",\n  "total": 2,\n  "videos": [{\n    "id": 42,\n    "title": "Golden hour at Big Sur",\n    "ready": true,\n    "readiness": { … },\n    "coverage": { … }\n  }, …]\n}`,
+    note: 'Each video comes with its copy, readiness, coverage, ticket fields, provenance and publishing history.',
+  },
+  {
+    id: 'draft',
+    label: 'Draft copy',
+    req: `PATCH ${AGENT_API.url}/v1/videos/42\n{ "threads_text": "Ten minutes of gold on the Big Sur coast." }`,
+    status: '200 OK',
+    res: `{ "id": 42, "title": "Golden hour at Big Sur", "ready": true, … }`,
+    note: 'Draft edits apply at once, are checked against every limit first, and are logged as a change by an agent. Rate-limited.',
+  },
+  {
+    id: 'schedule',
+    label: 'Ask to schedule',
+    req: `POST ${AGENT_API.url}/v1/videos/42/schedule\n{ "scheduled_at": "2026-10-20T09:00:00-07:00", "platforms": ["youtube"] }`,
+    status: '202 Accepted',
+    res: `{ "approval_id": 17, "operation": "schedule", "status": "pending", … }`,
+    note: 'Nothing happens until a person approves it on the Mac. If the video changes first, the request goes stale and isn’t done.',
+  },
+  {
+    id: 'search',
+    label: 'Search',
+    req: `GET ${AGENT_API.url}/v1/search?profile=Juniper%20Lane&q=gold`,
+    status: '200 OK',
+    res: `{\n  "query": "gold",\n  "total": 1,\n  "results": [{\n    "spoken": true,\n    "snippet": "…it is completely «gold» right now.",\n    "video": { "id": 42, … }\n  }]\n}`,
+    note: 'Full-text search of the archive, transcripts included, best results first.',
+  },
+];
+
+const lifecycle = ['pending', 'approved', 'executed', 'failed', 'stale', 'rejected', 'expired'];
 ---
 
 <BaseLayout
-  title={`AI Companion & Model Context Protocol (MCP) — ${SITE.fullName}`}
-  description="Connect Claude, ChatGPT, Gemini, and Meta Muse to your video pipeline via MCP. Zero AI token markup, ScopedPipeline security boundaries, and local offline helpers."
+  title={`Agents and the Agent API: ${SITE.fullName}`}
+  description={`Reelay's local Agent API lets AI agents read the board, draft copy and ask to schedule. Anything that posts, archives or changes many tickets waits for a person's approval. Writing help runs on a model on your own computer.`}
 >
-  <div class="ai-page">
-    <div class="container">
-      <header class="page-header">
-        <div class="badge-pill">
-          <span class="pill-dot"></span>
-          <span>OPEN PROTOCOL ARCHITECTURE</span>
-        </div>
-        <h1 class="page-title">AI Companion Ecosystem</h1>
-        <p class="page-lead">
-          Connect your favorite AI assistant to Reelay Studio via the Model Context Protocol (MCP). Zero middle-man token markups, complete privacy, and an un-bypassable human-in-the-loop security boundary.
-        </p>
-      </header>
+  <PageHero eyebrow="Agents">
+    <Fragment slot="title">Your agents can ask.<br /><span class="text-glow">You decide.</span></Fragment>
+    <Fragment slot="lede">Reelay includes a local API for AI agents and automations. An agent can read the board, draft copy and request a schedule. <strong>Nothing that posts happens until a person approves it.</strong></Fragment>
+  </PageHero>
 
-      <!-- Architecture Highlight Rail -->
-      <div class="specs-rail">
-        <div class="spec-cell">
-          <span class="spec-num">$0</span>
-          <span class="spec-label">Token Markups Billed</span>
+  <section class="stage stage--flush-top" aria-labelledby="ex-title">
+    <div class="wrap">
+      <h2 id="ex-title" class="sr-only">Example requests</h2>
+      <div class="ex" data-examples data-reveal>
+        <div class="ex-tabs" role="tablist" aria-label="Example requests">
+          {examples.map((e, i) => (
+            <button type="button" role="tab" class="ex-tab" id={`ex-tab-${e.id}`} aria-controls={`ex-panel-${e.id}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1}>{e.label}</button>
+          ))}
         </div>
-        <div class="spec-cell">
-          <span class="spec-num">127.0.0.1:4482</span>
-          <span class="spec-label">Local Loopback Bridge</span>
-        </div>
-        <div class="spec-cell">
-          <span class="spec-num">ScopedPipeline</span>
-          <span class="spec-label">Approval Gate Enforced</span>
-        </div>
-        <div class="spec-cell">
-          <span class="spec-num">100%</span>
-          <span class="spec-label">Bring Your Own Keys</span>
-        </div>
-      </div>
-
-      <!-- Interactive MCP Protocol Console -->
-      <section class="mcp-console-section" aria-label="Interactive MCP Protocol Console">
-        <div class="console-top-bar">
-          <div class="console-status">
-            <span class="live-dot"></span>
-            <span class="console-title-text">MCP RUNTIME CONSOLE • 127.0.0.1:4482</span>
-          </div>
-          <span class="protocol-version">PROTOCOL SPEC: 2024-11-05</span>
-        </div>
-
-        <div class="mcp-window-frame">
-          <div class="window-top-bar">
-            <div class="traffic-lights">
-              <span class="light red"></span>
-              <span class="light yellow"></span>
-              <span class="light green"></span>
+        {examples.map((e, i) => (
+          <div class="ex-panel" role="tabpanel" id={`ex-panel-${e.id}`} aria-labelledby={`ex-tab-${e.id}`} hidden={i !== 0}>
+            <div class="ex-term">
+              <pre class="ex-req"><code>{e.req}</code></pre>
+              <p class:list={['ex-status', { wait: e.status.startsWith('202') }]}>{e.status}</p>
+              <pre class="ex-res"><code>{e.res}</code></pre>
             </div>
-            <span class="window-label">Reelay Studio — Model Context Protocol Server Bridge</span>
-            <span class="window-status">LISTENING • LOCAL ONLY</span>
+            <p class="ex-note">{e.note}</p>
           </div>
-
-          <div class="mcp-console-grid">
-            <!-- Left: Assistant Selector & Config -->
-            <div class="console-config-col">
-              <div class="assistant-tab-strip">
-                <button type="button" class="assistant-tab active" id="tab-claude" aria-pressed="true">Claude Desktop</button>
-                <button type="button" class="assistant-tab" id="tab-chatgpt" aria-pressed="false">ChatGPT / OpenAI</button>
-                <button type="button" class="assistant-tab" id="tab-gemini" aria-pressed="false">Google Gemini</button>
-                <button type="button" class="assistant-tab" id="tab-muse" aria-pressed="false">Meta Muse</button>
-              </div>
-
-              <div class="config-view-box">
-                <span class="config-filename">claude_desktop_config.json</span>
-                <pre class="json-code"><code>{`{
-  "mcpServers": {
-    "reelay": {
-      "command": "/Applications/Reelay.app/Contents/MacOS/reelay-mcp",
-      "args": ["--port", "4482"],
-      "env": {
-        "REELAY_DB": "~/Library/Application Support/reelay/app.db"
-      }
-    }
-  }
-}`}</code></pre>
-              </div>
-
-              <div class="tool-capabilities-list">
-                <span class="caps-label">EXPOSED MCP TOOLS (READ-ONLY BY DEFAULT):</span>
-                <div class="tool-pill"><code>reelay_get_pipeline_cards</code> Inspect staged video cuts</div>
-                <div class="tool-pill"><code>reelay_query_transcripts</code> Search Whisper speech text</div>
-                <div class="tool-pill"><code>reelay_propose_caption</code> Draft platform copy variation</div>
-              </div>
-            </div>
-
-            <!-- Right: ScopedPipeline Human-in-the-Loop Simulation -->
-            <div class="console-gate-col">
-              <div class="gate-header">
-                <span class="gate-badge">SECURITY BOUNDARY TEST</span>
-                <h4>ScopedPipeline Approval Gate</h4>
-                <p>When an AI agent invokes an action modifying accounts or publishing media, execution halts until human approval.</p>
-              </div>
-
-              <!-- Simulated Approval Request Modal -->
-              <div class="sim-approval-dialog">
-                <div class="dialog-header">
-                  <span class="shield-icon">🛡️</span>
-                  <div>
-                    <h5 class="dialog-title">Pending Human Approval Request</h5>
-                    <span class="req-id">REQUEST ID: req_9f82c4 • YouTube Data API</span>
-                  </div>
-                </div>
-
-                <div class="dialog-body">
-                  <div class="dialog-row">
-                    <span class="row-label">Action:</span>
-                    <strong>Publish Video: 2026-10-interview-clip-04.mp4</strong>
-                  </div>
-                  <div class="dialog-row">
-                    <span class="row-label">Target Channel:</span>
-                    <span>@AndrewTechOps (Verified YouTube OAuth)</span>
-                  </div>
-                  <div class="dialog-row">
-                    <span class="row-label">Proposed Title:</span>
-                    <span>"Stop organizing video in spreadsheets 🚀"</span>
-                  </div>
-                </div>
-
-                <div class="dialog-actions">
-                  <button type="button" class="dialog-btn btn-reject">Reject Action</button>
-                  <button type="button" class="dialog-btn btn-approve">✓ Authorize Publish</button>
-                </div>
-
-                <div class="dialog-guarantee">
-                  <span>Enforced by SQLite Foreign Key Constraint <code>approval_status = 'AUTHORIZED'</code></span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Deep Dive Architectural Content -->
-      <div class="deep-dive-content">
-        <h2>1. The Model Context Protocol (MCP) Integration</h2>
-        <p>
-          Instead of locking you into a proprietary in-app AI chat with high monthly subscription fees and token surveillance, Reelay Studio operates as a standardized <strong>MCP Server</strong> running entirely on your local machine (e.g., <code>127.0.0.1:4482</code>).
-        </p>
-        <p>
-          You can connect any modern AI assistant directly through open protocols:
-        </p>
-        <div class="assistants-grid">
-          <div class="assistant-card card">
-            <h4>Anthropic Claude</h4>
-            <p>Connect Claude Desktop or Claude Code via native MCP configuration in seconds to draft tailored captions and analyze hooks.</p>
-          </div>
-          <div class="assistant-card card">
-            <h4>ChatGPT / OpenAI</h4>
-            <p>Inspect project transcripts and draft multi-platform captions via local tool calls without exporting raw footage.</p>
-          </div>
-          <div class="assistant-card card">
-            <h4>Google Gemini</h4>
-            <p>Analyze long-form video structures, suggest chapter timestamps, and generate YouTube SEO descriptions.</p>
-          </div>
-          <div class="assistant-card card">
-            <h4>Meta Muse</h4>
-            <p>Tailor creative reels hooks and music pairing suggestions directly on desktop with zero latency.</p>
-          </div>
-        </div>
-
-        <h2>2. Zero AI Token Markup Guarantee</h2>
-        <div class="compliance-box">
-          <h3 class="compliance-box-title">Why Pay Middle-Man Token Markups?</h3>
-          <p>
-            Traditional social media SaaS dashboards mark up AI tokens by 300% to 500% to justify expensive monthly subscription tiers. 
-            <strong>Reelay never sells, meters, or bills for AI tokens.</strong> You bring your existing assistant subscriptions or direct API keys. Reelay provides the local bridge completely free.
-          </p>
-        </div>
-
-        <h2 id="security-boundary">3. The ScopedPipeline Security Boundary</h2>
-        <p>
-          Autonomous agents should assist you—not make dangerous assumptions with your channel reputation, social accounts, or raw media assets. Reelay Studio enforces an un-bypassable security boundary:
-        </p>
-        <div class="pipeline-card card">
-          <div class="pipeline-header">
-            <span class="badge-pill mini">SQLITE FOREIGN KEY ENFORCED</span>
-            <h4>Durable Approval Requests</h4>
-          </div>
-          <p>
-            When an external AI agent invokes tools to schedule a post, publish to YouTube, or delete video files, the action is blocked from executing immediately.
-          </p>
-          <p>
-            Instead, Reelay creates a durable <code>approval_request</code> record in your local SQLite database and surfaces an explicit confirmation modal in the desktop app. <strong>Nothing publishes until you physically review and click Approve.</strong>
-          </p>
-        </div>
-
-        <h2>4. Local Token-Free Writing Helpers</h2>
-        <p>
-          Prefer not to use third-party cloud AI at all? Reelay Studio includes offline text utilities that require zero internet connection:
-        </p>
-        <ul class="helpers-list">
-          <li><strong>Brand Voice Profiles:</strong> Store reusable tone guidelines, author bios, and signatory tags in local SQLite tables.</li>
-          <li><strong>Hashtag Formatters:</strong> Auto-cleans and validates hashtag counts against platform limits (e.g. 30 on Instagram, 5 recommended on Shorts).</li>
-          <li><strong>Offline Whisper Insights:</strong> Analyzes speech pacing, words-per-minute, and hook length without calling external APIs.</li>
-        </ul>
-
-        <div class="cta-box">
-          <h3>Supercharge Your Desktop Video Workflow</h3>
-          <p>Download Reelay Studio and connect your AI assistant using open protocol tools.</p>
-          <a href={`${base}/#download`} class="btn btn-primary">Download Reelay Studio</a>
-        </div>
+        ))}
       </div>
     </div>
-  </div>
+  </section>
+
+  <section class="stage stage--lift" aria-labelledby="connect-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">Connecting</p>
+        <h2 id="connect-title" class="headline">One address.<br /><span class="text-silver">On your machine.</span></h2>
+        <p class="lede">The API starts when Reelay opens and stops when it quits. Its machine-readable description is served at <code>/openapi.json</code> (OpenAPI 3.1), which agent frameworks such as Claude, Gemini and Antigravity can turn into tools directly.</p>
+      </header>
+      <div class="spec-rail" data-reveal>
+        <div class="spec"><span class="spec-value spec-value--sm">{AGENT_API.host}</span><span class="spec-label"><strong>Listens locally</strong>Port {AGENT_API.port}. A network address only if you set it and allow it.</span></div>
+        <div class="spec"><span class="spec-value spec-value--sm">Bearer</span><span class="spec-label"><strong>A key from your keychain</strong>Settings → AI agents shows the address, Copy Access Key and Make a New Key….</span></div>
+        <div class="spec"><span class="spec-value spec-value--sm">3.1</span><span class="spec-label"><strong>OpenAPI</strong>The contract is generated from the code and tested against the live server.</span></div>
+      </div>
+      <div class="feature-grid mt-4" data-reveal>
+        <div class="feature"><h3>Without the window</h3><p>Run <code>python -m reelay.api</code> on a server or for testing. The scheduler that posts to Bluesky and Threads runs too.</p></div>
+        <div class="feature"><h3>Agents somewhere else</h3><p>Point a Cloudflare Tunnel at the API. Every call still needs the key, and Reelay sends no CORS headers: it’s for server-to-server calls.</p></div>
+        <div class="feature"><h3>Off switch</h3><p>Set <code>REELAY_API_DISABLED=1</code> and the API doesn’t start.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage" id="security-boundary" aria-labelledby="sec-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">Approvals</p>
+        <h2 id="sec-title" class="headline">A person holds<br /><span class="text-silver">the publish button.</span></h2>
+        <p class="lede">Anything that posts, archives, or changes many tickets at once <strong>needs a person’s approval</strong>. The request is checked straight away, stored, and answered with an approval ID. Agents can read what happened to it. They can’t approve it.</p>
+      </header>
+      <div class="lifecycle" data-reveal aria-label="Approval statuses">
+        {lifecycle.map((s) => <span class:list={['lc', `lc--${s}`]}>{s}</span>)}
+      </div>
+      <div class="feature-grid mt-4" data-reveal>
+        <div class="feature"><h3>Needs approval</h3><p>Scheduling, applying a sheet import, bulk updates, archiving, removing a source, ticking a platform as scheduled or posted, recording a manual post, and resolving an interrupted send.</p></div>
+        <div class="feature"><h3>Applies at once</h3><p>Draft edits, restoring an earlier value, filling from the original post, fetching a transcript, and saving a source. Rate-limited, and every change is logged with the agent as its author.</p></div>
+        <div class="feature"><h3>Approving, today</h3><p>On the Mac, with <code>python -m reelay.approvals list</code>, <code>show</code>, <code>approve</code> or <code>reject</code>. The running app then carries it out.</p></div>
+        <div class="feature"><h3>Captions are data</h3><p>Text from the internet is never treated as an instruction. A rule will not schedule copy an agent supplied; that waits for a person too.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage stage--lift" id="writing-help" aria-labelledby="wh-title">
+    <div class="wrap">
+      <div class="split">
+        <div data-reveal>
+          <p class="eyebrow">Writing help</p>
+          <h2 id="wh-title" class="title">AI that runs on your computer.</h2>
+          <p class="lede">The Assist menu on every caption checks spelling and grammar, and rewrites through a small model on your own machine: <strong>Ollama, or llama.cpp with a .gguf file.</strong> Brand-voice profiles set the tone, words to avoid and default hashtags.</p>
+          <p class="lede mt-1">Rewrites are suggestions. They’re never saved by themselves, and never shortened to fit. <strong>No paid AI, no tokens.</strong></p>
+        </div>
+        <ul class="wh-list" data-reveal style="--reveal-delay:.08s">
+          <li><strong>Spelling and grammar</strong><span>Built in, or LanguageTool fully offline when installed</span></li>
+          <li><strong>Rewrites</strong><span>Ollama at 127.0.0.1:11434, or llama.cpp</span></li>
+          <li><strong>Brand voice</strong><span>Tone, words to avoid, hashtags, guidance</span></li>
+          <li><strong>SEO suggestions</strong><span>From YouTube’s own search suggestions, with a score for the title and tags</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage stage--tight" aria-labelledby="mcp-title">
+    <div class="wrap-narrow center" data-reveal>
+      <p class="eyebrow">Coming later</p>
+      <h2 id="mcp-title" class="subtitle">Model Context Protocol</h2>
+      <p class="mt-1">An MCP endpoint is planned, built on the same approval boundary as the API so an MCP client gets exactly the same limits. It isn’t in the app yet; the Agent API is how agents connect today.</p>
+    </div>
+  </section>
+
+  <NextUp kicker="Next" title="Pricing" href={href('/pricing')} />
 </BaseLayout>
 
-<script>
-  // Simple tab switcher for MCP config
-  const tabClaude = document.getElementById('tab-claude');
-  const tabChatGPT = document.getElementById('tab-chatgpt');
-  const tabGemini = document.getElementById('tab-gemini');
-  const tabMuse = document.getElementById('tab-muse');
-  const codeBlock = document.querySelector('.json-code code');
-  const configFilename = document.querySelector('.config-filename');
-
-  const configs: Record<string, { file: string; json: string }> = {
-    claude: {
-      file: "claude_desktop_config.json",
-      json: `{\n  "mcpServers": {\n    "reelay": {\n      "command": "/Applications/Reelay.app/Contents/MacOS/reelay-mcp",\n      "args": ["--port", "4482"],\n      "env": {\n        "REELAY_DB": "~/Library/Application Support/reelay/app.db"\n      }\n    }\n  }\n}`
-    },
-    chatgpt: {
-      file: "chatgpt_tools.json",
-      json: `{\n  "name": "reelay_local_assistant",\n  "transport": "sse",\n  "endpoint": "http://127.0.0.1:4482/events",\n  "tools": ["get_transcripts", "stage_caption"]\n}`
-    },
-    gemini: {
-      file: "gemini_agent_config.json",
-      json: `{\n  "server_uri": "http://localhost:4482",\n  "schema_version": "2024-11-05",\n  "require_approval": true\n}`
-    },
-    muse: {
-      file: "meta_muse_bridge.json",
-      json: `{\n  "bridge_mode": "local_loopback",\n  "listen_port": 4482,\n  "sandbox": "desktop_keychain_protected"\n}`
-    }
-  };
-
-  function setTab(name: string, activeBtn: HTMLElement | null) {
-    [tabClaude, tabChatGPT, tabGemini, tabMuse].forEach(b => {
-      b?.classList.remove('active');
-      b?.setAttribute('aria-pressed', 'false');
-    });
-    activeBtn?.classList.add('active');
-    activeBtn?.setAttribute('aria-pressed', 'true');
-    if (codeBlock && configFilename && configs[name]) {
-      configFilename.textContent = configs[name].file;
-      codeBlock.textContent = configs[name].json;
-    }
-  }
-
-  tabClaude?.addEventListener('click', () => setTab('claude', tabClaude));
-  tabChatGPT?.addEventListener('click', () => setTab('chatgpt', tabChatGPT));
-  tabGemini?.addEventListener('click', () => setTab('gemini', tabGemini));
-  tabMuse?.addEventListener('click', () => setTab('muse', tabMuse));
-</script>
-
 <style>
-  .ai-page {
-    padding-top: clamp(3rem, 6vw, 5rem);
-    padding-bottom: clamp(5rem, 8vw, 8rem);
-  }
-
-  .page-header {
-    text-align: center;
-    max-width: 820px;
-    margin: 0 auto 3.5rem auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .badge-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.85rem;
-    background: rgba(245, 158, 11, 0.08);
-    border: 1px solid rgba(245, 158, 11, 0.28);
-    border-radius: 9999px;
-    font-family: var(--font-mono, monospace);
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: #fbbf24;
-    text-transform: uppercase;
-    margin-bottom: 1.25rem;
-  }
-  .badge-pill.mini {
-    font-size: 0.65rem;
-    padding: 0.2rem 0.55rem;
-    margin-bottom: 0;
-  }
-
-  .pill-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #f59e0b;
-    box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
-  }
-
-  .page-title {
-    font-family: var(--font-display);
-    font-size: clamp(2.5rem, 5vw, 4.25rem);
-    font-weight: 700;
-    letter-spacing: -0.035em;
-    line-height: 1.1;
-    background: var(--text-gradient-silver);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-top: 0.5rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .page-lead {
-    font-family: var(--font-body);
-    font-size: clamp(1.15rem, 1.8vw, 1.35rem);
-    color: #a1a1aa;
-    line-height: 1.65;
-    max-width: 800px;
-  }
-
-  /* Specs Rail */
-  .specs-rail {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    background: #0c0d12;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-lg, 16px);
-    margin-bottom: 4.5rem;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-    overflow: hidden;
-  }
-
-  .spec-cell {
-    padding: 1.75rem 1.5rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    border-right: 1px solid rgba(255, 255, 255, 0.07);
-  }
-  .spec-cell:last-child {
-    border-right: none;
-  }
-
-  .spec-num {
-    font-family: var(--font-display);
-    font-size: 1.65rem;
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    color: #f1f2f6;
-    margin-bottom: 0.35rem;
-  }
-
-  .spec-label {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: #9496a1;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  /* MCP Console Frame */
-  .mcp-console-section {
-    margin-bottom: 5rem;
-  }
-
-  .console-top-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-  }
-
-  .console-status {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .live-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #34d399;
-    box-shadow: 0 0 8px #34d399;
-  }
-
-  .console-title-text {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #cbd5e1;
-    letter-spacing: 0.05em;
-  }
-
-  .protocol-version {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: #71717a;
-  }
-
-  .mcp-window-frame {
-    background: #090a0f;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: var(--radius-lg, 16px);
-    overflow: hidden;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
-  }
-
-  .window-top-bar {
-    background: #11121a;
-    padding: 0.75rem 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .traffic-lights {
-    display: flex;
-    gap: 0.4rem;
-  }
-
-  .light {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-  }
-  .light.red { background-color: #ff5f56; }
-  .light.yellow { background-color: #ffbd2e; }
-  .light.green { background-color: #27c93f; }
-
-  .window-label {
-    font-family: var(--font-mono);
-    font-size: 0.76rem;
-    color: #94a3b8;
-  }
-
-  .window-status {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: #34d399;
-    background: rgba(52, 211, 153, 0.12);
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-  }
-
-  .mcp-console-grid {
-    display: grid;
-    grid-template-columns: 1.15fr 1fr;
-    background: #06070a;
-  }
-
-  .console-config-col {
-    padding: 1.75rem;
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-
-  .assistant-tab-strip {
-    display: flex;
-    gap: 0.4rem;
-    background: rgba(255, 255, 255, 0.03);
-    padding: 0.25rem;
-    border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    overflow-x: auto;
-  }
-
-  .assistant-tab {
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    font-weight: 600;
-    padding: 0.4rem 0.75rem;
-    border-radius: 4px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.15s ease;
-  }
-  .assistant-tab.active {
-    background: rgba(255, 255, 255, 0.12);
-    color: #f8fafc;
-  }
-
-  .config-view-box {
-    background: #0b0c12;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    padding: 1rem;
-  }
-
-  .config-filename {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: #fbbf24;
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-
-  .json-code {
-    margin: 0;
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    color: #cbd5e1;
-    line-height: 1.5;
-    overflow-x: auto;
-  }
-
-  .tool-capabilities-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
-  }
-
-  .caps-label {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: #71717a;
-    font-weight: 700;
-    margin-bottom: 0.25rem;
-  }
-
-  .tool-pill {
-    font-size: 0.82rem;
-    color: #94a3b8;
-    background: rgba(255, 255, 255, 0.02);
-    padding: 0.35rem 0.65rem;
-    border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-  }
-  .tool-pill code {
-    font-family: var(--font-mono);
-    color: #fbbf24;
-    font-size: 0.9em;
-  }
-
-  /* Right: ScopedPipeline Simulation */
-  .console-gate-col {
-    padding: 1.75rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
-
-  .gate-header h4 {
-    font-family: var(--font-display);
-    font-size: 1.35rem;
-    color: #f8fafc;
-    margin: 0.35rem 0 0.5rem 0;
-  }
-
-  .gate-header p {
-    font-size: 0.88rem;
-    color: #94a3b8;
-    line-height: 1.55;
-    margin: 0 0 1.5rem 0;
-  }
-
-  .gate-badge {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: #fbbf24;
-    letter-spacing: 0.04em;
-  }
-
-  .sim-approval-dialog {
-    background: #0f1018;
-    border: 1px solid rgba(245, 158, 11, 0.4);
-    border-radius: 12px;
-    padding: 1.25rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  }
-
-  .dialog-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  }
-
-  .shield-icon {
-    font-size: 1.4rem;
-  }
-
-  .dialog-title {
-    font-family: var(--font-display);
-    font-size: 1rem;
-    color: #f8fafc;
-    margin: 0;
-  }
-
-  .req-id {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: #fbbf24;
-  }
-
-  .dialog-body {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .dialog-row {
-    font-size: 0.82rem;
-    display: flex;
-    justify-content: space-between;
-    color: #cbd5e1;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    padding-bottom: 0.35rem;
-  }
-  .dialog-row .row-label {
-    color: #71717a;
-  }
-  .dialog-row strong {
-    color: #ffffff;
-  }
-
-  .dialog-actions {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .dialog-btn {
-    flex: 1;
-    padding: 0.55rem;
-    border-radius: 6px;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    font-weight: 700;
-    cursor: pointer;
-    border: none;
-    transition: all 0.15s ease;
-  }
-  .btn-reject {
-    background: rgba(239, 68, 68, 0.15);
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-  }
-  .btn-approve {
-    background: #f59e0b;
-    color: #07080a;
-  }
-
-  .dialog-guarantee {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    color: #64748b;
-    text-align: center;
-  }
-  .dialog-guarantee code {
-    color: #cbd5e1;
-  }
-
-  /* Deep Dive Content */
-  .deep-dive-content {
-    color: #cbd5e1;
-    font-size: 1.05rem;
-    line-height: 1.75;
-  }
-
-  .deep-dive-content h2 {
-    font-family: var(--font-display);
-    font-size: 1.75rem;
-    color: #f8fafc;
-    margin-top: 3.5rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .assistants-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-    margin: 1.75rem 0 3rem 0;
-  }
-
-  .assistant-card {
-    background: #0c0d12;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-md, 12px);
-    padding: 1.75rem;
-  }
-
-  .assistant-card h4 {
-    font-family: var(--font-display);
-    color: #f8fafc;
-    font-size: 1.15rem;
-    margin-top: 0;
-    margin-bottom: 0.5rem;
-  }
-
-  .assistant-card p {
-    font-size: 0.92rem;
-    color: #94a3b8;
-    line-height: 1.55;
-    margin: 0;
-  }
-
-  .compliance-box {
-    background: linear-gradient(180deg, #12131b 0%, #0c0d12 100%);
-    border: 1px solid rgba(245, 158, 11, 0.3);
-    border-radius: var(--radius-md, 12px);
-    padding: 2rem;
-    margin: 2rem 0 3rem 0;
-  }
-
-  .compliance-box-title {
-    font-family: var(--font-display);
-    color: #fbbf24;
-    font-size: 1.25rem;
-    margin-top: 0;
-    margin-bottom: 0.75rem;
-  }
-
-  .compliance-box p {
-    font-size: 0.98rem;
-    color: #d1d5db;
-    line-height: 1.65;
-    margin: 0;
-  }
-
-  .pipeline-card {
-    background-color: #0c0d12;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-left: 3px solid #f59e0b;
-    border-radius: var(--radius-md, 12px);
-    padding: 2rem;
-    margin: 1.75rem 0 3rem 0;
-  }
-
-  .pipeline-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-  }
-
-  .pipeline-header h4 {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: 1.25rem;
-    color: #f8fafc;
-  }
-
-  .helpers-list {
-    margin-bottom: 2.5rem;
-    padding-left: 1.5rem;
-  }
-
-  .helpers-list li {
-    margin-bottom: 0.75rem;
-  }
-
-  .cta-box {
-    background: linear-gradient(180deg, #101118 0%, #08090d 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-lg, 16px);
-    padding: 3rem 2rem;
-    text-align: center;
-    margin-top: 4.5rem;
-  }
-
-  .cta-box h3 {
-    font-family: var(--font-display);
-    font-size: 1.85rem;
-    color: #f8fafc;
-    margin-bottom: 0.75rem;
-  }
-
-  .cta-box p {
-    font-size: 1.05rem;
-    color: #94a3b8;
-    margin-bottom: 2rem;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  @media (max-width: 960px) {
-    .specs-rail {
-      grid-template-columns: repeat(2, 1fr);
-    }
-    .spec-cell:nth-child(2) {
-      border-right: none;
-    }
-    .spec-cell:nth-child(3) {
-      border-top: 1px solid rgba(255, 255, 255, 0.07);
-    }
-    .spec-cell:nth-child(4) {
-      border-top: 1px solid rgba(255, 255, 255, 0.07);
-    }
-    .mcp-console-grid {
-      grid-template-columns: 1fr;
-    }
-    .console-config-col {
-      border-right: none;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .assistants-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .specs-rail {
-      grid-template-columns: 1fr;
-    }
-    .spec-cell {
-      border-right: none;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-    }
-    .spec-cell:last-child {
-      border-bottom: none;
-    }
-  }
+  .ex {
+    max-width: 58rem;
+    margin: 0 auto;
+    padding: clamp(1rem, 3vw, 2rem);
+    border-radius: var(--radius-xl);
+    background: radial-gradient(70% 50% at 50% 0%, rgba(240, 170, 60, 0.12), transparent 70%), linear-gradient(180deg, #151517, #0b0b0c);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 50px 120px -40px rgba(0, 0, 0, 0.9);
+  }
+  .ex-tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.25rem; }
+  .ex-tab { min-height: 40px; padding: 0 1rem; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.07); color: var(--r-ink-2); font-size: 0.92rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; }
+  .ex-tab:hover { color: var(--r-ink); }
+  .ex-tab[aria-selected='true'] { background: var(--r-ink); color: #000; }
+  .ex-panel[hidden] { display: none; }
+  .ex-term { border-radius: 18px; background: #060607; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); overflow: hidden; }
+  .ex-term pre { margin: 0; padding: 1.1rem 1.25rem; overflow-x: auto; font-size: 0.86rem; line-height: 1.65; }
+  .ex-req { color: var(--r-ink); }
+  .ex-res { color: var(--r-ink-2); border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .ex-status { padding: 0.6rem 1.25rem 0; font-family: var(--font-mono); font-size: 0.82rem; color: #5fe08a; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .ex-status.wait { color: var(--r-amber-text); }
+  .ex-note { margin-top: 1rem; font-size: 0.95rem; color: var(--r-ink-3); }
+
+  .spec-value--sm { font-size: clamp(1.6rem, 3vw, 2.4rem); letter-spacing: -0.03em; }
+  .lede code, .feature code, .wrap-narrow code { font-size: 0.85em; color: var(--r-ink); }
+
+  .lifecycle { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .lc { padding: 0.55rem 1rem; border-radius: 999px; font-family: var(--font-mono); font-size: 0.88rem; background: rgba(255, 255, 255, 0.06); color: var(--r-ink-2); }
+  .lc--pending { background: rgba(240, 180, 76, 0.16); color: var(--r-amber-text); }
+  .lc--approved, .lc--executed { background: rgba(48, 209, 88, 0.14); color: #5fe08a; }
+  .lc--failed, .lc--rejected { background: rgba(255, 69, 58, 0.14); color: #ff7a70; }
+
+  .wh-list { list-style: none; }
+  .wh-list li { display: grid; gap: 0.25rem; padding: 1.1rem 0; border-top: 1px solid var(--hairline); }
+  .wh-list li:last-child { border-bottom: 1px solid var(--hairline); }
+  .wh-list strong { font-size: 1.1rem; }
+  .wh-list span { color: var(--r-ink-3); }
 </style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-examples]').forEach((root) => {
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('.ex-tab'));
+    const select = (i: number, focus = false) => {
+      tabs.forEach((t, j) => {
+        const on = i === j;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        const p = document.getElementById(t.getAttribute('aria-controls') || '');
+        if (p) p.hidden = !on;
+      });
+      if (focus) tabs[i].focus();
+    };
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => select(i));
+      t.addEventListener('keydown', (e) => {
+        const last = tabs.length - 1;
+        const next = e.key === 'ArrowRight' ? (i === last ? 0 : i + 1) : e.key === 'ArrowLeft' ? (i === 0 ? last : i - 1) : e.key === 'Home' ? 0 : e.key === 'End' ? last : -1;
+        if (next >= 0) { e.preventDefault(); select(next, true); }
+      });
+    });
+  });
+</script>

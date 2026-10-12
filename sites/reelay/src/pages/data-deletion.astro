@@ -1,276 +1,108 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { SITE } from '../data/site';
+import { SITE, DATA_PATHS, href } from '../data/site';
 
-const lastUpdated = 'October 11, 2026';
+const lastUpdated = 'October 12, 2026';
+const toc = [
+  ['meta-compliance', 'Statement'],
+  ['disconnect', '1. Disconnect an account'],
+  ['delete-profile', '2. Delete a profile'],
+  ['delete-everything', '3. Remove everything'],
+  ['revoke', '4. Revoke from the platform'],
+  ['confirmation', 'Confirmation'],
+];
 ---
 
 <BaseLayout
-  title={`User Data Deletion Instructions — ${SITE.fullName}`}
-  description="Meta/Facebook and third-party platform user data deletion instructions for Reelay Studio. Learn how to immediately wipe your local tokens and SQLite data."
+  title={`User Data Deletion Instructions: ${SITE.fullName}`}
+  description="How to delete every piece of data Reelay holds about your Instagram, Facebook, Threads, YouTube, TikTok and Bluesky accounts. It is all on your own computer, and removing it takes effect immediately."
 >
-  <div class="legal-page">
-    <div class="container container-narrow">
-      <header class="legal-header">
-        <div class="badge badge-brand">Platform Compliance Notice</div>
-        <h1 class="legal-title">User Data Deletion Instructions</h1>
-        <p class="legal-meta">Compliance: Meta Platform Terms & Google API Limited Use • Last Updated: {lastUpdated}</p>
-      </header>
+  <header class="doc-hero">
+    <div class="wrap">
+      <p class="eyebrow">Legal</p>
+      <h1>User Data Deletion</h1>
+      <p class="lede">Everything Reelay keeps about your accounts is on your own computer, so you can delete it yourself, at once. <strong>Here is how, step by step.</strong></p>
+      <p class="doc-meta">Last updated {lastUpdated} · For Meta Platform Terms and Google API Services User Data Policy</p>
+    </div>
+  </header>
 
-      <!-- Primary Meta Platform Disclosure -->
-      <div class="compliance-box" id="meta-compliance">
-        <h3 class="compliance-box-title">Official Meta Data Deletion Statement</h3>
-        <p class="official-statement">
-          <strong>"Reelay does not store your social account data on cloud servers. All account tokens and drafts reside entirely in your local SQLite database on your device. To delete all associated data, open Reelay Settings → Accounts → Disconnect, or delete your local profile folder located at <code>~/Library/Application Support/reelay</code>."</strong>
-        </p>
+  <div class="wrap doc-layout">
+    <nav class="doc-toc" aria-label="On this page">
+      <div>
+        <p>On this page</p>
+        <ol>{toc.map(([id, label]) => <li><a href={`#${id}`}>{label}</a></li>)}</ol>
       </div>
+    </nav>
 
-      <div class="legal-content">
-        <h2>Overview: Why We Don't Hold Your Data</h2>
-        <p>
-          Unlike centralized social media SaaS dashboards that maintain multi-tenant cloud databases of user tokens, posts, and analytics, <strong>Reelay Studio is 100% local-first software</strong>.
-        </p>
-        <p>
-          We do not host or operate any central database containing your Facebook, Instagram, Threads, YouTube, or TikTok profile data, access tokens, or media drafts. Because your data never leaves your workstation, you maintain sovereign control over your information at all times.
-        </p>
+    <div class="legal-content">
+      <section id="meta-compliance" class="doc-summary">
+        <h2>Data deletion statement</h2>
+        <p class="statement">Reelay does not store your social account data on cloud servers. Your account tokens are kept in your computer’s keychain, and your drafts and account details in Reelay’s database on your computer. To delete them, click <strong>Disconnect</strong> on the account under <strong>Accounts</strong> in Reelay, or delete the Reelay data folder at <code>{DATA_PATHS.mac}</code> (Mac) or <code>{DATA_PATHS.windows}</code> (Windows).</p>
+      </section>
 
-        <h2>Methods to Delete or Purge Your Data</h2>
-        <p>You can completely delete your data using any of the methods outlined below:</p>
+      <section id="disconnect">
+        <h2>1. Disconnect an account</h2>
+        <p>The quickest way to remove one platform account (Instagram, Facebook Page, Threads, YouTube, TikTok or Bluesky):</p>
+        <ol>
+          <li>Open Reelay and click <strong>Accounts</strong> in the sidebar.</li>
+          <li>Find the account’s card and click <strong>Disconnect</strong>.</li>
+        </ol>
+        <p>What happens straight away:</p>
+        <ul>
+          <li>Reelay asks the platform to revoke the access token where it can: Google’s revocation endpoint for YouTube, and the platform’s own revocation for accounts you signed in to with Reelay’s app.</li>
+          <li>The token is deleted from the macOS Keychain or Windows Credential Manager.</li>
+          <li>The account (its name, ID and picture) is removed from Reelay’s database.</li>
+        </ul>
+        <p>If the same account is connected to another profile, it stays connected there until you disconnect it there too. Videos and tickets you made stay on your computer until you delete them with method 2 or 3.</p>
+      </section>
 
-        <!-- Method 1 -->
-        <div class="method-card">
-          <div class="method-header">
-            <span class="step-badge">Method 1</span>
-            <h3>In-App Account Disconnection (Instant Token & Cache Purge)</h3>
-          </div>
-          <p>This is the fastest method to remove external platform credentials:</p>
-          <ol>
-            <li>Launch <strong>Reelay Studio</strong> on your desktop.</li>
-            <li>Click the <strong>Settings</strong> icon (bottom-left gear icon or <code>Cmd+,</code> / <code>Ctrl+,</code>).</li>
-            <li>Select the <strong>Accounts</strong> tab from the sidebar.</li>
-            <li>Locate the account you wish to remove (e.g., Facebook, Instagram, YouTube, TikTok).</li>
-            <li>Click the red <strong>"Disconnect"</strong> button.</li>
-          </ol>
-          <div class="action-result">
-            <strong>What happens immediately:</strong>
-            <ul>
-              <li>The desktop app contacts the provider's OAuth revocation endpoint to invalidate your active tokens.</li>
-              <li>OAuth tokens and credentials are deleted immediately from your operating system's native secure keychain (macOS Keychain or Windows Credential Manager).</li>
-              <li>Associated account metadata, tokens, and channel identifiers are deleted from your local SQLite database (<code>app.db</code>).</li>
-            </ul>
-          </div>
-        </div>
+      <section id="delete-profile">
+        <h2>2. Delete a profile</h2>
+        <ol>
+          <li>Click the profile at the top of the sidebar, or open the <strong>Profile</strong> menu.</li>
+          <li>Choose <strong>Delete Profile…</strong> and confirm.</li>
+        </ol>
+        <p>The profile’s board, tickets, drafts and connected accounts are removed from Reelay, and each account is disconnected as in method 1. Downloaded video files stay in the profile’s library folder for you to keep or delete. Delete Profile is available when you have more than one profile; with only one, use method 3.</p>
+      </section>
 
-        <!-- Method 2 -->
-        <div class="method-card">
-          <div class="method-header">
-            <span class="step-badge">Method 2</span>
-            <h3>Complete Local Storage Deletion (Full Reset)</h3>
-          </div>
-          <p>
-            If you wish to wipe 100% of Reelay Studio's local data from your computer, including your SQLite database, video indexes, and Whisper transcripts, delete the application data directory:
-          </p>
+      <section id="delete-everything">
+        <h2>3. Remove everything</h2>
+        <p>Quit Reelay, then delete its data folder. This removes the database (<code>{DATA_PATHS.dbName}</code>) with every profile, ticket, transcript, rule and history entry, plus Reelay’s caches.</p>
+        <h3>Mac</h3>
+        <pre><code>rm -rf ~/Library/Application\ Support/Reelay ~/Library/Logs/Reelay</code></pre>
+        <p>Or in Finder: press <code>⌘⇧G</code>, paste <code>{DATA_PATHS.mac}</code>, and move the folder to the Trash.</p>
+        <h3>Windows</h3>
+        <pre><code>Remove-Item -Recurse -Force "{DATA_PATHS.windowsPs}", "$env:LOCALAPPDATA\Reelay"</code></pre>
+        <p>Or in File Explorer: go to <code>{DATA_PATHS.windows}</code> and delete the folder.</p>
+        <h3>Then</h3>
+        <ul>
+          <li><strong>Sign-ins:</strong> delete the entries named <strong>Reelay</strong> in Keychain Access (Mac) or Credential Manager → Windows Credentials (Windows).</li>
+          <li><strong>A shared database:</strong> if you moved the database to Google Drive, Dropbox, iCloud Drive or OneDrive, delete <code>{DATA_PATHS.dbName}</code> from that folder too.</li>
+          <li><strong>Videos:</strong> delete your library folder (by default <code>~/Movies/Reelay</code> or <code>Videos\Reelay</code>) if you don’t want to keep the files.</li>
+        </ul>
+      </section>
 
-          <div class="os-box">
-            <h4>macOS</h4>
-            <p>Open Terminal or Finder and delete the following directory:</p>
-            <pre><code>rm -rf ~/Library/Application\ Support/reelay</code></pre>
-            <p class="note">Alternatively in Finder: Press <code>Cmd + Shift + G</code>, paste <code>~/Library/Application Support/reelay</code>, and move the folder to Trash.</p>
-          </div>
+      <section id="revoke">
+        <h2>4. Revoke Reelay from the platform</h2>
+        <p>You can also remove Reelay’s access from the platform itself at any time, even if Reelay is no longer installed:</p>
+        <ul>
+          <li><strong>Facebook and Instagram:</strong> Facebook <a href="https://www.facebook.com/settings?tab=business_tools" target="_blank" rel="noopener">Settings &amp; privacy → Business integrations</a> (or Apps and websites), find Reelay and choose Remove.</li>
+          <li><strong>Threads:</strong> in Threads, Settings → Account → Website permissions, then remove Reelay.</li>
+          <li><strong>Google and YouTube:</strong> <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google Account → Third-party apps and services</a>, select Reelay and choose Delete all connections.</li>
+          <li><strong>TikTok:</strong> in TikTok, Settings and privacy → Security and permissions → Apps and services permissions, then remove Reelay.</li>
+          <li><strong>Bluesky:</strong> Settings → Privacy and security → App passwords, then delete the password you made for Reelay.</li>
+        </ul>
+      </section>
 
-          <div class="os-box">
-            <h4>Windows</h4>
-            <p>Open PowerShell or File Explorer and delete the following directory:</p>
-            <pre><code>Remove-Item -Recurse -Force "$env:APPDATA\reelay"</code></pre>
-            <p class="note">Alternatively in File Explorer: Navigate to <code>%APPDATA%\reelay</code> and delete the folder.</p>
-          </div>
-
-          <div class="action-result">
-            <strong>What happens immediately:</strong>
-            <p>
-              Your local SQLite database, custom presets, automation rules, and local cache are permanently deleted. Raw video files on your hard drive remain untouched in their original directories.
-            </p>
-          </div>
-        </div>
-
-        <!-- Method 3 -->
-        <div class="method-card">
-          <div class="method-header">
-            <span class="step-badge">Method 3</span>
-            <h3>Revoking Permissions from Meta / Third-Party Platforms</h3>
-          </div>
-          <p>You can also revoke Reelay's access directly from the social platform interfaces at any time:</p>
-          <ul>
-            <li>
-              <strong>Facebook & Instagram:</strong> Go to <a href="https://www.facebook.com/settings?tab=applications" target="_blank" rel="noopener">Facebook Settings & Privacy → Settings → Apps and Websites</a>. Find <strong>Reelay</strong> and click <strong>Remove</strong>.
-            </li>
-            <li>
-              <strong>Google & YouTube:</strong> Go to <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google Account Permissions</a>. Select <strong>Reelay Studio</strong> and click <strong>Remove Access</strong>.
-            </li>
-            <li>
-              <strong>TikTok:</strong> Go to TikTok Mobile App → Profile → Settings & Privacy → Security & Permissions → Manage App Permissions → <strong>Reelay</strong> → <strong>Remove Access</strong>.
-            </li>
-          </ul>
-        </div>
-
-        <h2>Data Deletion Confirmation & Compliance Assistance</h2>
-        <p>
-          Because Reelay does not store your account data on remote servers, no central server processing or waiting periods apply. Once you perform any of the steps above, your data is erased immediately.
-        </p>
-        <p>
-          If you are an app reviewer or creator requiring a formal written confirmation of data deletion for audit purposes, or if you need assistance, please contact our compliance team:
-        </p>
-        <div class="contact-card">
-          <p><strong>Compliance & Data Protection:</strong> <a href="mailto:compliance@reelay.app">compliance@reelay.app</a></p>
-          <p><strong>Privacy Inquiries:</strong> <a href="mailto:privacy@reelay.app">privacy@reelay.app</a></p>
-          <p><strong>Response Time:</strong> Within 24-48 business hours</p>
-        </div>
-      </div>
+      <section id="confirmation">
+        <h2>Confirmation</h2>
+        <p>Deletion on your computer takes effect immediately; there is no waiting period. Reelay has no server copy of your account data to delete. Its sign-in server keeps nothing once a sign-in is finished (see the <a href={`${href('/privacy')}#sign-in-server`}>Privacy Policy</a>).</p>
+        <p>If you need written confirmation for a request, or help with any of these steps, email <a href={`mailto:${SITE.complianceEmail}`}>{SITE.complianceEmail}</a>.</p>
+      </section>
     </div>
   </div>
 </BaseLayout>
 
 <style>
-  .legal-page {
-    padding-top: clamp(2rem, 5vw, 4rem);
-    padding-bottom: clamp(4rem, 8vw, 8rem);
-  }
-
-  .legal-header {
-    margin-bottom: 2.5rem;
-    border-bottom: 1px solid var(--hairline);
-    padding-bottom: 2rem;
-  }
-
-  .legal-title {
-    font-size: clamp(2.25rem, 5vw, 3.5rem);
-    margin-top: 1rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .legal-meta {
-    font-size: 0.9rem;
-    color: var(--text-muted);
-    font-family: var(--font-mono);
-  }
-
-  .compliance-box-title {
-    font-size: 1.15rem;
-    color: #6ee7b7;
-    margin-bottom: 0.75rem;
-  }
-
-  .official-statement {
-    font-size: 1.05rem;
-    line-height: 1.7;
-    color: #f8fafc;
-  }
-
-  .official-statement code {
-    background-color: var(--color-surface-elevated);
-    padding: 0.2rem 0.4rem;
-    border-radius: var(--radius-sm);
-    color: #a5b4fc;
-    font-size: 0.95em;
-  }
-
-  .method-card {
-    background-color: var(--color-surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 1.75rem;
-    margin: 2rem 0;
-  }
-
-  .method-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-  }
-
-  .step-badge {
-    background-color: var(--brand);
-    color: #ffffff;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    padding: 0.25rem 0.6rem;
-    border-radius: var(--radius-sm);
-    font-family: var(--font-mono);
-  }
-
-  .method-card h3 {
-    margin: 0;
-    font-size: 1.25rem;
-  }
-
-  .action-result {
-    margin-top: 1.25rem;
-    background-color: rgba(16, 185, 129, 0.06);
-    border: 1px solid rgba(16, 185, 129, 0.2);
-    border-radius: var(--radius-md);
-    padding: 1rem 1.25rem;
-    font-size: 0.92rem;
-  }
-
-  .action-result strong {
-    color: #6ee7b7;
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-
-  .action-result ul {
-    margin-bottom: 0;
-    padding-left: 1.2rem;
-  }
-
-  .os-box {
-    margin: 1.25rem 0;
-    background-color: var(--color-surface-2);
-    border: 1px solid var(--hairline);
-    border-radius: var(--radius-md);
-    padding: 1.25rem;
-  }
-
-  .os-box h4 {
-    margin-bottom: 0.5rem;
-    color: var(--text-primary);
-  }
-
-  .os-box pre {
-    background-color: var(--color-black);
-    padding: 0.75rem 1rem;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--hairline);
-    overflow-x: auto;
-    margin: 0.75rem 0;
-  }
-
-  .os-box code {
-    color: #38bdf8;
-    font-size: 0.9rem;
-  }
-
-  .os-box .note {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    margin-bottom: 0;
-  }
-
-  .contact-card {
-    background-color: var(--color-surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 1.25rem;
-    margin-top: 1.25rem;
-  }
-
-  .contact-card p {
-    margin-bottom: 0.35rem;
-  }
-
-  .contact-card p:last-child {
-    margin-bottom: 0;
-  }
+  .statement { color: var(--r-ink); font-size: 1.08rem; line-height: 1.6; }
 </style>

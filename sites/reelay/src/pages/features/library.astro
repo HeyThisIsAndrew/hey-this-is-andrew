@@ -1,941 +1,162 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { SITE } from '../../data/site';
+import PageHero from '../../components/ui/PageHero.astro';
+import NextUp from '../../components/ui/NextUp.astro';
+import ImportScene from '../../components/ImportScene.astro';
+import PlayerDemo from '../../components/PlayerDemo.astro';
+import SearchScene from '../../components/SearchScene.astro';
+import { SITE, href } from '../../data/site';
 
-const base = import.meta.env.BASE_URL.replace(/\/?$/, '');
+const naming = [
+  { name: 'Platform, date and video ID', example: 'TikTok_20261009_7692175258450677023.mp4', note: 'The default' },
+  { name: 'Date and your name', example: '2026-10-09_golden-hour-big-sur.mp4', note: 'Suggest Names fills it from the caption' },
+  { name: 'Custom pattern…', example: '{date}_{custom}.mp4', note: 'For when you have a system' },
+];
 ---
 
 <BaseLayout
-  title={`Media Library & Reelay Studio Player — ${SITE.fullName}`}
-  description="Native desktop video player and media archive. Hardware-accelerated 60 FPS playback, VP9/AV1 proxies, 16:9 and 9:16 vertical modes, and offline Whisper AI transcription."
+  title={`Library and Player: ${SITE.fullName}`}
+  description="Bring in every video from TikTok, Instagram and YouTube profiles you own or manage, watermark-free with full audio. Watch each one in a player built for writing captions, and search everything that was said."
 >
-  <div class="feature-page">
-    <div class="container">
-      <header class="feature-header">
-        <a href={`${base}/features`} class="back-link">← All Features</a>
-        <div class="badge-pill">
-          <span class="pill-dot"></span>
-          <span>PILLAR 01 • CORE WORKSTATION</span>
-        </div>
-        <h1 class="feature-title">Media Library & Studio Player</h1>
-        <p class="feature-lead">
-          Stop managing raw video cuts in generic Finder folders and spreadsheets. Inspect 4K ProRes and vertical clips with a hardware-accelerated desktop player, and search spoken words instantly via on-device Whisper AI.
-        </p>
-      </header>
+  <PageHero eyebrow="Library and Player">
+    <Fragment slot="title">Everything you’ve made.<br /><span class="text-glow">Right here.</span></Fragment>
+    <Fragment slot="lede">Reelay brings your videos home from the platforms you post to, keeps the facts of where each one came from, and plays it right beside the words you’re writing for it.</Fragment>
+  </PageHero>
 
-      <!-- Interactive Hardware Studio Player Demo -->
-      <section class="player-demo-section" aria-label="Interactive Studio Player Demo">
-        <div class="demo-top-strip">
-          <div class="demo-status">
-            <span class="live-dot"></span>
-            <span class="demo-label">STUDIO PLAYER WORKBENCH</span>
-          </div>
-          <div class="player-controls-meta">
-            <span class="fps-pill">HARDWARE 60 FPS</span>
-            <span class="codec-pill">PRORES 422 PROXY • AV1</span>
-          </div>
-        </div>
-
-        <div class="studio-workstation-window">
-          <!-- Window Title Bar -->
-          <div class="window-bar">
-            <div class="traffic-lights">
-              <span class="light red"></span>
-              <span class="light yellow"></span>
-              <span class="light green"></span>
-            </div>
-            <span class="window-title">Reelay Studio — 2026-10-interview-clip-04.mp4</span>
-            <span class="window-version">macOS Native • Metal GPU</span>
-          </div>
-
-          <div class="workstation-inner-grid">
-            <!-- Left Pane: Native Player Canvas -->
-            <div class="player-viewport-column">
-              <div class="viewport-switchers">
-                <div class="aspect-switch-group">
-                  <button type="button" class="switch-btn active" id="btn-9-16" aria-pressed="true">9:16 Vertical Shorts</button>
-                  <button type="button" class="switch-btn" id="btn-16-9" aria-pressed="false">16:9 Longform</button>
-                </div>
-                <div class="speed-switch-group">
-                  <span class="speed-label">SPEED:</span>
-                  <span class="speed-val active">1.0x</span>
-                  <span class="speed-val">1.5x</span>
-                  <span class="speed-val">2.0x</span>
-                </div>
-              </div>
-
-              <!-- Canvas Simulation Area -->
-              <div class="canvas-screen-box">
-                <div class="vertical-phone-mockup" id="preview-canvas">
-                  <div class="phone-status-notch">
-                    <span class="clip-time">00:24.12</span>
-                    <span class="clip-res">1080×1920</span>
-                  </div>
-                  <div class="canvas-active-graphic">
-                    <div class="audio-waveform-bars">
-                      <span class="wave-bar w1"></span>
-                      <span class="wave-bar w2"></span>
-                      <span class="wave-bar w3"></span>
-                      <span class="wave-bar w4"></span>
-                      <span class="wave-bar w5"></span>
-                      <span class="wave-bar w6"></span>
-                      <span class="wave-bar w7"></span>
-                    </div>
-                    <p class="canvas-caption-overlay" id="caption-live-text">
-                      "Stop organizing your video assets across fragmented spreadsheets."
-                    </p>
-                  </div>
-                  <div class="canvas-hud-footer">
-                    <span class="hud-pill">WHISPER FTS5 SYNC</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Playback Scrubber & Transport Rail -->
-              <div class="player-transport-rail">
-                <div class="scrubber-bar-container" id="scrubber-track">
-                  <div class="scrubber-progress" id="scrubber-fill" style="width: 41%;"></div>
-                  <div class="scrubber-thumb" id="scrubber-handle" style="left: 41%;"></div>
-                </div>
-                <div class="transport-controls">
-                  <div class="transport-buttons">
-                    <button type="button" class="transport-btn play-toggle" id="play-btn" aria-label="Play/Pause">
-                      <span id="play-icon">▶</span>
-                    </button>
-                    <span class="time-display" id="time-readout">00:24.12 / 00:58.24</span>
-                  </div>
-                  <div class="transport-specs">
-                    <span class="spec-tag">Metal GPU Accelerated</span>
-                    <span class="spec-tag">Zero Cloud Relay</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Right Pane: Whisper Speech-to-Text Inspector -->
-            <div class="transcript-inspector-column">
-              <div class="inspector-header">
-                <div class="header-badge">LOCAL SPEECH RECOGNITION</div>
-                <h4>Offline Whisper Transcript</h4>
-                <div class="search-sim-bar">
-                  <span class="search-icon">🔍</span>
-                  <input type="text" readonly value="spreadsheets" class="sim-search-input" aria-label="Simulated search" />
-                  <span class="search-match-count">1 match found</span>
-                </div>
-              </div>
-
-              <div class="transcript-stream" role="region" aria-label="Interactive Transcript Stream">
-                <div class="stream-line" tabindex="0" role="button" data-seek="2" aria-label="Seek to 00:02">
-                  <span class="timestamp-tag">00:02</span>
-                  <p class="transcript-sentence">Welcome back to the content studio update.</p>
-                </div>
-                <div class="stream-line active-line" tabindex="0" role="button" data-seek="12" aria-label="Seek to 00:12">
-                  <span class="timestamp-tag active-tag">00:12</span>
-                  <p class="transcript-sentence">
-                    Stop organizing your video assets across fragmented <mark class="search-highlight">spreadsheets</mark> when you can own the database.
-                  </p>
-                </div>
-                <div class="stream-line" tabindex="0" role="button" data-seek="24" aria-label="Seek to 00:24">
-                  <span class="timestamp-tag">00:24</span>
-                  <p class="transcript-sentence">Reelay pulls high-fidelity media directly from YouTube, TikTok and Instagram.</p>
-                </div>
-                <div class="stream-line" tabindex="0" role="button" data-seek="38" aria-label="Seek to 00:38">
-                  <span class="timestamp-tag">00:38</span>
-                  <p class="transcript-sentence">Your credentials stay locked safely inside your local operating system keychain.</p>
-                </div>
-                <div class="stream-line" tabindex="0" role="button" data-seek="50" aria-label="Seek to 00:50">
-                  <span class="timestamp-tag">00:50</span>
-                  <p class="transcript-sentence">Deterministic safety gates guarantee zero unverified publishing.</p>
-                </div>
-              </div>
-
-              <!-- Metadata Specs Rail -->
-              <div class="media-specs-box">
-                <div class="box-row"><span>Audio Sampling:</span> <strong>16,000 Hz Mono Float32</strong></div>
-                <div class="box-row"><span>Whisper Model:</span> <strong>Distil-Whisper Large-v3 (Quantized)</strong></div>
-                <div class="box-row"><span>FTS5 Search Speed:</span> <strong class="green-text">&lt; 4.2 ms (SQLite Local)</strong></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Deep Dive Architectural Content -->
-      <div class="deep-dive-content">
-        <h2>1. In-App Hardware-Accelerated Video Engine</h2>
-        <p>
-          Web and Electron wrappers struggle with high-bitrate 4K 60fps video, causing dropped frames, CPU thermal throttling, and choppy scrubbing. Reelay Studio's player is engineered with native graphics pipelines (<code>QGraphicsView</code>, Metal GPU on macOS, and DirectX 12 on Windows):
-        </p>
-        <div class="highlight-grid">
-          <div class="card spec-card">
-            <h4>Smooth Scrubbing & Frame Precision</h4>
-            <p>Scrub through ProRes 422, H.264, and H.265 footage with zero interface stalling. Toggle between 0.5x, 1.0x, 1.5x, and 2.0x playback speeds with pitch-corrected audio.</p>
-          </div>
-          <div class="card spec-card">
-            <h4>Automatic Lightweight Codec Proxies</h4>
-            <p>Intelligently generates fast, lightweight proxy streams for compute-heavy modern codecs like AV1 and VP9, guaranteeing buttery seek times on MacBook Air and desktop rigs alike.</p>
-          </div>
-        </div>
-
-        <h2>2. Aspect Ratio Agnostic: 9:16 Vertical & 16:9 Widescreen</h2>
-        <p>
-          Modern video teams publish both horizontal widescreen cuts for YouTube and vertical short-form clips for TikTok, Instagram Reels, and YouTube Shorts. Reelay Studio automatically detects media orientation upon ingestion and offers instant aspect-ratio preview switching without tedious manual framing.
-        </p>
-
-        <h2 id="transcripts">3. Offline Whisper AI Speech-to-Text & Sub-Second Search</h2>
-        <p>
-          Finding specific quotes, hooks, or soundbites across hundreds of gigabytes of raw video files used to require hours of manual re-listening. Reelay integrates local OpenAI Whisper speech recognition models directly into your hardware:
-        </p>
-        <ul>
-          <li><strong>100% Offline Inference:</strong> Speech recognition executes strictly on your local Apple Neural Engine or Metal GPU. Zero audio bytes are uploaded to remote cloud APIs.</li>
-          <li><strong>SQLite FTS5 Full-Text Index:</strong> Spoken words are indexed into a local SQLite full-text search table with sub-second retrieval times across entire channel catalogs.</li>
-          <li><strong>Click-to-Seek Interactive Timestamps:</strong> Click any word in the transcript stream to snap the playhead directly to that precise millisecond.</li>
-        </ul>
-
-        <h2>4. High-Fidelity Asset Ingestion with yt-dlp</h2>
-        <p>
-          Need to pull top-performing clips from your channels for remixing or distribution? Reelay bundles an integrated, sandboxed <code>yt-dlp</code> engine:
-        </p>
-        <ul>
-          <li>Direct high-resolution downloads from YouTube, TikTok, and Instagram.</li>
-          <li>Captures original author captions, audio stems, and publication timestamps automatically.</li>
-          <li>Assets save straight into your local Reelay media directory with zero intermediate cloud storage fees.</li>
-        </ul>
-
-        <div class="cta-box">
-          <h3>Experience Native Video Performance</h3>
-          <p>Download Reelay Studio for macOS or Windows and test hardware playback on your local files.</p>
-          <a href={`${base}/#download`} class="btn btn-primary">Download Reelay Studio</a>
-        </div>
+  <section class="stage stage--flush-top" aria-label="The Download page">
+    <div class="wrap-wide" data-reveal>
+      <div class="lib-stage">
+        <div class="halo" style="width:70%;height:50%;left:15%;top:35%;background:rgba(240,150,40,.32)" aria-hidden="true"></div>
+        <ImportScene />
       </div>
     </div>
-  </div>
+  </section>
+
+  <section class="stage" aria-labelledby="pick-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">Download</p>
+        <h2 id="pick-title" class="headline">See everything.<br /><span class="text-silver">Take only what you pick.</span></h2>
+        <p class="lede">Paste a profile link, or click a saved source, and Reelay lists every video before anything downloads. <strong>New videos start unselected</strong>, and the strip above the list always tells you what is.</p>
+      </header>
+      <div class="feature-grid" data-reveal>
+        <div class="feature"><h3>Saved sources</h3><p>One-click buttons for the profiles you use most, grouped by platform. Connected YouTube channels appear on their own, private and scheduled videos included.</p></div>
+        <div class="feature"><h3>Watermark-free TikTok</h3><p>Always the clean stream with the creator’s own audio. The post’s separate sound track is never merged in.</p></div>
+        <div class="feature"><h3>Select the way you think</h3><p>Select All follows your search. More picks the newest few, what the search shows, or the highlighted rows. Space ticks highlighted rows.</p></div>
+        <div class="feature"><h3>Search and hashtags</h3><p>Search matches captions and hashtags, and All hashtags filters the list to one, with counts. Click a hashtag in the side panel to do the same.</p></div>
+        <div class="feature"><h3>Tagged products</h3><p>For TikTok Shop videos, the tagged products are read from the public page in the background, so you can filter to every video for one product.</p></div>
+        <div class="feature"><h3>A record of every download</h3><p>Each download writes a manifest.md and a JSON file per video, and Rename Files… renames what you already have, with a preview first.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage stage--lift" aria-labelledby="names-title">
+    <div class="wrap">
+      <div class="split">
+        <div data-reveal>
+          <p class="eyebrow">File names</p>
+          <h2 id="names-title" class="title">Names you can read in Finder.</h2>
+          <p class="lede">Choose how files are named from plain options, with a live example under each one. Suggest Names writes names from captions, or you can type your own.</p>
+        </div>
+        <ul class="names" data-reveal style="--reveal-delay:.08s">
+          {naming.map((n, i) => (
+            <li class:list={['name-opt', { on: i === 0 }]}>
+              <span class="name-radio" aria-hidden="true"></span>
+              <span><strong>{n.name}</strong><code>{n.example}</code><small>{n.note}</small></span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage" aria-labelledby="prov-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">Provenance</p>
+        <h2 id="prov-title" class="headline">Where it came from.<br /><span class="text-silver">On every video.</span></h2>
+        <p class="lede">Every imported video records the facts a rights question will ask. <strong>Links from your own accounts are marked as your own content</strong>; anything else stays unrecorded until you set it on the ticket.</p>
+      </header>
+      <div class="spec-rail spec-rail--5" data-reveal>
+        <div class="spec"><span class="spec-label"><strong>Source platform</strong>TikTok, Instagram or YouTube</span></div>
+        <div class="spec"><span class="spec-label"><strong>Original link</strong>The post it came from</span></div>
+        <div class="spec"><span class="spec-label"><strong>Imported</strong>When it came in</span></div>
+        <div class="spec"><span class="spec-label"><strong>First published</strong>And by which creator</span></div>
+        <div class="spec"><span class="spec-label"><strong>Permission</strong>Own content, or what you record</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage stage--lift" id="player" aria-labelledby="player-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">The player</p>
+        <h2 id="player-title" class="headline">Watch it where<br /><span class="text-silver">you write it.</span></h2>
+        <p class="lede">Select a video and it plays in the right-hand panel, above its captions and readiness. <strong>It shows the cover until you press play, and it never autoplays.</strong></p>
+      </header>
+      <div data-reveal><PlayerDemo /></div>
+      <div class="feature-grid mt-4" data-reveal>
+        <div class="feature"><h3>Formats it can’t play, handled</h3><p>YouTube’s VP9 and AV1 above 1080p can’t be decoded in the panel, so Reelay offers an H.264 preview copy, made in the background, or opens it in QuickTime. The original is never touched.</p></div>
+        <div class="feature"><h3>Lets go of the file</h3><p>The player releases a file the moment you switch videos, so renaming or moving it still works.</p></div>
+        <div class="feature"><h3>Scrub from the grid</h3><p>The Library and Board are grids of thumbnails. Hover a card to scrub through the video before you open it.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage" id="transcripts" aria-labelledby="tr-title">
+    <div class="wrap">
+      <div class="split">
+        <div data-reveal>
+          <p class="eyebrow">Transcripts</p>
+          <h2 id="tr-title" class="title">Search what was said.</h2>
+          <p class="lede">Get from Original Post turns a post’s own captions into the ticket’s transcript: the creator’s subtitles first, otherwise the platform’s automatic ones. From then on, the Board’s search finds the video by its spoken words and shows you the quote.</p>
+          <p class="fine mt-2">Reelay doesn’t run speech recognition to make transcripts, so a video posted without captions has no transcript to fetch.</p>
+        </div>
+        <div data-reveal style="--reveal-delay:.08s"><SearchScene /></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage stage--lift" id="video-tools" aria-labelledby="tools-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">Video tools</p>
+        <h2 id="tools-title" class="headline">Small edits.<br /><span class="text-silver">The original stays put.</span></h2>
+        <p class="lede">Three edits, done by ffmpeg on your computer. Each writes a new <code>.edited.mp4</code> beside the original, and <strong>the edited copy is what gets posted</strong> until you choose Use Original.</p>
+      </header>
+      <div class="bento" data-reveal>
+        <div class="tile span-2"><h3>Remove the sound</h3><p>For a clip you want silent everywhere, or to add a platform’s own sound when you post.</p></div>
+        <div class="tile span-2"><h3>Replace the sound</h3><p>Swap in a track you have the rights to use.</p></div>
+        <div class="tile span-2"><h3>Burn in captions</h3><p>From a .srt, .vtt or .ass file you have, or automatic captions when the free faster-whisper add-on is installed.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage stage--tight">
+    <div class="wrap-narrow center">
+      <p class="fine">Only download and republish content you own or have permission to use.</p>
+    </div>
+  </section>
+
+  <NextUp kicker="Next" title="Board and Tickets" href={href('/features/pipeline')} />
 </BaseLayout>
 
-<script>
-  // Simple interactive client script for demo workstation
-  const playBtn = document.getElementById('play-btn');
-  const playIcon = document.getElementById('play-icon');
-  const timeReadout = document.getElementById('time-readout');
-  const scrubberFill = document.getElementById('scrubber-fill');
-  const scrubberHandle = document.getElementById('scrubber-handle');
-  const captionLiveText = document.getElementById('caption-live-text');
-  const previewCanvas = document.getElementById('preview-canvas');
-  const btn916 = document.getElementById('btn-9-16');
-  const btn169 = document.getElementById('btn-16-9');
-  const lines = document.querySelectorAll('.stream-line');
-
-  let isPlaying = false;
-  let currentTime = 24.12;
-  const totalDuration = 58.24;
-
-  const captionsMap: Record<number, string> = {
-    2: "Welcome back to the content studio update.",
-    12: "Stop organizing your video assets across fragmented spreadsheets when you can own the database.",
-    24: "Reelay pulls high-fidelity media directly from YouTube, TikTok and Instagram.",
-    38: "Your credentials stay locked safely inside your local operating system keychain.",
-    50: "Deterministic safety gates guarantee zero unverified publishing."
-  };
-
-  function updatePlayhead(time: number) {
-    currentTime = Math.max(0, Math.min(totalDuration, time));
-    const pct = (currentTime / totalDuration) * 100;
-    if (scrubberFill) scrubberFill.style.width = `${pct}%`;
-    if (scrubberHandle) scrubberHandle.style.left = `${pct}%`;
-    if (timeReadout) {
-      const min = Math.floor(currentTime / 60).toString().padStart(2, '0');
-      const sec = (currentTime % 60).toFixed(2).padStart(5, '0');
-      timeReadout.textContent = `${min}:${sec} / 00:58.24`;
-    }
-
-    // Match caption
-    let activeKey = 2;
-    for (const key of [2, 12, 24, 38, 50]) {
-      if (currentTime >= key) activeKey = key;
-    }
-    if (captionLiveText && captionsMap[activeKey]) {
-      captionLiveText.textContent = `"${captionsMap[activeKey]}"`;
-    }
-
-    // Match stream lines
-    lines.forEach((l) => {
-      const seek = Number(l.getAttribute('data-seek'));
-      if (seek === activeKey) {
-        l.classList.add('active-line');
-        const tag = l.querySelector('.timestamp-tag');
-        if (tag) tag.classList.add('active-tag');
-      } else {
-        l.classList.remove('active-line');
-        const tag = l.querySelector('.timestamp-tag');
-        if (tag) tag.classList.remove('active-tag');
-      }
-    });
-  }
-
-  playBtn?.addEventListener('click', () => {
-    isPlaying = !isPlaying;
-    if (playIcon) playIcon.textContent = isPlaying ? '⏸' : '▶';
-  });
-
-  lines.forEach((l) => {
-    l.addEventListener('click', () => {
-      const seek = Number(l.getAttribute('data-seek'));
-      updatePlayhead(seek);
-    });
-  });
-
-  btn916?.addEventListener('click', () => {
-    btn916.classList.add('active');
-    btn916.setAttribute('aria-pressed', 'true');
-    btn169?.classList.remove('active');
-    btn169?.setAttribute('aria-pressed', 'false');
-    if (previewCanvas) previewCanvas.style.width = '200px';
-  });
-
-  btn169?.addEventListener('click', () => {
-    btn169.classList.add('active');
-    btn169.setAttribute('aria-pressed', 'true');
-    btn916?.classList.remove('active');
-    btn916?.setAttribute('aria-pressed', 'false');
-    if (previewCanvas) previewCanvas.style.width = '340px';
-  });
-</script>
-
 <style>
-  .feature-page {
-    padding-top: clamp(3rem, 6vw, 5rem);
-    padding-bottom: clamp(5rem, 8vw, 8rem);
-  }
-
-  .back-link {
-    font-family: var(--font-mono);
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #94a3b8;
-    margin-bottom: 1.5rem;
-    display: inline-block;
-    transition: color 0.15s ease;
-  }
-  .back-link:hover {
-    color: #f8fafc;
-  }
-
-  .feature-header {
-    margin-bottom: 3.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding-bottom: 3rem;
-  }
-
-  .badge-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.85rem;
-    background: rgba(245, 158, 11, 0.08);
-    border: 1px solid rgba(245, 158, 11, 0.28);
-    border-radius: 9999px;
-    font-family: var(--font-mono, monospace);
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: #fbbf24;
-    text-transform: uppercase;
-    margin-bottom: 1.25rem;
-  }
-
-  .pill-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #f59e0b;
-    box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
-  }
-
-  .feature-title {
-    font-family: var(--font-display);
-    font-size: clamp(2.5rem, 5vw, 4.25rem);
-    font-weight: 700;
-    letter-spacing: -0.035em;
-    line-height: 1.1;
-    background: var(--text-gradient-silver);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-top: 0.5rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .feature-lead {
-    font-family: var(--font-body);
-    font-size: clamp(1.15rem, 1.8vw, 1.35rem);
-    color: #a1a1aa;
-    line-height: 1.65;
-    max-width: 840px;
-  }
-
-  /* Player Demo Section */
-  .player-demo-section {
-    margin-bottom: 5rem;
-  }
-
-  .demo-top-strip {
+  .lib-stage { position: relative; isolation: isolate; max-width: 1180px; margin: 0 auto; }
+  .names { list-style: none; display: grid; gap: 0.75rem; }
+  .name-opt {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-  }
-
-  .demo-status {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .live-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #34d399;
-    box-shadow: 0 0 8px #34d399;
-  }
-
-  .demo-label {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #cbd5e1;
-    letter-spacing: 0.05em;
-  }
-
-  .player-controls-meta {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .fps-pill {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: #34d399;
-    background: rgba(52, 211, 153, 0.12);
-    border: 1px solid rgba(52, 211, 153, 0.25);
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-  }
-
-  .codec-pill {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: #94a3b8;
-    background: rgba(255, 255, 255, 0.06);
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-  }
-
-  .studio-workstation-window {
-    background: #090a0f;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: var(--radius-lg, 16px);
-    overflow: hidden;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
-  }
-
-  .window-bar {
-    background: #11121a;
-    padding: 0.75rem 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .traffic-lights {
-    display: flex;
-    gap: 0.4rem;
-  }
-
-  .light {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-  }
-  .light.red { background-color: #ff5f56; }
-  .light.yellow { background-color: #ffbd2e; }
-  .light.green { background-color: #27c93f; }
-
-  .window-title {
-    font-family: var(--font-mono);
-    font-size: 0.76rem;
-    color: #94a3b8;
-  }
-
-  .window-version {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: #fbbf24;
-  }
-
-  .workstation-inner-grid {
-    display: grid;
-    grid-template-columns: 1.25fr 1fr;
-    background: #06070a;
-  }
-
-  .player-viewport-column {
-    padding: 1.5rem;
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    flex-direction: column;
-  }
-
-  .viewport-switchers {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.25rem;
-  }
-
-  .aspect-switch-group {
-    display: flex;
-    gap: 0.35rem;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1.1rem 1.25rem;
+    border-radius: 18px;
     background: rgba(255, 255, 255, 0.04);
-    padding: 0.2rem;
-    border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
   }
-
-  .switch-btn {
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    font-weight: 600;
-    padding: 0.35rem 0.65rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-  .switch-btn.active {
-    background: rgba(255, 255, 255, 0.12);
-    color: #f8fafc;
-  }
-
-  .speed-switch-group {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-  }
-
-  .speed-label {
-    color: #64748b;
-  }
-
-  .speed-val {
-    color: #94a3b8;
-    padding: 0.15rem 0.35rem;
-    border-radius: 3px;
-    cursor: pointer;
-  }
-  .speed-val.active {
-    color: #fbbf24;
-    background: rgba(245, 158, 11, 0.15);
-  }
-
-  .canvas-screen-box {
-    background: #0b0c13;
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 12px;
-    min-height: 280px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .vertical-phone-mockup {
-    width: 200px;
-    height: 250px;
-    background: linear-gradient(180deg, #13141f 0%, #090a0e 100%);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 16px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 1rem;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
-    transition: width 0.25s ease;
-  }
-
-  .phone-status-notch {
-    display: flex;
-    justify-content: space-between;
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    color: #71717a;
-  }
-
-  .canvas-active-graphic {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  .audio-waveform-bars {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin-bottom: 0.85rem;
-  }
-
-  .wave-bar {
-    width: 3px;
-    background: #f59e0b;
-    border-radius: 2px;
-  }
-  .w1 { height: 16px; }
-  .w2 { height: 28px; }
-  .w3 { height: 38px; }
-  .w4 { height: 22px; }
-  .w5 { height: 34px; }
-  .w6 { height: 20px; }
-  .w7 { height: 12px; }
-
-  .canvas-caption-overlay {
-    font-size: 0.76rem;
-    color: #e2e8f0;
-    line-height: 1.4;
-    margin: 0;
-    background: rgba(0, 0, 0, 0.45);
-    padding: 0.35rem 0.5rem;
-    border-radius: 4px;
-  }
-
-  .canvas-hud-footer {
-    display: flex;
-    justify-content: center;
-  }
-
-  .hud-pill {
-    font-family: var(--font-mono);
-    font-size: 0.6rem;
-    font-weight: 700;
-    color: #fbbf24;
-    background: rgba(245, 158, 11, 0.12);
-    padding: 0.15rem 0.45rem;
-    border-radius: 3px;
-  }
-
-  /* Scrubber & Controls */
-  .player-transport-rail {
-    background: #0f1017;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    padding: 0.85rem 1rem;
-  }
-
-  .scrubber-bar-container {
-    height: 6px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
-    position: relative;
-    cursor: pointer;
-    margin-bottom: 0.75rem;
-  }
-
-  .scrubber-progress {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    background: #f59e0b;
-    border-radius: 3px;
-  }
-
-  .scrubber-thumb {
-    position: absolute;
-    top: 50%;
-    width: 12px;
-    height: 12px;
-    background: #ffffff;
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
-  }
-
-  .transport-controls {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .transport-buttons {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .transport-btn {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    color: #f8fafc;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.75rem;
-    cursor: pointer;
-  }
-  .transport-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-  }
-
-  .time-display {
-    font-family: var(--font-mono);
-    font-size: 0.74rem;
-    color: #94a3b8;
-  }
-
-  .transport-specs {
-    display: flex;
-    gap: 0.4rem;
-  }
-
-  .spec-tag {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    color: #71717a;
-    background: rgba(255, 255, 255, 0.04);
-    padding: 0.15rem 0.4rem;
-    border-radius: 3px;
-  }
-
-  /* Right Pane: Whisper Inspector */
-  .transcript-inspector-column {
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
-
-  .inspector-header {
-    margin-bottom: 1.25rem;
-  }
-
-  .header-badge {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: #fbbf24;
-    letter-spacing: 0.04em;
-    margin-bottom: 0.25rem;
-  }
-
-  .inspector-header h4 {
-    font-family: var(--font-display);
-    font-size: 1.25rem;
-    color: #f8fafc;
-    margin: 0 0 0.85rem 0;
-  }
-
-  .search-sim-bar {
-    display: flex;
-    align-items: center;
-    background: #0d0e15;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
-    padding: 0.4rem 0.75rem;
-    gap: 0.5rem;
-  }
-
-  .sim-search-input {
-    background: transparent;
-    border: none;
-    color: #f1f5f9;
-    font-family: var(--font-mono);
-    font-size: 0.82rem;
-    flex: 1;
-    outline: none;
-  }
-
-  .search-match-count {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: #34d399;
-  }
-
-  .transcript-stream {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-    max-height: 280px;
-    overflow-y: auto;
-  }
-
-  .stream-line {
-    display: flex;
-    gap: 0.75rem;
-    padding: 0.6rem 0.75rem;
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid transparent;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .stream-line:hover {
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  .stream-line.active-line {
-    background: rgba(245, 158, 11, 0.08);
-    border-color: rgba(245, 158, 11, 0.35);
-  }
-
-  .timestamp-tag {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    color: #64748b;
-    margin-top: 0.1rem;
-  }
-  .timestamp-tag.active-tag {
-    color: #fbbf24;
-    font-weight: 700;
-  }
-
-  .transcript-sentence {
-    font-size: 0.82rem;
-    color: #cbd5e1;
-    line-height: 1.45;
-    margin: 0;
-  }
-
-  .search-highlight {
-    background: rgba(245, 158, 11, 0.35);
-    color: #fef08a;
-    padding: 0.1rem 0.25rem;
-    border-radius: 2px;
-  }
-
-  .media-specs-box {
-    background: #090a10;
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 8px;
-    padding: 0.85rem 1rem;
-  }
-
-  .box-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.78rem;
-    padding: 0.3rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    color: #828594;
-  }
-  .box-row:last-child {
-    border-bottom: none;
-  }
-  .box-row strong {
-    color: #e2e8f0;
-  }
-  .green-text {
-    color: #34d399 !important;
-  }
-
-  /* Deep Dive Content */
-  .deep-dive-content {
-    color: #cbd5e1;
-    font-size: 1.05rem;
-    line-height: 1.75;
-  }
-
-  .deep-dive-content h2 {
-    font-family: var(--font-display);
-    font-size: 1.75rem;
-    color: #f8fafc;
-    margin-top: 3.5rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .highlight-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.75rem;
-    margin: 1.75rem 0 3rem 0;
-  }
-
-  .spec-card {
-    background: #0c0d12;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-md, 12px);
-    padding: 1.75rem;
-  }
-
-  .spec-card h4 {
-    font-family: var(--font-display);
-    color: #f8fafc;
-    font-size: 1.15rem;
-    margin-top: 0;
-    margin-bottom: 0.75rem;
-  }
-
-  .spec-card p {
-    font-size: 0.94rem;
-    color: #94a3b8;
-    line-height: 1.6;
-    margin: 0;
-  }
-
-  .deep-dive-content ul {
-    margin-bottom: 2.5rem;
-    padding-left: 1.5rem;
-  }
-
-  .deep-dive-content li {
-    margin-bottom: 0.75rem;
-  }
-
-  .cta-box {
-    background: linear-gradient(180deg, #101118 0%, #08090d 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-lg, 16px);
-    padding: 3rem 2rem;
-    text-align: center;
-    margin-top: 4.5rem;
-  }
-
-  .cta-box h3 {
-    font-family: var(--font-display);
-    font-size: 1.85rem;
-    color: #f8fafc;
-    margin-bottom: 0.75rem;
-  }
-
-  .cta-box p {
-    font-size: 1.05rem;
-    color: #94a3b8;
-    margin-bottom: 2rem;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  @media (max-width: 960px) {
-    .workstation-inner-grid {
-      grid-template-columns: 1fr;
-    }
-    .player-viewport-column {
-      border-right: none;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .highlight-grid {
-      grid-template-columns: 1fr;
-    }
-  }
+  .name-opt.on { background: rgba(240, 180, 76, 0.1); box-shadow: inset 0 0 0 1px rgba(245, 197, 107, 0.35); }
+  .name-radio { flex: none; width: 1.15rem; height: 1.15rem; margin-top: 0.15rem; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.35); }
+  .on .name-radio { box-shadow: inset 0 0 0 5px var(--r-amber); }
+  .name-opt strong { display: block; font-size: 1.02rem; }
+  .name-opt code { display: block; margin-top: 0.35rem; font-size: 0.82rem; color: var(--r-amber-text); overflow-wrap: anywhere; }
+  .name-opt small { display: block; margin-top: 0.3rem; font-size: 0.85rem; color: var(--r-ink-3); }
+  .lede code { font-size: 0.85em; color: var(--r-ink); }
 </style>

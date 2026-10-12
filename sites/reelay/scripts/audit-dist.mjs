@@ -50,8 +50,20 @@ if (fs.existsSync(privacyPath)) {
   if (!privacyHtml.includes('Google API Services User Data Policy')) {
     failures.push('privacy/index.html is missing Google Limited Use disclosure');
   }
+  if (!privacyHtml.includes('https://www.googleapis.com/auth/youtube.readonly')) {
+    failures.push('privacy/index.html is missing disclosure for youtube.readonly scope');
+  }
   if (!privacyHtml.includes('Keychain') && !privacyHtml.includes('keychain')) {
     failures.push('privacy/index.html is missing Keychain storage disclosure');
+  }
+  if (!privacyHtml.includes('RFC 8252')) {
+    failures.push('privacy/index.html is missing the RFC 8252 loopback sign-in description');
+  }
+  if (!privacyHtml.includes('https://oauth2.googleapis.com/revoke')) {
+    failures.push('privacy/index.html is missing the Google token revocation endpoint');
+  }
+  if (!privacyHtml.includes('id="google-limited-use"') || !privacyHtml.includes('id="meta-compliance"')) {
+    failures.push('privacy/index.html is missing the #google-limited-use or #meta-compliance anchor');
   }
 }
 
@@ -62,8 +74,24 @@ if (fs.existsSync(dataDeletionPath)) {
   if (!ddHtml.includes('Reelay does not store your social account data on cloud servers')) {
     failures.push('data-deletion/index.html is missing mandatory Meta statement');
   }
-  if (!ddHtml.includes('~/Library/Application Support/reelay')) {
+  // The app's data folder is APP_ID = "Reelay" (reelay/paths.py), capital R.
+  if (!ddHtml.includes('~/Library/Application Support/Reelay')) {
     failures.push('data-deletion/index.html is missing local macOS directory path');
+  }
+  if (!ddHtml.includes('Disconnect')) {
+    failures.push('data-deletion/index.html is missing the in-app Disconnect instructions');
+  }
+}
+
+// 3b. The App Review notes reviewers are sent to
+const supportPath = path.join(dist, 'support/index.html');
+if (fs.existsSync(supportPath)) {
+  const supportHtml = fs.readFileSync(supportPath, 'utf8');
+  if (!supportHtml.includes('id="demo-verification"')) {
+    failures.push('support/index.html is missing the #demo-verification reviewer section');
+  }
+  if (!supportHtml.includes('https://www.googleapis.com/auth/youtube.upload')) {
+    failures.push('support/index.html reviewer notes are missing the youtube.upload scope');
   }
 }
 
@@ -96,11 +124,34 @@ if (fs.existsSync(indexPath)) {
   if (!indexHtml.includes('id="download"')) {
     failures.push('index.html is missing #download component');
   }
-  if (!indexHtml.includes('60 FPS')) {
-    failures.push('index.html is missing 60 FPS hardware playback metric');
+  if (!indexHtml.includes('id="studio-preview"')) {
+    failures.push('index.html is missing the #studio-preview product stage');
   }
   if (!indexHtml.includes('25d314bff7a3bdecffa66c5ba2261e3c732b347401d1c2e881ccdcde3f2fdfa0')) {
     failures.push('index.html is missing SHA-256 cryptographic verification checksum for Reelay-0.12.0-mac-arm64.dmg');
+  }
+}
+
+// 6. Truth guard. Google and Meta review read this site, so claims the app
+// (HeyThisIsAndrew/reelay) does not support must never come back. Each
+// pattern was on the site once; the comment says what is actually true.
+const FALSE_CLAIMS = [
+  [/60 ?FPS/i, 'no frame-rate claim: the player is QtMultimedia with no fps guarantee'],
+  [/Whisper (AI|speech|transcri|model|Neural)|offline Whisper/i, 'transcripts come from the original post captions; no speech-to-text runs'],
+  [/app\.db/, 'the database is reelay.db'],
+  [/4482/, 'the Agent API is on port 8471; there is no MCP server yet'],
+  [/MCP server|exposes an? (open )?Model Context Protocol/i, 'MCP is a proposal, not in the app'],
+  [/Apple Notarized|Gatekeeper-verified|Hardened Runtime Configured/i, 'builds are not notarized'],
+  [/Neural Engine|DirectX|Apple Metal|Metal GPU/i, 'no GPU or Neural Engine acceleration is claimed by the app'],
+  [/\$79|\$199|money-back|one-time license/i, 'no pricing is set; the beta is free'],
+  [/5-stage|five-stage|5 Stages/i, 'the board has four columns'],
+];
+for (const p of pages) {
+  const rel = path.relative(dist, p);
+  const text = fs.readFileSync(p, 'utf8').replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, '');
+  for (const [re, why] of FALSE_CLAIMS) {
+    const m = text.match(re);
+    if (m) failures.push(`${rel} contains "${m[0]}" (${why})`);
   }
 }
 
@@ -114,6 +165,7 @@ console.log(`\n✓ All ${requiredRoutes.length} required compliance and marketin
 console.log('✓ Google Limited Use & YouTube Data API scopes verified.');
 console.log('✓ Meta user data deletion instructions verified.');
 console.log('✓ Local-first Keychain & SQLite security statements verified.');
-console.log('✓ Interactive 4-stage publishing workflow component verified.');
-console.log('✓ Zero-knowledge data-flow topology component verified.');
-console.log('✓ Cryptographic SHA-256 download checksum verification verified.\n');
+console.log('✓ App Review notes (#demo-verification) verified.');
+console.log('✓ Four-column board workflow and data-flow topology components verified.');
+console.log('✓ SHA-256 download checksum verified.');
+console.log('✓ Truth guard: no retired claims about the app on any page.\n');

@@ -1,649 +1,204 @@
 ---
-import SectionHeader from '@andrew/ui/SectionHeader.astro';
-import { SITE, homeUrl } from '../data/site';
+/**
+ * DataFlowTopology: where everything Reelay touches actually lives, in four
+ * boundaries, including the one place a Reelay server is involved (the
+ * sign-in broker for TikTok and Meta). Written from reelay/paths.py,
+ * tokens.py, oauth.py and server/auth_broker.py.
+ *
+ * Test hooks: #data-topology, four .topology-tab with data-node-target,
+ * #panel-<target>, ArrowUp / ArrowDown on the vertical list.
+ */
+import { DATA_PATHS, AGENT_API, href } from '../data/site';
 
-const rawBase = import.meta.env.BASE_URL;
-const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
-
-const NODES = [
+const nodes = [
   {
-    id: 'node-nvme',
-    name: 'Workstation Storage (Local NVMe / SSD)',
-    tag: 'LOCAL DISK',
-    role: 'Raw Media, Proxies & On-Device Transcripts',
-    badge: '100% On-Device',
-    badgeType: 'local',
-    icon: 'disk',
-    description: 'All 4K, ProRes, and H.264 master video files remain on your local hard drive. Reelay operates no centralized media servers, performs no cloud backups of your footage, and never ingests your raw video into external systems.',
-    dataTypes: [
-      { label: 'Raw Master Files', status: 'Stored locally in creator-selected directories' },
-      { label: 'Whisper AI Transcripts', status: 'Generated on-device via local CPU/NPU inference' },
-      { label: 'Hardware Video Proxies', status: 'Cached locally in ~/.cache/reelay/proxies' },
-      { label: 'Exported Renders', status: 'Written directly to local NVMe storage' },
+    id: 'on-device',
+    label: 'On your computer',
+    short: 'Library and database',
+    title: 'Your archive lives where you put it.',
+    body: 'Videos download into the library folder you choose. Every ticket, its copy, transcript, change history and the search index live in one SQLite file. Preview and edited copies sit beside the originals, which Reelay never changes.',
+    rows: [
+      ['Videos', 'Your library folder'],
+      ['Tickets, copy, history', DATA_PATHS.dbName],
+      ['Database folder (Mac)', DATA_PATHS.mac],
+      ['Database folder (Windows)', DATA_PATHS.windows],
     ],
-    boundaryCheck: 'Zero external network transmission for local playback, editing, and transcription.',
   },
   {
-    id: 'node-sqlite',
-    name: 'Local Database & OS Secure Keychain',
-    tag: 'SECURE CREDENTIALS',
-    role: 'Relational State, History & Hardware-Sealed Secrets',
-    badge: 'Hardware Encrypted',
-    badgeType: 'secure',
-    icon: 'database',
-    description: 'Project metadata, Kanban column states, and automation rules are stored in a local SQLite file (app.db). Sensitive OAuth access and refresh tokens are sealed directly in Apple Keychain (macOS) or Windows Credential Manager—never written as plaintext files on disk.',
-    dataTypes: [
-      { label: 'OAuth 2.0 Tokens', status: 'Stored in OS Keychain (Service: "Reelay")' },
-      { label: 'Pipeline Card States', status: 'Local SQLite database (app.db)' },
-      { label: 'Automation Rules', status: 'Local SQLite relational schema' },
-      { label: 'Durable Audit Journal', status: 'Immutable local SQLite event log' },
+    id: 'keychain',
+    label: 'In your keychain',
+    short: 'Sign-ins and keys',
+    title: 'Sign-ins never touch a file.',
+    body: 'Platform tokens, Bluesky App Passwords and the agent API key are kept by your operating system, in the macOS Keychain or Windows Credential Manager. Disconnect an account and Reelay deletes its token from the keychain, and revokes it with the platform where it can.',
+    rows: [
+      ['YouTube, TikTok, Meta tokens', 'Keychain / Credential Manager'],
+      ['Bluesky App Password', 'Keychain / Credential Manager'],
+      ['Agent API key', 'Keychain / Credential Manager'],
+      ['In Reelay’s database', 'Never'],
     ],
-    boundaryCheck: 'Disconnecting any platform immediately purges keychain secrets, revokes tokens, and wipes database rows.',
   },
   {
-    id: 'node-platforms',
-    name: 'Direct Platform Publishing (Client-to-API)',
-    tag: 'DIRECT API',
-    role: 'Direct Endpoints: YouTube, TikTok & Meta Graph',
-    badge: 'Direct Client-to-API',
-    badgeType: 'direct',
-    icon: 'network',
-    description: 'When scheduled or manual publishing triggers, Reelay dispatches requests directly from your machine to official platform APIs over TLS 1.3. No Reelay proxy server routes or inspects your video payloads. (For TikTok and Meta OAuth sign-in, a short-lived loopback auth broker performs code-to-token exchange without persistent storage).',
-    dataTypes: [
-      { label: 'YouTube Data API v3', status: 'Direct TLS 1.3 from local IP to googleapis.com' },
-      { label: 'Meta Graph API', status: 'Direct TLS 1.3 to graph.facebook.com' },
-      { label: 'OAuth Code Exchange', status: 'Ephemeral broker handoff; tokens sent straight to loopback' },
-      { label: 'Prepare to Publish Tray', status: 'Local clip & clipboard copy handoff for native posting' },
+    id: 'platforms',
+    label: 'Straight to the platforms',
+    short: 'Uploads and posts',
+    title: 'From your computer to theirs.',
+    body: 'Uploads and posts go directly from your computer to YouTube, Facebook, Threads and Bluesky. Google sign-in happens entirely on your machine. For TikTok, Instagram, Threads and Facebook, Reelay’s sign-in server swaps the sign-in code for your tokens, hands them back, and keeps nothing longer than the few minutes a sign-in takes.',
+    rows: [
+      ['Video uploads', 'Your computer → the platform'],
+      ['Google sign-in', 'Loopback on 127.0.0.1'],
+      ['TikTok and Meta sign-in', 'Code exchanged by Reelay’s sign-in server'],
+      ['Copies of your videos on Reelay servers', 'None'],
     ],
-    boundaryCheck: 'Reelay operates no intermediate storage proxy. Publishing dispatches directly from your machine.',
   },
   {
-    id: 'node-mcp',
-    name: 'External AI Assistants (Optional BYO AI)',
-    tag: 'BYO AI MODELS',
-    role: 'Claude Desktop, Ollama, Meta Muse & ChatGPT',
-    badge: 'Human-in-the-Loop',
-    badgeType: 'mcp',
-    icon: 'cpu',
-    description: 'Reelay exposes a local Model Context Protocol (MCP) server bound to 127.0.0.1. External AI assistants can draft captions or suggest hashtags, but ScopedPipeline strictly prevents unattended publishing. When you invoke an external LLM, only the prompt text and transcript excerpts you provide are sent directly to that AI provider.',
-    dataTypes: [
-      { label: 'Local MCP Interface', status: 'Bound locally to loopback 127.0.0.1' },
-      { label: 'External AI Requests', status: 'Prompt text & transcripts sent to user-selected AI provider' },
-      { label: 'ScopedPipeline Approval Gate', status: 'Durable approval_requests row required for all mutations' },
-      { label: 'Token Billing & Markup', status: '$0.00 — Bring your own API keys or desktop AI subscriptions' },
+    id: 'agents',
+    label: 'Agents you approve',
+    short: 'Local API and models',
+    title: 'Help that asks first.',
+    body: 'The agent API listens on your own machine and needs its key. Drafts can be edited straight away; anything that posts, archives or changes many tickets waits for a person’s approval. Writing help runs on a model on your computer.',
+    rows: [
+      ['Agent API', `${AGENT_API.host}:${AGENT_API.port}`],
+      ['Posting, archiving, bulk edits', 'Waits for approval'],
+      ['Writing help', 'Ollama or llama.cpp, on device'],
+      ['Paid AI services', 'None'],
     ],
-    boundaryCheck: 'No AI agent can publish or delete assets without physical creator approval in the desktop GUI.',
   },
 ];
 ---
+<section id="data-topology" class="stage topo" aria-labelledby="topo-title">
+  <div class="topo-glow" aria-hidden="true"></div>
+  <div class="wrap">
+    <header class="chapter-head center topo-head" data-reveal>
+      <p class="eyebrow">Privacy</p>
+      <h2 id="topo-title" class="headline">Your computer<br />is the studio.</h2>
+      <p class="lede">There is no Reelay cloud holding your videos, your drafts or your sign-ins. <strong>Here is everything, and exactly where it lives.</strong></p>
+    </header>
 
-<section class="section topology-section" id="data-topology" aria-labelledby="topology-heading">
-  <div class="container">
-    <SectionHeader
-      index="04"
-      kicker="DATA-FLOW & PRIVACY BOUNDARIES"
-      title="Local-First Data-Flow Architecture"
-      lede="Reelay is designed so your creative assets and credentials stay in your custody. Examine the four structural boundaries of the system to see exactly what runs locally, what connects to external APIs, and how data boundaries are enforced."
-      id="topology-heading"
-    />
-
-    <!-- Interactive Topology Display -->
-    <div class="topology-container" data-topology-root>
-      <!-- Left: Interactive Node Selector Tabs -->
-      <div class="topology-nav" role="tablist" aria-orientation="vertical" aria-label="Architecture Boundaries">
-        {NODES.map((node, index) => (
+    <div class="topo-grid" data-reveal>
+      <div class="topo-tabs" role="tablist" aria-orientation="vertical" aria-label="Where your data lives">
+        {nodes.map((n, i) => (
           <button
             type="button"
             role="tab"
-            class={`topology-tab ${index === 0 ? 'active' : ''}`}
-            id={`tab-${node.id}`}
-            aria-selected={index === 0 ? 'true' : 'false'}
-            aria-controls={`panel-${node.id}`}
-            tabindex={index === 0 ? 0 : -1}
-            data-node-target={node.id}
-            data-node-index={index}
+            class="topology-tab"
+            id={`ttab-${n.id}`}
+            data-node-target={n.id}
+            aria-selected={i === 0 ? 'true' : 'false'}
+            aria-controls={`panel-${n.id}`}
+            tabindex={i === 0 ? 0 : -1}
           >
-            <div class="tab-index font-mono">0{index + 1}</div>
-            <div class="tab-info">
-              <span class="tab-tag font-mono">{node.tag}</span>
-              <span class="tab-title">{node.name.split(' (')[0]}</span>
-              <span class="tab-role">{node.role}</span>
-            </div>
-            <span class={`tab-badge badge-${node.badgeType}`}>{node.badge}</span>
+            <span class="tt-num">{String(i + 1).padStart(2, '0')}</span>
+            <span class="tt-text"><strong>{n.label}</strong><small>{n.short}</small></span>
           </button>
         ))}
       </div>
 
-      <!-- Right: Detailed Boundary Inspection Panel -->
-      <div class="topology-detail-wrap">
-        {NODES.map((node, index) => (
-          <div
-            id={`panel-${node.id}`}
-            role="tabpanel"
-            aria-labelledby={`tab-${node.id}`}
-            class={`topology-panel ${index === 0 ? 'active' : ''}`}
-            data-node-panel={node.id}
-            hidden={index !== 0}
-          >
-            <div class="panel-header">
-              <div class="panel-title-block">
-                <span class={`panel-badge badge-${node.badgeType}`}>{node.badge}</span>
-                <h3 class="panel-title">{node.name}</h3>
-                <p class="panel-role font-mono">{node.role}</p>
-              </div>
-            </div>
-
-            <p class="panel-desc">{node.description}</p>
-
-            <div class="panel-ledger">
-              <h4 class="ledger-title font-mono">Data Storage & Transit Ledger</h4>
-              <ul class="ledger-list">
-                {node.dataTypes.map(item => (
-                  <li class="ledger-item">
-                    <span class="ledger-label">{item.label}</span>
-                    <span class="ledger-status font-mono">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                      </svg>
-                      {item.status}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div class="panel-boundary-guarantee">
-              <div class="guarantee-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                </svg>
-              </div>
-              <div class="guarantee-content">
-                <strong>Architectural Boundary Guarantee:</strong>
-                <span>{node.boundaryCheck}</span>
-              </div>
-            </div>
+      <div class="topo-panels">
+        {nodes.map((n, i) => (
+          <div class="topo-panel" role="tabpanel" id={`panel-${n.id}`} aria-labelledby={`ttab-${n.id}`} hidden={i !== 0} tabindex="0">
+            <h3 class="title">{n.title}</h3>
+            <p class="tp-body">{n.body}</p>
+            <dl class="ledger">
+              {n.rows.map(([k, v]) => (
+                <div><dt>{k}</dt><dd>{v}</dd></div>
+              ))}
+            </dl>
           </div>
         ))}
       </div>
     </div>
 
-    <!-- Verifiable Compliance Badges Footer -->
-    <div class="compliance-strip">
-      <div class="compliance-item">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-          <polyline points="22 4 12 14.01 9 11.01"></polyline>
-        </svg>
-        <div>
-          <strong>Google API Limited Use</strong>
-          <p>Adheres strictly to the Google API Services User Data Policy, including Limited Use requirements.</p>
-        </div>
-      </div>
-
-      <div class="compliance-item">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 6h18"></path>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-        </svg>
-        <div>
-          <strong>Meta Account Disconnect Wipe</strong>
-          <p>Account disconnection instantly revokes tokens and purges all cached Meta metadata from SQLite.</p>
-        </div>
-      </div>
-
-      <div class="compliance-item">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-        </svg>
-        <div>
-          <strong>OS Keychain Encryption</strong>
-          <p>OAuth secrets sealed in Apple Keychain (macOS) or Windows Credential Manager. Zero plaintext tokens on disk.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Quick Links to Full Legal Documents -->
-    <div class="legal-links-row">
-      <span>Read full compliance documentation:</span>
-      <a href={`${base}/privacy`} class="legal-link">Privacy Policy →</a>
-      <a href={`${base}/privacy#google-limited-use`} class="legal-link">Google Limited Use Disclosure →</a>
-      <a href={`${base}/data-deletion`} class="legal-link">Meta Data Deletion Instructions →</a>
-    </div>
+    <p class="topo-links" data-reveal>
+      <a class="link-more" href={href('/privacy')}>Privacy Policy</a>
+      <a class="link-more" href={`${href('/privacy')}#google-limited-use`}>Google Limited Use</a>
+      <a class="link-more" href={href('/data-deletion')}>Deleting your data</a>
+    </p>
   </div>
 </section>
 
-<!-- Accessible Vertical Tablist Script with Keyboard Handling -->
-<script>
-  function setupTopologyTabs() {
-    const root = document.querySelector('[data-topology-root]');
-    if (!root) return;
-
-    const tabs = Array.from(root.querySelectorAll('.topology-tab'));
-    const panels = Array.from(root.querySelectorAll('[data-node-panel]'));
-
-    function selectNode(index: number, focus = true) {
-      if (index < 0 || index >= tabs.length) return;
-
-      tabs.forEach((tab, i) => {
-        const isSelected = i === index;
-        tab.classList.toggle('active', isSelected);
-        tab.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-        tab.setAttribute('tabindex', isSelected ? '0' : '-1');
-        if (isSelected && focus) {
-          (tab as HTMLElement).focus();
-        }
-      });
-
-      panels.forEach((panel, i) => {
-        const isSelected = i === index;
-        panel.classList.toggle('active', isSelected);
-        (panel as HTMLElement).hidden = !isSelected;
-      });
-    }
-
-    tabs.forEach((tab, index) => {
-      tab.addEventListener('click', () => {
-        selectNode(index, false);
-      });
-
-      tab.addEventListener('keydown', (e: KeyboardEvent) => {
-        let newIndex = index;
-        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-          newIndex = (index + 1) % tabs.length;
-          e.preventDefault();
-        } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-          newIndex = (index - 1 + tabs.length) % tabs.length;
-          e.preventDefault();
-        } else if (e.key === 'Home') {
-          newIndex = 0;
-          e.preventDefault();
-        } else if (e.key === 'End') {
-          newIndex = tabs.length - 1;
-          e.preventDefault();
-        } else if (e.key === 'Enter' || e.key === ' ') {
-          newIndex = index;
-          e.preventDefault();
-        } else {
-          return;
-        }
-        selectNode(newIndex, true);
-      });
-    });
-  }
-
-  setupTopologyTabs();
-  document.addEventListener('astro:page-load', setupTopologyTabs);
-</script>
-
 <style>
-  .topology-section {
-    background-color: var(--color-bg);
-    border-top: 1px solid var(--hairline);
-    border-bottom: 1px solid var(--hairline);
+  .topo { overflow: clip; }
+  .topo-glow {
+    position: absolute;
+    z-index: -1;
+    left: 50%;
+    top: 30%;
+    width: min(1200px, 150vw);
+    height: 900px;
+    transform: translateX(-50%);
+    background: radial-gradient(40% 40% at 50% 50%, rgba(240, 160, 50, 0.1), transparent 70%);
+    pointer-events: none;
   }
-
-  .topology-container {
-    display: grid;
-    grid-template-columns: 420px 1fr;
-    gap: 2rem;
-    margin-top: 2.5rem;
-    margin-bottom: 3rem;
+  .topo-head { align-items: center; }
+  .topo-head .lede { margin-inline: auto; }
+  .topo-grid { display: grid; gap: clamp(2rem, 5vw, 5rem); align-items: start; }
+  @media (min-width: 900px) {
+    .topo-grid { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); }
   }
-
-  .topology-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
+  .topo-tabs { display: grid; }
   .topology-tab {
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 1.15rem 1.25rem;
-    background-color: var(--color-surface);
-    border: 1px solid var(--hairline);
-    border-radius: var(--radius);
+    width: 100%;
+    min-height: 72px;
+    padding: 1rem 0.25rem;
+    border: 0;
+    border-top: 1px solid var(--hairline);
+    background: none;
     text-align: left;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    color: var(--text-primary);
-    width: 100%;
-    min-height: 48px;
-    outline: none;
+    color: var(--r-ink-3);
+    transition: color 0.25s ease;
   }
+  .topology-tab:last-child { border-bottom: 1px solid var(--hairline); }
+  .tt-num { font-size: 0.8rem; font-variant-numeric: tabular-nums; color: var(--r-ink-4); width: 1.5rem; }
+  .tt-text strong { display: block; font-size: clamp(1.15rem, 1.8vw, 1.4rem); font-weight: 650; letter-spacing: -0.025em; color: inherit; }
+  .tt-text small { display: block; margin-top: 0.15rem; font-size: 0.88rem; color: var(--r-ink-4); }
+  .topology-tab:hover { color: var(--r-ink-2); }
+  .topology-tab[aria-selected='true'] { color: var(--r-ink); }
+  .topology-tab[aria-selected='true'] .tt-num { color: var(--r-amber-text); }
 
-  .topology-tab:focus-visible {
-    outline: 2px solid var(--brand);
-    outline-offset: 2px;
-  }
-
-  .topology-tab:hover {
-    border-color: var(--border-strong);
-    background-color: var(--color-surface-2);
-  }
-
-  .topology-tab.active {
-    border-color: rgba(229, 169, 60, 0.5);
-    background: linear-gradient(90deg, rgba(229, 169, 60, 0.08) 0%, var(--color-surface-2) 100%);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(229, 169, 60, 0.08);
-  }
-
-  .tab-index {
-    font-size: 0.82rem;
-    font-weight: 700;
-    color: var(--text-dim);
-    flex-shrink: 0;
-  }
-
-  .topology-tab.active .tab-index {
-    color: var(--brand);
-  }
-
-  .tab-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .tab-tag {
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: var(--brand);
-    text-transform: uppercase;
-  }
-
-  .tab-title {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .tab-role {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .tab-badge {
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 0.2rem 0.55rem;
-    border-radius: 4px;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-
-  .badge-local {
-    background-color: rgba(255, 255, 255, 0.06);
-    color: #e6e8ec;
-    border: 1px solid var(--hairline);
-  }
-
-  .badge-secure {
-    background-color: rgba(62, 207, 142, 0.12);
-    color: #3ecf8e;
-    border: 1px solid rgba(62, 207, 142, 0.25);
-  }
-
-  .badge-direct {
-    background-color: rgba(77, 144, 254, 0.12);
-    color: #70a4ff;
-    border: 1px solid rgba(77, 144, 254, 0.25);
-  }
-
-  .badge-mcp {
-    background-color: rgba(229, 169, 60, 0.12);
-    color: var(--brand);
-    border: 1px solid rgba(229, 169, 60, 0.25);
-  }
-
-  /* Right Panel */
-  .topology-detail-wrap {
-    position: relative;
-    background-color: #0c0d13;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: var(--radius-lg);
-    padding: clamp(1.75rem, 3vw, 2.5rem);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  }
-
-  .topology-panel {
-    display: block;
-    animation: fadeIn 0.25s ease-out;
-  }
-
-  .topology-panel[hidden] {
-    display: none;
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(4px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1.25rem;
-  }
-
-  .panel-badge {
-    display: inline-block;
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 0.25rem 0.6rem;
-    border-radius: 4px;
-    margin-bottom: 0.75rem;
-  }
-
-  .panel-title {
-    font-family: var(--font-display);
-    font-size: clamp(1.4rem, 2.5vw, 1.85rem);
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    margin-bottom: 0.35rem;
-    color: #ffffff;
-  }
-
-  .panel-role {
-    font-size: 0.84rem;
-    color: var(--brand-light);
-  }
-
-  .panel-desc {
-    font-size: 0.96rem;
-    line-height: 1.65;
-    color: var(--text-secondary);
-    margin-bottom: 1.75rem;
-  }
-
-  .panel-ledger {
-    background-color: rgba(255, 255, 255, 0.025);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    padding: 1.25rem 1.5rem;
-    margin-bottom: 1.75rem;
-  }
-
-  .ledger-title {
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-dim);
-    margin-bottom: 1rem;
-  }
-
-  .ledger-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .ledger-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.88rem;
-    padding-bottom: 0.65rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    gap: 1rem;
-  }
-
-  .ledger-item:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-  }
-
-  .ledger-label {
-    color: var(--text-primary);
-    font-weight: 500;
-  }
-
-  .ledger-status {
-    font-size: 0.8rem;
-    color: var(--brand-light);
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    text-align: right;
-  }
-
-  .ledger-status svg {
-    color: #3ecf8e;
-    flex-shrink: 0;
-  }
-
-  .panel-boundary-guarantee {
-    display: flex;
-    gap: 1rem;
-    align-items: flex-start;
-    padding: 1.15rem 1.35rem;
-    background-color: rgba(229, 169, 60, 0.06);
-    border: 1px solid rgba(229, 169, 60, 0.25);
-    border-radius: calc(var(--radius) - 2px);
-  }
-
-  .guarantee-icon {
-    color: var(--brand);
-    flex-shrink: 0;
-    margin-top: 0.1rem;
-  }
-
-  .guarantee-content {
-    font-size: 0.88rem;
-    line-height: 1.5;
-    color: var(--text-secondary);
-  }
-
-  .guarantee-content strong {
-    color: var(--text-primary);
-    display: block;
-    margin-bottom: 0.2rem;
-  }
-
-  /* Compliance Strip */
-  .compliance-strip {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-    padding: 1.75rem 2rem;
-    background-color: var(--color-surface);
-    border: 1px solid var(--hairline);
-    border-radius: var(--radius);
-    margin-bottom: 2rem;
-  }
-
-  .compliance-item {
-    display: flex;
-    gap: 0.85rem;
-    align-items: flex-start;
-  }
-
-  .compliance-item svg {
-    color: var(--brand);
-    flex-shrink: 0;
-    margin-top: 0.15rem;
-  }
-
-  .compliance-item strong {
-    display: block;
-    font-size: 0.92rem;
-    color: var(--text-primary);
-    margin-bottom: 0.25rem;
-  }
-
-  .compliance-item p {
-    font-size: 0.8rem;
-    line-height: 1.45;
-    color: var(--text-muted);
-    margin: 0;
-  }
-
-  /* Legal Links Row */
-  .legal-links-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-    font-size: 0.85rem;
-    color: var(--text-dim);
-  }
-
-  .legal-link {
-    color: var(--brand-light);
-    font-weight: 500;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    transition: color 0.15s ease;
-  }
-
-  .legal-link:hover {
-    color: var(--brand);
-  }
-
-  /* Reduced Motion */
-  @media (prefers-reduced-motion: reduce) {
-    .topology-panel {
-      animation: none !important;
-      transition: none !important;
-    }
-    .topology-tab {
-      transition: none !important;
-    }
-  }
-
-  @media (max-width: 960px) {
-    .topology-container {
-      grid-template-columns: 1fr;
-    }
-
-    .compliance-strip {
-      grid-template-columns: 1fr;
-    }
+  .topo-panel { padding: clamp(1.75rem, 3.5vw, 2.75rem); border-radius: var(--radius-xl); background: linear-gradient(180deg, #141416, #0b0b0c); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08); }
+  .topo-panel[hidden] { display: none; }
+  .topo-panel:not([hidden]) { animation: tp-in 0.55s var(--r-ease) both; }
+  @keyframes tp-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .topo-panel:not([hidden]) { animation: none; } }
+  .tp-body { margin-top: 1rem; font-size: 1.06rem; line-height: 1.55; color: var(--r-ink-2); }
+  .ledger { margin-top: 1.75rem; display: grid; }
+  .ledger div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 1rem; padding: 0.85rem 0; border-top: 1px solid var(--hairline); }
+  .ledger dt { color: var(--r-ink-3); font-size: 0.95rem; }
+  .ledger dd { color: var(--r-ink); font-size: 0.95rem; font-weight: 500; overflow-wrap: anywhere; }
+  .topo-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.25rem 2rem; margin-top: clamp(3rem, 6vw, 4.5rem); }
+  @media (max-width: 560px) {
+    .ledger div { grid-template-columns: 1fr; gap: 0.2rem; }
   }
 </style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('#data-topology').forEach((root) => {
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('.topology-tab'));
+    const select = (i: number, focus = false) => {
+      tabs.forEach((t, j) => {
+        const on = i === j;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        const panel = root.querySelector<HTMLElement>(`#panel-${t.dataset.nodeTarget}`);
+        if (panel) panel.hidden = !on;
+      });
+      if (focus) tabs[i].focus();
+    };
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => select(i));
+      t.addEventListener('keydown', (e) => {
+        const last = tabs.length - 1;
+        let next = -1;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') next = i === last ? 0 : i + 1;
+        else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') next = i === 0 ? last : i - 1;
+        else if (e.key === 'Home') next = 0;
+        else if (e.key === 'End') next = last;
+        if (next >= 0) { e.preventDefault(); select(next, true); }
+      });
+    });
+  });
+</script>

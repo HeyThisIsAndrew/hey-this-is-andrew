@@ -1,19 +1,17 @@
 ---
 /**
- * BaseLayout: Utilizes @andrew/ui shared building blocks (Nav, Footer, ChromeMeta, PageNav)
- * layered on top of @andrew/tokens and site theme overrides.
+ * BaseLayout: the shared @andrew/ui chrome (Nav, Footer, ChromeMeta) over
+ * @andrew/tokens, with Reelay's theme and global styles layered on top.
  */
 import '@andrew/tokens/tokens.css';
 import '../styles/theme.css';
 import '@andrew/ui/styles/base.css';
-import '@andrew/ui/styles/chips.css';
-import '@andrew/ui/styles/cta.css';
 import '../styles/global.css';
 import Nav from '@andrew/ui/Nav.astro';
 import Footer from '@andrew/ui/Footer.astro';
 import ChromeMeta from '@andrew/ui/ChromeMeta.astro';
 import logo from '../assets/logo.svg';
-import { SITE, NAV_LINKS, FOOTER_EXPLORE, UTILITY_LINKS, SOCIALS, homeUrl } from '../data/site';
+import { SITE, NAV_LINKS, FOOTER_EXPLORE, UTILITY_LINKS, SOCIALS, homeUrl, href } from '../data/site';
 
 interface Props {
   title?: string;
@@ -21,26 +19,25 @@ interface Props {
 }
 
 const {
-  title = `${SITE.fullName} — ${SITE.tagline}`,
+  title = `${SITE.fullName}: ${SITE.tagline}`,
   description = SITE.description,
 } = Astro.props;
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const canonicalURL = new URL(Astro.url.pathname, Astro.site || 'https://reelay.app');
-const logoAsset = { src: logo.src, width: 170, height: 34, alt: SITE.fullName };
-const privacyHref = `${base}privacy`;
+const logoAsset = { src: logo.src, width: 132, height: 32, alt: SITE.fullName };
 ---
 
 <!doctype html>
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
-    <ChromeMeta color="#101014" />
+    <ChromeMeta color="#000000" />
+    <script is:inline>document.documentElement.classList.add('js');</script>
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalURL} />
 
-    <!-- Open Graph & Meta Platform Tags -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -48,11 +45,10 @@ const privacyHref = `${base}privacy`;
     <meta property="og:site_name" content={SITE.fullName} />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
 
-    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..800&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
   </head>
@@ -68,16 +64,36 @@ const privacyHref = `${base}privacy`;
       explore={FOOTER_EXPLORE}
       socials={SOCIALS}
       copyright={SITE.copyright}
-      privacyHref={privacyHref}
+      privacyHref={href('/privacy')}
       utility={UTILITY_LINKS}
       notes={[
-        "Google API Limited Use Disclosure: Reelay adheres to the Google API Services User Data Policy, including Limited Use requirements.",
-        "Local-First Architecture: Video assets, drafts, and OAuth credentials reside on your workstation in SQLite and OS Keychain."
+        "Reelay's use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.",
+        'Reelay is a desktop app. Your library, its database and your sign-ins stay on your computer.',
       ]}
     />
     <script>
       import { initSectionAnchors } from '@andrew/ui/scripts/section-anchors.ts';
       initSectionAnchors();
+
+      // Fade stages up as they arrive. Content is only hidden once this
+      // script runs (html.js), so a page without JS shows everything.
+      const items = document.querySelectorAll<HTMLElement>('[data-reveal]');
+      if ('IntersectionObserver' in window && items.length) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const e of entries) {
+              if (e.isIntersecting) {
+                e.target.classList.add('is-in');
+                io.unobserve(e.target);
+              }
+            }
+          },
+          { rootMargin: '0px 0px -8% 0px', threshold: 0.08 }
+        );
+        items.forEach((el) => io.observe(el));
+      } else {
+        items.forEach((el) => el.classList.add('is-in'));
+      }
     </script>
   </body>
 </html>

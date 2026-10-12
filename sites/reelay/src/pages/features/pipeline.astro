@@ -1,872 +1,208 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { SITE } from '../../data/site';
+import PageHero from '../../components/ui/PageHero.astro';
+import NextUp from '../../components/ui/NextUp.astro';
+import BoardScene from '../../components/BoardScene.astro';
+import PlatformIcon from '../../components/ui/PlatformIcon.astro';
+import { SITE, href } from '../../data/site';
 
-const base = import.meta.env.BASE_URL.replace(/\/?$/, '');
+const limits = [
+  ['youtube', 'YouTube title', '100 characters'],
+  ['youtube', 'YouTube description', '5,000 bytes'],
+  ['youtube', 'YouTube tags', '500 characters in total'],
+  ['tiktok', 'TikTok', '4,000 characters'],
+  ['instagram', 'Instagram', '2,200 characters and 30 hashtags'],
+  ['bluesky', 'Bluesky', '300 characters (an emoji counts once) and 3,000 bytes'],
+  ['threads', 'Threads', '500 characters (an emoji counts as its UTF-8 bytes)'],
+  ['facebook', 'Facebook', '63,206 characters'],
+] as const;
+
+const legend = [
+  { cls: 'live', mark: '✓', name: 'Published', note: 'Live on that platform' },
+  { cls: 'sched', mark: '◷', name: 'Scheduled', note: 'Has a time to go live' },
+  { cls: 'ready', mark: '●', name: 'Ready to publish', note: 'Copy and file check out' },
+  { cls: 'needs', mark: '!', name: 'Needs work', note: 'Missing caption or file, failed or interrupted' },
+  { cls: 'off', mark: '○', name: 'Not going', note: 'Faint: not posting there' },
+];
+
+const handoff = [
+  'Checks the file and the caption',
+  'Copies the caption',
+  'Opens the platform’s uploader',
+  'Selects the .mp4 in Finder or Explorer',
+  'Records the post link and time you paste back',
+];
 ---
 
 <BaseLayout
-  title={`Cross-Platform Pipeline & Kanban Board — ${SITE.fullName}`}
-  description="Manage multi-platform video releases with Reelay's Kanban pipeline. 5 lifecycle stages, visual coverage maps, and Prepare to Publish handoffs."
+  title={`Board and Tickets: ${SITE.fullName}`}
+  description="A Kanban board where every video is a ticket with ready-to-paste copy for six platforms, a readiness checklist, a Ready gate before scheduling, a coverage map and a complete change history."
 >
-  <div class="feature-page">
-    <div class="container">
-      <header class="feature-header">
-        <a href={`${base}/features`} class="back-link">← All Features</a>
-        <div class="badge-pill">
-          <span class="pill-dot"></span>
-          <span>PILLAR 02 • EDITORIAL FLOW</span>
-        </div>
-        <h1 class="feature-title">Cross-Platform Pipeline (Kanban)</h1>
-        <p class="feature-lead">
-          One master video, five target platforms. Track publishing readiness across YouTube Shorts, Instagram Reels, TikTok, Threads, and Facebook on a native visual board designed specifically for high-velocity video production.
-        </p>
+  <PageHero eyebrow="Board and Tickets">
+    <Fragment slot="title">Know what’s ready.<br /><span class="text-glow">Before it ships.</span></Fragment>
+    <Fragment slot="lede">Every video is a ticket on a four-column board. Each one holds the copy for every platform, a checklist that says whether it can go, and one record of everywhere it has been.</Fragment>
+  </PageHero>
+
+  <section class="stage stage--flush-top" aria-label="The Board">
+    <div class="wrap-wide" data-reveal>
+      <div class="pl-stage">
+        <div class="horizon" style="height:70%;bottom:-10%" aria-hidden="true"></div>
+        <BoardScene />
+      </div>
+    </div>
+  </section>
+
+  <section class="stage" aria-labelledby="ticket-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">The ticket</p>
+        <h2 id="ticket-title" class="headline">Everything a video<br /><span class="text-silver">needs to leave.</span></h2>
+        <p class="lede">Copy blocks for YouTube’s title, description and tags, for TikTok, Instagram, Bluesky, Threads and Facebook, and one shared hashtag block. <strong>Every block has a Copy button and a live count against that platform’s own limit.</strong></p>
       </header>
+      <div class="table-scroll" data-reveal>
+        <table class="limits">
+          <caption class="sr-only">Copy limits Reelay checks for each platform</caption>
+          <thead><tr><th scope="col">Copy block</th><th scope="col">Limit Reelay checks</th></tr></thead>
+          <tbody>
+            {limits.map(([p, name, limit]) => (
+              <tr>
+                <th scope="row"><span class="lim-name"><PlatformIcon name={p} /> {name}</span></th>
+                <td>{limit}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="lede mt-3" data-reveal>Over-limit text is reported and the save is refused. <strong>Nothing is ever cut short.</strong> Copy an empty block and you get what Reelay would use instead: the title for Bluesky and Threads, the description for TikTok, Instagram and Facebook.</p>
+    </div>
+  </section>
 
-      <!-- Interactive Kanban Pipeline Simulator -->
-      <section class="kanban-simulator-section" aria-label="Interactive Kanban Board Simulation">
-        <div class="simulator-header">
-          <div class="sim-title-group">
-            <span class="sim-indicator">● LIVE SIMULATOR</span>
-            <h3>Interactive Production Board</h3>
-          </div>
-          <p class="sim-caption">Click stages or cards below to inspect platform readiness coverage maps.</p>
+  <section class="stage stage--lift" id="readiness" aria-labelledby="ready-title">
+    <div class="wrap">
+      <div class="split">
+        <div data-reveal>
+          <p class="eyebrow">Readiness</p>
+          <h2 id="ready-title" class="title">A checklist at the top of every ticket.</h2>
+          <p class="lede">For each platform: is its copy written, is it within the limit, is the video downloaded. <strong>A ticket is READY when at least one of its platforms is.</strong> Platforms you post by hand aren’t checked, so they never block.</p>
+          <p class="lede mt-1"><strong>The Ready gate</strong> refuses to schedule any platform that isn’t ready, and lists why. You can still go ahead after an explicit confirmation. Copying and pasting is never blocked.</p>
         </div>
-
-        <div class="kanban-board-frame">
-          <div class="board-top-bar">
-            <div class="board-window-controls">
-              <span class="dot red"></span>
-              <span class="dot yellow"></span>
-              <span class="dot green"></span>
-            </div>
-            <span class="board-title-label">Reelay Studio — Pipeline: Q4_Social_Launches</span>
-            <span class="board-meta-tag">14 Active Media Cuts</span>
-          </div>
-
-          <div class="kanban-columns-grid" role="region" aria-label="Kanban Columns">
-            <!-- Col 1: Backlog -->
-            <div class="kanban-column" data-stage="backlog">
-              <div class="column-header">
-                <span class="col-name">01 BACKLOG</span>
-                <span class="col-count">4</span>
-              </div>
-              <div class="card-stack">
-                <div class="k-card active-card" tabindex="0" role="button" aria-label="Card: Apple Metal Whisper Benchmarks">
-                  <div class="card-top-row">
-                    <span class="card-codec">4K ProRes</span>
-                    <span class="card-duration">01:14</span>
-                  </div>
-                  <h4 class="card-clip-title">Apple Metal Whisper Benchmarks</h4>
-                  <div class="coverage-pills">
-                    <span class="pill-tag ready" title="YouTube Ready">YT</span>
-                    <span class="pill-tag draft" title="TikTok Drafting">TT</span>
-                    <span class="pill-tag pending" title="Instagram Pending">IG</span>
-                  </div>
-                </div>
-                <div class="k-card" tabindex="0" role="button" aria-label="Card: Studio Setup Walkthrough">
-                  <div class="card-top-row">
-                    <span class="card-codec">1080p VP9</span>
-                    <span class="card-duration">00:48</span>
-                  </div>
-                  <h4 class="card-clip-title">Studio Setup Walkthrough</h4>
-                  <div class="coverage-pills">
-                    <span class="pill-tag ready">YT</span>
-                    <span class="pill-tag ready">IG</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Col 2: Staging -->
-            <div class="kanban-column" data-stage="staging">
-              <div class="column-header">
-                <span class="col-name">02 STAGING</span>
-                <span class="col-count">3</span>
-              </div>
-              <div class="card-stack">
-                <div class="k-card" tabindex="0" role="button" aria-label="Card: SQLite FTS5 Search Demo">
-                  <div class="card-top-row">
-                    <span class="card-codec">AV1 Proxy</span>
-                    <span class="card-duration">00:52</span>
-                  </div>
-                  <h4 class="card-clip-title">SQLite FTS5 Search Demo</h4>
-                  <div class="coverage-pills">
-                    <span class="pill-tag ready">YT</span>
-                    <span class="pill-tag ready">TT</span>
-                    <span class="pill-tag ready">IG</span>
-                    <span class="pill-tag draft">TH</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Col 3: Ready (Selected Default) -->
-            <div class="kanban-column active-column" data-stage="ready">
-              <div class="column-header">
-                <span class="col-name">03 READY FOR RELEASE</span>
-                <span class="col-count active-count">5</span>
-              </div>
-              <div class="card-stack">
-                <div class="k-card featured-card" tabindex="0" role="button" aria-label="Card: Local AI MCP Architecture Guide">
-                  <div class="card-top-row">
-                    <span class="card-codec amber">9:16 Vertical</span>
-                    <span class="card-duration">00:58</span>
-                  </div>
-                  <h4 class="card-clip-title">Local AI MCP Architecture Guide</h4>
-                  <p class="card-hook-text">"Stop paying $50/mo cloud markups for video you already own."</p>
-                  <div class="coverage-pills">
-                    <span class="pill-tag ready">YT</span>
-                    <span class="pill-tag ready">TT</span>
-                    <span class="pill-tag ready">IG</span>
-                    <span class="pill-tag ready">TH</span>
-                    <span class="pill-tag ready">FB</span>
-                  </div>
-                  <div class="card-status-bar">
-                    <span class="status-indicator">5/5 Channels Verified</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Col 4: Scheduled -->
-            <div class="kanban-column" data-stage="scheduled">
-              <div class="column-header">
-                <span class="col-name">04 SCHEDULED</span>
-                <span class="col-count">2</span>
-              </div>
-              <div class="card-stack">
-                <div class="k-card" tabindex="0" role="button" aria-label="Card: Hardware Proxy Comparison">
-                  <div class="card-top-row">
-                    <span class="card-codec">1080p AV1</span>
-                    <span class="card-duration">00:35</span>
-                  </div>
-                  <h4 class="card-clip-title">Hardware Proxy Comparison</h4>
-                  <div class="coverage-pills">
-                    <span class="pill-tag ready">YT</span>
-                    <span class="pill-tag ready">IG</span>
-                  </div>
-                  <span class="schedule-badge">Tomorrow • 14:00 UTC</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Col 5: Published -->
-            <div class="kanban-column" data-stage="published">
-              <div class="column-header">
-                <span class="col-name">05 PUBLISHED</span>
-                <span class="col-count">8</span>
-              </div>
-              <div class="card-stack">
-                <div class="k-card published-card" tabindex="0" role="button" aria-label="Card: Reelay Studio Launch Teaser">
-                  <div class="card-top-row">
-                    <span class="card-codec">Live Asset</span>
-                    <span class="card-duration">00:45</span>
-                  </div>
-                  <h4 class="card-clip-title">Reelay Studio Launch Teaser</h4>
-                  <div class="coverage-pills">
-                    <span class="pill-tag live">Live 5/5</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Active Card Inspection Drawer -->
-          <div class="card-inspector-panel">
-            <div class="inspector-header">
-              <div class="inspector-badge">INSPECTED CARD METADATA</div>
-              <h4>Local AI MCP Architecture Guide (Ready for Release)</h4>
-            </div>
-            <div class="inspector-grid">
-              <div class="inspector-col">
-                <span class="col-label">Media Specifications</span>
-                <div class="spec-row"><span>Source Asset:</span> <code>render_final_mcp_v2.mp4</code></div>
-                <div class="spec-row"><span>Aspect Ratio:</span> <strong>1080 × 1920 (9:16 Vertical)</strong></div>
-                <div class="spec-row"><span>Hardware Proxy:</span> <strong>ProRes 422 Proxy (105 MB)</strong></div>
-                <div class="spec-row"><span>Audio Transcript:</span> <strong>Whisper Large-v3 (100% On-Device)</strong></div>
-              </div>
-              <div class="inspector-col">
-                <span class="col-label">Cross-Platform Coverage Validation</span>
-                <div class="coverage-row">
-                  <span class="platform-name">YouTube Shorts</span>
-                  <span class="badge-status ready">✓ 100 char title • #Shorts tag present</span>
-                </div>
-                <div class="coverage-row">
-                  <span class="platform-name">Instagram Reels</span>
-                  <span class="badge-status ready">✓ 2,200 char caption formatted • Cover art bound</span>
-                </div>
-                <div class="coverage-row">
-                  <span class="platform-name">TikTok</span>
-                  <span class="badge-status ready">✓ Commercial sounds cleared • 4 hashtags</span>
-                </div>
-                <div class="coverage-row">
-                  <span class="platform-name">Threads & Facebook</span>
-                  <span class="badge-status ready">✓ Native text snippet & direct link ready</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Deep Dive Architectural Content -->
-      <div class="deep-dive-content">
-        <h2>1. The 5 Deterministic Lifecycle Gates</h2>
-        <p>
-          Generic issue trackers lack video-specific context. Reelay Studio enforces five deterministic publishing gates directly in its local SQLite database schema:
-        </p>
-        <div class="stages-flow">
-          <div class="stage-item">
-            <span class="stage-num">01</span>
-            <div class="stage-desc-group">
-              <strong>Backlog</strong>
-              <p>Raw video cuts, external ingestions via <code>yt-dlp</code>, and unedited screen recordings awaiting review.</p>
-            </div>
-            <span class="stage-badge">Local Disk</span>
-          </div>
-          <div class="stage-item">
-            <span class="stage-num">02</span>
-            <div class="stage-desc-group">
-              <strong>Staging</strong>
-              <p>Drafting hook variations, running Whisper speech recognition, and generating platform-specific caption adaptations.</p>
-            </div>
-            <span class="stage-badge">In Progress</span>
-          </div>
-          <div class="stage-item">
-            <span class="stage-num">03</span>
-            <div class="stage-desc-group">
-              <strong>Ready</strong>
-              <p>Full validation passed: resolution conforms to 9:16, audio peaks normalized, hashtags within platform API limits.</p>
-            </div>
-            <span class="stage-badge active">Verified 5/5</span>
-          </div>
-          <div class="stage-item">
-            <span class="stage-num">04</span>
-            <div class="stage-desc-group">
-              <strong>Scheduled</strong>
-              <p>Locked into queue for direct HTTPS dispatch to platform APIs at the creator's target release hour.</p>
-            </div>
-            <span class="stage-badge">Queue Guard</span>
-          </div>
-          <div class="stage-item">
-            <span class="stage-num">05</span>
-            <div class="stage-desc-group">
-              <strong>Published</strong>
-              <p>Successfully uploaded with live platform URL references and publication receipts saved in local SQLite ledger.</p>
-            </div>
-            <span class="stage-badge live">Live Receipts</span>
-          </div>
-        </div>
-
-        <h2>2. At-a-Glance Platform Coverage Map</h2>
-        <p>
-          Publishing to multiple destinations is fragile when character counts, hashtags, and aspect ratios differ. Reelay's Coverage Map evaluates every card against platform rules in real time:
-        </p>
-        <div class="coverage-preview card">
-          <h4>Coverage Status Definitions</h4>
-          <ul class="coverage-list">
-            <li><span class="dot-ready">●</span> <strong>Green (Ready):</strong> Media dimensions, audio tracks, and platform copy are completely validated.</li>
-            <li><span class="dot-pending">●</span> <strong>Amber (Drafting):</strong> Character limit exceeded, missing custom thumbnail, or pending Whisper transcription.</li>
-            <li><span class="dot-handoff">●</span> <strong>Grey (Manual Handoff):</strong> Platform requires manual creator intervention or mobile app upload flow.</li>
+        <div class="ready-card" data-reveal style="--reveal-delay:.08s" aria-hidden="true">
+          <div class="rc-head"><span>Tokyo after midnight</span><em class="rc-not">NOT READY</em></div>
+          <ul>
+            <li><PlatformIcon name="youtube" /><span>YouTube</span><b class="ok">✓ Ready</b></li>
+            <li><PlatformIcon name="tiktok" /><span>TikTok</span><b class="ok">✓ Ready</b></li>
+            <li class="bad"><PlatformIcon name="instagram" /><span>Instagram</span><b>⚠ Caption is 2,317 of 2,200</b></li>
+            <li class="skip"><PlatformIcon name="threads" /><span>Threads</span><b>Not checked</b></li>
           </ul>
-        </div>
-
-        <h2>3. "Prepare to Publish" Frictionless Handoff</h2>
-        <p>
-          Some platforms occasionally restrict third-party API scheduling (such as specific mobile-only sticker features or audio trending tags). Reelay solves this with its signature <strong>Prepare to Publish</strong> feature:
-        </p>
-        <div class="handoff-feature-card">
-          <div class="handoff-col">
-            <h4>One-Click Export Bundle</h4>
-            <p>Packages final video cuts, copied platform captions, and exact hashtag strings into your clipboard and native export tray.</p>
+          <div class="rc-gate">
+            <strong>Can’t schedule Instagram yet</strong>
+            <span>The Instagram caption is 117 characters over.</span>
           </div>
-          <div class="handoff-col">
-            <h4>AirDrop & Local Sharing</h4>
-            <p>Instantly hands off raw media files to your mobile device or opens native platform web studios without re-rendering.</p>
-          </div>
-          <div class="handoff-col">
-            <h4>Zero Deadlines Missed</h4>
-            <p>When remote APIs experience outages or rate limits, your content release cadence remains completely unblocked.</p>
-          </div>
-        </div>
-
-        <div class="cta-box">
-          <h3>Take Command of Multi-Platform Publishing</h3>
-          <p>Download Reelay Studio and manage your video production pipeline natively on your workstation.</p>
-          <a href={`${base}/#download`} class="btn btn-primary">Download Reelay Studio</a>
         </div>
       </div>
     </div>
-  </div>
+  </section>
+
+  <section class="stage" id="coverage" aria-labelledby="cov-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">Coverage map</p>
+        <h2 id="cov-title" class="headline">Six platforms.<br /><span class="text-silver">One glance.</span></h2>
+        <p class="lede">Every card shows all six platforms in the same order, coloured by where it stands. The card’s status line names whatever needs work. <strong>Cards move themselves</strong>: to Scheduled once every platform it’s going to is scheduled or live, to Published once every one is live.</p>
+      </header>
+      <ul class="legend" data-reveal>
+        {legend.map((l) => (
+          <li>
+            <span class={`lg-dot lg--${l.cls}`} aria-hidden="true">{l.mark}</span>
+            <strong>{l.name}</strong>
+            <span>{l.note}</span>
+          </li>
+        ))}
+      </ul>
+      <p class="fine mt-2" data-reveal>Checked every minute by the background dispatcher, whether the app is open or running headless. YouTube is confirmed with YouTube.</p>
+    </div>
+  </section>
+
+  <section class="stage stage--lift" id="prepare-to-publish" aria-labelledby="ptp-title">
+    <div class="wrap">
+      <div class="split split--flip">
+        <div data-reveal>
+          <p class="eyebrow">Prepare to Publish</p>
+          <h2 id="ptp-title" class="title">For the platforms you post to yourself.</h2>
+          <p class="lede">TikTok and Instagram only allow automatic posting from apps they have reviewed, so Reelay does everything up to the button. <strong>You post in the real uploader</strong>, which keeps sounds, tags and Shop links.</p>
+        </div>
+        <ol class="steps" data-reveal style="--reveal-delay:.08s">
+          {handoff.map((s, i) => (
+            <li><span class="step-n">{i + 1}</span><span>{s}</span></li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage" aria-labelledby="more-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">Built for a real backlog</p>
+        <h2 id="more-title" class="headline">Hundreds of tickets.<br /><span class="text-silver">No surprises.</span></h2>
+      </header>
+      <div class="feature-grid" data-reveal>
+        <div class="feature"><h3>Change history</h3><p>Every saved change is logged with the time, who made it (you, a rule or an agent), the field, and the old and new values. Restore any earlier value; the restore is logged too. If logging fails, nothing is saved.</p></div>
+        <div class="feature"><h3>Durable sends</h3><p>Every send is recorded before it runs. A send cut off by a crash or a sleeping Mac becomes interrupted and waits for you: Try Again, It Was Posted, or Cancel.</p></div>
+        <div class="feature"><h3>Import Sheet</h3><p>Fill tickets from a CSV or a shared Google Sheet. Every row is previewed first, empty cells never erase anything, and the whole import is one transaction.</p></div>
+        <div class="feature"><h3>Bulk edit</h3><p>⌘-click or Shift-click cards to set permission, type, topic, keywords, creator or hashtags on all of them at once, or to fill, fetch transcripts or archive them together.</p></div>
+        <div class="feature"><h3>Your own columns</h3><p>Rename, add, remove and reorder columns per profile. Reelay’s four steps always live somewhere, so automatic moves keep working.</p></div>
+        <div class="feature"><h3>Filters that answer questions</h3><p>Show: Ready, Not ready, or Blocking a platform. Archive hides a video without deleting anything; Archived… brings it back.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <NextUp kicker="Next" title="Automations" href={href('/features/automations')} />
 </BaseLayout>
 
 <style>
-  .feature-page {
-    padding-top: clamp(3rem, 6vw, 5rem);
-    padding-bottom: clamp(5rem, 8vw, 8rem);
-  }
-
-  .back-link {
-    font-family: var(--font-mono);
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #94a3b8;
-    margin-bottom: 1.5rem;
-    display: inline-block;
-    transition: color 0.15s ease;
-  }
-  .back-link:hover {
-    color: #f8fafc;
-  }
-
-  .feature-header {
-    margin-bottom: 3.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding-bottom: 3rem;
-  }
-
-  .badge-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.85rem;
-    background: rgba(245, 158, 11, 0.08);
-    border: 1px solid rgba(245, 158, 11, 0.28);
-    border-radius: 9999px;
-    font-family: var(--font-mono, monospace);
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: #fbbf24;
-    text-transform: uppercase;
-    margin-bottom: 1.25rem;
-  }
-
-  .pill-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #f59e0b;
-    box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
-  }
-
-  .feature-title {
-    font-family: var(--font-display);
-    font-size: clamp(2.5rem, 5vw, 4.25rem);
-    font-weight: 700;
-    letter-spacing: -0.035em;
-    line-height: 1.1;
-    background: var(--text-gradient-silver);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-top: 0.5rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .feature-lead {
-    font-family: var(--font-body);
-    font-size: clamp(1.15rem, 1.8vw, 1.35rem);
-    color: #a1a1aa;
-    line-height: 1.65;
-    max-width: 840px;
-  }
-
-  /* Kanban Simulator Frame */
-  .kanban-simulator-section {
-    margin-bottom: 5rem;
-  }
-
-  .simulator-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-bottom: 1.25rem;
-  }
-
-  .sim-title-group h3 {
-    font-family: var(--font-display);
-    font-size: 1.5rem;
-    color: #f8fafc;
-    margin: 0.25rem 0 0 0;
-  }
-
-  .sim-indicator {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #34d399;
-    letter-spacing: 0.04em;
-  }
-
-  .sim-caption {
-    font-family: var(--font-body);
-    font-size: 0.88rem;
-    color: #71717a;
-    margin: 0;
-  }
-
-  .kanban-board-frame {
-    background: #090a0f;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: var(--radius-lg, 16px);
-    overflow: hidden;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
-  }
-
-  .board-top-bar {
-    background: #11121a;
-    padding: 0.75rem 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .board-window-controls {
-    display: flex;
-    gap: 0.4rem;
-  }
-
-  .dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-  }
-  .dot.red { background-color: #ff5f56; }
-  .dot.yellow { background-color: #ffbd2e; }
-  .dot.green { background-color: #27c93f; }
-
-  .board-title-label {
-    font-family: var(--font-mono);
-    font-size: 0.76rem;
-    color: #94a3b8;
-  }
-
-  .board-meta-tag {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    color: #fbbf24;
-    background: rgba(245, 158, 11, 0.12);
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-  }
-
-  .kanban-columns-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 1rem;
-    padding: 1.5rem;
-    background: #06070a;
-    overflow-x: auto;
-  }
-
-  .kanban-column {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 10px;
-    padding: 1rem 0.85rem;
-    display: flex;
-    flex-direction: column;
-    min-width: 190px;
-  }
-
-  .kanban-column.active-column {
-    background: rgba(245, 158, 11, 0.03);
-    border-color: rgba(245, 158, 11, 0.25);
-  }
-
-  .column-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  }
-
-  .col-name {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #94a3b8;
-    letter-spacing: 0.03em;
-  }
-
-  .col-count {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: #64748b;
-    background: rgba(255, 255, 255, 0.06);
-    padding: 0.1rem 0.4rem;
-    border-radius: 4px;
-  }
-
-  .col-count.active-count {
-    color: #fbbf24;
-    background: rgba(245, 158, 11, 0.2);
-  }
-
-  .card-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 0.85rem;
-  }
-
-  .k-card {
-    background: #111218;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    padding: 0.85rem;
-    cursor: pointer;
-    transition: transform 0.15s ease, border-color 0.15s ease;
-  }
-
-  .k-card:hover, .k-card:focus {
-    transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.2);
-    outline: none;
-  }
-
-  .k-card.featured-card {
-    border-color: rgba(245, 158, 11, 0.5);
-    background: linear-gradient(180deg, #181922 0%, #101117 100%);
-    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.12);
-  }
-
-  .card-top-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-  }
-
-  .card-codec {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    color: #94a3b8;
-    background: rgba(255, 255, 255, 0.06);
-    padding: 0.1rem 0.35rem;
-    border-radius: 3px;
-  }
-  .card-codec.amber {
-    color: #fbbf24;
-    background: rgba(245, 158, 11, 0.15);
-  }
-
-  .card-duration {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: #71717a;
-  }
-
-  .card-clip-title {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #f1f5f9;
-    line-height: 1.3;
-    margin: 0 0 0.5rem 0;
-  }
-
-  .card-hook-text {
-    font-size: 0.74rem;
-    color: #94a3b8;
-    font-style: italic;
-    line-height: 1.4;
-    margin-bottom: 0.65rem;
-  }
-
-  .coverage-pills {
-    display: flex;
-    gap: 4px;
-    flex-wrap: wrap;
-  }
-
-  .pill-tag {
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    font-weight: 700;
-    padding: 0.12rem 0.35rem;
-    border-radius: 3px;
-  }
-  .pill-tag.ready { background: rgba(52, 211, 153, 0.15); color: #34d399; }
-  .pill-tag.draft { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-  .pill-tag.pending { background: rgba(255, 255, 255, 0.06); color: #94a3b8; }
-  .pill-tag.live { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
-
-  .card-status-bar {
-    margin-top: 0.75rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-  }
-
-  .status-indicator {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: #34d399;
-    font-weight: 600;
-  }
-
-  .schedule-badge {
-    display: block;
-    margin-top: 0.5rem;
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    color: #fbbf24;
-  }
-
-  /* Card Inspector Panel */
-  .card-inspector-panel {
-    background: #0d0e15;
-    border-top: 1px solid rgba(255, 255, 255, 0.09);
-    padding: 1.5rem;
-  }
-
-  .inspector-header {
-    margin-bottom: 1.25rem;
-  }
-
-  .inspector-badge {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: #fbbf24;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.35rem;
-  }
-
-  .inspector-header h4 {
-    font-family: var(--font-display);
-    font-size: 1.2rem;
-    color: #f8fafc;
-    margin: 0;
-  }
-
-  .inspector-grid {
-    display: grid;
-    grid-template-columns: 1fr 1.25fr;
-    gap: 2rem;
-  }
-
-  .col-label {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    color: #71717a;
-    font-weight: 700;
-    text-transform: uppercase;
-    display: block;
-    margin-bottom: 0.75rem;
-  }
-
-  .spec-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.84rem;
-    padding: 0.4rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    color: #94a3b8;
-  }
-  .spec-row strong {
-    color: #f1f5f9;
-  }
-  .spec-row code {
-    font-family: var(--font-mono);
-    color: #fbbf24;
-  }
-
-  .coverage-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.84rem;
-    padding: 0.45rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  }
-
-  .platform-name {
-    font-weight: 600;
-    color: #f1f5f9;
-  }
-
-  .badge-status.ready {
-    font-size: 0.76rem;
-    color: #34d399;
-  }
-
-  /* Deep Dive Stages Flow */
-  .deep-dive-content {
-    color: #cbd5e1;
-    font-size: 1.05rem;
-    line-height: 1.75;
-  }
-
-  .deep-dive-content h2 {
-    font-family: var(--font-display);
-    font-size: 1.75rem;
-    color: #f8fafc;
-    margin-top: 3.5rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .stages-flow {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin: 1.75rem 0 3rem 0;
-  }
-
-  .stage-item {
-    background: #0a0b10;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-md, 10px);
-    padding: 1.25rem 1.5rem;
-    display: grid;
-    grid-template-columns: 50px 1fr 140px;
-    align-items: center;
-    gap: 1.5rem;
-  }
-
-  .stage-num {
-    font-family: var(--font-mono);
-    color: #fbbf24;
-    font-weight: 700;
-    font-size: 1.25rem;
-  }
-
-  .stage-desc-group strong {
-    color: #f8fafc;
-    font-size: 1.08rem;
-    display: block;
-    margin-bottom: 0.25rem;
-  }
-
-  .stage-desc-group p {
-    color: #94a3b8;
-    font-size: 0.92rem;
-    line-height: 1.5;
-    margin: 0;
-  }
-
-  .stage-badge {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: #94a3b8;
-    background: rgba(255, 255, 255, 0.06);
-    padding: 0.3rem 0.65rem;
-    border-radius: 6px;
-    text-align: center;
-  }
-  .stage-badge.active {
-    color: #fbbf24;
-    background: rgba(245, 158, 11, 0.15);
-  }
-  .stage-badge.live {
-    color: #34d399;
-    background: rgba(52, 211, 153, 0.15);
-  }
-
-  .coverage-preview {
-    background: #0a0b10;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-md, 12px);
-    padding: 1.75rem;
-    margin: 1.75rem 0 3rem 0;
-  }
-
-  .coverage-preview h4 {
-    font-family: var(--font-display);
-    color: #f8fafc;
-    margin-top: 0;
-    margin-bottom: 1rem;
-  }
-
-  .coverage-list {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 0.85rem;
-    padding: 0;
-    margin: 0;
-  }
-
-  .coverage-list li {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    font-size: 0.94rem;
-    color: #cbd5e1;
-  }
-
-  .dot-ready { color: #34d399; font-size: 1.1rem; }
-  .dot-pending { color: #fbbf24; font-size: 1.1rem; }
-  .dot-handoff { color: #64748b; font-size: 1.1rem; }
-
-  .handoff-feature-card {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-    background: #0c0d12;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-md, 12px);
-    padding: 2rem;
-    margin: 1.75rem 0 3.5rem 0;
-  }
-
-  .handoff-col h4 {
-    font-family: var(--font-display);
-    color: #f8fafc;
-    font-size: 1.05rem;
-    margin-top: 0;
-    margin-bottom: 0.5rem;
-  }
-
-  .handoff-col p {
-    font-size: 0.9rem;
-    color: #94a3b8;
-    line-height: 1.55;
-    margin: 0;
-  }
-
-  .cta-box {
-    background: linear-gradient(180deg, #101118 0%, #08090d 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-lg, 16px);
-    padding: 3rem 2rem;
-    text-align: center;
-    margin-top: 4.5rem;
-  }
-
-  .cta-box h3 {
-    font-family: var(--font-display);
-    font-size: 1.85rem;
-    color: #f8fafc;
-    margin-bottom: 0.75rem;
-  }
-
-  .cta-box p {
-    font-size: 1.05rem;
-    color: #94a3b8;
-    margin-bottom: 2rem;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  @media (max-width: 900px) {
-    .inspector-grid {
-      grid-template-columns: 1fr;
-      gap: 1.5rem;
-    }
-    .handoff-feature-card {
-      grid-template-columns: 1fr;
-    }
-    .stage-item {
-      grid-template-columns: 40px 1fr;
-      gap: 1rem;
-    }
-    .stage-badge {
-      display: none;
-    }
-  }
+  .pl-stage { position: relative; isolation: isolate; max-width: 1240px; margin: 0 auto; }
+  .limits { width: 100%; border-collapse: collapse; }
+  .limits th, .limits td { text-align: left; padding: 1.1rem 0; border-bottom: 1px solid var(--hairline); font-size: 1.05rem; vertical-align: middle; }
+  .limits thead th { font-size: 0.85rem; font-weight: 600; color: var(--r-ink-3); border-bottom-color: var(--hairline-strong); padding-top: 0; }
+  .limits tbody th { font-weight: 600; color: var(--r-ink); padding-right: 2rem; white-space: nowrap; }
+  .limits td { color: var(--r-ink-2); }
+  .lim-name { display: inline-flex; align-items: center; gap: 0.75rem; }
+  .lim-name :global(svg) { width: 1.25rem; height: 1.25rem; color: var(--r-ink-2); }
+
+  .ready-card {
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border-radius: var(--radius-xl);
+    background: radial-gradient(70% 50% at 80% 0%, rgba(255, 69, 58, 0.12), transparent 70%), linear-gradient(180deg, #151517, #0c0c0d);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 40px 100px -30px rgba(0, 0, 0, 0.9);
+  }
+  .rc-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: 1.15rem; font-weight: 650; letter-spacing: -0.02em; }
+  .rc-not { font-style: normal; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; padding: 0.3rem 0.6rem; border-radius: 6px; background: rgba(255, 69, 58, 0.16); color: #ff7a70; }
+  .ready-card ul { list-style: none; margin-top: 1.25rem; }
+  .ready-card li { display: grid; grid-template-columns: 1.4rem 6.5rem minmax(0, 1fr); align-items: center; gap: 0.75rem; padding: 0.85rem 0; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 0.98rem; }
+  .ready-card li :global(svg) { width: 1.15rem; height: 1.15rem; color: var(--r-ink-2); }
+  .ready-card li span { font-weight: 600; }
+  .ready-card li b { font-weight: 500; text-align: right; color: var(--r-ink-3); }
+  .ready-card li b.ok { color: #5fe08a; }
+  .ready-card li.bad b { color: #ff7a70; }
+  .ready-card li.skip { opacity: 0.55; }
+  .rc-gate { margin-top: 1rem; padding: 1rem 1.1rem; border-radius: 16px; background: rgba(255, 69, 58, 0.1); display: grid; gap: 0.25rem; }
+  .rc-gate strong { color: #ffb0aa; }
+  .rc-gate span { font-size: 0.92rem; color: var(--r-ink-2); }
+
+  .legend { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 2rem 1.5rem; }
+  .legend li { display: grid; gap: 0.35rem; padding-top: 1.25rem; border-top: 1px solid var(--hairline-strong); }
+  .legend strong { font-size: 1.05rem; }
+  .legend span:last-child { font-size: 0.92rem; color: var(--r-ink-3); }
+  .lg-dot { display: grid; place-items: center; width: 2.6rem; height: 2.6rem; margin-bottom: 0.6rem; border-radius: 12px; font-weight: 800; font-size: 1.05rem; }
+  .lg--live { color: var(--r-live); background: rgba(48, 209, 88, 0.14); }
+  .lg--sched { color: var(--r-sched); background: rgba(10, 132, 255, 0.16); }
+  .lg--ready { color: var(--r-ready); background: rgba(255, 159, 10, 0.15); }
+  .lg--needs { color: var(--r-needs); background: rgba(255, 69, 58, 0.15); }
+  .lg--off { color: rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.04); }
+
+  .steps { list-style: none; display: grid; counter-reset: s; }
+  .steps li { display: flex; align-items: center; gap: 1.1rem; padding: 1.15rem 0; border-top: 1px solid var(--hairline); font-size: 1.12rem; font-weight: 500; color: var(--r-ink); }
+  .steps li:last-child { border-bottom: 1px solid var(--hairline); }
+  .step-n { display: grid; place-items: center; flex: none; width: 2.2rem; height: 2.2rem; border-radius: 50%; background: rgba(240, 180, 76, 0.14); color: var(--r-amber-text); font-size: 0.95rem; font-weight: 700; }
 </style>

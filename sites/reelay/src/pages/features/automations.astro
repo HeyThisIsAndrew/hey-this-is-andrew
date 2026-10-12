@@ -1,741 +1,229 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { SITE } from '../../data/site';
+import PageHero from '../../components/ui/PageHero.astro';
+import NextUp from '../../components/ui/NextUp.astro';
+import { SITE, href } from '../../data/site';
+import { CREATOR, OPEN_TICKET } from '../../data/demo';
 
-const base = import.meta.env.BASE_URL.replace(/\/?$/, '');
+/* The vocabulary is the app's own (reelay/rules.py). */
+const triggers = ['A video is added to the board', 'A video is moved to a column'];
+const conditions = [
+  'Caption or copy contains',
+  'Title contains',
+  'Has hashtag',
+  'Tagged product or brand contains',
+  'Shorter than (seconds)',
+  'Longer than (seconds)',
+  'Came from (TikTok, Instagram, YouTube…)',
+];
+const actions = [
+  'Fill an empty field from a template',
+  'Add hashtags',
+  'Post to these platforms',
+  'Set a ticket field',
+  'Move to column',
+  'Schedule for the next…',
+];
+const sample = {
+  hook: OPEN_TICKET.card.title,
+  title: OPEN_TICKET.card.title,
+  caption: OPEN_TICKET.caption,
+  hashtags: '#bigsur #goldenhour #roadtrip',
+  topic: 'Travel',
+  creator: CREATOR.name,
+};
+const placeholders = Object.keys(sample).map((k) => `{${k}}`);
+const safety = [
+  { t: 'Once per video', d: 'A rule acts on each video once and remembers it, so edits you make afterwards are never overwritten by the same rule.' },
+  { t: 'Never on what’s already there', d: 'A new or re-enabled rule never fires on videos already on the board. Run on Existing Videos… does that on purpose, after showing how many match.' },
+  { t: 'Only empty fields', d: 'Templates fill empty fields only. Nothing a person typed is ever replaced.' },
+  { t: 'Through the Ready gate', d: 'A rule that schedules goes through the same gate you do. A ticket that isn’t ready isn’t scheduled, and the log says why.' },
+  { t: 'Agents wait for a person', d: 'A rule never schedules copy that came from an AI agent. That waits for a person’s approval instead.' },
+  { t: 'Everything is logged', d: 'Automations → Activity lists everything every rule did, in plain words.' },
+];
 ---
 
 <BaseLayout
-  title={`Automations & Safe Rules Engine — ${SITE.fullName}`}
-  description="Local-first When/If/Then automation engine for video creators. Dynamic caption templates, safety gates, and deterministic publishing logic."
+  title={`Automations: ${SITE.fullName}`}
+  description="When, if, then rules that work your tickets for you: fill empty copy from templates, add hashtags, pick platforms and schedule, with safety rules that never overwrite what you wrote."
 >
-  <div class="feature-page">
-    <div class="container">
-      <header class="feature-header">
-        <a href={`${base}/features`} class="back-link">← All Features</a>
-        <div class="badge-pill">
-          <span class="pill-dot"></span>
-          <span>PILLAR 03 • DETERMINISTIC LOGIC</span>
+  <PageHero eyebrow="Automations">
+    <Fragment slot="title">When. If. Then.<br /><span class="text-glow">Done.</span></Fragment>
+    <Fragment slot="lede">Rules that do the repetitive part of every ticket the moment a video arrives, and that are careful about it: <strong>they fill what’s empty, act once, and write down everything they did.</strong></Fragment>
+  </PageHero>
+
+  <section class="stage stage--flush-top" aria-labelledby="builder-title">
+    <div class="wrap">
+      <h2 id="builder-title" class="sr-only">Build a rule</h2>
+      <div class="builder" data-rule-builder data-sample={JSON.stringify(sample)} data-reveal>
+        <div class="b-row">
+          <span class="b-k">When</span>
+          <label class="b-field">
+            <span class="sr-only">Trigger</span>
+            <select data-b-when>{triggers.map((t) => <option>{t}</option>)}</select>
+          </label>
         </div>
-        <h1 class="feature-title">Automations & Safe Rules Engine</h1>
-        <p class="feature-lead">
-          Eliminate repetitive formatting, tagging, and multi-platform distribution tasks with safe, deterministic desktop rules that trigger automatically when video cards advance across your pipeline.
-        </p>
-      </header>
-
-      <!-- Interactive Rule Builder & Token Simulator -->
-      <section class="rule-simulator-section" aria-label="Interactive Rule Builder Simulator">
-        <div class="sim-top-bar">
-          <div class="sim-title">
-            <span class="live-dot"></span>
-            <span class="title-text">INTERACTIVE RULE SANDBOX</span>
-          </div>
-          <span class="sim-badge">DETERMINISTIC SQLITE TRIGGERS</span>
+        <div class="b-row">
+          <span class="b-k">If</span>
+          <label class="b-field">
+            <span class="sr-only">Condition</span>
+            <select data-b-if>{conditions.map((c) => <option>{c}</option>)}</select>
+          </label>
+          <label class="b-field b-field--short">
+            <span class="sr-only">Value</span>
+            <input type="text" value="sunset" data-b-value />
+          </label>
         </div>
-
-        <div class="rule-sandbox-window">
-          <div class="window-header">
-            <div class="traffic-lights">
-              <span class="light red"></span>
-              <span class="light yellow"></span>
-              <span class="light green"></span>
-            </div>
-            <span class="window-name">Reelay Studio — Rule Configurator: Rule #04_Shorts_Autotag</span>
-            <span class="window-mode">Active • Guard Enforced</span>
-          </div>
-
-          <div class="sandbox-content-grid">
-            <!-- Left: Configurable Rule Controls -->
-            <div class="rule-logic-column">
-              <h4 class="col-title">Rule Definition (When / If / Then)</h4>
-
-              <!-- WHEN Block -->
-              <div class="rule-clause-block">
-                <div class="clause-badge when-badge">WHEN</div>
-                <div class="clause-body">
-                  <span class="clause-label">Trigger Event:</span>
-                  <div class="clause-select-sim">
-                    <span>Card advances to column:</span>
-                    <strong class="highlight-val">03 Ready for Release</strong>
-                  </div>
-                </div>
-              </div>
-
-              <!-- IF Block -->
-              <div class="rule-clause-block">
-                <div class="clause-badge if-badge">IF</div>
-                <div class="clause-body">
-                  <span class="clause-label">Match Conditions:</span>
-                  <div class="clause-checkboxes">
-                    <label class="check-item"><span class="checked-box">✓</span> Aspect ratio equals <code>9:16 Vertical</code></label>
-                    <label class="check-item"><span class="checked-box">✓</span> Target includes <code>YouTube Shorts</code></label>
-                    <label class="check-item"><span class="checked-box">✓</span> Whisper transcript word count &gt; 50</label>
-                  </div>
-                </div>
-              </div>
-
-              <!-- THEN Block -->
-              <div class="rule-clause-block">
-                <div class="clause-badge then-badge">THEN</div>
-                <div class="clause-body">
-                  <span class="clause-label">Execute Operations:</span>
-                  <div class="then-steps">
-                    <div class="step-line">1. Apply Template: <code>{`{hook}`}</code> • <code>{`{caption}`}</code></div>
-                    <div class="step-line">2. Append Preset Tags: <code>#Shorts #CreatorOps</code></div>
-                    <div class="step-line">3. Generate 1080×1920 Cover Thumbnail from frame 00:01.50</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Safety Gate Banner -->
-              <div class="safety-gate-rail">
-                <div class="gate-status">
-                  <span class="gate-icon">🛡️</span>
-                  <div>
-                    <strong>Non-Destructive Safety Gate Active</strong>
-                    <p>Will never overwrite creator manual edits. Enforced by SQLite update checksums.</p>
-                  </div>
-                </div>
-                <span class="gate-tag">ENFORCED</span>
-              </div>
-            </div>
-
-            <!-- Right: Real-time Live Output Preview -->
-            <div class="rule-output-column">
-              <h4 class="col-title">Live Token Expansion Simulation</h4>
-
-              <div class="tokens-preview-card">
-                <span class="output-label">OUTPUT PREVIEW (YOUTUBE SHORTS)</span>
-                
-                <div class="output-field">
-                  <span class="field-name">Title:</span>
-                  <p class="field-val">Stop organizing your video assets in spreadsheets 🚀</p>
-                </div>
-
-                <div class="output-field">
-                  <span class="field-name">Expanded Description:</span>
-                  <div class="caption-expanded-box">
-                    <p>Why pay $50/mo cloud markups for video files that already live on your local hard drive? Reelay Studio runs directly on your machine with zero cloud relay.</p>
-                    <p class="hashtag-string">#Shorts #CreatorOps #LocalFirst #VideoEditing</p>
-                  </div>
-                </div>
-
-                <div class="tokens-legend">
-                  <span class="legend-title">RESOLVED DYNAMIC TOKENS:</span>
-                  <div class="token-chip"><span class="tok-name">{`{hook}`}</span> First sentence of Whisper transcript</div>
-                  <div class="token-chip"><span class="tok-name">{`{caption}`}</span> Channel default release summary</div>
-                  <div class="token-chip"><span class="tok-name">{`{hashtags}`}</span> 4 tags (verified under platform limits)</div>
-                </div>
-              </div>
-
-              <div class="rule-metrics-box">
-                <div class="metric-row"><span>Execution Latency:</span> <strong class="green-text">&lt; 1.8 ms (Local SQLite)</strong></div>
-                <div class="metric-row"><span>Cloud Network Calls:</span> <strong>0 Bytes Transmitted</strong></div>
-                <div class="metric-row"><span>State Rollback:</span> <strong>Atomic Transaction Safe</strong></div>
-              </div>
-            </div>
+        <div class="b-row">
+          <span class="b-k">Then</span>
+          <label class="b-field">
+            <span class="sr-only">Action</span>
+            <select data-b-then>{actions.map((a) => <option>{a}</option>)}</select>
+          </label>
+        </div>
+        <div class="b-template">
+          <label for="b-tpl">TikTok caption template</label>
+          <input id="b-tpl" type="text" value="{hook}. Shot on the road. {hashtags}" spellcheck="false" data-b-tpl />
+          <div class="b-chips" aria-label="Placeholders">
+            {placeholders.map((p) => <button type="button" class="b-chip" data-b-insert={p}>{p}</button>)}
           </div>
         </div>
-      </section>
-
-      <!-- Deep Dive Architectural Content -->
-      <div class="deep-dive-content">
-        <h2>1. Intuitive When / If / Then Logic</h2>
-        <p>
-          Configure custom operational rules without writing complicated Python or shell scripts. Reelay's desktop automation engine monitors your local SQLite database events:
-        </p>
-        <div class="code-rule-card card">
-          <div class="rule-token"><span class="token-kw">WHEN:</span> Video is moved to column <code>03 Ready</code></div>
-          <div class="rule-token"><span class="token-kw">IF:</span> Aspect Ratio is <code>9:16</code> AND Platform includes <code>Instagram Reels</code></div>
-          <div class="rule-token"><span class="token-kw">THEN:</span> Format caption with Brand Template #1, append default audio tag, and generate shareable asset package</div>
-        </div>
-
-        <h2>2. Dynamic Token Templating Matrix</h2>
-        <p>
-          Maintain consistent brand voice across platforms while eliminating copy-paste errors using dynamic tokens that pull directly from your video's audio and metadata:
-        </p>
-        <div class="tokens-table">
-          <div class="token-row">
-            <code>{`{hook}`}</code>
-            <span>Extracted first sentence from your spoken Whisper transcript or manual title.</span>
-          </div>
-          <div class="token-row">
-            <code>{`{caption}`}</code>
-            <span>Platform-optimized description text generated or refined for each destination.</span>
-          </div>
-          <div class="token-row">
-            <code>{`{hashtags}`}</code>
-            <span>Platform-specific tag groups configured in your channel presets, auto-checked against platform rules.</span>
-          </div>
-          <div class="token-row">
-            <code>{`{creator}`}</code>
-            <span>Channel handle or brand signatory string.</span>
+        <div class="b-out">
+          <p class="b-sentence" data-b-sentence>When: a video is added to the board. If: caption or copy contains “sunset”. Then: fill an empty field from a template.</p>
+          <div class="b-preview">
+            <span class="b-preview-k">Filled for “{sample.title}”</span>
+            <p data-b-preview>{sample.hook}. Shot on the road. {sample.hashtags}</p>
           </div>
         </div>
-
-        <h2>3. Built-In Safety Gates (Non-Destructive Guarantee)</h2>
-        <p>
-          Automations should save time—never destroy creator work. Reelay enforces unbreakable safety guardrails:
-        </p>
-        <ul>
-          <li><strong>Never Overwrite Manual Copy:</strong> If you manually edit a caption on a video card, automated rules will detect the dirty flag and never overwrite your custom words.</li>
-          <li><strong>Once Per Video Per Rule:</strong> Rules track execution hashes in SQLite, completely preventing accidental infinite loops.</li>
-          <li><strong>Readiness Verification:</strong> Automated publishing actions strictly verify platform compliance gates (e.g., maximum video length, file size limits) before queueing.</li>
-        </ul>
-
-        <div class="cta-box">
-          <h3>Automate Your Pipeline Safely</h3>
-          <p>Download Reelay Studio and build custom local automation rules for your channels today.</p>
-          <a href={`${base}/#download`} class="btn btn-primary">Download Reelay Studio</a>
-        </div>
+        <p class="b-note">An illustration of the Automations page. The sentence under the rule is how Reelay itself describes it.</p>
       </div>
     </div>
-  </div>
+  </section>
+
+  <section class="stage stage--lift" aria-labelledby="vocab-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">The vocabulary</p>
+        <h2 id="vocab-title" class="headline">Two triggers. Seven conditions.<br /><span class="text-silver">Six actions.</span></h2>
+      </header>
+      <div class="vocab" data-reveal>
+        <div><h3>When</h3><ul>{triggers.map((t) => <li>{t}</li>)}</ul></div>
+        <div><h3>If</h3><ul>{conditions.map((t) => <li>{t}</li>)}</ul></div>
+        <div><h3>Then</h3><ul>{actions.map((t) => <li>{t}</li>)}</ul></div>
+      </div>
+      <p class="lede mt-3" data-reveal>Templates can use <code>{'{caption}'}</code>, <code>{'{title}'}</code>, <code>{'{hashtags}'}</code>, <code>{'{topic}'}</code>, <code>{'{creator}'}</code> and <code>{'{hook}'}</code>, the video’s opening line as a viewer would recognise it.</p>
+    </div>
+  </section>
+
+  <section class="stage" aria-labelledby="safety-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <p class="eyebrow">Safety first</p>
+        <h2 id="safety-title" class="headline">Rules that know<br /><span class="text-silver">their place.</span></h2>
+        <p class="lede">An automation that quietly overwrites a caption is worse than none. These six rules are built into how every rule runs.</p>
+      </header>
+      <div class="feature-grid" data-reveal>
+        {safety.map((s) => <div class="feature"><h3>{s.t}</h3><p>{s.d}</p></div>)}
+      </div>
+      <p class="fine mt-3" data-reveal>Rules and their memory live in each profile’s settings, so they travel with a shared database.</p>
+    </div>
+  </section>
+
+  <NextUp kicker="Next" title="Agents" href={href('/ai')} />
 </BaseLayout>
 
 <style>
-  .feature-page {
-    padding-top: clamp(3rem, 6vw, 5rem);
-    padding-bottom: clamp(5rem, 8vw, 8rem);
-  }
-
-  .back-link {
-    font-family: var(--font-mono);
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #94a3b8;
-    margin-bottom: 1.5rem;
-    display: inline-block;
-    transition: color 0.15s ease;
-  }
-  .back-link:hover {
-    color: #f8fafc;
-  }
-
-  .feature-header {
-    margin-bottom: 3.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding-bottom: 3rem;
-  }
-
-  .badge-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.85rem;
-    background: rgba(245, 158, 11, 0.08);
-    border: 1px solid rgba(245, 158, 11, 0.28);
-    border-radius: 9999px;
-    font-family: var(--font-mono, monospace);
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: #fbbf24;
-    text-transform: uppercase;
-    margin-bottom: 1.25rem;
-  }
-
-  .pill-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #f59e0b;
-    box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
-  }
-
-  .feature-title {
-    font-family: var(--font-display);
-    font-size: clamp(2.5rem, 5vw, 4.25rem);
-    font-weight: 700;
-    letter-spacing: -0.035em;
-    line-height: 1.1;
-    background: var(--text-gradient-silver);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-top: 0.5rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .feature-lead {
-    font-family: var(--font-body);
-    font-size: clamp(1.15rem, 1.8vw, 1.35rem);
-    color: #a1a1aa;
-    line-height: 1.65;
-    max-width: 840px;
-  }
-
-  /* Rule Simulator Section */
-  .rule-simulator-section {
-    margin-bottom: 5rem;
-  }
-
-  .sim-top-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-  }
-
-  .sim-title {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .live-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #34d399;
-    box-shadow: 0 0 8px #34d399;
-  }
-
-  .title-text {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #cbd5e1;
-    letter-spacing: 0.05em;
-  }
-
-  .sim-badge {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: #fbbf24;
-    background: rgba(245, 158, 11, 0.12);
-    border: 1px solid rgba(245, 158, 11, 0.25);
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-  }
-
-  .rule-sandbox-window {
-    background: #090a0f;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: var(--radius-lg, 16px);
-    overflow: hidden;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
-  }
-
-  .window-header {
-    background: #11121a;
-    padding: 0.75rem 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .traffic-lights {
-    display: flex;
-    gap: 0.4rem;
-  }
-
-  .light {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-  }
-  .light.red { background-color: #ff5f56; }
-  .light.yellow { background-color: #ffbd2e; }
-  .light.green { background-color: #27c93f; }
-
-  .window-name {
-    font-family: var(--font-mono);
-    font-size: 0.76rem;
-    color: #94a3b8;
-  }
-
-  .window-mode {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: #34d399;
-  }
-
-  .sandbox-content-grid {
+  .builder {
     display: grid;
-    grid-template-columns: 1.15fr 1fr;
-    background: #06070a;
+    gap: 0.9rem;
+    max-width: 52rem;
+    margin: 0 auto;
+    padding: clamp(1.25rem, 3.5vw, 2.5rem);
+    border-radius: var(--radius-xl);
+    background:
+      radial-gradient(70% 50% at 50% 0%, rgba(240, 170, 60, 0.14), transparent 70%),
+      linear-gradient(180deg, #151517, #0b0b0c);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 50px 120px -40px rgba(0, 0, 0, 0.9);
   }
+  .b-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+  .b-k { width: 3.5rem; font-weight: 700; font-size: 1.05rem; color: var(--r-amber-text); }
+  .b-field { flex: 1; min-width: min(100%, 14rem); }
+  .b-field--short { flex: 0 1 11rem; min-width: 8rem; }
+  .b-field select, .b-field input, .b-template input {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 1rem;
+    border: 0;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--r-ink);
+    font: 500 1rem var(--font-body);
+    letter-spacing: -0.01em;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .b-field select {
+    padding-right: 2.5rem;
+    background-image: linear-gradient(45deg, transparent 50%, var(--r-ink-3) 50%), linear-gradient(135deg, var(--r-ink-3) 50%, transparent 50%);
+    background-position: calc(100% - 1.25rem) 52%, calc(100% - 0.9rem) 52%;
+    background-size: 6px 6px;
+    background-repeat: no-repeat;
+    cursor: pointer;
+  }
+  .b-field select option { background: #1c1c1f; color: var(--r-ink); }
+  .b-field select:focus, .b-field input:focus, .b-template input:focus { outline: none; box-shadow: inset 0 0 0 1px rgba(245, 197, 107, 0.6), 0 0 0 4px rgba(240, 180, 76, 0.12); }
+  .b-template { display: grid; gap: 0.6rem; margin-top: 0.5rem; padding-top: 1.25rem; border-top: 1px solid var(--hairline); }
+  .b-template label { font-size: 0.9rem; font-weight: 600; }
+  .b-template input { font-family: var(--font-mono); font-size: 0.92rem; }
+  .b-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .b-chip { min-height: 36px; padding: 0 0.8rem; border: 0; border-radius: 999px; background: rgba(240, 180, 76, 0.12); color: var(--r-amber-text); font: 500 0.85rem var(--font-mono); cursor: pointer; }
+  .b-chip:hover { background: rgba(240, 180, 76, 0.22); }
+  .b-out { display: grid; gap: 0.9rem; margin-top: 0.5rem; padding-top: 1.25rem; border-top: 1px solid var(--hairline); }
+  .b-sentence { font-size: 1.1rem; line-height: 1.5; color: var(--r-ink); }
+  .b-preview { padding: 1rem 1.15rem; border-radius: 16px; background: #0a0a0b; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+  .b-preview-k { font-size: 0.8rem; font-weight: 600; color: var(--r-ink-3); }
+  .b-preview p { margin-top: 0.4rem; color: var(--r-ink); overflow-wrap: anywhere; }
+  .b-note { font-size: 0.8rem; color: var(--r-ink-4); }
 
-  .rule-logic-column {
-    padding: 1.75rem;
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-
-  .col-title {
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin: 0;
-  }
-
-  .rule-clause-block {
-    background: #0f1017;
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 8px;
-    padding: 1rem;
-    display: flex;
-    gap: 1rem;
-  }
-
-  .clause-badge {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    font-weight: 800;
-    padding: 0.25rem 0.6rem;
-    border-radius: 4px;
-    align-self: flex-start;
-  }
-  .when-badge { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
-  .if-badge { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
-  .then-badge { background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
-
-  .clause-body {
-    flex: 1;
-  }
-
-  .clause-label {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: #71717a;
-    display: block;
-    margin-bottom: 0.35rem;
-  }
-
-  .clause-select-sim {
-    font-size: 0.85rem;
-    color: #cbd5e1;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .highlight-val {
-    color: #fbbf24;
-    font-family: var(--font-mono);
-  }
-
-  .clause-checkboxes {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-  }
-
-  .check-item {
-    font-size: 0.82rem;
-    color: #cbd5e1;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .checked-box {
-    font-size: 0.7rem;
-    color: #34d399;
-    background: rgba(52, 211, 153, 0.15);
-    padding: 0.1rem 0.3rem;
-    border-radius: 3px;
-  }
-
-  .check-item code {
-    background: rgba(255, 255, 255, 0.08);
-    padding: 0.1rem 0.35rem;
-    border-radius: 3px;
-    font-family: var(--font-mono);
-    font-size: 0.8em;
-  }
-
-  .then-steps {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    font-size: 0.82rem;
-    color: #cbd5e1;
-  }
-
-  .then-steps code {
-    background: rgba(255, 255, 255, 0.08);
-    padding: 0.1rem 0.35rem;
-    border-radius: 3px;
-    font-family: var(--font-mono);
-    font-size: 0.8em;
-    color: #fbbf24;
-  }
-
-  .safety-gate-rail {
-    background: rgba(52, 211, 153, 0.05);
-    border: 1px solid rgba(52, 211, 153, 0.25);
-    border-radius: 8px;
-    padding: 0.85rem 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .gate-status {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .gate-status strong {
-    font-size: 0.82rem;
-    color: #34d399;
-    display: block;
-  }
-
-  .gate-status p {
-    font-size: 0.75rem;
-    color: #94a3b8;
-    margin: 0;
-  }
-
-  .gate-tag {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    font-weight: 700;
-    color: #34d399;
-    background: rgba(52, 211, 153, 0.15);
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-  }
-
-  /* Right Column: Output Preview */
-  .rule-output-column {
-    padding: 1.75rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 1.5rem;
-  }
-
-  .tokens-preview-card {
-    background: #0d0e15;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    padding: 1.25rem;
-  }
-
-  .output-label {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: #fbbf24;
-    letter-spacing: 0.04em;
-    display: block;
-    margin-bottom: 1rem;
-  }
-
-  .output-field {
-    margin-bottom: 1rem;
-  }
-
-  .field-name {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    color: #71717a;
-    display: block;
-    margin-bottom: 0.25rem;
-  }
-
-  .field-val {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: #f8fafc;
-    margin: 0;
-  }
-
-  .caption-expanded-box {
-    background: #07080c;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 6px;
-    padding: 0.85rem;
-    font-size: 0.82rem;
-    color: #cbd5e1;
-    line-height: 1.5;
-  }
-  .caption-expanded-box p {
-    margin: 0 0 0.5rem 0;
-  }
-  .caption-expanded-box p:last-child {
-    margin: 0;
-  }
-
-  .hashtag-string {
-    color: #60a5fa;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-  }
-
-  .tokens-legend {
-    margin-top: 1.25rem;
-    padding-top: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-  }
-
-  .legend-title {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: #71717a;
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-
-  .token-chip {
-    font-size: 0.76rem;
-    color: #94a3b8;
-    margin-bottom: 0.35rem;
-  }
-
-  .tok-name {
-    font-family: var(--font-mono);
-    color: #fbbf24;
-    font-weight: 700;
-  }
-
-  .rule-metrics-box {
-    background: #090a10;
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 8px;
-    padding: 0.85rem 1rem;
-  }
-
-  .metric-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.78rem;
-    padding: 0.3rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    color: #828594;
-  }
-  .metric-row:last-child {
-    border-bottom: none;
-  }
-  .metric-row strong {
-    color: #e2e8f0;
-  }
-  .green-text {
-    color: #34d399 !important;
-  }
-
-  /* Deep Dive Content */
-  .deep-dive-content {
-    color: #cbd5e1;
-    font-size: 1.05rem;
-    line-height: 1.75;
-  }
-
-  .deep-dive-content h2 {
-    font-family: var(--font-display);
-    font-size: 1.75rem;
-    color: #f8fafc;
-    margin-top: 3.5rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .code-rule-card {
-    background-color: #0c0d12;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-md, 10px);
-    font-family: var(--font-mono);
-    display: flex;
-    flex-direction: column;
-    gap: 0.85rem;
-    padding: 1.5rem;
-    margin: 1.75rem 0 3rem 0;
-  }
-
-  .rule-token {
-    font-size: 0.88rem;
-    color: #cbd5e1;
-  }
-
-  .token-kw {
-    color: #fbbf24;
-    font-weight: 700;
-  }
-
-  .tokens-table {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    margin: 1.75rem 0 3rem 0;
-  }
-
-  .token-row {
-    background-color: #0c0d12;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-md, 8px);
-    padding: 1rem 1.25rem;
-    display: grid;
-    grid-template-columns: 140px 1fr;
-    align-items: center;
-    gap: 1.25rem;
-  }
-
-  .token-row code {
-    color: #fbbf24;
-    font-family: var(--font-mono);
-    font-size: 0.95em;
-  }
-
-  .token-row span {
-    font-size: 0.92rem;
-    color: #94a3b8;
-  }
-
-  .deep-dive-content ul {
-    margin-bottom: 2.5rem;
-    padding-left: 1.5rem;
-  }
-
-  .deep-dive-content li {
-    margin-bottom: 0.75rem;
-  }
-
-  .cta-box {
-    background: linear-gradient(180deg, #101118 0%, #08090d 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-lg, 16px);
-    padding: 3rem 2rem;
-    text-align: center;
-    margin-top: 4.5rem;
-  }
-
-  .cta-box h3 {
-    font-family: var(--font-display);
-    font-size: 1.85rem;
-    color: #f8fafc;
-    margin-bottom: 0.75rem;
-  }
-
-  .cta-box p {
-    font-size: 1.05rem;
-    color: #94a3b8;
-    margin-bottom: 2rem;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  @media (max-width: 960px) {
-    .sandbox-content-grid {
-      grid-template-columns: 1fr;
-    }
-    .rule-logic-column {
-      border-right: none;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .token-row {
-      grid-template-columns: 1fr;
-      gap: 0.4rem;
-    }
-  }
+  .vocab { display: grid; gap: 2.5rem 3rem; }
+  @media (min-width: 820px) { .vocab { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .vocab h3 { font-size: 1.5rem; font-weight: 700; color: var(--r-amber-text); padding-bottom: 0.9rem; border-bottom: 1px solid var(--hairline-strong); }
+  .vocab ul { list-style: none; }
+  .vocab li { padding: 0.8rem 0; border-bottom: 1px solid var(--hairline); color: var(--r-ink-2); }
+  .lede code { font-size: 0.85em; color: var(--r-amber-text); }
 </style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-rule-builder]').forEach((root) => {
+    const sample: Record<string, string> = JSON.parse(root.dataset.sample || '{}');
+    const when = root.querySelector<HTMLSelectElement>('[data-b-when]')!;
+    const cond = root.querySelector<HTMLSelectElement>('[data-b-if]')!;
+    const value = root.querySelector<HTMLInputElement>('[data-b-value]')!;
+    const then = root.querySelector<HTMLSelectElement>('[data-b-then]')!;
+    const tpl = root.querySelector<HTMLInputElement>('[data-b-tpl]')!;
+    const sentence = root.querySelector<HTMLElement>('[data-b-sentence]')!;
+    const preview = root.querySelector<HTMLElement>('[data-b-preview]')!;
+
+    const render = () => {
+      const v = value.value.trim();
+      const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+      sentence.textContent = `When: ${lower(when.value)}. If: ${lower(cond.value)}${v ? ` “${v}”` : ''}. Then: ${lower(then.value)}.`;
+      let out = tpl.value;
+      for (const [k, val] of Object.entries(sample)) out = out.split(`{${k}}`).join(val);
+      preview.textContent = out.trim() || '(empty: nothing is filled)';
+    };
+    root.querySelectorAll<HTMLButtonElement>('[data-b-insert]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const at = tpl.selectionStart ?? tpl.value.length;
+        const token = b.dataset.bInsert || '';
+        tpl.value = tpl.value.slice(0, at) + token + tpl.value.slice(tpl.selectionEnd ?? at);
+        tpl.focus();
+        tpl.setSelectionRange(at + token.length, at + token.length);
+        render();
+      })
+    );
+    [when, cond, then].forEach((el) => el.addEventListener('change', render));
+    [value, tpl].forEach((el) => el.addEventListener('input', render));
+    render();
+  });
+</script>
