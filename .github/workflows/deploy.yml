@@ -38,7 +38,7 @@ jobs:
         run: pnpm --filter hey-this-is-andrew check
       # Reelay's `test` audits its built site (compliance pages, permissions,
       # forbidden wording), so it has to be built before the unit tests run.
-      # It isn't deployed by this workflow.
+      # The copy that is deployed is built later, for its subpath.
       - name: Build Reelay
         run: pnpm --filter reelay build
         env:
@@ -60,6 +60,22 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Run Playwright E2E tests
         run: pnpm exec playwright test
+      # Reelay's marketing site rides along as a preview at /hey-this-is-andrew/reelay/,
+      # built for that path, marked noindex (it still carries {{PLACEHOLDERS}}),
+      # audited as built, then copied in after the personal site's own checks.
+      - name: Build Reelay preview
+        run: pnpm --filter reelay build
+        env:
+          BASE_PATH: /hey-this-is-andrew/reelay/
+          SITE_URL: https://heythisisandrew.github.io
+          REELAY_NOINDEX: '1'
+          ASTRO_TELEMETRY_DISABLED: '1'
+      - name: Check the Reelay preview
+        run: pnpm --filter reelay test
+        env:
+          BASE_PATH: /hey-this-is-andrew/reelay/
+      - name: Add the Reelay preview to the site
+        run: cp -R sites/reelay/dist sites/hey-this-is-andrew/dist/reelay
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

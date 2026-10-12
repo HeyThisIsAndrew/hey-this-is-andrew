@@ -7,8 +7,11 @@
  */
 import { PRODUCT_NAV, homeUrl, href } from '../../data/site';
 
-const path = Astro.url.pathname.replace(/\/$/, '') || '/';
-const isHome = path === '/' || path === homeUrl.replace(/\/$/, '');
+/* Matched without the base path, so the marks hold under a subpath build too. */
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const full = Astro.url.pathname;
+const path = (base && full.startsWith(base) ? full.slice(base.length) : full).replace(/\/$/, '') || '/';
+const isHome = path === '/';
 const current = PRODUCT_NAV.find((l) => l.match.some((m) => (m === '/' ? isHome : path === m || path.startsWith(`${m}/`))));
 ---
 <nav class="pnav" aria-label="Reelay" data-pnav data-home={isHome ? '' : undefined}>

@@ -443,6 +443,53 @@ async function runVerification() {
     }
 
     // -------------------------------------------------------------
+    // TEST SUITE 12: Balanced grids (no orphan rows, equal cells)
+    // -------------------------------------------------------------
+    // Any grid or wrapping row of three or more like items must fill its
+    // last row (no 3-3-1, no 2-1), and a grid's cells must be one height.
+    // Text checklists are exempt: their lines are not boxes.
+    console.log('\n--- 12. Testing Balanced Grids ---');
+    {
+      const EXEMPT = ['plan-list'];
+      for (const width of [390, 768, 1024, 1440]) {
+        const ctx = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
+        const pg = await ctx.newPage();
+        let bad = 0;
+        for (const r of routes) {
+          await pg.goto(`${baseUrl}${r}`, { waitUntil: 'load' });
+          const found = await pg.evaluate((exempt) => {
+            const out = [];
+            for (const el of document.querySelectorAll('body *')) {
+              if (exempt.some((c) => el.classList.contains(c))) continue;
+              const cs = getComputedStyle(el);
+              const grid = cs.display.includes('grid');
+              if (!grid && !(cs.display.includes('flex') && cs.flexWrap === 'wrap')) continue;
+              const kids = [...el.children].filter((k) => {
+                const b = k.getBoundingClientRect();
+                return getComputedStyle(k).position !== 'absolute' && b.width > 0 && b.height > 0;
+              });
+              if (kids.length < 3) continue;
+              const sig = (k) => `${k.tagName}.${k.classList[0] || ''}`;
+              if (new Set(kids.map(sig)).size !== 1) continue;
+              const rows = new Map();
+              for (const k of kids) { const t = Math.round(k.getBoundingClientRect().top); rows.set(t, (rows.get(t) || 0) + 1); }
+              const counts = [...rows.values()];
+              if (counts.length < 2 || counts[0] < 2) continue;
+              const hs = kids.map((k) => Math.round(k.getBoundingClientRect().height));
+              const name = `${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`;
+              if (counts[counts.length - 1] < counts[0]) out.push(`${name} rows ${counts.join('-')}`);
+              else if (grid && Math.max(...hs) - Math.min(...hs) > 2) out.push(`${name} cells ${Math.min(...hs)} to ${Math.max(...hs)}px tall`);
+            }
+            return out;
+          }, EXEMPT);
+          for (const f of found) { failures.push(`${r} at ${width}px: ${f}`); bad++; }
+        }
+        if (!bad) passedChecks.push(`Balanced grids at ${width}px: every row full and every cell one size, on all ${routes.length} routes`);
+        await ctx.close();
+      }
+    }
+
+    // -------------------------------------------------------------
     // TEST SUITE 7: Responsive Layout & Overflow across 9 Viewports
     // -------------------------------------------------------------
     console.log('\n--- 7. Testing Responsive Layouts across 9 Viewports ---');

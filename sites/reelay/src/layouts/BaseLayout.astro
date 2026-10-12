@@ -34,14 +34,17 @@ const {
   description = SITE.description,
   subnav = false,
   jsonLd,
-  noindex = false,
+  noindex: pageNoindex = false,
 } = Astro.props;
+/* REELAY_NOINDEX=1 marks a whole build as a preview (the GitHub Pages copy). */
+const noindex = pageNoindex || import.meta.env.REELAY_NOINDEX === '1';
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const site = Astro.site || new URL(SITE.url);
 const canonicalURL = new URL(Astro.url.pathname, site);
 /* One Open Graph image per page: public/og/<slug>.png (scripts/make-og.mjs). */
-const slug = Astro.url.pathname.replace(/^\/|\/$/g, '').replace(/\//g, '-') || 'home';
+const pagePath = Astro.url.pathname.startsWith(base) ? Astro.url.pathname.slice(base.length) : Astro.url.pathname;
+const slug = pagePath.replace(/^\/|\/$/g, '').replace(/\//g, '-') || 'home';
 const ogImage = new URL(`${base}og/${slug}.png`, site).href;
 const logoAsset = { src: logo.src, width: 132, height: 32, alt: SITE.fullName };
 const operatorLine = `Reelay is operated by ${OPERATOR.legalEntity}, ${OPERATOR.address}, ${OPERATOR.country}. Contact: ${CONTACTS.support}.`;

@@ -288,14 +288,28 @@ code, pre, kbd { font-family: var(--font-mono); font-size: 0.88em; letter-spacin
   .bento .span-4 { grid-column: span 4; }
 }
 
+/* ── Balanced grids: every row full, every cell the same size ─────────
+   The column count comes from the number of items, never from how many
+   happen to fit, so a grid can't end on an orphan (3-3-1, 2-1). Rows are
+   1fr, so every cell is as tall as the tallest. Counts that divide by
+   nothing that fits (5, 7, 11…) fall back to one column: change the
+   content instead. verify-browser.mjs fails on any short last row. */
+.spec-rail, .feature-grid { --cols: 1; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); grid-auto-rows: 1fr; }
+@media (min-width: 600px) {
+  .spec-rail:has(> :last-child:nth-child(3n)), .feature-grid:has(> :last-child:nth-child(3n)) { --cols: 3; }
+  .spec-rail:has(> :last-child:nth-child(2n)), .feature-grid:has(> :last-child:nth-child(2n)) { --cols: 2; }
+}
+@media (min-width: 960px) {
+  .spec-rail:has(> :last-child:nth-child(4n)) { --cols: 4; }
+  .spec-rail:has(> :last-child:nth-child(3n)), .feature-grid:has(> :last-child:nth-child(3n)) { --cols: 3; }
+}
+/* Five captions, no numbers: they share one row as soon as they fit. */
+@media (min-width: 700px) { .spec-rail--5 { --cols: 5; } }
+
 /* ── Spec rail: big numbers over hairline captions, no boxes ─────────── */
 .spec-rail {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: clamp(2rem, 4vw, 3.5rem) clamp(1.5rem, 3vw, 3rem);
-}
-@media (min-width: 960px) {
-  .spec-rail--5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
 .spec { border-top: 1px solid var(--hairline-strong); padding-top: 1.25rem; }
 .spec-value {
@@ -314,7 +328,6 @@ code, pre, kbd { font-family: var(--font-mono); font-size: 0.88em; letter-spacin
 /* ── Feature list: Apple's hairline grid ─────────────────────────────── */
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 0 clamp(2rem, 4vw, 4rem);
 }
 .feature { padding-block: 1.6rem; border-top: 1px solid var(--hairline); }
@@ -608,6 +621,8 @@ html[data-subnav] .page-hero { padding-top: clamp(3.5rem, 8vw, 7rem); }
   text-align: left;
 }
 #top .site-footer .footer-nav ul { justify-content: flex-start; gap: 0.5rem 1.6rem; max-width: none; }
+/* Even rows of links: four across, never seven and a straggler. */
+@media (min-width: 769px) { #top .site-footer .footer-nav ul { display: grid; grid-template-columns: repeat(4, max-content); } }
 #top .site-footer .footer-nav a,
 #top .site-footer .footer-legal-links a {
   font-family: var(--font-body);

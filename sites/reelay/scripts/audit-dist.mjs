@@ -15,6 +15,8 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.resolve(process.argv[2] || path.join(root, 'dist'));
 const RELEASE = process.env.REELAY_RELEASE === '1';
+/* The build's base path (BASE_PATH, as astro.config.mjs reads it), without its trailing slash. */
+const BASE = (process.env.BASE_PATH || '/').replace(/\/$/, '');
 if (!fs.existsSync(dist)) {
   console.error(`Dist folder not found: ${dist}`);
   process.exit(1);
@@ -174,9 +176,9 @@ for (const p of pages) {
   if (!html.includes('id="main-content"')) fail(`${rel} is missing #main-content`);
   if (!html.includes('property="og:image"') || !html.includes('name="twitter:card"')) fail(`${rel} is missing Open Graph or Twitter tags`);
   const og = (html.match(/property="og:image" content="([^"]+)"/) || [])[1] || '';
-  const ogFile = og.replace(/^https?:\/\/[^/]+\//, '');
+  const ogFile = og.replace(/^https?:\/\/[^/]+/, '').slice(BASE.length).replace(/^\//, '');
   if (ogFile && !fs.existsSync(path.join(dist, ogFile))) fail(`${rel} points og:image at ${ogFile}, which isn't built (run npm run og)`);
-  for (const link of ['href="/privacy"', 'href="/terms"', 'href="/data-deletion"', 'href="/reviewers"']) {
+  for (const link of ['/privacy', '/terms', '/data-deletion', '/reviewers'].map((l) => `href="${BASE}${l}"`)) {
     if (!html.includes(link)) fail(`${rel} footer is missing ${link}`);
   }
   if (!html.includes('TikTok is a trademark of ByteDance Ltd.')) fail(`${rel} footer is missing the trademark line`);
