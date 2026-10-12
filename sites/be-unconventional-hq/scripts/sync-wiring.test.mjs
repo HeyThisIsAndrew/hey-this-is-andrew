@@ -70,7 +70,7 @@ const scripts = pkg.scripts || {};
 const syncAll = fs.readFileSync(path.join(ROOT, 'scripts/sync-all.mjs'), 'utf8');
 const igSync = fs.readFileSync(path.join(ROOT, 'scripts/sync-instagram.mjs'), 'utf8');
 const workflow = fs.readFileSync(
-  path.join(ROOT, '../../.github/workflows/hq-sync-youtube.yml'),
+  path.join(ROOT, 'workflows-parked/hq-sync-youtube.yml'),
   'utf8'
 );
 
@@ -192,7 +192,7 @@ test('an empty API response never blanks the stored feed', () => {
 });
 
 test('an Instagram sync workflow exists and uses the EXISTING Meta secret', () => {
-  const p = path.join(ROOT, '../../.github/workflows/hq-sync-instagram.yml');
+  const p = path.join(ROOT, 'workflows-parked/hq-sync-instagram.yml');
   assert.ok(
     fs.existsSync(p),
     'There is no sync-instagram.yml. META_ACCESS_TOKEN has been a repository\n' +
@@ -213,7 +213,7 @@ test('an Instagram sync workflow exists and uses the EXISTING Meta secret', () =
 });
 
 test('the Instagram workflow commits the images as well as the JSON', () => {
-  const wf = fs.readFileSync(path.join(ROOT, '../../.github/workflows/hq-sync-instagram.yml'), 'utf8');
+  const wf = fs.readFileSync(path.join(ROOT, 'workflows-parked/hq-sync-instagram.yml'), 'utf8');
   assert.ok(
     /git add src\/data\/instagram\.json public\/instagram/.test(wf),
     'the JSON references files in public/instagram/ by path, so committing one\n' +
@@ -279,7 +279,7 @@ test('media already on disk is not re-downloaded', () => {
 });
 
 test('the Instagram schedule runs at least every 6 hours, offset from the others', () => {
-  const wf = fs.readFileSync(path.join(ROOT, '../../.github/workflows/hq-sync-instagram.yml'), 'utf8');
+  const wf = fs.readFileSync(path.join(ROOT, 'workflows-parked/hq-sync-instagram.yml'), 'utf8');
   const cron = (wf.match(/cron:\s*'([^']+)'/) || [])[1];
   assert.ok(cron, 'no cron schedule found');
   const [minute, hour] = cron.split(' ');

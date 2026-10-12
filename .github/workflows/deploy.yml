@@ -36,6 +36,13 @@ jobs:
           CCC_INSTAGRAM_USER_ID: ${{ secrets.CCC_INSTAGRAM_USER_ID }}
       - name: Workspace checks
         run: pnpm --filter hey-this-is-andrew check
+      # Reelay's `test` audits its built site (compliance pages, permissions,
+      # forbidden wording), so it has to be built before the unit tests run.
+      # It isn't deployed by this workflow.
+      - name: Build Reelay
+        run: pnpm --filter reelay build
+        env:
+          ASTRO_TELEMETRY_DISABLED: '1'
       - name: Unit tests
         run: pnpm -r --if-present test
       - name: Build site
