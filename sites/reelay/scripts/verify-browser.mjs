@@ -225,10 +225,10 @@ async function runVerification() {
     // -------------------------------------------------------------
     console.log('\n--- 4. Testing Download Center & Cryptographic Hashes ---');
     const downloadCards = await page.$$('.download-card');
-    if (downloadCards.length !== 1) {
-      failures.push(`Expected 1 download card (Apple silicon only), found ${downloadCards.length}`);
+    if (downloadCards.length !== 3) {
+      failures.push(`Expected 3 download cards (macOS, Windows, Linux), found ${downloadCards.length}`);
     } else {
-      passedChecks.push('Found the one download card (Apple silicon)');
+      passedChecks.push('Found 3 platform download and setup cards (macOS, Windows, Linux)');
     }
 
     const versionText = await page.textContent('.download-section');
@@ -411,34 +411,53 @@ async function runVerification() {
     }
 
     // -------------------------------------------------------------
-    // TEST SUITE 11: Product sub-nav and capability matrix
+    // TEST SUITE 11: Unified Navigation and Capability Matrix
     // -------------------------------------------------------------
-    console.log('\n--- 11. Testing Sub-nav and Capability Matrix ---');
+    console.log('\n--- 11. Testing Unified Navigation and Capability Matrix ---');
     {
       const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
       const pg = await ctx.newPage();
       await pg.goto(`${baseUrl}/features/library/`, { waitUntil: 'load' });
-      const visibleLinks = await pg.$$eval('.pnav-links a', (as) => as.filter((a) => a.getBoundingClientRect().width > 0).length);
-      const current = await pg.getAttribute('.pnav-links a[aria-current="page"]', 'href');
-      if (visibleLinks !== 7 || current !== '/features/library') failures.push(`Sub-nav desktop: ${visibleLinks} links, current ${current}`);
-      else passedChecks.push('Sub-nav: 7 chapters on desktop, current page marked');
+
+      // 1. Verify single coherent navbar (no duplicate sticky product nav bar)
+      const pnavBars = await pg.$$('.pnav');
+      if (pnavBars.length > 0) failures.push(`Duplicate persistent navigation bar (.pnav) detected on /features/library/`);
+      else passedChecks.push('Zero duplicate navigation bars outside homepage');
+
+      // 2. Primary nav dropdown contains feature chapters
+      const featureSubLinks = await pg.$$eval('.dropdown-menu a[href*="/features/"], .dropdown-menu a[href*="/ai"]', (as) => as.length);
+      if (featureSubLinks < 4) failures.push(`Primary nav Features dropdown has ${featureSubLinks} links, expected at least 4`);
+      else passedChecks.push('Primary nav: 4 feature chapters in Features dropdown');
+
       await pg.goto(`${baseUrl}/`, { waitUntil: 'load' });
       const rows = await pg.$$eval('#works-with tbody tr', (r) => r.length);
       if (rows !== 7) failures.push(`Capability matrix has ${rows} rows, expected 7`);
       else passedChecks.push('Capability matrix: one row for each of the 7 platforms');
       await ctx.close();
+
       const phone = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const pp = await phone.newPage();
       await pp.goto(`${baseUrl}/features/pipeline/`, { waitUntil: 'load' });
-      const before = await pp.isVisible('.pnav-links a >> nth=0');
-      await pp.click('[data-pnav-toggle]');
+
+      // Verify no duplicate toggle buttons on mobile
+      const pnavToggles = await pp.$$('[data-pnav-toggle]');
+      if (pnavToggles.length > 0) failures.push(`Duplicate mobile menu toggle ([data-pnav-toggle]) detected on mobile`);
+      else passedChecks.push('Zero duplicate mobile menu toggles on mobile');
+
+      // Unified mobile menu opens, displays subsections, and closes with Escape
+      const before = await pp.isVisible('#mobile-menu a >> nth=0');
+      await pp.click('.menu-btn');
       await pp.waitForTimeout(400);
-      const expanded = await pp.getAttribute('[data-pnav-toggle]', 'aria-expanded');
-      const after = await pp.isVisible('.pnav-links a >> nth=0');
+      const expanded = await pp.getAttribute('.menu-btn', 'aria-expanded');
+      const after = await pp.isVisible('#mobile-menu a >> nth=0');
       await pp.keyboard.press('Escape');
-      const closed = await pp.getAttribute('[data-pnav-toggle]', 'aria-expanded');
-      if (before || expanded !== 'true' || !after || closed !== 'false') failures.push(`Sub-nav phone sheet: hidden-first ${!before}, opens ${expanded}, links shown ${after}, Escape closes ${closed}`);
-      else passedChecks.push('Sub-nav on phones: folds into a sheet that opens, shows the chapters and closes with Escape');
+      await pp.waitForTimeout(300);
+      const closed = await pp.getAttribute('.menu-btn', 'aria-expanded');
+      if (before || expanded !== 'true' || !after || closed !== 'false') {
+        failures.push(`Unified mobile menu: hidden-first ${!before}, opens ${expanded}, links shown ${after}, Escape closes ${closed}`);
+      } else {
+        passedChecks.push('Unified mobile menu: opens cleanly, shows chapters, and closes with Escape');
+      }
       await phone.close();
     }
 

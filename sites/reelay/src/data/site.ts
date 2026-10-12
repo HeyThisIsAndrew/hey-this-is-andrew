@@ -211,5 +211,31 @@ export const UTILITY_LINKS: FooterLink[] = [
 /* Reelay has no social accounts of its own yet; the footer hides the column. */
 export const SOCIALS: SocialLink[] = [];
 
-/* Only one build is published: Apple silicon. */
-export const DOWNLOADS = { macArm: { ...RELEASE, label: 'Download for Mac' } };
+/* Multi-platform availability: macOS verified .dmg, Windows build pipeline, Linux source. */
+export const DOWNLOADS = {
+  macArm: {
+    ...RELEASE,
+    label: 'Download for Mac',
+    platform: 'macOS',
+    arch: 'Apple Silicon (M1–M4)',
+    badge: 'Verified Release Artifact',
+  },
+  windows: {
+    platform: 'Windows',
+    arch: 'Windows 10 / 11 (64-bit)',
+    badge: 'Automated Build Pipeline',
+    requirements: 'Windows 10 / 11 (64-bit, Python 3.11+)',
+    pipelineScript: 'packaging/build_windows.ps1',
+    href: `${homeUrl}download#windows-setup`,
+    label: 'Setup & Build Guide →',
+  },
+  linux: {
+    platform: 'Linux',
+    arch: 'Linux Desktop (x86_64)',
+    badge: 'Run from Source',
+    requirements: 'Ubuntu 22.04+ / Fedora 39+ (Python 3.11+)',
+    pipelineScript: 'python run_app.py',
+    href: `${homeUrl}download#linux-setup`,
+    label: 'Source Instructions →',
+  },
+};

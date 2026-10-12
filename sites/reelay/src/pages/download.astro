@@ -8,42 +8,127 @@ import { softwareApplication } from '../data/seo';
 
 const latest = CHANGELOG[0];
 const apple = 'M16.4 12.6c0-2.4 2-3.6 2.1-3.6-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8s1.9.8 3.2.8c1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.7 1.3-2.8 0 0-2.5-1-2.5-4zM14 5.4c.7-.8 1.1-1.9 1-3-.9 0-2.1.6-2.8 1.4-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.6 2.8-1.3z';
+const windows = 'M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.949-1.801';
 ---
 
 <BaseLayout
   title={`Download Reelay: ${SITE.fullName}`}
-  description={`Download Reelay ${RELEASE.label} for Mac (${RELEASE.requirements}). Free during the beta. Release notes, SHA-256 checksum, first-open steps and how to uninstall.`}
-  subnav
+  description={`Download Reelay ${RELEASE.label} for Mac (${RELEASE.requirements}). Automated build scripts for Windows and source instructions for Linux. Release notes, SHA-256 checksum and setup guides.`}
   jsonLd={softwareApplication()}
 >
-  <PageHero eyebrow="Download">
-    <Fragment slot="title">Reelay for Mac.</Fragment>
-    <Fragment slot="lede">Free during the beta. No account to create. <strong>{RELEASE.requirements}.</strong></Fragment>
+  <PageHero eyebrow="Download Center">
+    <Fragment slot="title">Get Reelay Studio.</Fragment>
+    <Fragment slot="lede">Verified release package for macOS. Automated build pipelines and source installation for Windows and Linux. Free during beta. No account to create.</Fragment>
   </PageHero>
 
-  <section class="stage stage--flush-top" aria-labelledby="get-title">
+  <!-- macOS Release Section -->
+  <section class="stage stage--flush-top" id="macos" aria-labelledby="get-title">
     <div class="wrap">
-      <h2 id="get-title" class="sr-only">Get the app</h2>
+      <div class="platform-nav">
+        <a href="#macos" class="p-tab active">macOS (Apple Silicon)</a>
+        <a href="#windows-setup" class="p-tab">Windows 10 / 11</a>
+        <a href="#linux-setup" class="p-tab">Linux Desktop</a>
+      </div>
+
+      <h2 id="get-title" class="sr-only">macOS Release Package</h2>
       <div class="get panel">
         <span class="get-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d={apple} /></svg></span>
+        <h3 class="platform-heading">macOS Release Artifact</h3>
         <dl class="get-facts">
           <div><dt>Version</dt><dd>{RELEASE.label}</dd></div>
           <div><dt>Released</dt><dd><time datetime={RELEASE.date}>{RELEASE.dateLabel}</time></dd></div>
-          <div><dt>Size</dt><dd>{RELEASE.size}</dd></div>
+          <div><dt>Package Size</dt><dd>{RELEASE.size}</dd></div>
           <div><dt>Requires</dt><dd>{RELEASE.requirements}</dd></div>
         </dl>
         <a class="btn btn-primary btn-lg" href={RELEASE.href}>Download {RELEASE.filename}</a>
         <div class="get-sha">
-          <p>SHA-256</p>
+          <p>SHA-256 Checksum</p>
           <code>{RELEASE.sha256}</code>
-          <p class="fine">Check it in Terminal with <code>shasum -a 256 ~/Downloads/{RELEASE.filename}</code></p>
+          <p class="fine">Verify in Terminal with <code>shasum -a 256 ~/Downloads/{RELEASE.filename}</code></p>
         </div>
       </div>
 
-      <div class="mt-3"><GatekeeperSteps /></div>
+      <div class="mt-4"><GatekeeperSteps /></div>
     </div>
   </section>
 
+  <!-- Windows Setup Section -->
+  <section class="stage stage--lift" id="windows-setup" aria-labelledby="win-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <div class="glyph-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d={windows} /></svg></div>
+        <p class="eyebrow">Windows Platform</p>
+        <h2 id="win-title" class="headline">Windows 10 / 11 Setup.<br /><span class="text-silver">Automated pipeline & source.</span></h2>
+        <p class="lede">Reelay includes dedicated Windows build scripts for 64-bit Windows 10 and 11 workstations. You can compile a standalone executable or run directly from Python source.</p>
+      </header>
+
+      <div class="install-grid" data-reveal>
+        <div class="install-card panel">
+          <div class="card-badge">Option 1 · Recommended</div>
+          <h3>Automated PowerShell Build</h3>
+          <p class="card-sub">Compiles a standalone <code>Reelay.exe</code> using PyInstaller and the repository build script.</p>
+          <pre><code># Clone the application repository
+git clone https://github.com/HeyThisIsAndrew/reelay.git
+cd reelay
+
+# Run the automated Windows build pipeline
+powershell -ExecutionPolicy Bypass -File packaging/build_windows.ps1</code></pre>
+          <p class="fine mt-2">The compiled package is placed in <code>dist\Reelay\Reelay.exe</code> ready for your desktop.</p>
+        </div>
+
+        <div class="install-card panel">
+          <div class="card-badge">Option 2</div>
+          <h3>Run from Python Source</h3>
+          <p class="card-sub">Launch directly in a Python 3.11+ virtual environment with native PySide6 Qt bindings.</p>
+          <pre><code># Create and activate virtual environment
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+
+# Install dependencies and launch
+pip install -r requirements.txt
+python run_app.py</code></pre>
+          <p class="fine mt-2">Prerequisites: Python 3.11+, Git, and FFmpeg available on your Windows system PATH.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Linux Setup Section -->
+  <section class="stage" id="linux-setup" aria-labelledby="linux-title">
+    <div class="wrap">
+      <header class="chapter-head" data-reveal>
+        <div class="glyph-badge" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19"></line>
+          </svg>
+        </div>
+        <p class="eyebrow">Linux Desktop</p>
+        <h2 id="linux-title" class="headline">Linux Desktop Setup.<br /><span class="text-silver">Run from Python source.</span></h2>
+        <p class="lede">Reelay runs seamlessly on Linux distributions with Python 3.11+ and Qt 6 dependencies (Ubuntu 22.04+, Debian 12, Fedora 39+, Arch Linux).</p>
+      </header>
+
+      <div class="install-card panel" data-reveal>
+        <div class="card-badge">Linux Installation Steps</div>
+        <h3>Prerequisites & Environment Setup</h3>
+        <pre><code># 1. Install system prerequisites (Ubuntu / Debian)
+sudo apt update && sudo apt install -y python3-pip python3-venv ffmpeg libxcb-cursor0
+
+# 2. Clone repository & configure virtual environment
+git clone https://github.com/HeyThisIsAndrew/reelay.git
+cd reelay
+python3 -m venv venv
+source venv/bin/activate
+
+# 3. Install Python requirements & launch
+pip install -r requirements.txt
+python run_app.py</code></pre>
+        <p class="fine mt-2">For Fedora/RHEL systems: <code>sudo dnf install python3-pip ffmpeg xcb-util-cursor</code> before launching.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Release Notes Section -->
   <section class="stage stage--lift" id="release-notes" aria-labelledby="notes-title">
     <div class="wrap-narrow">
       <p class="eyebrow">Release notes</p>
@@ -53,15 +138,25 @@ const apple = 'M16.4 12.6c0-2.4 2-3.6 2.1-3.6-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9
     </div>
   </section>
 
+  <!-- Complete Uninstallation Guide -->
   <section class="stage" id="uninstall" aria-labelledby="un-title">
     <div class="wrap-narrow">
       <p class="eyebrow">Uninstall</p>
       <h2 id="un-title" class="title">Remove Reelay completely.</h2>
+      
+      <h3 class="un-platform-title">macOS</h3>
       <ol class="un">
         <li>Quit Reelay and drag it from Applications to the Trash.</li>
         <li>Delete its data folder, <code>{DATA_PATHS.mac}</code>, and its logs, <code>{DATA_PATHS.logs}</code>. In Terminal:<pre><code>rm -rf ~/Library/Application\ Support/Reelay ~/Library/Logs/Reelay</code></pre></li>
         <li>Open Keychain Access and delete the items named <strong>{DATA_PATHS.keychainService}</strong>.</li>
         <li>Your videos stay in your library folder (by default <code>{DATA_PATHS.library}</code>) until you delete them.</li>
+      </ol>
+
+      <h3 class="un-platform-title mt-4">Windows & Linux</h3>
+      <ol class="un">
+        <li>On Windows: Remove the application folder, then delete <code>%LOCALAPPDATA%\Reelay</code> and <code>%LOCALAPPDATA%\Logs\Reelay</code>.</li>
+        <li>On Linux: Remove the cloned directory, then delete <code>~/.local/share/Reelay</code> and <code>~/.local/state/Reelay</code>.</li>
+        <li>Your downloaded video files remain in your designated library folder until you choose to remove them.</li>
       </ol>
       <p class="fine mt-2">Disconnect your accounts in Reelay first if you want it to revoke access with the platforms. See <a href={href('/data-deletion')}>Data Deletion</a>.</p>
     </div>
@@ -69,9 +164,35 @@ const apple = 'M16.4 12.6c0-2.4 2-3.6 2.1-3.6-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9
 </BaseLayout>
 
 <style>
+  .platform-nav {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+  }
+  .p-tab {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.6rem 1.25rem;
+    border-radius: 999px;
+    background: var(--r-panel);
+    border: 1px solid var(--hairline);
+    color: var(--r-ink-2);
+    font-size: 0.88rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+  .p-tab:hover, .p-tab.active {
+    background: var(--r-amber-soft);
+    color: var(--r-amber-text);
+    border-color: rgba(240, 180, 76, 0.4);
+  }
+
   .get { display: grid; justify-items: center; gap: 1.5rem; padding: clamp(2rem, 5vw, 3.5rem); text-align: center; max-width: 52rem; margin: 0 auto; }
   .get-glyph { color: var(--r-ink); }
   .get-glyph svg { width: 3rem; height: 3rem; }
+  .platform-heading { font-size: 1.5rem; font-weight: 700; color: var(--r-ink); margin: 0; }
   .get-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 1rem 2rem; width: 100%; }
   @media (min-width: 960px) { .get-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
   .get-facts div { border-top: 1px solid var(--hairline-strong); padding-top: 0.75rem; text-align: left; }
@@ -82,8 +203,73 @@ const apple = 'M16.4 12.6c0-2.4 2-3.6 2.1-3.6-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9
   .get-sha > p:first-child { font-size: 0.8rem; font-weight: 600; color: var(--r-ink-3); }
   .get-sha > code { font-size: 0.85rem; color: var(--r-amber-text); overflow-wrap: anywhere; }
   .get-sha .fine code { overflow-wrap: anywhere; }
+
+  .glyph-badge {
+    display: inline-grid;
+    place-items: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    margin-bottom: 1rem;
+    border-radius: 16px;
+    background: var(--r-panel);
+    border: 1px solid var(--hairline);
+    color: var(--r-amber-text);
+  }
+  .glyph-badge svg { width: 2rem; height: 2rem; }
+
+  .install-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+  @media (max-width: 860px) {
+    .install-grid { grid-template-columns: 1fr; }
+  }
+
+  .install-card {
+    padding: clamp(1.5rem, 3.5vw, 2.25rem);
+    border-radius: var(--radius-xl);
+    background: var(--r-panel);
+    border: 1px solid var(--hairline);
+    box-shadow: var(--r-panel-shadow);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .card-badge {
+    align-self: flex-start;
+    padding: 0.2rem 0.65rem;
+    border-radius: 6px;
+    background: var(--r-amber-soft);
+    color: var(--r-amber-text);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.75rem;
+  }
+  .install-card h3 { font-size: 1.35rem; font-weight: 700; color: var(--r-ink); margin: 0 0 0.4rem; }
+  .card-sub { font-size: 0.92rem; color: var(--r-ink-3); margin-bottom: 1.25rem; }
+  .install-card pre {
+    margin: 0;
+    padding: 1rem 1.15rem;
+    border-radius: 14px;
+    background: var(--r-code-bg);
+    overflow-x: auto;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    color: var(--r-ink);
+  }
+
+  .un-platform-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--r-amber-text);
+    margin: 1.5rem 0 0.5rem;
+  }
+
   .notes { margin-top: 1.5rem; padding-left: 1.2rem; display: grid; gap: 0.75rem; color: var(--r-ink-2); }
-  .un { margin-top: 1.5rem; padding-left: 1.2rem; display: grid; gap: 0.9rem; color: var(--r-ink-2); }
+  .un { margin-top: 0.75rem; padding-left: 1.2rem; display: grid; gap: 0.9rem; color: var(--r-ink-2); }
   .un pre { margin-top: 0.6rem; padding: 0.85rem 1rem; border-radius: 12px; background: var(--r-code-bg); overflow-x: auto; color: var(--r-ink); }
   .un code { color: var(--r-ink); }
 </style>
