@@ -187,6 +187,12 @@ async function runVerification() {
     // TEST SUITE 3: Interactive Data-Flow Topology
     // -------------------------------------------------------------
     console.log('\n--- 3. Testing Interactive Data-Flow Topology ---');
+    // Ensure Panel 04 (privacy & topology) is expanded in the showcase accordion
+    const privHeader = await page.$('#acc-privacy');
+    if (privHeader) {
+      await privHeader.click();
+      await page.waitForTimeout(150);
+    }
     const topologyTabs = await page.$$('.topology-tab');
     if (topologyTabs.length !== 4) {
       failures.push(`Expected 4 topology boundary tabs, found ${topologyTabs.length}`);
@@ -224,6 +230,12 @@ async function runVerification() {
     // TEST SUITE 4: Professional Download Center & Cryptographic Hashes
     // -------------------------------------------------------------
     console.log('\n--- 4. Testing Download Center & Cryptographic Hashes ---');
+    // Ensure Panel 05 (download) is expanded in the showcase accordion
+    const dlHeader = await page.$('#acc-download');
+    if (dlHeader) {
+      await dlHeader.click();
+      await page.waitForTimeout(150);
+    }
     const downloadCards = await page.$$('.download-card');
     if (downloadCards.length !== 3) {
       failures.push(`Expected 3 download cards (macOS, Windows, Linux), found ${downloadCards.length}`);
