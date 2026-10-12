@@ -1,17 +1,16 @@
 ---
 /**
- * DownloadSection: the closing stage. One build is published today (Mac,
- * Apple silicon); the other two say plainly that they aren't. The checksum
- * lets anyone confirm the .dmg they got is the one we built.
+ * DownloadSection: the closing stage of the home page. One build is
+ * published (Apple silicon). The first-open steps are part of the stage,
+ * not fine print, until the app is notarized.
  *
- * Test hooks: #download, .download-section with the version, three
- * .download-card, and a .checksums-drawer <details> with the SHA-256.
+ * Test hooks: #download, .download-section with the version, .download-card,
+ * and a .checksums-drawer <details> with the SHA-256.
  */
-import { SITE, DOWNLOADS } from '../data/site';
-
-const builds = [DOWNLOADS.macArm, DOWNLOADS.macIntel, DOWNLOADS.windows];
+import { SITE, href } from '../data/site';
+import { RELEASE } from '../data/release';
+import GatekeeperSteps from './ui/GatekeeperSteps.astro';
 const apple = 'M16.4 12.6c0-2.4 2-3.6 2.1-3.6-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8s1.9.8 3.2.8c1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.7 1.3-2.8 0 0-2.5-1-2.5-4zM14 5.4c.7-.8 1.1-1.9 1-3-.9 0-2.1.6-2.8 1.4-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.6 2.8-1.3z';
-const windows = 'M3 5.5 10.4 4.5v7H3zm0 13 7.4 1v-7H3zm8.3 1.1L21 21v-8.5h-9.7zm0-15.2v7.1H21V3z';
 ---
 <section id="download" class="stage download-section" aria-labelledby="dl-title">
   <div class="horizon dl-horizon" aria-hidden="true"></div>
@@ -24,44 +23,25 @@ const windows = 'M3 5.5 10.4 4.5v7H3zm0 13 7.4 1v-7H3zm8.3 1.1L21 21v-8.5h-9.7zm
       <p class="lede">Reelay Studio {SITE.version}. Free while it’s in beta, and no account to create.</p>
     </header>
 
-    <div class="dl-grid" data-reveal>
-      {builds.map((b) => (
-        <article class:list={['download-card', { 'is-live': b.status === 'available' }]}>
-          <span class="dc-glyph" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path fill="currentColor" d={b.platform === 'Windows' ? windows : apple} /></svg>
-          </span>
-          <h3>{b.platform}<span>{b.arch}</span></h3>
-          <p class="dc-req">{b.requirements}</p>
-          {b.status === 'available' ? (
-            <>
-              <a class="btn btn-primary" href={b.href}>Download .dmg</a>
-              <p class="dc-meta">{b.filename} · {b.size}</p>
-            </>
-          ) : (
-            <>
-              <span class="dc-status">{b.statusLabel}</span>
-              <p class="dc-meta">{b.filename}</p>
-            </>
-          )}
-        </article>
-      ))}
+    <div class="download-card" data-reveal>
+      <span class="dc-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d={apple} /></svg></span>
+      <p class="dc-req">{RELEASE.requirements}</p>
+      <a class="btn btn-primary btn-lg" href={RELEASE.href}>Download for Mac</a>
+      <p class="dc-meta">{RELEASE.filename} · {RELEASE.size} · {RELEASE.dateLabel}</p>
+      <a class="link-more" href={href('/download')}>Release notes, checksum and uninstalling</a>
     </div>
 
     <div class="dl-notes" data-reveal>
-      <p><strong>First launch on a Mac.</strong> This beta isn’t notarized by Apple yet, so the first time you open it, Control-click Reelay in Applications and choose Open.</p>
+      <GatekeeperSteps compact />
       <details class="checksums-drawer">
         <summary class="checksums-summary">Verify your download</summary>
         <div class="checksums-content">
           <p>Compare the SHA-256 of the file you downloaded with ours. In Terminal:</p>
-          <pre><code>shasum -a 256 ~/Downloads/{DOWNLOADS.macArm.filename}</code></pre>
-          <dl>
-            <div><dt>{DOWNLOADS.macArm.filename}</dt><dd><code>{DOWNLOADS.macArm.sha256}</code></dd></div>
-            <div><dt>{DOWNLOADS.macIntel.filename}</dt><dd>{DOWNLOADS.macIntel.sha256}</dd></div>
-            <div><dt>{DOWNLOADS.windows.filename}</dt><dd>{DOWNLOADS.windows.sha256}</dd></div>
-          </dl>
+          <pre><code>shasum -a 256 ~/Downloads/{RELEASE.filename}</code></pre>
+          <p class="sha"><span>{RELEASE.filename}</span><code>{RELEASE.sha256}</code></p>
         </div>
       </details>
-      <p class="fine">Only download and republish content you own or have permission to use.</p>
+      <p class="fine">Only import and republish media you own or have permission to manage.</p>
     </div>
   </div>
 </section>
@@ -78,52 +58,25 @@ const windows = 'M3 5.5 10.4 4.5v7H3zm0 13 7.4 1v-7H3zm8.3 1.1L21 21v-8.5h-9.7zm
     margin-bottom: 2rem;
     border-radius: 24px;
     background: linear-gradient(180deg, #2c2c30, #0c0c0e);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.08), 0 30px 80px rgba(240, 150, 40, 0.3);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.08), 0 30px 80px var(--r-glow-1);
   }
   .dl-icon svg { width: 3.6rem; height: 3.6rem; }
   .dl-head .lede { margin: 1.5rem auto 0; }
+  .download-card { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; margin-top: clamp(3rem, 6vw, 4.5rem); }
+  .dc-glyph { display: grid; place-items: center; width: 3rem; height: 3rem; color: var(--r-ink); }
+  .dc-glyph svg { width: 2.2rem; height: 2.2rem; }
+  .dc-req { font-size: 1.05rem; font-weight: 600; color: var(--r-ink); }
+  .dc-meta { font-size: 0.8rem; color: var(--r-ink-4); overflow-wrap: anywhere; }
 
-  .dl-grid {
-    display: grid;
-    gap: 3rem 2rem;
-    margin-top: clamp(3.5rem, 7vw, 5.5rem);
-  }
-  @media (min-width: 820px) {
-    .dl-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .download-card + .download-card { border-left: 1px solid var(--hairline); }
-  }
-  .download-card { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; padding: 0 1rem; }
-  .dc-glyph { display: grid; place-items: center; width: 3rem; height: 3rem; color: var(--r-ink-3); margin-bottom: 0.4rem; }
-  .is-live .dc-glyph { color: var(--r-ink); }
-  .dc-glyph svg { width: 2.1rem; height: 2.1rem; }
-  .download-card h3 { font-size: 1.5rem; font-weight: 650; letter-spacing: -0.025em; }
-  .download-card h3 span { display: block; margin-top: 0.15rem; font-size: 1rem; font-weight: 500; color: var(--r-ink-3); letter-spacing: -0.01em; }
-  .dc-req { font-size: 0.92rem; color: var(--r-ink-3); max-width: 17rem; min-height: 2.8em; }
-  .download-card .btn { margin-top: 0.5rem; }
-  .dc-status { display: inline-flex; align-items: center; min-height: 44px; margin-top: 0.5rem; padding: 0 1.2rem; border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: var(--r-ink-3); font-size: 0.95rem; font-weight: 500; }
-  .dc-meta { font-size: 0.78rem; color: var(--r-ink-4); overflow-wrap: anywhere; }
-
-  .dl-notes { max-width: 44rem; margin: clamp(3.5rem, 7vw, 5rem) auto 0; display: grid; gap: 1.5rem; text-align: left; }
-  .dl-notes > p:first-child { font-size: 0.98rem; color: var(--r-ink-3); }
+  .dl-notes { max-width: 46rem; margin: clamp(3.5rem, 7vw, 5rem) auto 0; display: grid; gap: 1.5rem; text-align: left; }
   .checksums-drawer { border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); }
-  .checksums-summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 56px;
-    cursor: pointer;
-    list-style: none;
-    font-weight: 600;
-    color: var(--r-ink);
-  }
+  .checksums-summary { display: flex; align-items: center; justify-content: space-between; min-height: 56px; cursor: pointer; list-style: none; font-weight: 600; color: var(--r-ink); }
   .checksums-summary::-webkit-details-marker { display: none; }
   .checksums-summary::after { content: '+'; font-size: 1.4rem; font-weight: 300; color: var(--r-ink-3); transition: transform 0.3s var(--r-ease); }
   .checksums-drawer[open] .checksums-summary::after { transform: rotate(45deg); }
   .checksums-content { padding-bottom: 1.5rem; font-size: 0.92rem; }
-  .checksums-content pre { margin: 0.75rem 0 1.25rem; padding: 0.9rem 1rem; border-radius: 12px; background: #0e0e10; overflow-x: auto; font-size: 0.82rem; color: var(--r-ink); }
-  .checksums-content dl { display: grid; }
-  .checksums-content dl div { display: grid; gap: 0.25rem; padding: 0.75rem 0; border-top: 1px solid var(--hairline); }
-  .checksums-content dt { font-family: var(--font-mono); font-size: 0.82rem; color: var(--r-ink); }
-  .checksums-content dd { font-size: 0.82rem; color: var(--r-ink-3); overflow-wrap: anywhere; }
-  .checksums-content dd code { color: var(--r-amber-text); font-size: 0.82rem; }
+  .checksums-content pre { margin: 0.75rem 0 1.25rem; padding: 0.9rem 1rem; border-radius: 12px; background: var(--r-code-bg); overflow-x: auto; font-size: 0.82rem; color: var(--r-ink); }
+  .sha { display: grid; gap: 0.25rem; }
+  .sha span { font-family: var(--font-mono); font-size: 0.82rem; color: var(--r-ink); }
+  .sha code { font-size: 0.82rem; color: var(--r-amber-text); overflow-wrap: anywhere; }
 </style>

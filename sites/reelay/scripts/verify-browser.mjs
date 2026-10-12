@@ -6,10 +6,14 @@
  * 1. Interactive 4-Stage Publishing Workflow (mouse clicks, keyboard APG navigation, ARIA)
  * 2. Interactive Data-Flow Topology (node selection, keyboard arrows, boundary guarantees)
  * 3. 5-Drawer Vertical Feature Accordion (click expansion, preview synchronization)
- * 4. Professional Download Center (verified v0.12.0 version, SHA-256 checksums drawer)
+ * 4. Download (the one Apple silicon build, v0.12.0, SHA-256 checksums drawer)
  * 5. Responsive Overflow Check across 9 viewports (320, 375, 430, 768, 1024, 1280, 1440, 1920, 2560)
  * 6. Internal Anchor Link Integrity
  * 7. Zero Console Errors & Clean Runtimes
+ * 8. Every route: no console errors and no sideways overflow at 320, 390 and 1440
+ * 9. Reduced motion: nothing hidden or animating
+ * 10. Light and dark colour schemes: page colours and text contrast
+ * 11. Product sub-nav (desktop links, phone sheet) and the capability matrix
  */
 
 import http from 'node:http';
@@ -221,10 +225,10 @@ async function runVerification() {
     // -------------------------------------------------------------
     console.log('\n--- 4. Testing Download Center & Cryptographic Hashes ---');
     const downloadCards = await page.$$('.download-card');
-    if (downloadCards.length !== 3) {
-      failures.push(`Expected 3 download platform cards, found ${downloadCards.length}`);
+    if (downloadCards.length !== 1) {
+      failures.push(`Expected 1 download card (Apple silicon only), found ${downloadCards.length}`);
     } else {
-      passedChecks.push('Found 3 download platform cards (Apple Silicon, Intel, Windows)');
+      passedChecks.push('Found the one download card (Apple silicon)');
     }
 
     const versionText = await page.textContent('.download-section');
@@ -315,6 +319,128 @@ async function runVerification() {
     passedChecks.push('All in-page and cross-page anchor links resolve to valid target element IDs');
 
     await context.close();
+
+    // -------------------------------------------------------------
+    // TEST SUITE 8: Every route, at phone and desktop widths
+    // -------------------------------------------------------------
+    console.log('\n--- 8. Testing Every Route (console errors, overflow) ---');
+    const routes = ['/', '/features/', '/features/library/', '/features/pipeline/', '/features/automations/', '/ai/',
+      '/pricing/', '/support/', '/download/', '/changelog/', '/reviewers/', '/privacy/', '/terms/',
+      '/data-deletion/', '/copyright/', '/security/', '/accessibility/'];
+    for (const width of [320, 390, 1440]) {
+      const ctx = await browser.newContext({ viewport: { width, height: 800 } });
+      const pg = await ctx.newPage();
+      const errs = [];
+      pg.on('pageerror', (e) => errs.push(e.message));
+      pg.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
+      let bad = 0;
+      for (const r of routes) {
+        errs.length = 0;
+        const resp = await pg.goto(`${baseUrl}${r}`, { waitUntil: 'load' });
+        if (!resp || resp.status() !== 200) { failures.push(`${r} returned ${resp && resp.status()}`); bad++; continue; }
+        // Lift overflow-x: hidden so it can't mask a layout that's too wide.
+        const wide = await pg.evaluate(() => {
+          document.documentElement.style.overflowX = 'visible';
+          document.body.style.overflowX = 'visible';
+          return document.documentElement.scrollWidth - document.documentElement.clientWidth;
+        });
+        if (wide > 0) { failures.push(`${r} at ${width}px is ${wide}px too wide`); bad++; }
+        if (errs.length) { failures.push(`${r} at ${width}px console errors: ${errs.join('; ')}`); bad++; }
+      }
+      if (!bad) passedChecks.push(`All ${routes.length} routes at ${width}px: status 200, no console errors, no sideways overflow`);
+      await ctx.close();
+    }
+
+    // -------------------------------------------------------------
+    // TEST SUITE 9: Reduced motion
+    // -------------------------------------------------------------
+    console.log('\n--- 9. Testing Reduced Motion ---');
+    {
+      const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+      const pg = await ctx.newPage();
+      await pg.goto(`${baseUrl}/`, { waitUntil: 'load' });
+      const rm = await pg.evaluate(() => {
+        const hidden = [...document.querySelectorAll('[data-reveal]')].filter((el) => getComputedStyle(el).opacity !== '1').length;
+        const moving = [...document.querySelectorAll('.hero-in, .product-tilt, .caret')].filter((el) => {
+          const cs = getComputedStyle(el);
+          return cs.animationName !== 'none' && parseFloat(cs.animationDuration) > 0.01;
+        }).length;
+        const words = document.querySelectorAll('[data-statement] .w');
+        const unlit = [...words].filter((w) => !w.classList.contains('lit')).length;
+        const autoplay = document.querySelectorAll('video[autoplay]').length;
+        return { hidden, moving, unlit, autoplay };
+      });
+      if (rm.hidden || rm.moving || rm.unlit || rm.autoplay) failures.push(`Reduced motion: ${JSON.stringify(rm)}`);
+      else passedChecks.push('Reduced motion: every section visible at once, no animation running, statement fully lit, nothing autoplays');
+      await ctx.close();
+    }
+
+    // -------------------------------------------------------------
+    // TEST SUITE 10: Light and dark colour schemes
+    // -------------------------------------------------------------
+    console.log('\n--- 10. Testing Light and Dark Colour Schemes ---');
+    for (const scheme of ['light', 'dark']) {
+      const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: scheme });
+      const pg = await ctx.newPage();
+      let bad = 0;
+      for (const r of ['/', '/privacy/', '/reviewers/', '/download/']) {
+        await pg.goto(`${baseUrl}${r}`, { waitUntil: 'load' });
+        const res = await pg.evaluate(() => {
+          const rgb = (c) => (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+          const lum = ([r, g, b]) => [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; })
+            .reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
+          const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+          const bg = rgb(getComputedStyle(document.body).backgroundColor);
+          const worst = [];
+          for (const sel of ['p', 'li', 'h2', 'dt', 'dd', '.lede', '.fine']) {
+            for (const el of [...document.querySelectorAll(`main ${sel}`)].slice(0, 40)) {
+              const cs = getComputedStyle(el);
+              if (cs.color.includes('0)') || cs.backgroundClip === 'text' || el.closest('.app-window, .still, [class*="scene"], .ccs, .lgs, .brs, .slot')) continue;
+              const r = ratio(rgb(cs.color), bg);
+              if (r < 4.5) worst.push(`${sel} ${r.toFixed(2)}`);
+            }
+          }
+          return { bg, worst: worst.slice(0, 5) };
+        });
+        const want = scheme === 'light' ? [255, 255, 255] : [0, 0, 0];
+        if (res.bg.join() !== want.join()) { failures.push(`${scheme} ${r}: page background is ${res.bg}`); bad++; }
+        if (res.worst.length) { failures.push(`${scheme} ${r}: low-contrast text ${res.worst.join(', ')}`); bad++; }
+      }
+      if (!bad) passedChecks.push(`${scheme} scheme: page colours follow the system and body text meets 4.5:1`);
+      await ctx.close();
+    }
+
+    // -------------------------------------------------------------
+    // TEST SUITE 11: Product sub-nav and capability matrix
+    // -------------------------------------------------------------
+    console.log('\n--- 11. Testing Sub-nav and Capability Matrix ---');
+    {
+      const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      const pg = await ctx.newPage();
+      await pg.goto(`${baseUrl}/features/library/`, { waitUntil: 'load' });
+      const visibleLinks = await pg.$$eval('.pnav-links a', (as) => as.filter((a) => a.getBoundingClientRect().width > 0).length);
+      const current = await pg.getAttribute('.pnav-links a[aria-current="page"]', 'href');
+      if (visibleLinks !== 7 || current !== '/features/library') failures.push(`Sub-nav desktop: ${visibleLinks} links, current ${current}`);
+      else passedChecks.push('Sub-nav: 7 chapters on desktop, current page marked');
+      await pg.goto(`${baseUrl}/`, { waitUntil: 'load' });
+      const rows = await pg.$$eval('#works-with tbody tr', (r) => r.length);
+      if (rows !== 7) failures.push(`Capability matrix has ${rows} rows, expected 7`);
+      else passedChecks.push('Capability matrix: one row for each of the 7 platforms');
+      await ctx.close();
+      const phone = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const pp = await phone.newPage();
+      await pp.goto(`${baseUrl}/features/pipeline/`, { waitUntil: 'load' });
+      const before = await pp.isVisible('.pnav-links a >> nth=0');
+      await pp.click('[data-pnav-toggle]');
+      await pp.waitForTimeout(400);
+      const expanded = await pp.getAttribute('[data-pnav-toggle]', 'aria-expanded');
+      const after = await pp.isVisible('.pnav-links a >> nth=0');
+      await pp.keyboard.press('Escape');
+      const closed = await pp.getAttribute('[data-pnav-toggle]', 'aria-expanded');
+      if (before || expanded !== 'true' || !after || closed !== 'false') failures.push(`Sub-nav phone sheet: hidden-first ${!before}, opens ${expanded}, links shown ${after}, Escape closes ${closed}`);
+      else passedChecks.push('Sub-nav on phones: folds into a sheet that opens, shows the chapters and closes with Escape');
+      await phone.close();
+    }
 
     // -------------------------------------------------------------
     // TEST SUITE 7: Responsive Layout & Overflow across 9 Viewports

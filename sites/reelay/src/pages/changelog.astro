@@ -1,0 +1,32 @@
+---
+import DocPage from '../components/ui/DocPage.astro';
+import { SITE, href } from '../data/site';
+import { CHANGELOG } from '../data/release';
+---
+
+<DocPage
+  eyebrow="Changelog"
+  title="What’s new"
+  pageTitle={`Changelog: ${SITE.fullName}`}
+  description="Every Reelay release, newest first."
+>
+  <Fragment slot="lede">Every release of Reelay, newest first. <a href={href('/download')}>Download the latest</a>.</Fragment>
+  {CHANGELOG.map((r) => (
+    <section id={`v${r.version.replace(/\./g, '-')}`} class="rel">
+      <h2>{r.version} <span>{r.title}</span></h2>
+      <p class="rel-date">{r.date}</p>
+      <ul>{r.items.map((i) => <li>{i}</li>)}</ul>
+    </section>
+  ))}
+  <section id="site-changes">
+    <h2>This website and its policies</h2>
+    <ul>
+      <li>October 12, 2026: Privacy Policy, Terms, Data Deletion and reviewer notes rewritten to match Reelay {SITE.versionNumber}; Copyright, Security and Accessibility pages added.</li>
+    </ul>
+  </section>
+</DocPage>
+
+<style>
+  .rel h2 span { font-weight: 500; color: var(--r-ink-3); margin-left: 0.4rem; }
+  .rel-date { font-size: 0.88rem; color: var(--r-ink-4); margin-top: -0.6rem; }
+</style>

@@ -5,7 +5,8 @@
  */
 export type Cover = 'live' | 'sched' | 'ready' | 'needs' | 'off';
 export type PlatformKey = 'youtube' | 'tiktok' | 'instagram' | 'bluesky' | 'threads' | 'facebook';
-export const PLATFORM_ORDER: PlatformKey[] = ['youtube', 'tiktok', 'instagram', 'bluesky', 'threads', 'facebook'];
+// The app's fixed coverage order (reelay/coverage.py ORDER).
+export const PLATFORM_ORDER: PlatformKey[] = ['tiktok', 'instagram', 'youtube', 'facebook', 'threads', 'bluesky'];
 
 export interface DemoCard {
   id: string;

@@ -2,7 +2,11 @@
 /**
  * BaseLayout: the shared @andrew/ui chrome (Nav, Footer, ChromeMeta) over
  * @andrew/tokens, with Reelay's theme and global styles layered on top.
+ *
+ * Everything is first-party: no third-party scripts, styles or fonts, so the
+ * site needs no cookie banner. Keep it that way (the audit checks).
  */
+import '@fontsource-variable/inter';
 import '@andrew/tokens/tokens.css';
 import '../styles/theme.css';
 import '@andrew/ui/styles/base.css';
@@ -10,51 +14,74 @@ import '../styles/global.css';
 import Nav from '@andrew/ui/Nav.astro';
 import Footer from '@andrew/ui/Footer.astro';
 import ChromeMeta from '@andrew/ui/ChromeMeta.astro';
+import ProductNav from '../components/ui/ProductNav.astro';
 import logo from '../assets/logo.svg';
 import { SITE, NAV_LINKS, FOOTER_EXPLORE, UTILITY_LINKS, SOCIALS, homeUrl, href } from '../data/site';
+import { OPERATOR, CONTACTS, TRADEMARKS, LIMITED_USE } from '../data/operator';
 
 interface Props {
   title?: string;
   description?: string;
+  /** Show the product sub-nav (product and feature pages). */
+  subnav?: boolean;
+  /** Structured data for this page (schema.org JSON-LD). */
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  noindex?: boolean;
 }
 
 const {
   title = `${SITE.fullName}: ${SITE.tagline}`,
   description = SITE.description,
+  subnav = false,
+  jsonLd,
+  noindex = false,
 } = Astro.props;
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
-const canonicalURL = new URL(Astro.url.pathname, Astro.site || 'https://reelay.app');
+const site = Astro.site || new URL(SITE.url);
+const canonicalURL = new URL(Astro.url.pathname, site);
+/* One Open Graph image per page: public/og/<slug>.png (scripts/make-og.mjs). */
+const slug = Astro.url.pathname.replace(/^\/|\/$/g, '').replace(/\//g, '-') || 'home';
+const ogImage = new URL(`${base}og/${slug}.png`, site).href;
 const logoAsset = { src: logo.src, width: 132, height: 32, alt: SITE.fullName };
+const operatorLine = `Reelay is operated by ${OPERATOR.legalEntity}, ${OPERATOR.address}, ${OPERATOR.country}. Contact: ${CONTACTS.support}.`;
+const ld = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 ---
 
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-subnav={subnav ? '' : undefined}>
   <head>
     <meta charset="utf-8" />
-    <ChromeMeta color="#000000" />
+    <ChromeMeta color="#000000" lightColor="#ffffff" />
+    <meta name="color-scheme" content="light dark" />
     <script is:inline>document.documentElement.classList.add('js');</script>
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalURL} />
+    {noindex && <meta name="robots" content="noindex" />}
 
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE.name} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalURL} />
-    <meta property="og:site_name" content={SITE.fullName} />
-    <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={`${SITE.name}: ${title}`} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..800&family=JetBrains+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+    {ld.map((d) => <script type="application/ld+json" set:html={JSON.stringify({ '@context': 'https://schema.org', ...d })} />)}
   </head>
   <body id="top">
+    <a class="skip-link" href="#main-content">Skip to content</a>
     <Nav logo={logoAsset} homeHref={homeUrl} links={NAV_LINKS} />
     <main id="main-content">
+      {subnav && <ProductNav />}
       <slot />
     </main>
     <Footer
@@ -66,19 +93,17 @@ const logoAsset = { src: logo.src, width: 132, height: 32, alt: SITE.fullName };
       copyright={SITE.copyright}
       privacyHref={href('/privacy')}
       utility={UTILITY_LINKS}
-      notes={[
-        "Reelay's use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.",
-        'Reelay is a desktop app. Your library, its database and your sign-ins stay on your computer.',
-      ]}
+      notes={[operatorLine, LIMITED_USE, TRADEMARKS]}
     />
     <script>
       import { initSectionAnchors } from '@andrew/ui/scripts/section-anchors.ts';
       initSectionAnchors();
 
       // Fade stages up as they arrive. Content is only hidden once this
-      // script runs (html.js), so a page without JS shows everything.
+      // script runs (html.js), and never under reduced motion.
       const items = document.querySelectorAll<HTMLElement>('[data-reveal]');
-      if ('IntersectionObserver' in window && items.length) {
+      const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!still && 'IntersectionObserver' in window && items.length) {
         const io = new IntersectionObserver(
           (entries) => {
             for (const e of entries) {

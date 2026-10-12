@@ -1,192 +1,211 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+import DocPage from '../components/ui/DocPage.astro';
+import OperatorBlock from '../components/ui/OperatorBlock.astro';
+import PermissionsTable from '../components/ui/PermissionsTable.astro';
+import SignInDiagram from '../components/SignInDiagram.astro';
 import { SITE, DATA_PATHS, AGENT_API, href } from '../data/site';
+import { OPERATOR, CONTACTS, LIMITED_USE, YOUTUBE_30_DAY_REFRESH } from '../data/operator';
 
-const lastUpdated = 'October 12, 2026';
-const toc = [
+const updated = 'October 12, 2026';
+const ph = (v: string) => /\{\{/.test(v);
+const toc: [string, string][] = [
   ['summary', 'Summary'],
-  ['what-reelay-is', 'What Reelay is'],
-  ['on-your-device', 'Data on your computer'],
+  ['who-we-are', 'Who we are'],
+  ['on-your-mac', 'Data on your Mac'],
   ['google-limited-use', 'Google and YouTube'],
-  ['meta-compliance', 'Instagram, Facebook and Threads'],
   ['tiktok', 'TikTok'],
-  ['bluesky', 'Bluesky'],
+  ['meta-compliance', 'Instagram, Threads, Facebook'],
+  ['bluesky-snapchat', 'Bluesky and Snapchat'],
   ['sign-in-server', 'Reelay’s sign-in server'],
-  ['other-connections', 'Other connections'],
-  ['agents-and-ai', 'Agents and writing help'],
-  ['we-collect', 'What we collect'],
-  ['your-choices', 'Your choices and deletion'],
+  ['outside-services', 'Outside services'],
+  ['agents-and-ai', 'Agents and AI'],
+  ['website', 'This website'],
+  ['no-selling', 'No selling or sharing'],
+  ['gdpr', 'Your rights (GDPR, UK GDPR)'],
+  ['retention', 'Retention'],
   ['children', 'Children'],
   ['changes', 'Changes'],
   ['contact', 'Contact'],
 ];
+const services: [string, string, string][] = [
+  ['TikTok, Instagram, YouTube, Snapchat', 'When you list or bring in your own media', 'Requests from your Mac for the videos and details you asked for. With “Use browser sign-in” on, the sign-in cookies of the browser you chose, for that platform only.'],
+  ['YouTube Data API (googleapis.com)', 'When you list your channel, upload, schedule or check for updates', 'Your Google token and the video and details you upload.'],
+  ['Meta’s and Bluesky’s APIs (graph.facebook.com, graph.threads.com, bsky.social)', 'Only when you have turned automatic posting on for that platform and a post is due', 'Your token or App Password and the post you wrote.'],
+  ['Google, TikTok and Meta sign-in pages', 'When you sign in or refresh a sign-in', 'What you enter on their own pages; Reelay never sees your password.'],
+  ['auth.reelay.app (Reelay’s sign-in server)', 'TikTok and Meta sign-in, token refresh, TikTok disconnect', 'The sign-in code or token, for the few minutes described above.'],
+  ['suggestqueries.google.com', 'When you ask for SEO keyword ideas', 'The phrase you typed.'],
+  ['docs.google.com', 'When you import a Google Sheet', 'A request for the sheet you shared by link.'],
+  ['LanguageTool', 'Once, on first use, if you installed it', 'A one-time download of the checker; it then runs offline.'],
+  ['Ollama or llama.cpp', 'When you ask for a rewrite, if you installed one', 'Nothing leaves your Mac: both run on it.'],
+  ['Cloudflare Tunnel', 'Only if you set one up yourself', 'Your agent API and Threads media links travel through Cloudflare under your own account.'],
+  ['vidIQ', 'Never in this build', 'A plug-in point exists but stays off without partner credentials that Reelay doesn’t ship. If configured, it would receive a video’s title, tags, description and keyword ideas.'],
+];
 ---
 
-<BaseLayout
-  title={`Privacy Policy: ${SITE.fullName}`}
-  description="How Reelay handles your data: a desktop app that keeps your library, database and sign-ins on your computer, with full Google API Limited Use and Meta disclosures."
+<DocPage
+  title="Privacy Policy"
+  pageTitle={`Privacy Policy: ${SITE.fullName}`}
+  description="How Reelay handles your data: a Mac app that keeps your library, database and sign-ins on your Mac, with full YouTube API Services, Google Limited Use, TikTok and Meta disclosures."
+  updated={updated}
+  toc={toc}
 >
-  <header class="doc-hero">
-    <div class="wrap">
-      <p class="eyebrow">Legal</p>
-      <h1>Privacy Policy</h1>
-      <p class="lede">Reelay is a desktop app. <strong>Your videos, your drafts and your sign-ins stay on your computer.</strong> This policy explains exactly what Reelay touches, where it keeps it, and who else ever sees it.</p>
-      <p class="doc-meta">Last updated {lastUpdated} · Applies to Reelay Studio {SITE.version} and this website</p>
+  <Fragment slot="lede">Reelay is a Mac app. <strong>Your videos, your drafts and your sign-ins stay on your Mac.</strong> This policy says exactly what Reelay touches, where it keeps it, and who else ever sees it.</Fragment>
+
+  <section id="summary" class="doc-summary">
+    <h2>The short version</h2>
+    <ul>
+      <li>Your library, tickets, copy, transcripts and history live in a database file on your Mac. We don’t run a cloud database and we can’t see yours.</li>
+      <li>Sign-in tokens are kept in the macOS Keychain, never in a file.</li>
+      <li>Uploads and posts go straight from your Mac to the platform. Your videos are never copied to a Reelay server.</li>
+      <li>For TikTok and Meta sign-in only, Reelay’s sign-in server swaps the sign-in code for tokens. It holds the result at most 10 minutes and never stores it.</li>
+      <li>No analytics, no tracking, no advertising, no update checks, and no account with us. We don’t sell or share data, or use it to train AI models.</li>
+    </ul>
+  </section>
+
+  <section id="who-we-are">
+    <h2>1. Who we are</h2>
+    <p>Reelay Studio (“Reelay”, “we”, “us”) is operated by the business below, which is the controller for the little personal data we handle ourselves: what passes through the sign-in server, this website’s request logs, and email you send us.</p>
+    <OperatorBlock />
+  </section>
+
+  <section id="on-your-mac">
+    <h2>2. Data on your Mac</h2>
+    <p>Reelay is a desktop app for macOS. It helps creators bring in the short-form videos they own or manage, write copy for each platform, check each video is ready, and publish it. Everything it works with stays on the Mac it runs on:</p>
+    <ul>
+      <li><strong>Your videos</strong> are saved in the library folder you choose (by default <code>{DATA_PATHS.library}</code>), with a metadata file per video.</li>
+      <li><strong>The database</strong>, <code>{DATA_PATHS.dbName}</code>, holds your profiles, tickets, platform copy, transcripts, provenance, publishing history, change history, automation rules and the search index. It lives in <code>{DATA_PATHS.mac}</code> with caches and the backups Reelay makes before upgrading the database. Reelay makes that folder and its files readable by your macOS user only.</li>
+      <li><strong>Sign-in tokens and keys</strong> (YouTube, TikTok, Instagram, Threads and Facebook tokens, Bluesky App Passwords and the agent API key) are stored in the macOS Keychain.</li>
+      <li><strong>Logs</strong> are written to <code>{DATA_PATHS.logs}</code>. Tokens and secrets are never logged.</li>
+    </ul>
+    <p>If you choose to move the database into a folder synced by Google Drive, Dropbox, iCloud Drive or OneDrive so a teammate can open it, that provider stores the file under your account and its own terms.</p>
+  </section>
+
+  <section id="google-limited-use">
+    <h2>3. Google and YouTube</h2>
+    <p><strong>Reelay uses YouTube API Services.</strong> By using Reelay’s YouTube features you agree to the <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube Terms of Service</a>, and Google’s handling of your data is described in the <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a>.</p>
+
+    <h3>3.1 What Reelay accesses, and why</h3>
+    <PermissionsTable only={['google']} headingLevel={4} />
+
+    <h3>3.2 Where it’s stored</h3>
+    <p>On your Mac only. Your Google token is in the Keychain; your channel’s name, ID and picture, and the details of videos you bring in or upload (titles, descriptions, tags, publish times, view counts), are in your local database. None of it is sent to, or stored on, a Reelay server. Google sign-in uses OAuth 2.0 for native apps (RFC 8252): Google’s own page opens in your browser and returns to a one-time loopback address on your Mac (<code>http://127.0.0.1</code>), protected with PKCE, and the code is exchanged on your Mac. Reelay never sees your Google password.</p>
+
+    <h3>3.3 Limited Use</h3>
+    <blockquote><p>{LIMITED_USE}</p></blockquote>
+    <p>See the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>. In particular, Google user data is used only to provide the features you use in Reelay; it is not sold, not used for advertising, not used to determine creditworthiness, and not used to develop, improve or train generalized AI or machine-learning models; and no person at Reelay can read it.</p>
+
+    <h3>3.4 Revoking access and deleting Google data</h3>
+    <ul>
+      <li>In Reelay, click <strong>Disconnect</strong> on the channel under <strong>Accounts</strong>. Reelay asks Google to revoke the token at <code>https://oauth2.googleapis.com/revoke</code>, deletes it from the Keychain and removes the channel from the database.</li>
+      <li>At any time, remove Reelay from your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google Account permissions</a>.</li>
+      <li>To delete the video details too, remove the videos in Reelay, delete the profile, or delete the data folder (see <a href={href('/data-deletion')}>Data Deletion</a>).</li>
+    </ul>
+
+    <h3>3.5 How long it’s kept</h3>
+    {YOUTUBE_30_DAY_REFRESH ? (
+      <p>YouTube API data that Reelay stores is refreshed or deleted within 30 days when it isn’t updated.</p>
+    ) : (
+      <p>YouTube data Reelay stores stays in the database on your Mac until you remove the video, disconnect the channel, delete the profile or delete the data folder.</p>
+    )}
+    <p>Reviewers: see the <a href={href('/reviewers')}>notes for reviewers</a>.</p>
+  </section>
+
+  <section id="tiktok">
+    <h2>4. TikTok</h2>
+    <p>Reelay uses TikTok’s Login Kit to attach your TikTok account to a creator profile. <strong>Reelay does not post to TikTok</strong>: you post in TikTok, with Prepare to Publish.</p>
+    <PermissionsTable only={['tiktok']} headingLevel={4} />
+    <p>The token is stored in your Keychain. Sign-in, token refresh and disconnect pass through Reelay’s sign-in server, because TikTok requires the app secret for them. Disconnect asks TikTok to revoke access. You can also remove Reelay in TikTok under Settings and privacy → Security and permissions → Apps and services.</p>
+  </section>
+
+  <section id="meta-compliance">
+    <h2>5. Instagram, Threads and Facebook</h2>
+    <p>Reelay complies with the <a href="https://developers.facebook.com/terms/" target="_blank" rel="noopener">Meta Platform Terms</a> and <a href="https://developers.facebook.com/devpolicy/" target="_blank" rel="noopener">Developer Policies</a>. Reelay never posts to Instagram for you. It can post to Threads and to a Facebook Page only after you turn that on; both are off by default.</p>
+    <PermissionsTable only={['instagram', 'threads', 'facebook']} headingLevel={4} />
+    <p>Tokens are stored in your Keychain. Posts go from your Mac directly to Meta’s APIs. Threads fetches a video from a link rather than accepting an upload, so for Threads Reelay serves the file from your Mac through a public address you set up yourself (such as a Cloudflare Tunnel), on a link that expires after an hour. Disconnect asks Facebook to revoke access; Instagram and Threads access is removed in their own settings. How to remove everything is set out in our <a href={href('/data-deletion')}>Data Deletion Instructions</a>.</p>
+  </section>
+
+  <section id="bluesky-snapchat">
+    <h2>6. Bluesky and Snapchat</h2>
+    <p><strong>Bluesky</strong> is connected with an App Password you create in Bluesky, stored in your Keychain. When automatic posting is on, posts go from your Mac to Bluesky. <strong>Snapchat</strong> has no sign-in in Reelay: you paste links to your own Spotlight videos to bring them in, and you post in Snapchat.</p>
+  </section>
+
+  <section id="sign-in-server">
+    <h2>7. Reelay’s sign-in server</h2>
+    <p>TikTok and Meta require an app secret to turn a sign-in code into tokens, and a secret shipped inside a Mac app can be extracted. So for those platforms only, Reelay runs a small sign-in server at <code>auth.reelay.app</code> that holds Reelay’s app secrets and does that one step.</p>
+    <SignInDiagram id="privacy-sign-in" />
+    <ul>
+      <li><strong>TikTok:</strong> your Mac sends the code, the server exchanges it and returns the tokens in the same request. Nothing is kept.</li>
+      <li><strong>Meta:</strong> Meta sends your browser to the server, which exchanges the code and holds the result <strong>at most 10 minutes</strong> for a one-time key your browser carries back to the app. The app collects it once, and it is gone. A sign-in can’t be collected by its state alone.</li>
+      <li>It also refreshes tokens when the app asks, and revokes TikTok access when you disconnect.</li>
+      <li>It never stores tokens long-term, never logs tokens or secrets, and never receives your videos, your copy or your database.</li>
+      <li>It is hosted in <span class:list={[{ 'placeholder-token': ph(OPERATOR.authServerRegion) }]}>{OPERATOR.authServerRegion}</span>.</li>
+    </ul>
+  </section>
+
+  <section id="outside-services">
+    <h2>8. Outside services the app contacts</h2>
+    <p>Reelay contacts nothing else. It has no analytics, crash reporting or update checks.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th scope="col">Service</th><th scope="col">When</th><th scope="col">What it receives</th></tr></thead>
+        <tbody>{services.map(([s, w, r]) => <tr><th scope="row">{s}</th><td>{w}</td><td>{r}</td></tr>)}</tbody>
+      </table>
     </div>
-  </header>
+  </section>
 
-  <div class="wrap doc-layout">
-    <nav class="doc-toc" aria-label="On this page">
-      <div>
-        <p>On this page</p>
-        <ol>{toc.map(([id, label]) => <li><a href={`#${id}`}>{label}</a></li>)}</ol>
-      </div>
-    </nav>
+  <section id="agents-and-ai">
+    <h2>9. Agents and AI</h2>
+    <p>Reelay’s Agent API listens only on your Mac at <code>{AGENT_API.host}:{AGENT_API.port}</code>, needs an access key from your Keychain, and checks the Host header of every request. If you connect an AI agent to it, what that agent sends to its own provider is governed by your agreement with that provider. Anything an agent asks to publish, schedule, archive or bulk-edit waits for a person’s approval, and captions downloaded from the internet are labelled as untrusted text. Writing help runs on a model on your Mac; Reelay doesn’t send captions to a paid AI service. AI suggestions are suggestions: you decide what to use.</p>
+  </section>
 
-    <div class="legal-content">
-      <section id="summary" class="doc-summary">
-        <h2>The short version</h2>
-        <ul>
-          <li>We don’t run a cloud database. Your library, tickets, copy, transcripts and history live in a database file on your computer.</li>
-          <li>Sign-in tokens are kept in the macOS Keychain or Windows Credential Manager, never in a file.</li>
-          <li>Uploads and posts go straight from your computer to the platform. Your videos are never copied to a Reelay server.</li>
-          <li>For TikTok, Instagram, Threads and Facebook sign-in, Reelay’s sign-in server swaps the sign-in code for tokens and forgets them within minutes. Google sign-in never touches it.</li>
-          <li>The app has no analytics, no tracking and no advertising. We don’t sell data or use it to train AI models.</li>
-        </ul>
-      </section>
+  <section id="website">
+    <h2>10. This website</h2>
+    <p>reelay.app is hosted by <span class:list={[{ 'placeholder-token': ph(OPERATOR.webHost) }]}>{OPERATOR.webHost}</span>, which keeps standard request logs (IP address, browser, page and time) for security and to keep the site running, for <span class:list={[{ 'placeholder-token': ph(OPERATOR.webLogRetention) }]}>{OPERATOR.webLogRetention}</span>. The site sets no cookies and loads no third-party scripts, fonts or trackers.</p>
+  </section>
 
-      <section id="what-reelay-is">
-        <h2>1. What Reelay is</h2>
-        <p>Reelay Studio (“Reelay”, “we”, “us”) is a desktop application for macOS and Windows. It helps creators bring in short-form videos they own or manage from TikTok, Instagram and YouTube, write copy for each platform they post to, check whether each video is ready, and publish it: automatically to YouTube, and to Bluesky, Threads and Facebook when the creator turns that on; by hand, with Reelay’s help, everywhere else.</p>
-        <p>This policy covers the desktop app, the Reelay sign-in server described in <a href="#sign-in-server">section 7</a>, and this website.</p>
-      </section>
+  <section id="no-selling">
+    <h2>11. No selling or sharing</h2>
+    <p>We don’t sell personal information, and we don’t share it for cross-context behavioural advertising, as those terms are used in the California Consumer Privacy Act as amended by the CPRA. There is nothing to opt out of; if you’d like confirmation, write to <a href={`mailto:${CONTACTS.privacy}`}>{CONTACTS.privacy}</a>.</p>
+  </section>
 
-      <section id="on-your-device">
-        <h2>2. Data on your computer</h2>
-        <p>Everything Reelay works with is stored on the computer it runs on, in places only your user account can read:</p>
-        <ul>
-          <li><strong>Your videos</strong> are saved in the library folder you choose (by default <code>~/Movies/Reelay</code> on a Mac and <code>Videos\Reelay</code> on Windows), with a manifest and a metadata file per video.</li>
-          <li><strong>The database</strong>, <code>{DATA_PATHS.dbName}</code>, holds your profiles, tickets, platform copy, transcripts, provenance, publishing history, change history, automation rules and the search index. It lives in <code>{DATA_PATHS.mac}</code> on a Mac and <code>{DATA_PATHS.windows}</code> on Windows, a folder Reelay restricts to your user account.</li>
-          <li><strong>Sign-in tokens and keys</strong> (YouTube, TikTok, Instagram, Threads and Facebook tokens, Bluesky App Passwords and the agent API key) are stored in the macOS Keychain or Windows Credential Manager, protected by your system login.</li>
-          <li><strong>Logs</strong> are written to <code>~/Library/Logs/Reelay</code> on a Mac and <code>%LOCALAPPDATA%\Reelay\logs</code> on Windows. Secrets and tokens are never logged.</li>
-        </ul>
-        <p>If you choose to move the database into a folder synced by Google Drive, Dropbox, iCloud Drive or OneDrive so a teammate can open it, that provider stores the file under your account and its own privacy terms.</p>
-      </section>
+  <section id="gdpr">
+    <h2>12. Your rights under the GDPR and UK GDPR</h2>
+    <p>The controller is the operator in <a href="#who-we-are">section 1</a>. What we process, and why:</p>
+    <ul>
+      <li><strong>Sign-in server:</strong> the code and tokens for the minutes a sign-in takes, to provide the sign-in you asked for (performance of a contract, Article 6(1)(b)).</li>
+      <li><strong>Website logs:</strong> to keep the site secure and running (legitimate interests, Article 6(1)(f)).</li>
+      <li><strong>Email to us:</strong> to answer you (legitimate interests, Article 6(1)(f), or a contract, Article 6(1)(b)).</li>
+    </ul>
+    <p>Data in the app is processed on your own Mac, under your control; we have no copy. You have the right to access, correct, delete, restrict or object to our processing of your personal data, to data portability, and to complain to your data protection authority. To use any of them, write to <a href={`mailto:${CONTACTS.privacy}`}>{CONTACTS.privacy}</a>; we reply within one month.</p>
+    <p><strong>International transfers.</strong> The sign-in server runs in <span class:list={[{ 'placeholder-token': ph(OPERATOR.authServerRegion) }]}>{OPERATOR.authServerRegion}</span> and this website is hosted by <span class:list={[{ 'placeholder-token': ph(OPERATOR.webHost) }]}>{OPERATOR.webHost}</span>. Where that means personal data leaves the UK or the European Economic Area, we use the safeguards the law requires, such as the European Commission’s Standard Contractual Clauses.</p>
+  </section>
 
-      <section id="google-limited-use">
-        <h2>3. Google and YouTube</h2>
-        <p>Reelay uses the YouTube Data API v3 so you can list your channel’s videos, upload videos you choose, and schedule them. You connect a channel under <strong>Accounts</strong> with Google sign-in.</p>
+  <section id="retention">
+    <h2>13. Retention</h2>
+    <ul>
+      <li><strong>On your Mac:</strong> until you delete it. See <a href={href('/data-deletion')}>Data Deletion</a>.</li>
+      <li><strong>Sign-in server:</strong> at most 10 minutes; never stored.</li>
+      <li><strong>Website logs:</strong> <span class:list={[{ 'placeholder-token': ph(OPERATOR.webLogRetention) }]}>{OPERATOR.webLogRetention}</span>.</li>
+      <li><strong>Email:</strong> as long as needed to help you, then deleted.</li>
+    </ul>
+  </section>
 
-        <h3>3.1 Scopes Reelay requests</h3>
-        <ul>
-          <li><code>https://www.googleapis.com/auth/youtube.upload</code>: to upload the video files you choose to your channel, with the title, description, tags, visibility and publish time you set.</li>
-          <li><code>https://www.googleapis.com/auth/youtube.readonly</code>: to list your channel and its uploads (including private and scheduled ones) so you can bring them into Reelay, and to confirm when a scheduled video has gone live.</li>
-          <li><code>https://www.googleapis.com/auth/yt-analytics.readonly</code>: requested only by Reelay’s own one-click Google sign-in, read-only, to show a video’s performance on its ticket. If you connect with your own Google Cloud project instead, this scope isn’t requested.</li>
-        </ul>
+  <section id="children">
+    <h2>14. Children</h2>
+    <p>Reelay isn’t directed to children. You must be at least 13, and old enough to consent to data processing where you live, to use it, and 18 to connect a business account where a platform requires it (see the <a href={href('/terms')}>Terms</a>). We don’t knowingly collect information from children under 13.</p>
+  </section>
 
-        <h3>3.2 Limited Use</h3>
-        <blockquote><p>Reelay’s use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>, including the Limited Use requirements.</p></blockquote>
-        <p>In particular:</p>
-        <ul>
-          <li>Google user data is used only to provide the features you use in Reelay, shown to you in the app.</li>
-          <li>It is stored on your computer: tokens in your keychain, channel and video details in your local database. It is never sent to, or stored on, a Reelay server.</li>
-          <li>It is not sold, not used for advertising, not used to determine creditworthiness, and not used to develop, improve or train generalized AI or machine-learning models.</li>
-          <li>No person at Reelay can read it. It never leaves your computer except in the requests Reelay makes to Google on your behalf.</li>
-        </ul>
+  <section id="changes">
+    <h2>15. Changes</h2>
+    <p>When this policy changes, we update the date at the top and note it in the <a href={href('/changelog')}>Changelog</a>. If a change affects how data from a connected platform is used, we say so here before the app does it.</p>
+  </section>
 
-        <h3>3.3 How Google sign-in works</h3>
-        <p>Reelay uses the OAuth 2.0 flow for native apps described in RFC 8252. Your browser opens Google’s own sign-in page; Google sends the result back to a one-time loopback address on your computer (<code>http://127.0.0.1</code>, on a port chosen for that sign-in), protected with PKCE. Reelay never sees your Google password, and the exchange of the sign-in code for tokens happens on your computer, not on any Reelay server.</p>
-
-        <h3>3.4 Revoking access</h3>
-        <p>Click <strong>Disconnect</strong> on the channel under <strong>Accounts</strong>. Reelay asks Google to revoke the token at <code>https://oauth2.googleapis.com/revoke</code>, deletes it from your keychain, and removes the account from Reelay’s database. You can also remove Reelay at any time from your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google Account permissions</a>.</p>
-        <p>Reviewers: see the <a href={`${href('/support')}#demo-verification`}>App Review notes</a>.</p>
-      </section>
-
-      <section id="meta-compliance">
-        <h2>4. Instagram, Facebook and Threads</h2>
-        <p>Reelay can download videos from an Instagram profile, and publish to Facebook Pages and Threads when you turn automatic posting on for them. Instagram posting is done by you, in Instagram, with Prepare to Publish.</p>
-        <p>When you sign in with Meta through Reelay’s own app, Reelay requests:</p>
-        <ul>
-          <li><strong>Instagram:</strong> <code>instagram_business_basic</code>, <code>instagram_business_content_publish</code>, and read-only <code>instagram_business_manage_insights</code>.</li>
-          <li><strong>Threads:</strong> <code>threads_basic</code>, <code>threads_content_publish</code>, and read-only <code>threads_manage_insights</code>.</li>
-          <li><strong>Facebook Pages:</strong> <code>pages_show_list</code>, <code>pages_manage_posts</code>, <code>pages_read_engagement</code>, and read-only <code>read_insights</code>.</li>
-        </ul>
-        <p>Tokens are stored in your keychain. Posts are sent from your computer directly to Meta’s APIs (<code>graph.facebook.com</code> and <code>graph.threads.com</code>). Threads fetches a video from a public link rather than accepting an upload, so for Threads Reelay serves the file from your own computer through a public address you set up (such as a Cloudflare Tunnel), on a link that expires after an hour.</p>
-        <p>Meta sign-in passes through Reelay’s sign-in server (see <a href="#sign-in-server">section 7</a>). How to remove all Meta data is set out in our <a href={href('/data-deletion')}>User Data Deletion Instructions</a>.</p>
-      </section>
-
-      <section id="tiktok">
-        <h2>5. TikTok</h2>
-        <p>Reelay downloads videos from TikTok profiles you own or manage, and reads the products tagged on a TikTok Shop video from its public page. Reelay does not post to TikTok: you post in TikTok’s own uploader, with Prepare to Publish.</p>
-        <p>If you sign in with TikTok through Reelay’s app, Reelay requests <code>user.info.basic</code>, <code>video.list</code> and read-only <code>user.info.stats</code>. TikTok sign-in, token refresh and revocation pass through Reelay’s sign-in server, because TikTok requires the app secret for them.</p>
-      </section>
-
-      <section id="bluesky">
-        <h2>6. Bluesky</h2>
-        <p>Bluesky is connected with an App Password you create in Bluesky, stored in your keychain. When automatic posting is on, posts go from your computer directly to your Bluesky server.</p>
-      </section>
-
-      <section id="sign-in-server">
-        <h2>7. Reelay’s sign-in server</h2>
-        <p>TikTok and Meta require an app secret to turn a sign-in code into tokens, and a secret shipped inside a desktop app can be extracted. So for those platforms only, Reelay runs a small sign-in server (<code>auth.reelay.app</code>) that holds Reelay’s app secrets and does that one step:</p>
-        <ul>
-          <li>It receives the sign-in code, exchanges it with the platform, and hands the tokens back to the app on your computer. A sign-in that isn’t collected is forgotten after 10 minutes.</li>
-          <li>It also refreshes tokens when the app asks, and revokes TikTok tokens when you disconnect.</li>
-          <li>It stores nothing after that. Secrets and tokens are never logged. It never receives your videos, your copy or your database.</li>
-        </ul>
-        <p>Google sign-in, and signing in with your own developer keys or a Bluesky App Password, never involve this server.</p>
-      </section>
-
-      <section id="other-connections">
-        <h2>8. Other connections the app makes</h2>
-        <ul>
-          <li><strong>Downloading</strong> fetches videos and their details from the platform you list them from.</li>
-          <li><strong>Use browser sign-in</strong>, if you turn it on, lets Reelay read that browser’s sign-in cookies for the platform, on your computer, so it can download videos only visible to you. They are sent only to that platform.</li>
-          <li><strong>Get SEO Suggestions</strong> sends your search terms to YouTube’s public search suggestions.</li>
-          <li><strong>Import Sheet</strong> downloads a Google Sheet you share with a link.</li>
-          <li><strong>LanguageTool</strong>, if installed, downloads its checker on first use and then runs offline.</li>
-        </ul>
-        <p>Reelay has no analytics, crash reporting or update checks that send anything to us.</p>
-      </section>
-
-      <section id="agents-and-ai">
-        <h2>9. Agents and writing help</h2>
-        <p>Reelay’s Agent API listens on <code>{AGENT_API.host}:{AGENT_API.port}</code> on your computer and requires an access key from your keychain. If you connect an AI agent to it, what that agent sends to its own provider is governed by your agreement with that provider. Anything an agent asks to post, archive or change in bulk waits for a person’s approval.</p>
-        <p>Writing help runs with a model on your own computer (Ollama or llama.cpp). Reelay does not send your captions to a paid AI service.</p>
-      </section>
-
-      <section id="we-collect">
-        <h2>10. What we collect</h2>
-        <ul>
-          <li><strong>From the app:</strong> nothing. We have no access to your computer, your library or your database.</li>
-          <li><strong>From the sign-in server:</strong> only what is described in <a href="#sign-in-server">section 7</a>, for the minutes a sign-in takes.</li>
-          <li><strong>From this website:</strong> standard web server logs (IP address, browser, pages requested) kept by our hosting provider for security. The site uses no advertising cookies or trackers.</li>
-          <li><strong>When you email us:</strong> your address and message, used only to reply.</li>
-        </ul>
-      </section>
-
-      <section id="your-choices">
-        <h2>11. Your choices and deletion</h2>
-        <p>Disconnect any account under <strong>Accounts</strong>. Delete a profile from the profile menu to remove its board, drafts and connected accounts. Delete the data folder to remove everything Reelay stores. Step-by-step instructions, including how to revoke access from each platform, are in our <a href={href('/data-deletion')}>User Data Deletion Instructions</a>.</p>
-      </section>
-
-      <section id="children">
-        <h2>12. Children</h2>
-        <p>Reelay is not directed to children under 13 and we do not knowingly collect information from them.</p>
-      </section>
-
-      <section id="changes">
-        <h2>13. Changes</h2>
-        <p>If we change this policy we will update the date at the top. If a change affects how data from a connected platform is used, we will say so here before the app does it.</p>
-      </section>
-
-      <section id="contact">
-        <h2>14. Contact</h2>
-        <ul>
-          <li>Privacy questions: <a href={`mailto:${SITE.privacyEmail}`}>{SITE.privacyEmail}</a></li>
-          <li>App review and compliance: <a href={`mailto:${SITE.complianceEmail}`}>{SITE.complianceEmail}</a></li>
-        </ul>
-      </section>
-    </div>
-  </div>
-</BaseLayout>
+  <section id="contact">
+    <h2>16. Contact</h2>
+    <ul>
+      <li>Privacy questions and requests: <a href={`mailto:${CONTACTS.privacy}`}>{CONTACTS.privacy}</a></li>
+      <li>App review: <a href={`mailto:${CONTACTS.reviewers}`}>{CONTACTS.reviewers}</a></li>
+      <li>Security: <a href={`mailto:${CONTACTS.security}`}>{CONTACTS.security}</a></li>
+    </ul>
+  </section>
+</DocPage>

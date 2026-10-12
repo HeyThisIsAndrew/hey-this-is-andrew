@@ -3,6 +3,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import PageHero from '../components/ui/PageHero.astro';
 import NextUp from '../components/ui/NextUp.astro';
 import { SITE, AGENT_API, href } from '../data/site';
+import Screen from '../components/ui/Screen.astro';
+import SafetySection from '../components/SafetySection.astro';
 
 /* Requests and responses follow README "Agent API" (abbreviated). */
 const examples = [
@@ -44,6 +46,7 @@ const lifecycle = ['pending', 'approved', 'executed', 'failed', 'stale', 'reject
 ---
 
 <BaseLayout
+  subnav
   title={`Agents and the Agent API: ${SITE.fullName}`}
   description={`Reelay's local Agent API lets AI agents read the board, draft copy and ask to schedule. Anything that posts, archives or changes many tickets waits for a person's approval. Writing help runs on a model on your own computer.`}
 >
@@ -83,10 +86,11 @@ const lifecycle = ['pending', 'approved', 'executed', 'failed', 'stale', 'reject
         <p class="lede">The API starts when Reelay opens and stops when it quits. Its machine-readable description is served at <code>/openapi.json</code> (OpenAPI 3.1), which agent frameworks such as Claude, Gemini and Antigravity can turn into tools directly.</p>
       </header>
       <div class="spec-rail" data-reveal>
-        <div class="spec"><span class="spec-value spec-value--sm">{AGENT_API.host}</span><span class="spec-label"><strong>Listens locally</strong>Port {AGENT_API.port}. A network address only if you set it and allow it.</span></div>
+        <div class="spec"><span class="spec-value spec-value--sm">{AGENT_API.host}</span><span class="spec-label"><strong>Listens on your Mac</strong>Port {AGENT_API.port}, and it checks the Host header, so a web page can’t reach it by pretending to be local.</span></div>
         <div class="spec"><span class="spec-value spec-value--sm">Bearer</span><span class="spec-label"><strong>A key from your keychain</strong>Settings → AI agents shows the address, Copy Access Key and Make a New Key….</span></div>
         <div class="spec"><span class="spec-value spec-value--sm">3.1</span><span class="spec-label"><strong>OpenAPI</strong>The contract is generated from the code and tested against the live server.</span></div>
       </div>
+      <div class="mt-4" data-reveal><Screen id="agents-settings" caption="Settings → AI agents in the app." /></div>
       <div class="feature-grid mt-4" data-reveal>
         <div class="feature"><h3>Without the window</h3><p>Run <code>python -m reelay.api</code> on a server or for testing. The scheduler that posts to Bluesky and Threads runs too.</p></div>
         <div class="feature"><h3>Agents somewhere else</h3><p>Point a Cloudflare Tunnel at the API. Every call still needs the key, and Reelay sends no CORS headers: it’s for server-to-server calls.</p></div>
@@ -108,7 +112,7 @@ const lifecycle = ['pending', 'approved', 'executed', 'failed', 'stale', 'reject
       <div class="feature-grid mt-4" data-reveal>
         <div class="feature"><h3>Needs approval</h3><p>Scheduling, applying a sheet import, bulk updates, archiving, removing a source, ticking a platform as scheduled or posted, recording a manual post, and resolving an interrupted send.</p></div>
         <div class="feature"><h3>Applies at once</h3><p>Draft edits, restoring an earlier value, filling from the original post, fetching a transcript, and saving a source. Rate-limited, and every change is logged with the agent as its author.</p></div>
-        <div class="feature"><h3>Approving, today</h3><p>On the Mac, with <code>python -m reelay.approvals list</code>, <code>show</code>, <code>approve</code> or <code>reject</code>. The running app then carries it out.</p></div>
+        <div class="feature"><h3>Approving, today</h3><p>A waiting request shows as an hourglass on its card. To decide it, run <code>python -m reelay.approvals list</code>, <code>show</code>, <code>approve</code> or <code>reject</code> from a copy of Reelay’s source on the Mac; the running app then carries it out. An Approve button in the app is still to come.</p></div>
         <div class="feature"><h3>Captions are data</h3><p>Text from the internet is never treated as an instruction. A rule will not schedule copy an agent supplied; that waits for a person too.</p></div>
       </div>
     </div>
@@ -141,7 +145,9 @@ const lifecycle = ['pending', 'approved', 'executed', 'failed', 'stale', 'reject
     </div>
   </section>
 
-  <NextUp kicker="Next" title="Pricing" href={href('/pricing')} />
+  <SafetySection id="agent-safety" />
+
+  <NextUp kicker="Next" title="Download" href={href('/download')} />
 </BaseLayout>
 
 <style>
@@ -150,19 +156,19 @@ const lifecycle = ['pending', 'approved', 'executed', 'failed', 'stale', 'reject
     margin: 0 auto;
     padding: clamp(1rem, 3vw, 2rem);
     border-radius: var(--radius-xl);
-    background: radial-gradient(70% 50% at 50% 0%, rgba(240, 170, 60, 0.12), transparent 70%), linear-gradient(180deg, #151517, #0b0b0c);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 50px 120px -40px rgba(0, 0, 0, 0.9);
+    background: var(--r-panel);
+    box-shadow: var(--r-panel-shadow);
   }
   .ex-tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.25rem; }
-  .ex-tab { min-height: 40px; padding: 0 1rem; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.07); color: var(--r-ink-2); font-size: 0.92rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; }
+  .ex-tab { min-height: 40px; padding: 0 1rem; border: 0; border-radius: 999px; background: var(--r-fill-2); color: var(--r-ink-2); font-size: 0.92rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; }
   .ex-tab:hover { color: var(--r-ink); }
-  .ex-tab[aria-selected='true'] { background: var(--r-ink); color: #000; }
+  .ex-tab[aria-selected='true'] { background: var(--r-ink); color: var(--r-on-ink); }
   .ex-panel[hidden] { display: none; }
-  .ex-term { border-radius: 18px; background: #060607; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); overflow: hidden; }
+  .ex-term { border-radius: 18px; background: var(--r-code-bg); box-shadow: inset 0 0 0 1px var(--hairline); overflow: hidden; }
   .ex-term pre { margin: 0; padding: 1.1rem 1.25rem; overflow-x: auto; font-size: 0.86rem; line-height: 1.65; }
   .ex-req { color: var(--r-ink); }
-  .ex-res { color: var(--r-ink-2); border-top: 1px solid rgba(255, 255, 255, 0.06); }
-  .ex-status { padding: 0.6rem 1.25rem 0; font-family: var(--font-mono); font-size: 0.82rem; color: #5fe08a; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .ex-res { color: var(--r-ink-2); border-top: 1px solid var(--r-fill-2); }
+  .ex-status { padding: 0.6rem 1.25rem 0; font-family: var(--font-mono); font-size: 0.82rem; color: var(--r-ok-text); border-top: 1px solid var(--r-fill-2); }
   .ex-status.wait { color: var(--r-amber-text); }
   .ex-note { margin-top: 1rem; font-size: 0.95rem; color: var(--r-ink-3); }
 
@@ -170,10 +176,10 @@ const lifecycle = ['pending', 'approved', 'executed', 'failed', 'stale', 'reject
   .lede code, .feature code, .wrap-narrow code { font-size: 0.85em; color: var(--r-ink); }
 
   .lifecycle { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-  .lc { padding: 0.55rem 1rem; border-radius: 999px; font-family: var(--font-mono); font-size: 0.88rem; background: rgba(255, 255, 255, 0.06); color: var(--r-ink-2); }
+  .lc { padding: 0.55rem 1rem; border-radius: 999px; font-family: var(--font-mono); font-size: 0.88rem; background: var(--r-fill-2); color: var(--r-ink-2); }
   .lc--pending { background: rgba(240, 180, 76, 0.16); color: var(--r-amber-text); }
-  .lc--approved, .lc--executed { background: rgba(48, 209, 88, 0.14); color: #5fe08a; }
-  .lc--failed, .lc--rejected { background: rgba(255, 69, 58, 0.14); color: #ff7a70; }
+  .lc--approved, .lc--executed { background: rgba(48, 209, 88, 0.14); color: var(--r-ok-text); }
+  .lc--failed, .lc--rejected { background: rgba(255, 69, 58, 0.14); color: var(--r-bad-text); }
 
   .wh-list { list-style: none; }
   .wh-list li { display: grid; gap: 0.25rem; padding: 1.1rem 0; border-top: 1px solid var(--hairline); }

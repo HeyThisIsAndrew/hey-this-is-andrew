@@ -1,0 +1,156 @@
+---
+import DocPage from '../components/ui/DocPage.astro';
+import OperatorBlock from '../components/ui/OperatorBlock.astro';
+import PermissionsTable from '../components/ui/PermissionsTable.astro';
+import Screen from '../components/ui/Screen.astro';
+import VideoSlot from '../components/ui/VideoSlot.astro';
+import SignInDiagram from '../components/SignInDiagram.astro';
+import GatekeeperSteps from '../components/ui/GatekeeperSteps.astro';
+import { SITE, href } from '../data/site';
+import { APP_IDS, CONTACTS, LIMITED_USE } from '../data/operator';
+import { RELEASE } from '../data/release';
+
+const ph = (v: string) => /\{\{/.test(v);
+const toc: [string, string][] = [
+  ['about', 'About the app'],
+  ['install', 'Download and install'],
+  ['sign-in', 'How sign-in works'],
+  ['google', 'Google: YouTube'],
+  ['tiktok', 'TikTok'],
+  ['meta', 'Meta: Instagram, Threads, Facebook'],
+  ['links', 'Policy links'],
+  ['operator', 'Operator details'],
+  ['contact', 'Contact'],
+];
+---
+
+<DocPage
+  eyebrow="For reviewers"
+  title="Reviewer notes"
+  pageTitle={`Reviewer notes: ${SITE.fullName}`}
+  description="For Google OAuth verification, TikTok for Developers and Meta App Review: Reelay's app IDs, the permissions it requests and why, where each is used in the app, and step-by-step test instructions."
+  updated="October 12, 2026"
+  toc={toc}
+>
+  <Fragment slot="lede">Everything you need to review Reelay: what it requests, why, where each permission is used, and how to see it yourself. <strong>Test credentials are provided in the review submission, not on this site.</strong></Fragment>
+
+  <section id="about">
+    <h2>About the app</h2>
+    <dl class="facts">
+      <div><dt>App name</dt><dd>Reelay (shown on every consent screen with the Reelay logo)</dd></div>
+      <div><dt>What it is</dt><dd>A Mac app for creators: it prepares copy for each platform, checks each video is ready, uploads and schedules to YouTube, and posts to Threads and Facebook Pages only when the person turns that on. It never posts to TikTok, Instagram or Snapchat.</dd></div>
+      <div><dt>Platform</dt><dd>macOS 12 or later on Apple silicon. There is no web app.</dd></div>
+      <div><dt>Version</dt><dd>{RELEASE.label}, {RELEASE.dateLabel}</dd></div>
+      <div><dt>Data</dt><dd>Kept on the user’s Mac: a local database, and tokens in the macOS Keychain. No Reelay server stores user data.</dd></div>
+    </dl>
+  </section>
+
+  <section id="install">
+    <h2>Download and install</h2>
+    <ol>
+      <li>Download <a href={href('/download')}>{RELEASE.filename}</a> ({RELEASE.size}).</li>
+      <li>Open the disk image and drag Reelay to Applications.</li>
+      <li>Open Reelay the first time as below.</li>
+    </ol>
+    <GatekeeperSteps />
+  </section>
+
+  <section id="sign-in">
+    <h2>How sign-in works</h2>
+    <SignInDiagram id="reviewers-sign-in" />
+  </section>
+
+  <section id="google">
+    <h2>Google: YouTube Data API v3</h2>
+    <dl class="facts">
+      <div><dt>Google Cloud project</dt><dd><span class:list={[{ 'placeholder-token': ph(APP_IDS.googleProjectId) }]}>{APP_IDS.googleProjectId}</span></dd></div>
+      <div><dt>OAuth client ID</dt><dd><span class:list={[{ 'placeholder-token': ph(APP_IDS.googleClientId) }]}>{APP_IDS.googleClientId}</span> (Desktop app)</dd></div>
+      <div><dt>Redirect</dt><dd>Loopback, <code>http://127.0.0.1:&lt;port&gt;/</code> (RFC 8252), with PKCE</dd></div>
+    </dl>
+    <h3>Permissions and justification</h3>
+    <PermissionsTable only={['google']} media headingLevel={4} />
+    <h3>Consent screen</h3>
+    <Screen id="google-consent" />
+    <h3>Test steps</h3>
+    <ol>
+      <li>In Reelay, open <strong>Accounts</strong>. On the YouTube card click <strong>Sign in with Google</strong>.</li>
+      <li>Your browser opens Google’s consent screen for Reelay with the two YouTube permissions. Approve, and the browser returns to Reelay; the channel appears on the card.</li>
+      <li><strong>youtube.readonly:</strong> open <strong>Library → Download Sources</strong>. The connected channel is listed in the YouTube section; click <strong>List Videos</strong> to see its uploads, including private and scheduled ones. On the Accounts page, <strong>Channel Schedule → Load from YouTube</strong> shows the latest uploads.</li>
+      <li><strong>youtube.upload:</strong> open the <strong>Board</strong>, select a ticket with a downloaded video and a YouTube title and description, choose <strong>Post automatically to → YouTube</strong>, set a time and click <strong>Schedule</strong>. The upload runs with progress; YouTube holds the video and publishes it at that time.</li>
+      <li>Click <strong>Check YouTube for Updates</strong> on the Board to confirm it has gone live.</li>
+      <li>Back in Accounts, click <strong>Disconnect</strong>. Reelay revokes the token with Google and deletes it from the Keychain.</li>
+    </ol>
+    <h3>Demo video</h3>
+    <VideoSlot id="google-demo" />
+    <blockquote><p>{LIMITED_USE}</p></blockquote>
+  </section>
+
+  <section id="tiktok">
+    <h2>TikTok: Login Kit</h2>
+    <dl class="facts">
+      <div><dt>Client key</dt><dd><span class:list={[{ 'placeholder-token': ph(APP_IDS.tiktokClientKey) }]}>{APP_IDS.tiktokClientKey}</span></dd></div>
+      <div><dt>Redirect</dt><dd>Loopback, <code>http://127.0.0.1:&lt;port&gt;/callback/</code>, with PKCE; the code is exchanged by <code>auth.reelay.app</code></dd></div>
+      <div><dt>Posting</dt><dd>None. Reelay never posts to TikTok; the person posts in TikTok.</dd></div>
+    </dl>
+    <h3>Permissions and justification</h3>
+    <PermissionsTable only={['tiktok']} media headingLevel={4} />
+    <h3>Authorization screen</h3>
+    <Screen id="tiktok-login" />
+    <h3>Test steps</h3>
+    <ol>
+      <li>In Reelay, open <strong>Accounts</strong>. On the TikTok card click the TikTok sign-in button.</li>
+      <li>TikTok’s authorization page opens in your browser for Reelay. Approve, and the browser returns to Reelay.</li>
+      <li><strong>user.info.basic:</strong> the TikTok card now shows the account’s display name and picture.</li>
+      <li>Click <strong>Disconnect</strong> on the card. Reelay asks TikTok to revoke access and deletes the token.</li>
+    </ol>
+    <h3>Demo video</h3>
+    <VideoSlot id="tiktok-demo" />
+  </section>
+
+  <section id="meta">
+    <h2>Meta: Instagram, Threads and Facebook</h2>
+    <dl class="facts">
+      <div><dt>Instagram app ID</dt><dd><span class:list={[{ 'placeholder-token': ph(APP_IDS.instagramAppId) }]}>{APP_IDS.instagramAppId}</span></dd></div>
+      <div><dt>Threads app ID</dt><dd><span class:list={[{ 'placeholder-token': ph(APP_IDS.threadsAppId) }]}>{APP_IDS.threadsAppId}</span></dd></div>
+      <div><dt>Facebook app ID</dt><dd><span class:list={[{ 'placeholder-token': ph(APP_IDS.facebookAppId) }]}>{APP_IDS.facebookAppId}</span></dd></div>
+      <div><dt>Redirect</dt><dd><code>https://auth.reelay.app/v1/oauth/&lt;provider&gt;/callback</code>, which returns the browser to the app on <code>127.0.0.1</code> with a one-time key</dd></div>
+      <div><dt>Data deletion</dt><dd><a href={href('/data-deletion')}>https://reelay.app/data-deletion</a></dd></div>
+    </dl>
+    <p>Reelay complies with the Meta Platform Terms and Developer Policies.</p>
+    <h3>Permissions and justification</h3>
+    <PermissionsTable only={['instagram', 'threads', 'facebook']} media headingLevel={4} />
+    <h3>Authorization screen</h3>
+    <Screen id="meta-login" />
+    <h3>Test steps</h3>
+    <ol>
+      <li><strong>Instagram (instagram_business_basic):</strong> in <strong>Accounts</strong>, on the Instagram card click <strong>Sign in with Instagram</strong> and approve. The card shows the professional account’s username. Instagram posts are made by the person in Instagram, with Prepare to Publish.</li>
+      <li><strong>Threads (threads_basic):</strong> on the Threads card click <strong>Sign in with Threads</strong> and approve. The card shows the Threads username.</li>
+      <li><strong>Threads (threads_content_publish):</strong> in <strong>Settings → Automatic posting</strong>, turn Threads on and restart Reelay. Set the public address Threads fetches videos from (<strong>Settings → Public URL</strong>, for example a Cloudflare Tunnel). On the Board, write a ticket’s Threads text, choose <strong>Post automatically to → Threads</strong>, set a time and click <strong>Schedule</strong>. Reelay publishes it at that time.</li>
+      <li><strong>Facebook (pages_show_list, pages_read_engagement):</strong> on the Facebook card click <strong>Sign in with Facebook</strong>, approve, and choose the Page. The card shows the Page’s name.</li>
+      <li><strong>Facebook (pages_manage_posts):</strong> in <strong>Settings → Automatic posting</strong>, turn Facebook on and restart Reelay. On the Board, write the Facebook text, choose <strong>Post automatically to → Facebook</strong>, set a time and click <strong>Schedule</strong>. Facebook holds the post and publishes it at that time.</li>
+      <li>Click <strong>Disconnect</strong> on each card. Facebook access is revoked; Instagram and Threads access is removed in their settings, as described on the <a href={href('/data-deletion')}>Data Deletion</a> page.</li>
+    </ol>
+    <h3>Demo video</h3>
+    <VideoSlot id="meta-demo" />
+  </section>
+
+  <section id="links">
+    <h2>Policy links</h2>
+    <ul>
+      <li>Privacy Policy: <a href={href('/privacy')}>https://reelay.app/privacy</a> (Google: <a href={`${href('/privacy')}#google-limited-use`}>#google-limited-use</a>, TikTok: <a href={`${href('/privacy')}#tiktok`}>#tiktok</a>, Meta: <a href={`${href('/privacy')}#meta-compliance`}>#meta-compliance</a>)</li>
+      <li>Terms of Service: <a href={href('/terms')}>https://reelay.app/terms</a></li>
+      <li>Data Deletion Instructions: <a href={href('/data-deletion')}>https://reelay.app/data-deletion</a></li>
+      <li>Security: <a href={href('/security')}>https://reelay.app/security</a></li>
+    </ul>
+  </section>
+
+  <section id="operator">
+    <h2>Operator details</h2>
+    <OperatorBlock />
+  </section>
+
+  <section id="contact">
+    <h2>Contact</h2>
+    <p>For anything you need during review, write to <a href={`mailto:${CONTACTS.reviewers}`}>{CONTACTS.reviewers}</a>. Test credentials are provided in the review submission.</p>
+  </section>
+</DocPage>

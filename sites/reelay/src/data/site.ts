@@ -1,4 +1,6 @@
 import type { FooterLink, NavItem, SocialLink } from '@andrew/ui/types';
+import { RELEASE } from './release';
+import { CONTACTS } from './operator';
 
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
@@ -7,55 +9,145 @@ export const href = (path: string) => `${base}${path}`;
 
 /*
  * Every claim on this site has to be true of the shipping app
- * (github.com/HeyThisIsAndrew/reelay, v0.12.0). Google and Meta app review
- * read this site, and an invented feature is a failed review. When the app
- * changes, change these facts here first; the pages read them.
+ * (github.com/HeyThisIsAndrew/reelay). Google, TikTok and Meta review read
+ * this site, and an invented feature is a failed review. When the app
+ * changes, change these facts first; the pages read them.
  */
 export const SITE = {
   name: 'Reelay',
   fullName: 'Reelay Studio',
   tagline: 'Publish everywhere. Never lose control.',
   description:
-    'Reelay is a native desktop app for creators who post short-form video to more than one platform. Bring your videos in, turn each one into a ticket with ready-to-paste copy for every platform, and only post what is actually ready. Your library, database and sign-ins stay on your computer.',
-  version: 'v0.12.0 Beta',
-  versionNumber: '0.12.0',
-  releaseDate: 'October 2026',
+    'Reelay is a Mac app for creators who post short-form video to more than one platform. Bring in the videos you own or manage, turn each one into a ticket with ready-to-paste copy for every platform, and only post what is actually ready. Your library, database and sign-ins stay on your Mac.',
+  version: RELEASE.label,
+  versionNumber: RELEASE.version,
+  releaseDate: RELEASE.dateLabel,
   copyright: '© 2026 Reelay Studio. All rights reserved.',
-  supportEmail: 'support@reelay.app',
-  complianceEmail: 'compliance@reelay.app',
-  privacyEmail: 'privacy@reelay.app',
+  url: 'https://reelay.app',
+  supportEmail: CONTACTS.support,
+  complianceEmail: CONTACTS.reviewers,
+  privacyEmail: CONTACTS.privacy,
 };
 
 /* Where the app keeps its data (reelay/paths.py: APP_ID = "Reelay"). */
 export const DATA_PATHS = {
   mac: '~/Library/Application Support/Reelay',
   macDb: '~/Library/Application Support/Reelay/reelay.db',
-  windows: '%APPDATA%\\Reelay',
-  windowsPs: '$env:APPDATA\\Reelay',
-  linux: '~/.local/share/reelay',
+  logs: '~/Library/Logs/Reelay',
+  library: '~/Movies/Reelay',
   dbName: 'reelay.db',
+  keychainService: 'Reelay',
 };
 
 /* The four columns every board starts with (reelay/gui/board_page.py). */
 export const STAGES = ['Backlog', 'Staging', 'Scheduled', 'Published'] as const;
 
-/* The six platforms a ticket carries, in the app's fixed coverage order,
- * with each one's real copy limit (README, "Board (content tickets)") and
- * how Reelay posts there today (README, "Platform status"). */
+/* Copy limits (README, "Board (content tickets)"). Snapchat has no copy
+ * block of its own: it uses the caption you copy from the ticket. */
 export const PLATFORMS = [
-  { key: 'youtube', name: 'YouTube', limit: 100, limitLabel: 'Title: 100 characters', publish: 'Uploads and schedules on YouTube', mode: 'auto' },
-  { key: 'tiktok', name: 'TikTok', limit: 4000, limitLabel: '4,000 characters', publish: 'Prepare to Publish, then you post', mode: 'handoff' },
-  { key: 'instagram', name: 'Instagram', limit: 2200, limitLabel: '2,200 characters, 30 hashtags', publish: 'Prepare to Publish, then you post', mode: 'handoff' },
-  { key: 'bluesky', name: 'Bluesky', limit: 300, limitLabel: '300 characters', publish: 'Copy and paste, or automatic when you turn it on', mode: 'optional' },
-  { key: 'threads', name: 'Threads', limit: 500, limitLabel: '500 characters', publish: 'Copy and paste, or automatic when you turn it on', mode: 'optional' },
-  { key: 'facebook', name: 'Facebook', limit: 63206, limitLabel: '63,206 characters', publish: 'Copy and paste, or automatic when you turn it on', mode: 'optional' },
+  { key: 'youtube', name: 'YouTube', limitLabel: 'Title: 100 characters' },
+  { key: 'tiktok', name: 'TikTok', limitLabel: '4,000 characters' },
+  { key: 'instagram', name: 'Instagram', limitLabel: '2,200 characters, 30 hashtags' },
+  { key: 'bluesky', name: 'Bluesky', limitLabel: '300 characters' },
+  { key: 'threads', name: 'Threads', limitLabel: '500 characters' },
+  { key: 'facebook', name: 'Facebook', limitLabel: '63,206 characters' },
 ] as const;
 
-export const AGENT_API = {
-  host: '127.0.0.1',
-  port: 8471,
-  url: 'http://127.0.0.1:8471',
-};
+/*
+ * "Works with": one row per platform, exactly as the app behaves at
+ * 9f3a2fb (models.Platform.ALL / HAND_ONLY / NATIVE_SCHEDULING, oauth.py
+ * PROVIDERS, sources.py, README "Platform status"). `state` drives the
+ * glyph: yes, no, off (built, off by default), or partial.
+ */
+export type CapState = 'yes' | 'no' | 'off' | 'partial';
+export interface Cap { state: CapState; label: string }
+export interface CapRow {
+  key: 'youtube' | 'tiktok' | 'instagram' | 'bluesky' | 'threads' | 'facebook' | 'snapchat';
+  name: string;
+  signIn: Cap;
+  import: Cap;
+  auto: Cap;
+  schedule: Cap;
+  byHand: Cap;
+}
+export const CAP_COLUMNS = [
+  ['signIn', 'Sign in'],
+  ['import', 'Import'],
+  ['auto', 'Post automatically'],
+  ['schedule', 'Schedule'],
+  ['byHand', 'Posted by hand'],
+] as const;
+export const CAPABILITIES: CapRow[] = [
+  {
+    key: 'youtube', name: 'YouTube',
+    signIn: { state: 'yes', label: 'Google sign-in' },
+    import: { state: 'yes', label: 'Your channel, including private and scheduled videos' },
+    auto: { state: 'yes', label: 'Upload, always available' },
+    schedule: { state: 'yes', label: 'YouTube holds it and publishes on time' },
+    byHand: { state: 'yes', label: 'Optional' },
+  },
+  {
+    key: 'facebook', name: 'Facebook Pages',
+    signIn: { state: 'yes', label: 'Facebook sign-in' },
+    import: { state: 'no', label: 'No' },
+    auto: { state: 'off', label: 'Built, off by default' },
+    schedule: { state: 'off', label: 'When on, Facebook holds it' },
+    byHand: { state: 'yes', label: 'Default' },
+  },
+  {
+    key: 'threads', name: 'Threads',
+    signIn: { state: 'yes', label: 'Threads sign-in' },
+    import: { state: 'no', label: 'No' },
+    auto: { state: 'off', label: 'Built, off by default' },
+    schedule: { state: 'off', label: 'When on, Reelay posts at the time while running' },
+    byHand: { state: 'yes', label: 'Default' },
+  },
+  {
+    key: 'bluesky', name: 'Bluesky',
+    signIn: { state: 'partial', label: 'App Password' },
+    import: { state: 'no', label: 'No' },
+    auto: { state: 'off', label: 'Built, off by default' },
+    schedule: { state: 'off', label: 'When on, Reelay posts at the time while running' },
+    byHand: { state: 'yes', label: 'Default' },
+  },
+  {
+    key: 'tiktok', name: 'TikTok',
+    signIn: { state: 'yes', label: 'Shows the connected account' },
+    import: { state: 'yes', label: 'Profiles you own or manage' },
+    auto: { state: 'no', label: 'No' },
+    schedule: { state: 'no', label: 'No' },
+    byHand: { state: 'yes', label: 'Prepare to Publish' },
+  },
+  {
+    key: 'instagram', name: 'Instagram',
+    signIn: { state: 'yes', label: 'Shows the connected account' },
+    import: { state: 'partial', label: 'With your browser’s sign-in' },
+    auto: { state: 'no', label: 'No' },
+    schedule: { state: 'no', label: 'No' },
+    byHand: { state: 'yes', label: 'Prepare to Publish' },
+  },
+  {
+    key: 'snapchat', name: 'Snapchat',
+    signIn: { state: 'no', label: 'No' },
+    import: { state: 'partial', label: 'Paste your Spotlight links' },
+    auto: { state: 'no', label: 'No' },
+    schedule: { state: 'no', label: 'No' },
+    byHand: { state: 'yes', label: 'Prepare to Publish' },
+  },
+];
+
+export const AGENT_API = { host: '127.0.0.1', port: 8471, url: 'http://127.0.0.1:8471' };
+
+/* The product sub-nav (Apple's second bar). */
+export const PRODUCT_NAV = [
+  { id: 'overview', label: 'Overview', href: `${homeUrl}`, match: ['/'] },
+  { id: 'library', label: 'Library', href: href('/features/library'), match: ['/features/library'] },
+  { id: 'board', label: 'Board', href: href('/features/pipeline'), match: ['/features/pipeline'] },
+  { id: 'automations', label: 'Automations', href: href('/features/automations'), match: ['/features/automations'] },
+  { id: 'agents', label: 'Agents', href: href('/ai'), match: ['/ai'] },
+  { id: 'privacy', label: 'Privacy', href: `${homeUrl}#data-topology`, match: [] },
+  { id: 'tech-specs', label: 'Tech Specs', href: `${homeUrl}#tech-specs`, match: [] },
+];
 
 export const NAV_LINKS: NavItem[] = [
   {
@@ -65,7 +157,7 @@ export const NAV_LINKS: NavItem[] = [
     spy: ['studio-preview'],
     subsections: [
       { label: 'The Studio', href: `${homeUrl}#studio-preview`, kicker: 'Tour' },
-      { label: 'How it works', href: `${homeUrl}#interactive-workflow`, kicker: 'Board' },
+      { label: 'Works with', href: `${homeUrl}#works-with`, kicker: 'Platforms' },
       { label: 'Privacy by design', href: `${homeUrl}#data-topology`, kicker: 'Data' },
     ],
   },
@@ -78,17 +170,10 @@ export const NAV_LINKS: NavItem[] = [
       { label: 'Library and Player', href: href('/features/library'), kicker: 'Bring in' },
       { label: 'Board and Tickets', href: href('/features/pipeline'), kicker: 'Get ready' },
       { label: 'Automations', href: href('/features/automations'), kicker: 'Repeat' },
+      { label: 'Agents', href: href('/ai'), kicker: 'Connect' },
     ],
   },
-  {
-    label: 'Agents',
-    href: href('/ai'),
-    section: 'ai',
-    subsections: [
-      { label: 'Agent API', href: href('/ai'), kicker: 'Connect' },
-      { label: 'Approvals', href: href('/ai#security-boundary'), kicker: 'Safety' },
-    ],
-  },
+  { label: 'Download', href: href('/download'), section: 'download', subsections: [] },
   { label: 'Pricing', href: href('/pricing'), section: 'pricing', subsections: [] },
   {
     label: 'Support',
@@ -96,7 +181,8 @@ export const NAV_LINKS: NavItem[] = [
     section: 'support',
     subsections: [
       { label: 'Help and FAQ', href: href('/support'), kicker: 'Help' },
-      { label: 'App Review', href: href('/support#demo-verification'), kicker: 'Reviewers' },
+      { label: 'Security', href: href('/security'), kicker: 'Trust' },
+      { label: 'Changelog', href: href('/changelog'), kicker: 'New' },
     ],
   },
 ];
@@ -105,60 +191,24 @@ export const FOOTER_EXPLORE: FooterLink[] = [
   { label: 'Library and Player', href: href('/features/library') },
   { label: 'Board and Tickets', href: href('/features/pipeline') },
   { label: 'Automations', href: href('/features/automations') },
-  { label: 'Agent API', href: href('/ai') },
+  { label: 'Agents', href: href('/ai') },
+  { label: 'Download', href: href('/download') },
+  { label: 'Changelog', href: href('/changelog') },
   { label: 'Pricing', href: href('/pricing') },
-  { label: 'Download', href: `${homeUrl}#download` },
+  { label: 'Support', href: href('/support') },
 ];
 
 export const UTILITY_LINKS: FooterLink[] = [
   { label: 'Terms of Service', href: href('/terms') },
-  { label: 'User Data Deletion', href: href('/data-deletion') },
-  { label: 'Google Limited Use', href: href('/privacy#google-limited-use') },
-  { label: 'App Review', href: href('/support#demo-verification') },
+  { label: 'Data Deletion', href: href('/data-deletion') },
+  { label: 'Copyright', href: href('/copyright') },
+  { label: 'Security', href: href('/security') },
+  { label: 'Accessibility', href: href('/accessibility') },
+  { label: 'For Reviewers', href: href('/reviewers') },
 ];
 
 /* Reelay has no social accounts of its own yet; the footer hides the column. */
 export const SOCIALS: SocialLink[] = [];
 
-/* Builds come from packaging/build_mac.sh (one .dmg per machine
- * architecture, LSMinimumSystemVersion 12.0) and packaging/build_windows.ps1
- * (a zipped folder, not an installer). Builds are not notarized yet, so the
- * first launch on a Mac goes through Control-click → Open. */
-export const DOWNLOADS = {
-  macArm: {
-    label: 'Download for Mac',
-    platform: 'Mac',
-    arch: 'Apple silicon',
-    filename: 'Reelay-0.12.0-mac-arm64.dmg',
-    href: 'https://github.com/reelay-studio/reelay/releases/latest/download/Reelay-0.12.0-mac-arm64.dmg',
-    size: '105.4 MB',
-    status: 'available',
-    statusLabel: 'Available',
-    requirements: 'macOS 12 Monterey or later, Apple silicon (M1 or later)',
-    sha256: '25d314bff7a3bdecffa66c5ba2261e3c732b347401d1c2e881ccdcde3f2fdfa0',
-  },
-  macIntel: {
-    label: 'Mac with Intel',
-    platform: 'Mac',
-    arch: 'Intel',
-    filename: 'Reelay-0.12.0-mac-x86_64.dmg',
-    href: 'https://github.com/reelay-studio/reelay/releases',
-    size: 'Not built yet',
-    status: 'pipeline',
-    statusLabel: 'Not built yet',
-    requirements: 'macOS 12 Monterey or later, Intel processor',
-    sha256: 'Published with the build',
-  },
-  windows: {
-    label: 'Windows',
-    platform: 'Windows',
-    arch: '64-bit',
-    filename: 'Reelay-0.12.0-windows-x64.zip',
-    href: 'https://github.com/reelay-studio/reelay/releases',
-    size: 'Not published yet',
-    status: 'pipeline',
-    statusLabel: 'Not published yet',
-    requirements: 'Windows 10 or 11, 64-bit',
-    sha256: 'Published with the build',
-  },
-};
+/* Only one build is published: Apple silicon. */
+export const DOWNLOADS = { macArm: { ...RELEASE, label: 'Download for Mac' } };

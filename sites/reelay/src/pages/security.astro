@@ -1,0 +1,87 @@
+---
+import DocPage from '../components/ui/DocPage.astro';
+import SignInDiagram from '../components/SignInDiagram.astro';
+import { SITE, DATA_PATHS, AGENT_API, href } from '../data/site';
+import { CONTACTS } from '../data/operator';
+
+const toc: [string, string][] = [
+  ['on-your-mac', 'On your Mac'],
+  ['sign-in', 'Signing in to platforms'],
+  ['agent-api', 'The Agent API'],
+  ['approvals', 'Agents and approvals'],
+  ['fetching', 'Fetching and files'],
+  ['limits', 'What code can’t enforce'],
+  ['report', 'Report a vulnerability'],
+];
+---
+
+<DocPage
+  eyebrow="Security"
+  title="How Reelay protects your data"
+  pageTitle={`Security: ${SITE.fullName}`}
+  description="How Reelay keeps your data on your Mac and safe: private data files, Keychain tokens, hardened sign-in, a local-only Agent API with approvals, and how to report a vulnerability."
+  updated="October 12, 2026"
+  toc={toc}
+>
+  <Fragment slot="lede">Reelay keeps your work on your Mac, so most of its security is about doing the local things carefully. <strong>Here is what it does, and what it can’t.</strong> Found a problem? <a href="#report">Tell us</a>.</Fragment>
+
+  <section id="on-your-mac">
+    <h2>On your Mac</h2>
+    <ul>
+      <li><strong>Private files.</strong> The data folder (<code>{DATA_PATHS.mac}</code>), with the database, caches, logs and backups, is made readable by your macOS user only, and the database files likewise. This is applied every time Reelay starts.</li>
+      <li><strong>Tokens in the Keychain.</strong> Platform tokens, Bluesky App Passwords and the agent API key are stored in the macOS Keychain under “{DATA_PATHS.keychainService}”. They never appear in the database, in logs, in error messages or in API responses.</li>
+      <li><strong>Signed app.</strong> Reelay is signed with the hardened runtime and no extra entitlements. It isn’t notarized yet; see <a href={href('/download')}>Download</a> for the first-open steps.</li>
+      <li><strong>Safe upgrades.</strong> Each database upgrade runs in one transaction, and Reelay copies the database before the first one, so a failed upgrade never leaves it half-changed.</li>
+    </ul>
+  </section>
+
+  <section id="sign-in">
+    <h2>Signing in to platforms</h2>
+    <SignInDiagram id="security-sign-in" />
+    <ul>
+      <li><strong>One loopback receiver</strong> on 127.0.0.1, on a random port, answers only the registered path with the exact state, compared in constant time, and only for a local Host header, so another program or a web page can’t end or spoof a sign-in. It stops listening right after the real redirect, and never logs or echoes the code.</li>
+      <li><strong>Google</strong> uses PKCE, and the code is exchanged on your Mac.</li>
+      <li><strong>TikTok and Meta</strong> need Reelay’s app secret, which stays on the sign-in server. For Meta there is no way to collect a sign-in by its state alone: the browser carries a one-time key back to the app, which claims the result once. A callback that doesn’t lead back to an app on this computer is refused before the code is exchanged.</li>
+      <li><strong>Disconnect</strong> revokes access where the platform allows it (Google, TikTok and Facebook) and deletes the Keychain entry.</li>
+    </ul>
+  </section>
+
+  <section id="agent-api">
+    <h2>The Agent API</h2>
+    <ul>
+      <li>It listens only on <code>{AGENT_API.host}:{AGENT_API.port}</code> unless you explicitly opt in to a network address, and sends no CORS headers.</li>
+      <li>Every request must be addressed to this Mac (or to the public address you set for your own tunnel); anything else is refused before any route runs. That stops DNS-rebinding attacks from web pages.</li>
+      <li>Every <code>/v1</code> call needs the bearer key from your Keychain, compared in constant time.</li>
+    </ul>
+  </section>
+
+  <section id="approvals">
+    <h2>Agents and approvals</h2>
+    <ul>
+      <li>An agent only reaches Reelay through a boundary that passes reads through, allows rate-limited draft edits, and turns anything that publishes, schedules, archives or bulk-edits into a request that waits for a person.</li>
+      <li>A request records exactly which videos it targets. If any of them changes before it’s approved, it goes stale and isn’t carried out.</li>
+      <li>Edits by an AI assistant are marked on the card and recorded as the agent’s in the change history. A rule never schedules copy an agent supplied.</li>
+      <li>Captions and transcripts downloaded from the internet are labelled as untrusted text, and kept apart from the instructions given to any model.</li>
+      <li>Today a person approves requests on the Mac with <code>python -m reelay.approvals</code>; an Approve button in the app is still to come.</li>
+    </ul>
+  </section>
+
+  <section id="fetching">
+    <h2>Fetching and files</h2>
+    <ul>
+      <li>Every link Reelay fetches is checked first: http or https only, a TikTok, Instagram, YouTube or Snapchat host, no user names or odd ports, and never <code>file://</code>.</li>
+      <li>Covers and caption files from content networks are fetched only from public addresses, checked again on every redirect.</li>
+      <li>Downloads can’t be written outside the folder you chose, and Reelay only posts or serves video files from folders this Mac trusts.</li>
+    </ul>
+  </section>
+
+  <section id="limits">
+    <h2>What code can’t enforce</h2>
+    <p>Anything that can already write to your user account (another app you run, or someone using your Mac) can change Reelay’s files too. Keep your Mac’s login, FileVault and software updates on. A database shared through a synced folder is only as trustworthy as everyone who can edit it.</p>
+  </section>
+
+  <section id="report">
+    <h2>Report a vulnerability</h2>
+    <p>Email <a href={`mailto:${CONTACTS.security}`}>{CONTACTS.security}</a> with what you found, how to reproduce it, and the Reelay version. Please don’t test against other people’s accounts or data, and give us a reasonable time to fix the problem before sharing it. We’ll acknowledge your report within five working days and keep you updated. Our <a href="/.well-known/security.txt">security.txt</a> has the same details.</p>
+  </section>
+</DocPage>

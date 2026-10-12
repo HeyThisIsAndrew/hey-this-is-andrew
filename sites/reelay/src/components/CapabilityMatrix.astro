@@ -1,0 +1,88 @@
+---
+/**
+ * CapabilityMatrix: what Reelay does on each platform, one row per
+ * platform, read from CAPABILITIES in src/data/site.ts (which follows the
+ * app's code). A real table, so it reads correctly to a screen reader; on
+ * phones each row becomes a card.
+ */
+import PlatformIcon from './ui/PlatformIcon.astro';
+import { CAPABILITIES, CAP_COLUMNS, type CapState } from '../data/site';
+
+interface Props { caption?: string; id?: string }
+const { caption = 'What Reelay does on each platform', id = 'works-with-table' } = Astro.props;
+const word: Record<CapState, string> = { yes: 'Yes', partial: 'Partly', off: 'Off by default', no: 'No' };
+---
+<div class="cm" id={id}>
+  <table>
+    <caption class="sr-only">{caption}</caption>
+    <thead>
+      <tr>
+        <th scope="col">Platform</th>
+        {CAP_COLUMNS.map(([, label]) => <th scope="col">{label}</th>)}
+      </tr>
+    </thead>
+    <tbody>
+      {CAPABILITIES.map((row) => (
+        <tr>
+          <th scope="row">
+            <span class="cm-pf">
+              {row.key === 'snapchat'
+                ? <span class="cm-dot" aria-hidden="true">S</span>
+                : <PlatformIcon name={row.key} />}
+              {row.name}
+            </span>
+          </th>
+          {CAP_COLUMNS.map(([key, label]) => {
+            const c = row[key];
+            return (
+              <td data-label={label} class={`cm-${c.state}`}>
+                <span class="cm-g" aria-hidden="true"></span>
+                <span class="cm-l"><span class="sr-only">{word[c.state]}: </span>{c.label}</span>
+              </td>
+            );
+          })}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  <ul class="cm-key" aria-label="Key">
+    <li><span class="cm-g cm-yes" aria-hidden="true"></span> Yes</li>
+    <li><span class="cm-g cm-partial" aria-hidden="true"></span> Partly</li>
+    <li><span class="cm-g cm-off" aria-hidden="true"></span> Built, off by default</li>
+    <li><span class="cm-g cm-no" aria-hidden="true"></span> No</li>
+  </ul>
+  <p class="cm-note">
+    Reelay never posts to TikTok, Instagram or Snapchat for you: it prepares the caption and the file, you post in their app, then mark it posted.
+    One-click sign-in for TikTok, Instagram, Threads and Facebook, and Reelay’s own Google sign-in, switch on as each platform approves Reelay’s app; until then, Advanced Setup connects with your own developer keys.
+  </p>
+</div>
+
+<style>
+  .cm table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+  .cm th, .cm td { text-align: left; vertical-align: top; padding: 1rem 0.9rem 1rem 0; border-bottom: 1px solid var(--hairline); }
+  .cm thead th { font-size: 0.82rem; font-weight: 600; color: var(--r-ink-3); border-bottom-color: var(--hairline-strong); padding-top: 0; }
+  .cm tbody th { font-weight: 600; color: var(--r-ink); white-space: nowrap; }
+  .cm-pf { display: inline-flex; align-items: center; gap: 0.6rem; }
+  .cm-pf :global(svg) { width: 1.2rem; height: 1.2rem; color: var(--r-ink-2); }
+  .cm-dot { display: inline-grid; place-items: center; width: 1.2rem; height: 1.2rem; border-radius: 6px; background: var(--r-fill-3); font-size: 0.7rem; font-weight: 800; color: var(--r-ink-2); }
+  .cm td { color: var(--r-ink-2); }
+  .cm td .cm-l { display: block; }
+  .cm-g { display: inline-block; width: 0.7rem; height: 0.7rem; margin: 0 0.4rem 0.35rem 0; border-radius: 50%; vertical-align: -0.05rem; }
+  .cm-yes .cm-g, .cm-g.cm-yes { background: var(--r-ok-text); }
+  .cm-partial .cm-g, .cm-g.cm-partial { background: linear-gradient(90deg, var(--r-amber-text) 50%, transparent 50%); box-shadow: inset 0 0 0 1.5px var(--r-amber-text); }
+  .cm-off .cm-g, .cm-g.cm-off { box-shadow: inset 0 0 0 1.5px var(--r-info-text); }
+  .cm-no .cm-g, .cm-g.cm-no { height: 1.5px; border-radius: 1px; background: var(--r-ink-4); vertical-align: 0.2rem; }
+  .cm-no { color: var(--r-ink-4) !important; }
+  .cm-key { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; list-style: none; margin-top: 1.25rem; font-size: 0.85rem; color: var(--r-ink-3); }
+  .cm-note { margin-top: 1.25rem; max-width: 52rem; font-size: 0.95rem; color: var(--r-ink-3); }
+
+  @media (max-width: 860px) {
+    .cm thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+    .cm table, .cm tbody, .cm tr, .cm th, .cm td { display: block; }
+    .cm tr { padding: 1rem 0; border-bottom: 1px solid var(--hairline-strong); }
+    .cm tbody th { border: 0; padding: 0 0 0.6rem; font-size: 1.05rem; }
+    .cm td { display: grid; grid-template-columns: 9.5rem 1.2rem minmax(0, 1fr); align-items: baseline; gap: 0 0.4rem; padding: 0.4rem 0; border: 0; }
+    .cm td::before { content: attr(data-label); font-weight: 600; color: var(--r-ink); font-size: 0.88rem; }
+    .cm td .cm-g { margin: 0; }
+  }
+</style>

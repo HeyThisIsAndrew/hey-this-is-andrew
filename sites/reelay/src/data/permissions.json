@@ -1,0 +1,149 @@
+{
+  "_readme": "THE permissions table. Pages (privacy, reviewers, support) and scripts/audit-dist.mjs both read it. Edit here and nowhere else. A scope's `used: false` renders a visible 'not used by a shipped feature' note, because the code (not the site) decides what each permission does. Source: reelay/oauth.py PROVIDERS and reelay/youtube.py SCOPES at 9f3a2fb.",
+  "_removedBeforeReview": [
+    "https://www.googleapis.com/auth/yt-analytics.readonly",
+    "user.info.stats",
+    "instagram_business_content_publish",
+    "instagram_business_manage_insights",
+    "threads_manage_insights",
+    "read_insights"
+  ],
+  "_removedNote": "Still requested by the app at 9f3a2fb; the owner is removing them before review. The site is written without them, and the audit fails if any appears on a page.",
+  "platforms": [
+    {
+      "key": "google",
+      "name": "YouTube",
+      "provider": "Google",
+      "api": "YouTube Data API v3",
+      "signIn": "Google sign-in in your browser, returning to a one-time loopback address on your Mac (RFC 8252) with PKCE. The code is exchanged on your Mac.",
+      "scopes": [
+        {
+          "name": "https://www.googleapis.com/auth/youtube.upload",
+          "short": "youtube.upload",
+          "purpose": "Uploads a video you choose to your channel, with the title, description, tags, visibility and publish time you set, so YouTube publishes it on schedule.",
+          "where": "Board → a ticket → Post automatically to → YouTube",
+          "screen": "google-youtube-upload",
+          "video": "google-youtube-upload-demo",
+          "used": true
+        },
+        {
+          "name": "https://www.googleapis.com/auth/youtube.readonly",
+          "short": "youtube.readonly",
+          "purpose": "Reads your channel and its uploads, including private and scheduled ones: to list them as a download source, to show the channel's latest uploads and schedule, and to confirm when a scheduled video has gone live.",
+          "where": "Library → Download Sources (your connected channel) · Accounts → Channel Schedule → Load from YouTube · Board → Check YouTube for Updates",
+          "screen": "google-youtube-readonly",
+          "video": "google-youtube-readonly-demo",
+          "used": true
+        }
+      ]
+    },
+    {
+      "key": "tiktok",
+      "name": "TikTok",
+      "provider": "TikTok",
+      "api": "Login Kit",
+      "signIn": "TikTok sign-in in your browser, returning to a one-time loopback address on your Mac with PKCE. Reelay's sign-in server exchanges the code (TikTok requires the app secret) and returns the tokens to the app.",
+      "scopes": [
+        {
+          "name": "user.info.basic",
+          "short": "user.info.basic",
+          "purpose": "Shows the connected TikTok account's display name and picture on its card, so you can see which account is attached to which creator profile.",
+          "where": "Accounts → TikTok card",
+          "screen": "tiktok-user-info-basic",
+          "video": "tiktok-user-info-basic-demo",
+          "used": true
+        },
+        {
+          "name": "video.list",
+          "short": "video.list",
+          "purpose": "Requested by Reelay's TikTok sign-in. No shipped feature calls TikTok's video list endpoint yet.",
+          "where": "Not used in this version",
+          "screen": "tiktok-video-list",
+          "video": "tiktok-video-list-demo",
+          "used": false
+        }
+      ]
+    },
+    {
+      "key": "instagram",
+      "name": "Instagram",
+      "provider": "Meta",
+      "api": "Instagram API with Instagram Login",
+      "signIn": "Instagram sign-in in your browser. Instagram returns to Reelay's sign-in server, which exchanges the code and sends your browser back to the app with a one-time key; the app collects the result once. It is held at most 10 minutes.",
+      "scopes": [
+        {
+          "name": "instagram_business_basic",
+          "short": "instagram_business_basic",
+          "purpose": "Identifies the connected Instagram professional account and shows its username on its card. Reelay does not post to Instagram: you post in Instagram, with Prepare to Publish.",
+          "where": "Accounts → Instagram card",
+          "screen": "instagram-business-basic",
+          "video": "instagram-business-basic-demo",
+          "used": true
+        }
+      ]
+    },
+    {
+      "key": "threads",
+      "name": "Threads",
+      "provider": "Meta",
+      "api": "Threads API",
+      "signIn": "Threads sign-in in your browser, through Reelay's sign-in server as for Instagram. Held at most 10 minutes.",
+      "scopes": [
+        {
+          "name": "threads_basic",
+          "short": "threads_basic",
+          "purpose": "Identifies the connected Threads account and shows its username on its card. Required by Threads for publishing.",
+          "where": "Accounts → Threads card",
+          "screen": "threads-basic",
+          "video": "threads-basic-demo",
+          "used": true
+        },
+        {
+          "name": "threads_content_publish",
+          "short": "threads_content_publish",
+          "purpose": "Publishes the Threads post you wrote on a ticket, with its video, at the time you set. Only once you turn Threads posting on; it's off by default.",
+          "where": "Settings → Automatic posting → Threads, then Board → a ticket → Post automatically to → Threads",
+          "screen": "threads-content-publish",
+          "video": "threads-content-publish-demo",
+          "used": true
+        }
+      ]
+    },
+    {
+      "key": "facebook",
+      "name": "Facebook Pages",
+      "provider": "Meta",
+      "api": "Pages API",
+      "signIn": "Facebook sign-in in your browser, through Reelay's sign-in server as for Instagram. Held at most 10 minutes.",
+      "scopes": [
+        {
+          "name": "pages_show_list",
+          "short": "pages_show_list",
+          "purpose": "Lists the Facebook Pages you manage, so you can choose which Page Reelay connects.",
+          "where": "Accounts → Facebook card → Sign in",
+          "screen": "facebook-pages-show-list",
+          "video": "facebook-pages-show-list-demo",
+          "used": true
+        },
+        {
+          "name": "pages_read_engagement",
+          "short": "pages_read_engagement",
+          "purpose": "Reads the chosen Page's name and ID to confirm the connection before each post.",
+          "where": "Accounts → Facebook card; checked again when a post goes out",
+          "screen": "facebook-pages-read-engagement",
+          "video": "facebook-pages-read-engagement-demo",
+          "used": true
+        },
+        {
+          "name": "pages_manage_posts",
+          "short": "pages_manage_posts",
+          "purpose": "Publishes or schedules the video post you wrote on a ticket to that Page. Only once you turn Facebook posting on; it's off by default.",
+          "where": "Settings → Automatic posting → Facebook, then Board → a ticket → Post automatically to → Facebook",
+          "screen": "facebook-pages-manage-posts",
+          "video": "facebook-pages-manage-posts-demo",
+          "used": true
+        }
+      ]
+    }
+  ]
+}
