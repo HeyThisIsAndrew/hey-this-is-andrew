@@ -211,19 +211,21 @@ export const UTILITY_LINKS: FooterLink[] = [
 /* Reelay has no social accounts of its own yet; the footer hides the column. */
 export const SOCIALS: SocialLink[] = [];
 
-/* Multi-platform availability: macOS verified .dmg, Windows build pipeline, Linux source. */
+/* Where Reelay runs (reelay repo, README "Building the apps" and packaging/): a
+   released .dmg for Apple silicon; on Windows, packaging/build_windows.ps1 builds
+   dist\Reelay\Reelay.exe; on Linux there is no package, it runs from source. */
 export const DOWNLOADS = {
   macArm: {
     ...RELEASE,
     label: 'Download for Mac',
     platform: 'macOS',
     arch: 'Apple Silicon (M1–M4)',
-    badge: 'Verified Release Artifact',
+    badge: 'Release package',
   },
   windows: {
     platform: 'Windows',
     arch: 'Windows 10 / 11 (64-bit)',
-    badge: 'Automated Build Pipeline',
+    badge: 'Build script',
     requirements: 'Windows 10 / 11 (64-bit, Python 3.11+)',
     pipelineScript: 'packaging/build_windows.ps1',
     href: `${homeUrl}download#windows-setup`,
@@ -231,9 +233,9 @@ export const DOWNLOADS = {
   },
   linux: {
     platform: 'Linux',
-    arch: 'Linux Desktop (x86_64)',
+    arch: 'Linux desktop',
     badge: 'Run from Source',
-    requirements: 'Ubuntu 22.04+ / Fedora 39+ (Python 3.11+)',
+    requirements: 'Python 3.11+ and Qt 6, from source',
     pipelineScript: 'python run_app.py',
     href: `${homeUrl}download#linux-setup`,
     label: 'Source Instructions →',

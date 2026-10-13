@@ -188,7 +188,7 @@ async function runVerification() {
     // -------------------------------------------------------------
     console.log('\n--- 3. Testing Interactive Data-Flow Topology ---');
     // Ensure Panel 04 (privacy & topology) is expanded in the showcase accordion
-    const privHeader = await page.$('#acc-privacy');
+    const privHeader = await page.$('#pillar-privacy-header');
     if (privHeader) {
       await privHeader.click();
       await page.waitForTimeout(150);
@@ -231,7 +231,7 @@ async function runVerification() {
     // -------------------------------------------------------------
     console.log('\n--- 4. Testing Download Center & Cryptographic Hashes ---');
     // Ensure Panel 05 (download) is expanded in the showcase accordion
-    const dlHeader = await page.$('#acc-download');
+    const dlHeader = await page.$('#pillar-download-header');
     if (dlHeader) {
       await dlHeader.click();
       await page.waitForTimeout(150);
@@ -518,6 +518,62 @@ async function runVerification() {
         if (!bad) passedChecks.push(`Balanced grids at ${width}px: every row full and every cell one size, on all ${routes.length} routes`);
         await ctx.close();
       }
+    }
+
+    // -------------------------------------------------------------
+    // TEST SUITE 13: Vertical accordions and deep links
+    // -------------------------------------------------------------
+    // The homepage's five chapters are full-width rows stacked top to
+    // bottom (never side-by-side strips), one open at a time, and a link to
+    // anything inside a row opens that row: the nav's #works-with,
+    // #data-topology, #tech-specs, and a feature page's #transcripts.
+    console.log('\n--- 13. Testing Vertical Accordions and Deep Links ---');
+    for (const width of [1440, 390]) {
+      const ctx = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
+      const pg = await ctx.newPage();
+      await pg.goto(`${baseUrl}/`, { waitUntil: 'load' });
+      const boxes = await pg.$$eval('.pillars [data-accordion-header]', (hs) => hs.map((h) => {
+        const b = h.getBoundingClientRect();
+        return { top: b.top, bottom: b.bottom, left: b.left, width: b.width, open: h.getAttribute('aria-expanded') };
+      }));
+      const stacked = boxes.length === 5 && boxes.every((b, i) => i === 0
+        || (b.top >= boxes[i - 1].bottom - 1 && Math.abs(b.left - boxes[0].left) < 2 && Math.abs(b.width - boxes[0].width) < 2));
+      const wide = boxes.length && boxes[0].width >= Math.min(width - 64, 900);
+      if (!stacked || !wide) failures.push(`Homepage accordion at ${width}px is not 5 full-width stacked rows: ${JSON.stringify(boxes.map((b) => [Math.round(b.top), Math.round(b.left), Math.round(b.width)]))}`);
+      else passedChecks.push(`Homepage accordion at ${width}px: 5 full-width rows stacked vertically`);
+      if (boxes.map((b) => b.open).join() !== 'true,false,false,false,false') failures.push(`Homepage accordion at ${width}px should open on row 01 only`);
+
+      await pg.click('#pillar-tools-header');
+      await pg.waitForTimeout(100);
+      const state = await pg.$$eval('.pillars [data-accordion-header]', (hs) => hs.map((h) => h.getAttribute('aria-expanded')).join());
+      const body = await pg.$eval('#pillar-tools-content', (el) => el.getBoundingClientRect().height);
+      const below = await pg.evaluate(() => document.querySelector('#pillar-tools-content').getBoundingClientRect().top
+        >= document.querySelector('#pillar-tools-header').getBoundingClientRect().bottom - 1);
+      if (state !== 'false,false,true,false,false' || body < 100 || !below) failures.push(`Opening row 03 at ${width}px: ${state}, body ${Math.round(body)}px, below header ${below}`);
+      else passedChecks.push(`Homepage accordion at ${width}px: a row opens downward and closes the others`);
+      await ctx.close();
+    }
+    {
+      const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' });
+      const pg = await ctx.newPage();
+      const checks = [['/#works-with', 'pillar-platforms'], ['/#data-topology', 'pillar-privacy'], ['/#tech-specs', 'pillar-download'], ['/features/library/#transcripts', 'transcripts']];
+      let bad = 0;
+      for (const [url, row] of checks) {
+        await pg.goto(`${baseUrl}${url}`, { waitUntil: 'load' });
+        const open = await pg.getAttribute(`#${row}-header`, 'aria-expanded');
+        if (open !== 'true') { failures.push(`Deep link ${url} did not open #${row}`); bad++; }
+      }
+      await pg.goto(`${baseUrl}/`, { waitUntil: 'load' });
+      await pg.evaluate(() => { location.hash = 'data-topology'; });
+      await pg.waitForTimeout(150);
+      if (await pg.getAttribute('#pillar-privacy-header', 'aria-expanded') !== 'true') { failures.push('A hashchange to #data-topology did not open its row'); bad++; }
+      const dupes = await pg.evaluate(() => {
+        const ids = [...document.querySelectorAll('[id]')].map((e) => e.id);
+        return ids.filter((id, i) => ids.indexOf(id) !== i);
+      });
+      if (dupes.length) { failures.push(`Duplicate ids on the homepage: ${dupes.join(', ')}`); bad++; }
+      if (!bad) passedChecks.push('Deep links (on load and on hashchange) open the row that holds their target; no duplicate ids');
+      await ctx.close();
     }
 
     // -------------------------------------------------------------

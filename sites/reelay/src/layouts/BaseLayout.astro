@@ -46,7 +46,13 @@ const pagePath = Astro.url.pathname.startsWith(base) ? Astro.url.pathname.slice(
 const slug = pagePath.replace(/^\/|\/$/g, '').replace(/\//g, '-') || 'home';
 const ogImage = new URL(`${base}og/${slug}.png`, site).href;
 const logoAsset = { src: logo.src, width: 132, height: 32, alt: SITE.fullName };
-const operatorLine = `Reelay is operated by ${OPERATOR.legalEntity}, ${OPERATOR.address}, ${OPERATOR.country}. Contact: ${CONTACTS.support}.`;
+/* Until the operator's details are filled in (src/data/operator.ts), the footer
+   on every page says what Reelay is instead of printing {{PLACEHOLDERS}}. The
+   legal pages still print them, so a REELAY_RELEASE=1 audit still fails. */
+const operatorKnown = ![OPERATOR.legalEntity, OPERATOR.address, OPERATOR.country].some((v) => v.includes('{{'));
+const operatorLine = operatorKnown
+  ? `Reelay is operated by ${OPERATOR.legalEntity}, ${OPERATOR.address}, ${OPERATOR.country}. Contact: ${CONTACTS.support}.`
+  : `Reelay Studio is a local-first desktop application currently in public beta. Contact: ${CONTACTS.support}.`;
 const ld = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 ---
 

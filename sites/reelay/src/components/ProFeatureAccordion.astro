@@ -1,18 +1,28 @@
 ---
 /**
- * ProFeatureAccordion.astro: The Master Consolidated Showcase Accordion
- * Inspired by BE Unconventional HQ's horizontal expandable-panel interaction.
+ * ProFeatureAccordion: the homepage's five chapters, stacked vertically.
  *
- * Consolidates the Reelay homepage around 5 core thematic pillars:
- * 1. 01 Core Workflow (4-Stage Board): Import to Publish (#interactive-workflow / #studio-preview)
- * 2. 02 7 Platforms & Automations: Native APIs & When-If-Then Rules (#works-with)
- * 3. 03 Creator Tools & Local Assist: ffmpeg pipeline & Zero-Cloud AI
- * 4. 04 Local-First Privacy & Architecture: SQLite reelay.db & Keychain (#data-topology)
- * 5. 05 Download, Specs & Integrity: Apple silicon DMG, SHA-256 Checksums (#download / #tech-specs)
+ * Full-width rows (01 to 05) that open downward, one at a time, built on
+ * @andrew/ui's Accordion and AccordionRow: the pattern of the personal
+ * site's /build and BE Unconventional HQ's /featured. Only the look is
+ * Reelay's (the overrides at the bottom of this file).
+ *
+ * The shared Accordion also owns deep links: a link to anything inside a
+ * row (the nav's #works-with, #data-topology, #tech-specs, #download) opens
+ * that row on load, on hashchange, and on a same-page click (capture phase,
+ * before the browser scrolls). Collapsed rows are inert, and without
+ * JavaScript every row reads open.
+ *
+ * #studio-preview belongs to the Hero; nothing here repeats it.
+ * Every claim below follows the Reelay app repository (README, paths.py,
+ * tokens.py, assist.py, packaging/).
  */
-import PlatformIcon from './ui/PlatformIcon.astro';
+import Accordion from '@andrew/ui/Accordion.astro';
+import AccordionRow from '@andrew/ui/AccordionRow.astro';
 import Coverage from './ui/Coverage.astro';
-import { SITE, DOWNLOADS, CAPABILITIES, CAP_COLUMNS, href } from '../data/site';
+import CapabilityMatrix from './CapabilityMatrix.astro';
+import { SITE, DOWNLOADS, href } from '../data/site';
+import { RELEASE } from '../data/release';
 import { DEMO_CARDS, type Cover, type PlatformKey } from '../data/demo';
 
 const card = DEMO_CARDS[2];
@@ -24,95 +34,90 @@ const workflowSteps = [
     id: 'backlog',
     label: 'Backlog',
     kicker: 'Every download lands here',
-    title: 'A video becomes a ticket.',
-    body: 'Each video you bring in arrives as a card in Backlog, carrying its original caption, source, and local metadata.',
+    body: 'Each video you bring in arrives as a card in Backlog, with its original caption and where it came from.',
     coverage: cov('needs', 'needs', 'needs', 'needs'),
     status: 'Needs copy for 4 platforms',
+    tone: 'backlog',
   },
   {
     id: 'staging',
     label: 'Staging',
     kicker: 'Write it once per platform',
-    title: 'Ready means ready.',
-    body: 'Platform checklist: tailored caption, character limits, video validation. Ready when at least one platform is confirmed.',
+    body: 'Write each platform’s caption with live counts against its limits. A ticket is ready once at least one of its platforms is.',
     coverage: cov('ready', 'ready', 'ready', 'ready'),
     status: 'Ready for 4 platforms',
+    tone: 'staging',
   },
   {
     id: 'scheduled',
     label: 'Scheduled',
     kicker: 'Nothing unready gets through',
-    title: 'The Ready gate holds the door.',
-    body: 'Scheduling validates each platform. Direct upload queues run with rollback safety and zero silent overwrites.',
+    body: 'Scheduling refuses any platform that isn’t ready, and says why. YouTube goes out on time even with Reelay closed.',
     coverage: cov('sched', 'ready', 'ready', 'sched'),
     status: 'YouTube · Tue 9:00 AM',
+    tone: 'sched',
   },
   {
     id: 'published',
     label: 'Published',
     kicker: 'One record of everywhere it went',
-    title: 'It finishes on its own.',
-    body: 'Card moves to Published when complete. Check for Updates confirms live posts, and change history records every edit.',
+    body: 'The card moves to Published once every platform it’s going to is live. Check YouTube for Updates confirms what went out.',
     coverage: cov('live', 'live', 'live', 'live'),
     status: 'Live on 4 platforms',
+    tone: 'live',
   },
 ];
 
 const topologyNodes = [
   {
     id: 'on-device',
-    label: 'On your computer',
-    short: 'Library & database',
+    short: 'On your computer',
     title: 'Your archive lives where you put it.',
-    body: 'Videos download into your local library folder. Every ticket, copy, transcript, and index live in local SQLite (reelay.db).',
+    body: 'Videos download into your library folder. Tickets, copy and transcripts live in one local database.',
     rows: [
-      ['Videos', 'Your local library folder'],
-      ['Database', 'SQLite (reelay.db)'],
-      ['Transcripts & Edits', 'Local application support'],
-      ['Cloud copies on Reelay', 'None'],
+      ['Videos', 'Your library folder'],
+      ['Database', 'reelay.db, on your computer'],
+      ['Edited copies', 'Beside the original'],
+      ['Copies on Reelay’s servers', 'None'],
     ],
   },
   {
     id: 'keychain',
-    label: 'In your keychain',
-    short: 'Sign-ins & keys',
+    short: 'In your keychain',
     title: 'Sign-ins never touch a file.',
-    body: 'Platform OAuth tokens and API keys are stored in macOS Keychain. Revoked tokens are purged locally and at provider.',
+    body: 'Platform sign-ins, the Bluesky App Password and the Agent API key are kept in the system keychain, under “Reelay”.',
     rows: [
-      ['YouTube & Meta tokens', 'macOS Keychain'],
-      ['Bluesky App Password', 'macOS Keychain'],
-      ['Agent API Key', 'macOS Keychain'],
-      ['In Reelay database', 'Never'],
+      ['YouTube and Meta sign-ins', 'Keychain'],
+      ['Bluesky App Password', 'Keychain'],
+      ['Agent API key', 'Keychain'],
+      ['In the database or logs', 'Never'],
     ],
   },
   {
     id: 'platforms',
-    label: 'Direct to platforms',
-    short: 'Uploads & posts',
+    short: 'Straight to platforms',
     title: 'From your computer to theirs.',
-    body: 'Uploads go directly from your Mac to platform APIs with zero cloud middleware. Sign-ins use secure local loopback.',
+    body: 'Uploads go from your computer directly to each platform. Disconnecting an account revokes it with the platform too.',
     rows: [
-      ['Video uploads', 'Your Mac → Platform API'],
+      ['Video uploads', 'Your computer → the platform'],
       ['Google sign-in', 'Loopback on 127.0.0.1'],
-      ['Sign-in broker', 'Ephemeral code exchange only'],
-      ['Third-party trackers', 'Zero'],
+      ['Sign-in helper', 'Swaps a code, keeps no videos'],
+      ['Ad or analytics SDKs', 'None'],
     ],
   },
   {
-    id: 'security',
-    label: 'Local boundaries',
-    short: 'Isolation & safety',
-    title: 'Strict security boundaries.',
-    body: 'Reelay operates entirely on your device. Agents require explicit approvals before any publish, edit, or delete action.',
+    id: 'boundaries',
+    short: 'Clear limits',
+    title: 'You hold the publish button.',
+    body: 'The Agent API answers on your own computer only, and anything an agent wants to publish waits for your approval.',
     rows: [
-      ['Agent execution', 'Requires human confirmation'],
-      ['Network activity', 'Declared platform hosts only'],
-      ['Telemetry & Ads', 'Completely absent'],
-      ['Source verification', 'SHA-256 release digests'],
+      ['Agent API', '127.0.0.1 by default'],
+      ['Publishing by an agent', 'Needs your approval'],
+      ['Downloads', 'Known platform hosts only'],
+      ['Every release', 'SHA-256 checksum'],
     ],
   },
 ];
-
 
 const apple = 'M16.4 12.6c0-2.4 2-3.6 2.1-3.6-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8s1.9.8 3.2.8c1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.7 1.3-2.8 0 0-2.5-1-2.5-4zM14 5.4c.7-.8 1.1-1.9 1-3-.9 0-2.1.6-2.8 1.4-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.6 2.8-1.3z';
 const windows = 'M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.949-1.801';
@@ -121,1356 +126,369 @@ const panels = [
   {
     id: 'workflow',
     num: '01',
-    shortTitle: 'Workflow',
-    title: 'Core Workflow',
-    kicker: '4-Stage Kanban Pipeline',
-    headline: 'From local files to finished posts.',
-    body: 'Bring in videos you own or manage. Reelay parses metadata, drafts platform-tailored copy, and moves tickets through an Apple-standard Kanban board. Nothing leaves your Mac until you inspect and approve it.',
-    link: { label: 'Explore Pipeline & Board', href: href('/features/pipeline') },
-    tags: ['Staging library', 'Approval gate', 'Zero accidental posts'],
-    anchorId: 'studio-preview',
+    kicker: 'Import to published',
+    title: 'Your board',
+    headline: 'From your videos to finished posts.',
+    body: 'Bring in the videos you own or manage. Each one becomes a ticket on a four-column board, with its own copy for every platform and a checklist that says what’s missing.',
+    tags: ['Backlog to Published', 'A Ready gate on scheduling', 'Copy for six platforms'],
+    link: { label: 'Board and Tickets', href: href('/features/pipeline') },
   },
   {
     id: 'platforms',
     num: '02',
-    shortTitle: 'Platforms',
-    title: 'Platforms & Rules',
-    kicker: 'Seven Platforms · Native APIs',
-    headline: 'Seven platforms. Exactly what it does on each.',
-    body: 'Reelay connects directly from your Mac to platform APIs with zero cloud middleware. Automate repetitive metadata filling with When · If · Then rules, while respecting each platform’s rules and boundaries.',
-    link: { label: 'Explore Automations & Rules', href: href('/features/automations') },
-    tags: ['YouTube, TikTok, Meta', 'Direct API posting', 'When · If · Then rules'],
-    anchorId: 'works-with',
+    kicker: 'Seven platforms',
+    title: 'Platforms and rules',
+    headline: 'Exactly what it does on each platform.',
+    body: 'YouTube uploads and schedules. Bluesky, Threads and Facebook post automatically once you turn them on. TikTok, Instagram and Snapchat you post yourself, with the caption and file ready. When-if-then rules fill in the repetitive parts.',
+    tags: ['Automatic: YouTube, Bluesky, Threads, Facebook', 'You post: TikTok, Instagram, Snapchat', 'When · if · then rules'],
+    link: { label: 'Automations', href: href('/features/automations') },
   },
   {
     id: 'tools',
     num: '03',
-    shortTitle: 'Creator Tools',
-    title: 'Creator Tools',
-    kicker: 'Local ffmpeg & Zero-Token AI',
-    headline: 'Non-destructive video tools. Zero-cloud AI.',
-    body: 'Strip or replace audio tracks, burn subtitles non-destructively from SRT/VTT files with ffmpeg on this computer, and get caption rewrites using local LLMs (Ollama or llama.cpp) running on your Mac’s Apple silicon. No monthly tokens, no cloud subscriptions, no data leaks.',
-    link: { label: 'Explore Video Tools & Local AI', href: href('/features/library') },
-    tags: ['ffmpeg audio & subs', 'Originals untouched', 'Ollama / llama.cpp'],
-    anchorId: 'creator-tools',
+    kicker: 'Edit and write',
+    title: 'Creator tools',
+    headline: 'Small edits. Local writing help.',
+    body: 'Remove a video’s sound or replace it with a track you have rights to, and burn in captions from a .srt or .vtt file, with ffmpeg on your computer. The original never changes. Rewrites run on a local model through Ollama or llama.cpp: no tokens, no subscription.',
+    tags: ['ffmpeg on your computer', 'Originals untouched', 'Ollama or llama.cpp'],
+    link: { label: 'Library and Player', href: href('/features/library') },
   },
   {
     id: 'privacy',
     num: '04',
-    shortTitle: 'Privacy',
-    title: 'Privacy & Architecture',
-    kicker: 'Local SQLite · macOS Keychain',
-    headline: 'Where your data actually goes. The 3 boundaries.',
-    body: 'Your SQLite database (reelay.db), media files, and platform sign-ins live on your Mac. Platform tokens are stored exclusively in macOS Keychain. Zero analytics, zero tracking, zero third-party telemetry.',
-    link: { label: 'Security & Privacy Architecture', href: href('/security') },
-    tags: ['SQLite reelay.db', 'macOS Keychain', 'Zero telemetry'],
-    anchorId: 'data-topology',
+    kicker: 'Local first',
+    title: 'Privacy by design',
+    headline: 'Your work stays on your computer.',
+    body: 'Your videos, database and transcripts stay where you put them. Sign-ins live in the system keychain, never in a file, and uploads go straight from your computer to each platform.',
+    tags: ['A local database', 'Sign-ins in your keychain', 'No ads or analytics SDKs'],
+    link: { label: 'Security', href: href('/security') },
   },
   {
     id: 'download',
     num: '05',
-    shortTitle: 'Download',
-    title: 'Download & Specs',
-    kicker: 'Apple Silicon Native · v0.12.0 Beta',
-    headline: 'Native Mac app. 105.4 MB. Free beta.',
-    body: 'Reelay is an Apple silicon native macOS application (macOS 12+). Verified DMG with cryptographic SHA-256 integrity. Also available via automated PowerShell script for Windows and source build on Linux.',
-    link: { label: 'Download Center & Release Notes', href: href('/download') },
-    tags: ['macOS 12+ Apple silicon', 'Windows script', 'Linux source'],
-    anchorId: 'download',
+    kicker: RELEASE.label,
+    title: 'Download and specs',
+    headline: 'Free during the beta.',
+    body: 'A ready-to-run app for Macs with Apple silicon on macOS 12 or later. On Windows 10 or 11, build it yourself with the included PowerShell script; on Linux, run it from source with Python 3.11 or later.',
+    tags: ['macOS 12+ · Apple silicon', 'Windows: build script', 'Linux: from source'],
+    link: { label: 'Download and release notes', href: href('/download') },
   },
 ];
 ---
 
-<section class="stage stage--lift acc" id="four-pillars" aria-labelledby="acc-title">
+<section class="stage stage--lift pillars" id="four-pillars" aria-labelledby="acc-title">
   <div class="wrap">
     <header class="chapter-head" data-reveal>
-      <p class="eyebrow">The Studio Showcase</p>
-      <h2 id="acc-title" class="headline">Everything in one place.<br /><span class="text-silver">Explore how Reelay works.</span></h2>
-      <p class="lede">Select any panel below to explore Reelay’s core workflow, platform integrations, creator tools, local-first privacy, and download options.</p>
+      <p class="eyebrow">Inside Reelay</p>
+      <h2 id="acc-title" class="headline">Everything in one place.<br /><span class="text-silver">Open a chapter.</span></h2>
     </header>
 
-    <div class="horizontal-accordion-wrap" data-reveal>
-      <div class="horizontal-accordion" data-accordion role="region" aria-label="Reelay deep capabilities track">
+    <div class="pillars-list r-acc r-acc--cards" data-reveal>
+      <Accordion exclusive>
         {panels.map((p, i) => (
-          <div
-            class:list={['acc-panel', { 'is-expanded': i === 0, 'is-collapsed': i !== 0 }]}
-            data-panel-id={p.id}
-            id={`acc-panel-wrap-${p.id}`}
-          >
-            <!-- Panel Header Strip / Trigger -->
-            <button
-              type="button"
-              class="panel-strip"
-              data-accordion-header
-              data-target={p.id}
-              id={`acc-${p.id}`}
-              role="button"
-              aria-expanded={i === 0 ? 'true' : 'false'}
-              aria-selected={i === 0 ? 'true' : 'false'}
-              aria-controls={`panel-body-${p.id}`}
-              aria-label={`${p.title} capability drawer`}
-              tabindex={i === 0 ? 0 : -1}
-            >
-              <div class="strip-header-content">
-                <span class="strip-num">{p.num}</span>
-                <span class="strip-label">{p.shortTitle}</span>
+          <AccordionRow id={`pillar-${p.id}`} kicker={`${p.num} · ${p.kicker}`} title={p.title} level={3} size="md" open={i === 0}>
+            <div class="panel-inner">
+              <div class="panel-narrative">
+                <p class="panel-title">{p.headline}</p>
+                <p class="panel-body-text">{p.body}</p>
+                <ul class="panel-tags" aria-label="In short">
+                  {p.tags.map((t) => <li class="tag-pill">{t}</li>)}
+                </ul>
+                <a class="link-more" href={p.link.href}>{p.link.label}</a>
               </div>
-              <div class="strip-marker" aria-hidden="true">
-                <span class="strip-indicator"></span>
-                <svg class="strip-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </div>
-            </button>
 
-            <!-- Expanded Panel Body -->
-            <div
-              class="panel-body"
-              id={`panel-body-${p.id}`}
-              role="region"
-              aria-labelledby={`acc-${p.id}`}
-            >
-              <div class="panel-inner">
-                <!-- Narrative column -->
-                <div class="panel-narrative">
-                  <div class="narrative-meta">
-                    <span class="panel-num-pill">{p.num}</span>
-                    <span class="panel-kicker">{p.kicker}</span>
-                  </div>
-                  <h3 class="panel-title">{p.headline}</h3>
-                  <p class="panel-body-text">{p.body}</p>
-
-                  <div class="panel-tags" aria-label="Key guarantees">
-                    {p.tags.map((t) => <span class="tag-pill">{t}</span>)}
-                  </div>
-
-                  <div class="panel-action">
-                    <a class="link-more" href={p.link.href}>{p.link.label}</a>
-                  </div>
-                </div>
-
-                <!-- Visual Workstation Column -->
-                <div class="panel-visual">
-                  {/* PANEL 01: Core 4-Stage Publishing Workflow */}
-                  {p.id === 'workflow' && (
-                    <div class="ws-workstation ws-workflow" id="interactive-workflow">
-                      <div class="ws-header">
-                        <div class="ws-tabs" role="tablist" aria-label="Board columns">
-                          {workflowSteps.map((s, idx) => (
-                            <button
-                              type="button"
-                              role="tab"
-                              class="workflow-step-tab"
-                              id={`tab-${s.id}`}
-                              data-step-target={s.id}
-                              aria-selected={idx === 0 ? 'true' : 'false'}
-                              aria-controls={`panel-${s.id}`}
-                              tabindex={idx === 0 ? 0 : -1}
-                            >
-                              <span class="wf-num">{String(idx + 1).padStart(2, '0')}</span>
-                              <span>{s.label}</span>
-                            </button>
-                          ))}
+              <div class="panel-visual">
+                {p.id === 'workflow' && (
+                  <div class="ws ws-workflow" id="interactive-workflow">
+                    <div class="ws-tabs" role="tablist" aria-label="Board columns">
+                      {workflowSteps.map((s, idx) => (
+                        <button type="button" role="tab" class="workflow-step-tab" id={`tab-${s.id}`} data-step-target={s.id}
+                          aria-selected={idx === 0 ? 'true' : 'false'} aria-controls={`panel-${s.id}`} tabindex={idx === 0 ? 0 : -1}>
+                          <span class="wf-num">{String(idx + 1).padStart(2, '0')}</span>
+                          <span>{s.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {workflowSteps.map((s, idx) => (
+                      <div class="wf-panel" role="tabpanel" id={`panel-${s.id}`} aria-labelledby={`tab-${s.id}`} hidden={idx !== 0} tabindex="0">
+                        <div class="ticket-card">
+                          <div class="tc-top">
+                            <span class="tc-title">{card.title}</span>
+                            <span class={`tc-badge tc-badge--${s.tone}`}>{s.status}</span>
+                          </div>
+                          <p class="tc-meta">{s.kicker}</p>
+                          <div class="tc-cov">
+                            <span class="tc-cov-label">Platforms</span>
+                            <Coverage coverage={s.coverage} />
+                          </div>
+                          <p class="tc-preview">{s.body}</p>
                         </div>
                       </div>
+                    ))}
+                    <p class="ws-note workflow-simulation-disclaimer">Interactive illustration. Pick a column.</p>
+                  </div>
+                )}
 
-                      <div class="ws-content">
-                        {workflowSteps.map((s, idx) => (
-                          <div
-                            class="wf-panel"
-                            role="tabpanel"
-                            id={`panel-${s.id}`}
-                            aria-labelledby={`tab-${s.id}`}
-                            hidden={idx !== 0}
-                            tabindex="0"
-                          >
-                            <div class="ticket-card" id="studio-preview">
-                              <div class="tc-top">
-                                <span class="tc-title">{card.title}</span>
-                                <span class={`tc-badge tc-badge--${idx === 0 ? 'backlog' : idx === 1 ? 'staging' : idx === 2 ? 'sched' : 'live'}`}>{s.status}</span>
-                              </div>
-                              <p class="tc-meta">{s.kicker} · 0:42 · 1080×1920 · 48 kHz AAC</p>
-                              <div class="tc-cov">
-                                <span class="tc-cov-label">Platform Readiness:</span>
-                                <Coverage coverage={s.coverage} />
-                              </div>
-                              <div class="tc-preview">
-                                <p class="tc-caption">“{s.body}”</p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                {p.id === 'platforms' && (
+                  <div class="ws ws-platforms" id="works-with">
+                    <CapabilityMatrix />
+                    <p class="rule-preview"><span class="rule-tag">A rule</span> When a video is added, if its caption mentions “sunset”, then fill the TikTok caption from a template.</p>
+                  </div>
+                )}
+
+                {p.id === 'tools' && (
+                  <div class="ws ws-tools" id="creator-tools">
+                    <div class="vis-card">
+                      <p class="bar-title">Video tools</p>
+                      <div class="files">
+                        <div class="file">
+                          <span class="fthumb" aria-hidden="true"></span>
+                          <span><b>first-snow.mp4</b><small>The original, never changed</small></span>
+                        </div>
+                        <p class="arrow">Burn in captions from first-snow.srt</p>
+                        <div class="file hot">
+                          <span class="fthumb" aria-hidden="true"><i class="sub">first snow and I was not ready</i></span>
+                          <span><b>first-snow.edited.mp4</b><small>The copy that gets posted</small></span>
+                        </div>
                       </div>
-                      <p class="workflow-simulation-disclaimer">Interactive preview of Reelay’s local pipeline.</p>
                     </div>
-                  )}
+                    <div class="vis-card">
+                      <p class="bar-title">Assist</p>
+                      <p class="assist-text">the last ten minutes of light on the big sur coast, <u>shot hand held</u> from the turnout</p>
+                      <div class="assist-pop">
+                        <span>Spelling: <b>handheld</b></span>
+                        <span>Brand voice: <b>natural and direct</b></span>
+                        <span class="assist-model">llama3.2:3b on this computer · no tokens</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-                  {/* PANEL 02: 7 Platforms & Automations */}
-                  {p.id === 'platforms' && (
-                    <div class="ws-workstation ws-platforms" id="works-with">
-                      <div class="ws-table-wrap">
-                        <table class="cm-table" id="works-with-table">
-                          <thead>
-                            <tr>
-                              <th scope="col">Platform</th>
-                              {CAP_COLUMNS.map(([, label]) => <th scope="col">{label}</th>)}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {CAPABILITIES.map((row) => (
-                              <tr>
-                                <th scope="row">
-                                  <span class="cm-pf">
-                                    {row.key === 'snapchat'
-                                      ? <span class="cm-dot" aria-hidden="true">S</span>
-                                      : <PlatformIcon name={row.key} />}
-                                    {row.name}
-                                  </span>
-                                </th>
-                                {CAP_COLUMNS.map(([key, label]) => {
-                                  const c = row[key];
-                                  return (
-                                    <td data-label={label} class={`cm-${c.state}`}>
-                                      <span class="cm-g" aria-hidden="true"></span>
-                                      <span class="cm-l">{c.label}</span>
-                                    </td>
-                                  );
-                                })}
-                              </tr>
+                {p.id === 'privacy' && (
+                  <div class="ws ws-topology" id="data-topology">
+                    <div class="ws-tabs" role="tablist" aria-label="Where your data lives">
+                      {topologyNodes.map((n, idx) => (
+                        <button type="button" role="tab" class="topology-tab" id={`top-tab-${n.id}`} data-node-target={n.id}
+                          aria-selected={idx === 0 ? 'true' : 'false'} aria-controls={`panel-${n.id}`} tabindex={idx === 0 ? 0 : -1}>
+                          <span class="wf-num">{String(idx + 1).padStart(2, '0')}</span>
+                          <span>{n.short}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {topologyNodes.map((n, idx) => (
+                      <div class="wf-panel" role="tabpanel" id={`panel-${n.id}`} aria-labelledby={`top-tab-${n.id}`} hidden={idx !== 0} tabindex="0">
+                        <div class="topology-detail-card">
+                          <p class="top-detail-title">{n.title}</p>
+                          <p class="top-detail-body">{n.body}</p>
+                          <dl class="top-rows">
+                            {n.rows.map(([item, loc]) => (
+                              <div class="top-row"><dt>{item}</dt><dd>{loc}</dd></div>
                             ))}
-                          </tbody>
-                        </table>
+                          </dl>
+                        </div>
                       </div>
-                      <div class="rule-preview-pill">
-                        <span class="rule-tag">Rule Hook</span>
-                        <span>When video added → If tag matches → Then format captions & schedule</span>
+                    ))}
+                  </div>
+                )}
+
+                {p.id === 'download' && (
+                  <div class="ws ws-download download-section" id="download">
+                    <div class="ws-dl-cards">
+                      <div class="download-card download-card--featured">
+                        <span class="dc-badge dc-badge--featured">{DOWNLOADS.macArm.badge}</span>
+                        <span class="dc-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d={apple} /></svg></span>
+                        <p class="dc-title">{DOWNLOADS.macArm.platform}</p>
+                        <p class="dc-specs">{DOWNLOADS.macArm.requirements}</p>
+                        <a class="btn btn-primary btn-sm dc-btn" href={DOWNLOADS.macArm.href}>Download for Mac</a>
+                        <p class="dc-meta">{DOWNLOADS.macArm.filename} · {DOWNLOADS.macArm.size}</p>
+                      </div>
+                      <div class="download-card">
+                        <span class="dc-badge">{DOWNLOADS.windows.badge}</span>
+                        <span class="dc-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d={windows} /></svg></span>
+                        <p class="dc-title">{DOWNLOADS.windows.platform}</p>
+                        <p class="dc-specs">{DOWNLOADS.windows.requirements}</p>
+                        <a class="btn btn-secondary btn-sm dc-btn" href={DOWNLOADS.windows.href}>Build steps</a>
+                        <p class="dc-meta"><code>{DOWNLOADS.windows.pipelineScript}</code></p>
+                      </div>
+                      <div class="download-card">
+                        <span class="dc-badge">{DOWNLOADS.linux.badge}</span>
+                        <span class="dc-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg></span>
+                        <p class="dc-title">{DOWNLOADS.linux.platform}</p>
+                        <p class="dc-specs">{DOWNLOADS.linux.requirements}</p>
+                        <a class="btn btn-secondary btn-sm dc-btn" href={DOWNLOADS.linux.href}>Source steps</a>
+                        <p class="dc-meta"><code>{DOWNLOADS.linux.pipelineScript}</code></p>
                       </div>
                     </div>
-                  )}
-
-                  {/* PANEL 03: Creator Tools & Local Assist */}
-                  {p.id === 'tools' && (
-                    <div class="ws-workstation ws-tools" id="creator-tools">
-                      <div class="tools-grid">
-                        <div class="vis-card vis-card--tools">
-                          <div class="card-bar">
-                            <span class="bar-dot"></span>
-                            <span class="bar-title">ffmpeg Video Pipeline</span>
-                          </div>
-                          <div class="files">
-                            <div class="file">
-                              <span class="fthumb"></span>
-                              <span><b>first-snow.mp4</b><small>Original · Never modified</small></span>
-                            </div>
-                            <div class="arrow">ffmpeg · burn in captions.srt</div>
-                            <div class="file hot">
-                              <span class="fthumb"><i class="sub">first snow and I was not ready</i></span>
-                              <span><b>first-snow.edited.mp4</b><small>Rendered copy · Ready to post</small></span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div class="vis-card vis-card--assist">
-                          <div class="card-bar">
-                            <span class="bar-dot"></span>
-                            <span class="bar-title">Local LLM Assist (Zero Cloud)</span>
-                          </div>
-                          <div class="assist">
-                            <p class="assist-text">the last ten minutes of light on the big sur coast, <u>shot hand held</u> from the turnout</p>
-                            <div class="assist-pop">
-                              <span class="assist-h">Assist Menu</span>
-                              <span>Spelling: <b>handheld</b></span>
-                              <span>Brand Voice: <b>Natural & Direct</b></span>
-                              <span class="assist-model">Model: llama3.2:3b on this Mac · 0 tokens</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* PANEL 04: Local-First Privacy & Architecture */}
-                  {p.id === 'privacy' && (
-                    <div class="ws-workstation ws-topology" id="data-topology">
-                      <div class="ws-tabs" role="tablist" aria-label="Data boundaries">
-                        {topologyNodes.map((n, idx) => (
-                          <button
-                            type="button"
-                            role="tab"
-                            class="topology-tab"
-                            id={`top-tab-${n.id}`}
-                            data-node-target={n.id}
-                            aria-selected={idx === 0 ? 'true' : 'false'}
-                            aria-controls={`panel-${n.id}`}
-                            tabindex={idx === 0 ? 0 : -1}
-                          >
-                            <span class="wf-num">{String(idx + 1).padStart(2, '0')}</span>
-                            <span>{n.short}</span>
-                          </button>
-                        ))}
-                      </div>
-
-                      <div class="ws-content">
-                        {topologyNodes.map((n, idx) => (
-                          <div
-                            class="wf-panel"
-                            role="tabpanel"
-                            id={`panel-${n.id}`}
-                            aria-labelledby={`top-tab-${n.id}`}
-                            hidden={idx !== 0}
-                            tabindex="0"
-                          >
-                            <div class="topology-detail-card">
-                              <h4 class="top-detail-title">{n.title}</h4>
-                              <p class="top-detail-body">{n.body}</p>
-                              <dl class="top-rows">
-                                {n.rows.map(([item, loc]) => (
-                                  <div class="top-row">
-                                    <dt>{item}</dt>
-                                    <dd><code>{loc}</code></dd>
-                                  </div>
-                                ))}
-                              </dl>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* PANEL 05: Download, Specs & Integrity */}
-                  {p.id === 'download' && (
-                    <div class="ws-workstation ws-download download-section" id="download">
-                      <div class="ws-dl-cards">
-                        <!-- macOS (Featured Release) -->
-                        <div class="download-card download-card--featured">
-                          <div class="dc-badge dc-badge--verified">{DOWNLOADS.macArm.badge}</div>
-                          <span class="dc-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d={apple} /></svg></span>
-                          <h4 class="dc-title">{DOWNLOADS.macArm.platform}</h4>
-                          <p class="dc-specs">{DOWNLOADS.macArm.requirements}</p>
-                          <a class="btn btn-primary btn-sm dc-btn" href={DOWNLOADS.macArm.href}>Download for Mac</a>
-                          <p class="dc-meta">{DOWNLOADS.macArm.filename} · {DOWNLOADS.macArm.size}</p>
-                        </div>
-
-                        <!-- Windows Card -->
-                        <div class="download-card">
-                          <div class="dc-badge">{DOWNLOADS.windows.badge}</div>
-                          <span class="dc-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d={windows} /></svg></span>
-                          <h4 class="dc-title">{DOWNLOADS.windows.platform}</h4>
-                          <p class="dc-specs">{DOWNLOADS.windows.requirements}</p>
-                          <a class="btn btn-secondary btn-sm dc-btn" href={DOWNLOADS.windows.href}>{DOWNLOADS.windows.label}</a>
-                          <p class="dc-meta font-mono"><code>{DOWNLOADS.windows.pipelineScript}</code></p>
-                        </div>
-
-                        <!-- Linux Card -->
-                        <div class="download-card">
-                          <div class="dc-badge">{DOWNLOADS.linux.badge}</div>
-                          <span class="dc-glyph" aria-hidden="true">🐧</span>
-                          <h4 class="dc-title">{DOWNLOADS.linux.platform}</h4>
-                          <p class="dc-specs">{DOWNLOADS.linux.requirements}</p>
-                          <a class="btn btn-secondary btn-sm dc-btn" href={DOWNLOADS.linux.href}>{DOWNLOADS.linux.label}</a>
-                          <p class="dc-meta font-mono"><code>{DOWNLOADS.linux.pipelineScript}</code></p>
-                        </div>
-                      </div>
-
-                      <div class="dl-footer-row" id="tech-specs">
-                        <details class="checksums-drawer">
-                          <summary class="checksums-summary">
-                            <span class="cs-label">Cryptographic SHA-256 release checksum</span>
-                            <span class="cs-ver">{SITE.version}</span>
-                          </summary>
-                          <div class="checksums-content">
-                            <pre>25d314bff7a3bdecffa66c5ba2261e3c732b347401d1c2e881ccdcde3f2fdfa0</pre>
-                          </div>
-                        </details>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                    <details class="checksums checksums-drawer" id="tech-specs">
+                      <summary class="checksums-summary"><span>SHA-256 checksum for the Mac release</span><span class="cs-ver">{SITE.version}</span></summary>
+                      <div class="checksums-content"><pre>{RELEASE.sha256}</pre></div>
+                    </details>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          </AccordionRow>
         ))}
-      </div>
+      </Accordion>
     </div>
   </div>
 </section>
 
 <style>
-  .acc {
-    position: relative;
-    padding-block: clamp(2rem, 5vw, 4rem);
+  .pillars-list { margin-top: clamp(1.5rem, 3vw, 2.5rem); }
+
+  /* ── Inside an open row: the story beside the picture ─────────────── */
+  .panel-inner {
+    display: grid;
+    gap: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--hairline);
   }
-
-  .horizontal-accordion-wrap {
-    margin-top: clamp(1.5rem, 3vw, 2.5rem);
-    width: 100%;
+  @media (min-width: 960px) {
+    .panel-inner { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 2.5rem; align-items: start; }
   }
+  .panel-narrative { display: flex; flex-direction: column; gap: 0.9rem; }
+  .panel-title { font-family: var(--font-display); font-size: clamp(1.35rem, 2.4vw, 1.9rem); font-weight: 700; line-height: 1.15; letter-spacing: -0.025em; color: var(--r-ink); }
+  .panel-body-text { font-size: 1rem; line-height: 1.55; color: var(--r-ink-2); }
+  /* Three tags, one per line: a wrapping row would leave one alone. */
+  .panel-tags { display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; list-style: none; }
+  .tag-pill { font-size: 0.8rem; font-weight: 500; color: var(--r-ink-2); padding: 0.3rem 0.7rem; border-radius: 999px; background: var(--r-fill-2); }
+  .panel-visual { min-width: 0; }
 
-  /* Desktop Horizontal Track Layout (>= 860px) */
-  @media (min-width: 860px) {
-    .horizontal-accordion {
-      display: flex;
-      flex-direction: row;
-      height: 680px;
-      gap: 8px;
-      width: 100%;
-      border-radius: var(--radius-lg);
-      background: var(--r-bg-alt);
-      border: 1px solid var(--hairline-strong);
-      padding: 8px;
-      overflow: hidden;
-      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
-    }
-
-    .acc-panel {
-      position: relative;
-      display: flex;
-      flex-direction: row;
-      border-radius: calc(var(--radius-lg) - 4px);
-      overflow: hidden;
-      background: var(--r-fill);
-      border: 1px solid var(--hairline);
-      transition: flex 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-                  background 0.3s ease,
-                  border-color 0.3s ease;
-    }
-
-    .acc-panel.is-collapsed {
-      flex: 0 0 72px;
-      cursor: pointer;
-    }
-
-    .acc-panel.is-collapsed:hover {
-      background: var(--r-fill-2);
-      border-color: rgba(245, 197, 107, 0.3);
-    }
-
-    .acc-panel.is-expanded {
-      flex: 1 1 0%;
-      background: var(--r-surface);
-      border-color: rgba(245, 197, 107, 0.35);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    }
-
-    /* Left accent indicator bar on active panel */
-    .acc-panel.is-expanded::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 0;
-      width: 4px;
-      background: var(--r-amber-text);
-      z-index: 5;
-    }
-
-    .panel-strip {
-      flex: 0 0 72px;
-      width: 72px;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1.5rem 0.5rem;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      color: var(--r-ink-2);
-      transition: color 0.2s ease;
-      user-select: none;
-    }
-
-    .strip-header-content {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1.5rem;
-      width: 100%;
-    }
-
-    .strip-num {
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: var(--r-amber-text);
-      letter-spacing: 0.05em;
-    }
-
-    .strip-label {
-      writing-mode: vertical-rl;
-      transform: rotate(180deg);
-      font-family: var(--font-body);
-      font-size: 0.82rem;
-      font-weight: 600;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      white-space: nowrap;
-      color: var(--r-ink-2);
-      transition: color 0.2s ease;
-    }
-
-    .acc-panel.is-expanded .strip-label {
-      color: var(--r-ink);
-    }
-
-    .strip-marker {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      background: var(--r-fill-2);
-      border: 1px solid var(--hairline);
-    }
-
-    .strip-indicator {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--r-amber-text);
-      opacity: 0.3;
-      transition: opacity 0.2s ease, transform 0.2s ease;
-    }
-
-    .acc-panel.is-expanded .strip-indicator {
-      opacity: 1;
-      transform: scale(1.3);
-    }
-
-    .strip-chevron {
-      display: none;
-    }
-
-    .panel-body {
-      flex: 1 1 0%;
-      min-width: 0;
-      height: 100%;
-      overflow-y: auto;
-    }
-
-    .acc-panel.is-collapsed .panel-body {
-      opacity: 0;
-      pointer-events: none;
-      position: absolute;
-      left: 72px;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      overflow: hidden;
-    }
-
-    .acc-panel.is-expanded .panel-body {
-      opacity: 1;
-      pointer-events: auto;
-      transition: opacity 0.35s ease 0.1s;
-    }
-
-    .panel-inner {
-      display: grid;
-      grid-template-columns: 290px minmax(0, 1fr);
-      gap: 2rem;
-      height: 100%;
-      padding: 1.5rem 1.75rem 1.5rem 0.75rem;
-    }
-  }
-
-  /* Mobile Vertical Stacking (< 860px) */
-  @media (max-width: 859px) {
-    .horizontal-accordion {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      width: 100%;
-    }
-
-    .acc-panel {
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      background: var(--r-fill);
-      border: 1px solid var(--hairline);
-      transition: border-color 0.2s ease;
-    }
-
-    .acc-panel.is-expanded {
-      background: var(--r-surface);
-      border-color: rgba(245, 197, 107, 0.4);
-    }
-
-    .panel-strip {
-      width: 100%;
-      min-height: 56px;
-      padding: 0.85rem 1.15rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      color: var(--r-ink);
-    }
-
-    .strip-header-content {
-      display: flex;
-      align-items: center;
-      gap: 0.85rem;
-    }
-
-    .strip-num {
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: var(--r-amber-text);
-    }
-
-    .strip-label {
-      font-family: var(--font-body);
-      font-size: 0.95rem;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-    }
-
-    .strip-indicator {
-      display: none;
-    }
-
-    .strip-marker {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: var(--r-fill-2);
-      border: 1px solid var(--hairline);
-    }
-
-    .strip-chevron {
-      color: var(--r-ink-3);
-      transition: transform 0.25s ease;
-    }
-
-    .acc-panel.is-expanded .strip-chevron {
-      transform: rotate(180deg);
-      color: var(--r-amber-text);
-    }
-
-    .panel-body {
-      padding: 0 1.15rem 1.25rem;
-    }
-
-    .acc-panel.is-collapsed .panel-body {
-      display: none;
-    }
-
-    .panel-inner {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-      padding-top: 0.5rem;
-      border-top: 1px solid var(--hairline);
-    }
-  }
-
-  /* Narrative Column Styles */
-  .panel-narrative {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-  }
-
-  .narrative-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .panel-num-pill {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--r-amber-text);
-    padding: 0.15rem 0.45rem;
-    border-radius: 4px;
-    background: var(--r-amber-soft);
-  }
-
-  .panel-kicker {
-    font-size: 0.76rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--r-ink-3);
-  }
-
-  .panel-title {
-    font-size: clamp(1.2rem, 1.8vw, 1.45rem);
-    font-weight: 700;
-    line-height: 1.25;
-    letter-spacing: -0.02em;
-    color: var(--r-ink);
-    margin: 0 0 0.85rem;
-  }
-
-  .panel-body-text {
-    font-size: 0.88rem;
-    line-height: 1.55;
-    color: var(--r-ink-2);
-    margin: 0 0 1.25rem;
-  }
-
-  .panel-tags {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .tag-pill {
-    align-self: flex-start;
-    font-size: 0.74rem;
-    font-family: var(--font-mono);
-    color: var(--r-ink-3);
-    padding: 0.2rem 0.55rem;
-    border-radius: 4px;
-    background: var(--r-fill-2);
-    border: 1px solid var(--hairline);
-  }
-
-  .panel-action {
-    margin-top: auto;
-  }
-
-  /* Visual Workstation Column Styles */
-  .panel-visual {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
-
-  .ws-workstation {
-    background: var(--r-fill-2);
-    border: 1px solid var(--hairline-strong);
-    border-radius: var(--radius-md);
-    padding: 1rem 1.15rem;
+  .ws {
     display: flex;
     flex-direction: column;
     gap: 0.85rem;
-    height: 100%;
-    overflow-y: auto;
-  }
-
-  .ws-tabs {
-    display: flex;
-    gap: 0.35rem;
-    padding: 0.25rem;
-    background: var(--r-fill);
-    border: 1px solid var(--hairline);
-    border-radius: 8px;
-    overflow-x: auto;
-  }
-
-  .workflow-step-tab, .topology-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.4rem 0.75rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    border-radius: 6px;
-    border: none;
-    background: transparent;
-    color: var(--r-ink-3);
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.2s ease;
-  }
-
-  .workflow-step-tab[aria-selected="true"], .topology-tab[aria-selected="true"] {
-    background: var(--r-surface);
-    color: var(--r-ink);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-  }
-
-  .wf-num {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    color: var(--r-amber-text);
-  }
-
-  .ticket-card {
-    background: var(--r-surface);
-    border: 1px solid var(--hairline);
-    border-radius: 8px;
     padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
+    border-radius: var(--radius-md);
+    background: var(--r-bg-alt);
+    box-shadow: inset 0 0 0 1px var(--hairline);
   }
-
-  .tc-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .tc-title {
-    font-weight: 600;
-    font-size: 0.95rem;
-    color: var(--r-ink);
-  }
-
-  .tc-badge {
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-    background: var(--r-fill-3);
-    color: var(--r-ink-2);
-  }
-
-  .tc-badge--sched {
-    background: rgba(245, 197, 107, 0.15);
-    color: var(--r-amber-text);
-  }
-
-  .tc-badge--live {
-    background: rgba(94, 224, 138, 0.15);
-    color: #5fe08a;
-  }
-
-  .tc-meta {
-    font-family: var(--font-mono);
-    font-size: 0.76rem;
-    color: var(--r-ink-4);
-    margin: 0;
-  }
-
-  .tc-cov {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    font-size: 0.78rem;
-    color: var(--r-ink-3);
-    padding-block: 0.35rem;
-  }
-
-  .tc-preview {
-    background: var(--r-fill);
-    border-radius: 6px;
-    padding: 0.65rem;
-    font-size: 0.82rem;
-    line-height: 1.5;
-    color: var(--r-ink-2);
-  }
-
-  .workflow-simulation-disclaimer {
-    font-size: 0.72rem;
-    font-style: italic;
-    color: var(--r-ink-4);
-    margin: 0;
-  }
-
-  /* Matrix Table in Panel 02 */
-  .ws-table-wrap {
-    overflow-x: auto;
-    border-radius: 6px;
-    border: 1px solid var(--hairline);
-  }
-
-  .cm-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.78rem;
-    background: var(--r-surface);
-  }
-
-  .cm-table th, .cm-table td {
-    padding: 0.45rem 0.65rem;
-    text-align: left;
-    border-bottom: 1px solid var(--hairline);
-    white-space: nowrap;
-  }
-
-  .cm-table thead th {
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: var(--r-ink-3);
-    background: var(--r-fill);
-  }
-
-  .cm-pf {
+  .ws-tabs { display: flex; gap: 0.3rem; padding: 0.25rem; border-radius: 999px; background: var(--r-fill-2); overflow-x: auto; scrollbar-width: none; }
+  .workflow-step-tab, .topology-tab {
+    flex: 1 0 auto;
     display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-weight: 600;
-    color: var(--r-ink);
-  }
-
-  .cm-pf :global(svg) {
-    width: 1rem;
-    height: 1rem;
-    color: var(--r-ink-2);
-  }
-
-  .cm-dot {
-    display: inline-grid;
-    place-items: center;
-    width: 1rem;
-    height: 1rem;
-    border-radius: 4px;
-    background: var(--r-fill-3);
-    font-size: 0.65rem;
-    font-weight: 700;
-  }
-
-  .cm-g {
-    display: inline-block;
-    width: 0.55rem;
-    height: 0.55rem;
-    border-radius: 50%;
-    margin-right: 0.3rem;
-  }
-
-  .cm-yes .cm-g { background: #5fe08a; }
-  .cm-partial .cm-g { background: var(--r-amber-text); }
-  .cm-off .cm-g { box-shadow: inset 0 0 0 1.5px #5eb1ff; }
-  .cm-no .cm-g { height: 1.5px; border-radius: 1px; background: var(--r-ink-4); }
-
-  .rule-preview-pill {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.45rem 0.75rem;
-    background: var(--r-fill);
-    border: 1px solid var(--hairline);
-    border-radius: 6px;
-    font-size: 0.75rem;
-    color: var(--r-ink-2);
-  }
-
-  .rule-tag {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: var(--r-amber-text);
-    padding: 0.1rem 0.35rem;
-    background: var(--r-amber-soft);
-    border-radius: 4px;
-  }
-
-  /* Creator Tools in Panel 03 */
-  .tools-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .vis-card {
-    background: var(--r-surface);
-    border: 1px solid var(--hairline);
-    border-radius: 8px;
-    padding: 0.85rem;
-  }
-
-  .card-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    margin-bottom: 0.65rem;
-  }
-
-  .bar-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--r-amber-text);
-  }
-
-  .bar-title {
-    font-size: 0.74rem;
-    font-weight: 600;
-    color: var(--r-ink-3);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .files {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-  }
-
-  .file {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.45rem 0.65rem;
-    background: var(--r-fill);
-    border: 1px solid var(--hairline);
-    border-radius: 6px;
-  }
-
-  .file.hot {
-    border-color: rgba(245, 197, 107, 0.4);
-    background: rgba(245, 197, 107, 0.06);
-  }
-
-  .fthumb {
-    width: 2.2rem;
-    height: 3rem;
-    background: #111;
-    border-radius: 4px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .sub {
-    position: absolute;
-    bottom: 2px;
-    left: 2px;
-    right: 2px;
-    font-size: 0.55rem;
-    color: #fff;
-    background: rgba(0, 0, 0, 0.8);
-    font-style: normal;
-    padding: 1px 2px;
-  }
-
-  .file b {
-    display: block;
-    font-size: 0.82rem;
-    color: var(--r-ink);
-  }
-
-  .file small {
-    display: block;
-    font-size: 0.72rem;
-    color: var(--r-ink-3);
-  }
-
-  .arrow {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    color: var(--r-amber-text);
-    padding-left: 0.6rem;
-  }
-
-  .assist-text {
-    font-size: 0.8rem;
-    line-height: 1.5;
-    color: var(--r-ink-2);
-    margin: 0 0 0.5rem;
-  }
-
-  .assist-pop {
-    background: var(--r-fill);
-    border: 1px solid var(--hairline);
-    border-radius: 6px;
-    padding: 0.5rem 0.7rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-    font-size: 0.74rem;
-  }
-
-  .assist-h {
-    font-weight: 700;
-    color: var(--r-amber-text);
-  }
-
-  .assist-model {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: var(--r-ink-4);
-    margin-top: 0.2rem;
-  }
-
-  /* Topology Detail in Panel 04 */
-  .topology-detail-card {
-    background: var(--r-surface);
-    border: 1px solid var(--hairline);
-    border-radius: 8px;
-    padding: 0.85rem;
-  }
-
-  .top-detail-title {
-    font-size: 0.92rem;
-    font-weight: 600;
-    margin: 0 0 0.35rem;
-    color: var(--r-ink);
-  }
-
-  .top-detail-body {
-    font-size: 0.8rem;
-    line-height: 1.5;
-    color: var(--r-ink-2);
-    margin: 0 0 0.75rem;
-  }
-
-  .top-rows {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    margin: 0;
-  }
-
-  .top-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.76rem;
-    padding-block: 0.25rem;
-    border-bottom: 1px solid var(--hairline);
-  }
-
-  .top-row dt { color: var(--r-ink-3); }
-  .top-row dd { margin: 0; color: var(--r-ink); }
-  .top-row code { font-family: var(--font-mono); font-size: 0.72rem; }
-
-  /* Download Cards in Panel 05 */
-  .ws-dl-cards {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.75rem;
-  }
-
-  @media (max-width: 680px) {
-    .ws-dl-cards {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .download-card {
-    background: var(--r-surface);
-    border: 1px solid var(--hairline);
-    border-radius: 8px;
-    padding: 0.85rem 0.65rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
-    position: relative;
-    min-width: 0;
-  }
-
-  .download-card--featured {
-    border-color: rgba(245, 197, 107, 0.4);
-    background: var(--r-fill);
-  }
-
-  .dc-badge {
-    font-size: 0.65rem;
-    font-weight: 700;
-    color: var(--r-ink-3);
-    text-transform: uppercase;
-  }
-
-  .dc-badge--verified {
-    color: var(--r-amber-text);
-  }
-
-  .dc-glyph {
-    width: 1.4rem;
-    height: 1.4rem;
-    color: var(--r-ink);
-  }
-
-  .dc-glyph svg { width: 100%; height: 100%; }
-
-  .dc-title {
-    font-size: 0.88rem;
-    font-weight: 700;
-    margin: 0;
-    color: var(--r-ink);
-  }
-
-  .dc-specs {
-    font-size: 0.72rem;
-    color: var(--r-ink-3);
-    margin: 0;
-  }
-
-  .dc-btn {
-    margin-top: 0.35rem;
-    font-size: 0.72rem;
-    padding: 0.35rem 0.4rem;
-    text-align: center;
-    white-space: normal;
-    line-height: 1.3;
-    display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    min-height: 2.2rem;
-  }
-
-  .dc-meta {
-    font-size: 0.68rem;
-    color: var(--r-ink-4);
-    margin: 0;
-    overflow-wrap: break-word;
-    word-break: break-all;
-  }
-
-  .dl-footer-row {
-    margin-top: 0.6rem;
-    padding-top: 0.6rem;
-    border-top: 1px solid var(--hairline);
-  }
-
-  .checksums-drawer {
-    font-size: 0.75rem;
-  }
-
-  .checksums-summary {
+    gap: 0.4rem;
+    min-height: 36px;
+    padding: 0 0.85rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--r-ink-2);
+    font: 500 0.85rem var(--font-body);
+    white-space: nowrap;
     cursor: pointer;
-    color: var(--r-ink-3);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
+  .workflow-step-tab[aria-selected='true'], .topology-tab[aria-selected='true'] { background: var(--r-ink); color: var(--r-on-ink); }
+  .workflow-step-tab[aria-selected='true'] .wf-num, .topology-tab[aria-selected='true'] .wf-num { color: inherit; opacity: 0.7; }
+  .wf-num { font-size: 0.72rem; font-variant-numeric: tabular-nums; color: var(--r-amber-text); }
+  .ws-note { font-size: 0.8rem; color: var(--r-ink-4); }
 
-  .checksums-content pre {
-    margin: 0.4rem 0 0;
-    padding: 0.4rem;
-    background: var(--r-fill);
-    border-radius: 4px;
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: var(--r-amber-text);
-    overflow-x: auto;
+  .ticket-card, .topology-detail-card, .vis-card, .download-card {
+    padding: 1rem;
+    border-radius: 12px;
+    background: var(--r-surface);
+    box-shadow: inset 0 0 0 1px var(--hairline);
   }
+  .ticket-card { display: grid; gap: 0.6rem; }
+  .tc-top { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
+  .tc-title { font-weight: 600; color: var(--r-ink); }
+  .tc-badge { flex: none; font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 999px; background: var(--r-fill-2); color: var(--r-ink-2); }
+  .tc-badge--staging { background: var(--r-amber-soft); color: var(--r-amber-text); }
+  .tc-badge--sched { background: color-mix(in srgb, var(--r-info) 16%, transparent); color: var(--r-info-text); }
+  .tc-badge--live { background: color-mix(in srgb, var(--r-ok) 16%, transparent); color: var(--r-ok-text); }
+  .tc-meta { font-size: 0.82rem; color: var(--r-ink-3); }
+  .tc-cov { display: flex; align-items: center; gap: 0.7rem; font-size: 0.8rem; color: var(--r-ink-3); }
+  .tc-preview { padding: 0.7rem 0.8rem; border-radius: 10px; background: var(--r-fill); font-size: 0.92rem; line-height: 1.5; color: var(--r-ink-2); }
+
+  .rule-preview { font-size: 0.88rem; line-height: 1.5; color: var(--r-ink-2); }
+  .rule-tag { display: inline-block; margin-right: 0.4rem; padding: 0.1rem 0.5rem; border-radius: 999px; background: var(--r-amber-soft); color: var(--r-amber-text); font-size: 0.75rem; font-weight: 600; }
+
+  .ws-tools { display: grid; gap: 0.75rem; }
+  @media (min-width: 640px) { .ws-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .bar-title { margin-bottom: 0.7rem; font-size: 0.8rem; font-weight: 600; color: var(--r-ink-3); }
+  .files { display: grid; gap: 0.45rem; }
+  .file { display: flex; align-items: center; gap: 0.7rem; padding: 0.5rem 0.65rem; border-radius: 10px; background: var(--r-fill); }
+  .file.hot { background: var(--r-amber-soft); }
+  .file b { display: block; font-size: 0.86rem; color: var(--r-ink); overflow-wrap: anywhere; }
+  .file small { display: block; font-size: 0.78rem; color: var(--r-ink-3); }
+  .fthumb { position: relative; flex: none; width: 2.2rem; height: 3rem; border-radius: 6px; overflow: hidden; background: linear-gradient(160deg, #3b4a63, #11151c); }
+  .sub { position: absolute; left: 2px; right: 2px; bottom: 3px; padding: 1px 2px; border-radius: 2px; background: rgba(0, 0, 0, 0.75); color: #fff; font-size: 0.42rem; font-style: normal; line-height: 1.2; }
+  .arrow { padding-left: 0.6rem; font-size: 0.78rem; color: var(--r-amber-text); }
+  .assist-text { margin-bottom: 0.6rem; font-size: 0.9rem; line-height: 1.5; color: var(--r-ink-2); }
+  .assist-pop { display: grid; gap: 0.3rem; padding: 0.6rem 0.75rem; border-radius: 10px; background: var(--r-fill); font-size: 0.82rem; color: var(--r-ink-2); }
+  .assist-pop b { color: var(--r-ink); }
+  .assist-model { font-size: 0.76rem; color: var(--r-ink-4); }
+
+  .top-detail-title { font-weight: 600; color: var(--r-ink); }
+  .top-detail-body { margin: 0.35rem 0 0.8rem; font-size: 0.9rem; line-height: 1.5; color: var(--r-ink-2); }
+  .top-rows { display: grid; }
+  .top-row { display: flex; justify-content: space-between; gap: 1rem; padding: 0.45rem 0; border-top: 1px solid var(--hairline); font-size: 0.86rem; }
+  .top-row dt { color: var(--r-ink-3); }
+  .top-row dd { color: var(--r-ink); text-align: right; }
+
+  /* Three platforms: three across, or one column. Never two and one. */
+  .ws-dl-cards { display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: 1fr; gap: 0.75rem; }
+  @media (min-width: 640px) { .ws-dl-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .download-card { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
+  .download-card--featured { box-shadow: inset 0 0 0 1px var(--r-amber-line); }
+  .dc-badge { font-size: 0.75rem; font-weight: 600; color: var(--r-ink-3); }
+  .dc-badge--featured { color: var(--r-amber-text); }
+  .dc-glyph { width: 1.5rem; height: 1.5rem; margin-top: 0.2rem; color: var(--r-ink); }
+  .dc-glyph svg { width: 100%; height: 100%; }
+  .dc-title { font-weight: 600; color: var(--r-ink); }
+  .dc-specs { font-size: 0.82rem; color: var(--r-ink-3); }
+  .dc-btn { margin-top: auto; width: 100%; }
+  .dc-meta { font-size: 0.74rem; color: var(--r-ink-4); overflow-wrap: anywhere; }
+  .dc-meta code { font-size: 0.95em; }
+  .checksums { padding-top: 0.75rem; border-top: 1px solid var(--hairline); font-size: 0.85rem; }
+  .checksums summary { display: flex; justify-content: space-between; gap: 0.75rem; cursor: pointer; color: var(--r-ink-2); }
+  .cs-ver { color: var(--r-ink-3); }
+  .checksums pre { margin-top: 0.5rem; padding: 0.6rem; border-radius: 8px; background: var(--r-fill); color: var(--r-ink-2); font-size: 0.78rem; white-space: pre-wrap; overflow-wrap: anywhere; }
 
   @media (prefers-reduced-motion: reduce) {
-    .acc-panel,
-    .panel-strip,
-    .strip-marker,
-    .strip-chevron {
-      transition: none !important;
-    }
+    .workflow-step-tab, .topology-tab { transition: none; }
   }
 </style>
 
 <script>
-  function initMasterShowcase() {
-    document.querySelectorAll<HTMLElement>('[data-accordion]').forEach((root) => {
-      const panels = Array.from(root.querySelectorAll<HTMLElement>('.acc-panel'));
-      const triggers = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-accordion-header]'));
-
-      const activate = (idx: number, focus = false) => {
-        panels.forEach((panel, i) => {
-          const isTarget = i === idx;
-          panel.classList.toggle('is-expanded', isTarget);
-          panel.classList.toggle('is-collapsed', !isTarget);
-
-          const trigger = triggers[i];
-          if (trigger) {
-            trigger.setAttribute('aria-expanded', String(isTarget));
-            trigger.setAttribute('aria-selected', String(isTarget));
-            trigger.setAttribute('tabindex', isTarget ? '0' : '-1');
-            if (isTarget && focus) trigger.focus();
-          }
-        });
-      };
-
-      triggers.forEach((trigger, i) => {
-        trigger.addEventListener('click', (e) => {
-          e.stopPropagation();
-          activate(i);
-        });
-
-        trigger.addEventListener('keydown', (e) => {
-          let next = i;
-          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-            next = (i + 1) % triggers.length;
-            e.preventDefault();
-            activate(next, true);
-          } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-            next = (i - 1 + triggers.length) % triggers.length;
-            e.preventDefault();
-            activate(next, true);
-          } else if (e.key === 'Home') {
-            e.preventDefault();
-            activate(0, true);
-          } else if (e.key === 'End') {
-            e.preventDefault();
-            activate(triggers.length - 1, true);
-          }
-        });
+  /* The two tab sets inside the rows (board columns, data boundaries).
+     Opening and closing rows, and deep links, are @andrew/ui Accordion's. */
+  function initTabs(root: ParentNode, tabSel: string, panelSel: string) {
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>(tabSel));
+    const panels = Array.from(root.querySelectorAll<HTMLElement>(panelSel));
+    const select = (i: number, focus = false) => {
+      tabs.forEach((t, idx) => {
+        t.setAttribute('aria-selected', String(idx === i));
+        t.tabIndex = idx === i ? 0 : -1;
       });
-
-      // Expand on strip click anywhere
-      panels.forEach((panel, i) => {
-        panel.addEventListener('click', (e) => {
-          const target = e.target as HTMLElement;
-          if (panel.classList.contains('is-collapsed') || target.closest('.panel-strip')) {
-            activate(i);
-          }
-        });
-      });
-
-      // Panel 01 Workflow Step Tabs
-      const wfTabs = Array.from(root.querySelectorAll<HTMLButtonElement>('.workflow-step-tab'));
-      const wfPanels = Array.from(root.querySelectorAll<HTMLElement>('.ws-workflow .wf-panel'));
-
-      wfTabs.forEach((tab, i) => {
-        tab.addEventListener('click', () => {
-          wfTabs.forEach((t, idx) => {
-            const active = idx === i;
-            t.setAttribute('aria-selected', String(active));
-            t.setAttribute('tabindex', active ? '0' : '-1');
-          });
-          wfPanels.forEach((p, idx) => {
-            p.hidden = idx !== i;
-          });
-        });
-
-        tab.addEventListener('keydown', (e) => {
-          let next = i;
-          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % wfTabs.length;
-          else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + wfTabs.length) % wfTabs.length;
-          else if (e.key === 'Home') next = 0;
-          else if (e.key === 'End') next = wfTabs.length - 1;
-          else return;
-          e.preventDefault();
-          wfTabs[next]?.click();
-          wfTabs[next]?.focus();
-        });
-      });
-
-      // Panel 04 Topology Tabs
-      const topTabs = Array.from(root.querySelectorAll<HTMLButtonElement>('.topology-tab'));
-      const topPanels = Array.from(root.querySelectorAll<HTMLElement>('.ws-topology .wf-panel'));
-
-      topTabs.forEach((tab, i) => {
-        tab.addEventListener('click', () => {
-          topTabs.forEach((t, idx) => {
-            const active = idx === i;
-            t.setAttribute('aria-selected', String(active));
-            t.setAttribute('tabindex', active ? '0' : '-1');
-          });
-          topPanels.forEach((p, idx) => {
-            p.hidden = idx !== i;
-          });
-        });
-
-        tab.addEventListener('keydown', (e) => {
-          let next = i;
-          if (e.key === 'ArrowDown' || e.key === 'ArrowRight') next = (i + 1) % topTabs.length;
-          else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') next = (i - 1 + topTabs.length) % topTabs.length;
-          else return;
-          e.preventDefault();
-          topTabs[next]?.click();
-          topTabs[next]?.focus();
-        });
+      panels.forEach((p, idx) => { p.hidden = idx !== i; });
+      if (focus) tabs[i]?.focus();
+    };
+    tabs.forEach((tab, i) => {
+      if (tab.dataset.bound) return;
+      tab.dataset.bound = '1';
+      tab.addEventListener('click', () => select(i));
+      tab.addEventListener('keydown', (e) => {
+        const last = tabs.length - 1;
+        const next = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? (i === last ? 0 : i + 1)
+          : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? (i === 0 ? last : i - 1)
+          : e.key === 'Home' ? 0 : e.key === 'End' ? last : -1;
+        if (next < 0) return;
+        e.preventDefault();
+        select(next, true);
       });
     });
   }
-
-  initMasterShowcase();
-  document.addEventListener('astro:page-load', initMasterShowcase);
+  function initPillars() {
+    document.querySelectorAll<HTMLElement>('.pillars').forEach((root) => {
+      initTabs(root, '.workflow-step-tab', '.ws-workflow .wf-panel');
+      initTabs(root, '.topology-tab', '.ws-topology .wf-panel');
+    });
+  }
+  initPillars();
+  document.addEventListener('astro:page-load', initPillars);
 </script>

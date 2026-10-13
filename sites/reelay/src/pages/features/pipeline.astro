@@ -1,4 +1,6 @@
 ---
+import Accordion from '@andrew/ui/Accordion.astro';
+import AccordionRow from '@andrew/ui/AccordionRow.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PageHero from '../../components/ui/PageHero.astro';
 import NextUp from '../../components/ui/NextUp.astro';
@@ -55,126 +57,121 @@ const handoff = [
     </div>
   </section>
 
-  <section class="stage" id="command-center" aria-labelledby="cc-title">
+  <section class="stage stage--flush-top" aria-label="More about the Board">
     <div class="wrap">
-      <div class="split">
-        <div data-reveal>
-          <p class="eyebrow">The Command Center</p>
-          <h2 id="cc-title" class="title">Select a card. Everything about it, in one panel.</h2>
-          <p class="lede">The video plays on top. Under it, a readiness ring counts how many of the platforms it’s going to are ready, then the platforms, the captions, and <strong>Schedule pinned at the bottom with one line saying exactly what will happen.</strong></p>
-          <p class="fine mt-2">Platforms you post by hand aren’t checked, so they never hold a ticket back.</p>
+      <div class="r-acc" data-reveal>
+      <Accordion>
+        <AccordionRow id="command-center" kicker="The Command Center" title="Select a card. Everything about it, in one panel." size="md" open>
+      <div class="row-wrap">
+        <div class="split">
+          <div>
+            <p class="lede">The video plays on top. Under it, a readiness ring counts how many of the platforms it’s going to are ready, then the platforms, the captions, and <strong>Schedule pinned at the bottom with one line saying exactly what will happen.</strong></p>
+            <p class="fine mt-2">Platforms you post by hand aren’t checked, so they never hold a ticket back.</p>
+          </div>
+          <div><CommandCenterScene /></div>
         </div>
-        <div data-reveal style="--reveal-delay:.08s"><CommandCenterScene /></div>
       </div>
-    </div>
-  </section>
 
-  <section class="stage" aria-labelledby="ticket-title">
-    <div class="wrap">
-      <header class="chapter-head" data-reveal>
-        <p class="eyebrow">The ticket</p>
-        <h2 id="ticket-title" class="headline">Everything a video<br /><span class="text-silver">needs to leave.</span></h2>
-        <p class="lede">Copy blocks for YouTube’s title, description and tags, for TikTok, Instagram, Bluesky, Threads and Facebook, and one shared hashtag block. <strong>Every block has a Copy button and a live count against that platform’s own limit.</strong></p>
-      </header>
-      <div class="table-scroll" data-reveal>
-        <table class="limits">
-          <caption class="sr-only">Copy limits Reelay checks for each platform</caption>
-          <thead><tr><th scope="col">Copy block</th><th scope="col">Limit Reelay checks</th></tr></thead>
-          <tbody>
-            {limits.map(([p, name, limit]) => (
-              <tr>
-                <th scope="row"><span class="lim-name"><PlatformIcon name={p} /> {name}</span></th>
-                <td>{limit}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p class="lede mt-3" data-reveal>Over-limit text is reported and the save is refused. <strong>Nothing is ever cut short.</strong> Copy an empty block and you get what Reelay would use instead: the title for Bluesky and Threads, the description for TikTok, Instagram and Facebook.</p>
-      <div class="mt-4" data-reveal>
-        <CaptionLab />
-      </div>
-    </div>
-  </section>
-
-  <section class="stage stage--lift" id="readiness" aria-labelledby="ready-title">
-    <div class="wrap">
-      <div class="split">
-        <div data-reveal>
-          <p class="eyebrow">Readiness</p>
-          <h2 id="ready-title" class="title">A checklist at the top of every ticket.</h2>
-          <p class="lede">For each platform: is its copy written, is it within the limit, is the video downloaded. <strong>A ticket is READY when at least one of its platforms is.</strong> Platforms you post by hand (TikTok, Instagram and Snapchat, or any platform with automatic posting off) aren’t checked, so they never block.</p>
-          <p class="lede mt-1"><strong>The Ready gate</strong> refuses to schedule any platform that isn’t ready, and lists why. You can still go ahead after an explicit confirmation. Copying and pasting is never blocked.</p>
+        </AccordionRow>
+        <AccordionRow id="ticket" kicker="The ticket" title="Everything a video needs to leave." size="md">
+      <div class="row-wrap">
+        <div class="row-intro">
+          <p class="lede">Copy blocks for YouTube’s title, description and tags, for TikTok, Instagram, Bluesky, Threads and Facebook, and one shared hashtag block. <strong>Every block has a Copy button and a live count against that platform’s own limit.</strong></p>
         </div>
-        <div class="ready-card" data-reveal style="--reveal-delay:.08s" aria-hidden="true">
-          <div class="rc-head"><span>Tokyo after midnight</span><em class="rc-ok">READY</em></div>
-          <ul>
-            <li><PlatformIcon name="youtube" /><span>YouTube</span><b class="ok">✓ Ready</b></li>
-            <li class="bad"><PlatformIcon name="threads" /><span>Threads</span><b>⚠ 517 of 500 characters</b></li>
-            <li class="skip"><PlatformIcon name="tiktok" /><span>TikTok</span><b>Not checked: you post it</b></li>
-            <li class="skip"><PlatformIcon name="instagram" /><span>Instagram</span><b>Not checked: you post it</b></li>
-          </ul>
-          <div class="rc-gate">
-            <strong>Can’t schedule Threads yet</strong>
-            <span>The Threads text is 17 characters over.</span>
+        <div class="table-scroll">
+          <table class="limits">
+            <caption class="sr-only">Copy limits Reelay checks for each platform</caption>
+            <thead><tr><th scope="col">Copy block</th><th scope="col">Limit Reelay checks</th></tr></thead>
+            <tbody>
+              {limits.map(([p, name, limit]) => (
+                <tr>
+                  <th scope="row"><span class="lim-name"><PlatformIcon name={p} /> {name}</span></th>
+                  <td>{limit}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="lede mt-3">Over-limit text is reported and the save is refused. <strong>Nothing is ever cut short.</strong> Copy an empty block and you get what Reelay would use instead: the title for Bluesky and Threads, the description for TikTok, Instagram and Facebook.</p>
+        <div class="mt-4">
+          <CaptionLab />
+        </div>
+      </div>
+
+        </AccordionRow>
+        <AccordionRow id="readiness" kicker="Readiness" title="A checklist at the top of every ticket." size="md">
+      <div class="row-wrap">
+        <div class="split">
+          <div>
+            <p class="lede">For each platform: is its copy written, is it within the limit, is the video downloaded. <strong>A ticket is READY when at least one of its platforms is.</strong> Platforms you post by hand (TikTok, Instagram and Snapchat, or any platform with automatic posting off) aren’t checked, so they never block.</p>
+            <p class="lede mt-1"><strong>The Ready gate</strong> refuses to schedule any platform that isn’t ready, and lists why. You can still go ahead after an explicit confirmation. Copying and pasting is never blocked.</p>
+          </div>
+          <div class="ready-card" aria-hidden="true">
+            <div class="rc-head"><span>Tokyo after midnight</span><em class="rc-ok">READY</em></div>
+            <ul>
+              <li><PlatformIcon name="youtube" /><span>YouTube</span><b class="ok">✓ Ready</b></li>
+              <li class="bad"><PlatformIcon name="threads" /><span>Threads</span><b>⚠ 517 of 500 characters</b></li>
+              <li class="skip"><PlatformIcon name="tiktok" /><span>TikTok</span><b>Not checked: you post it</b></li>
+              <li class="skip"><PlatformIcon name="instagram" /><span>Instagram</span><b>Not checked: you post it</b></li>
+            </ul>
+            <div class="rc-gate">
+              <strong>Can’t schedule Threads yet</strong>
+              <span>The Threads text is 17 characters over.</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </section>
 
-  <section class="stage" id="coverage" aria-labelledby="cov-title">
-    <div class="wrap">
-      <header class="chapter-head" data-reveal>
-        <p class="eyebrow">Coverage map</p>
-        <h2 id="cov-title" class="headline">Six platforms.<br /><span class="text-silver">One glance.</span></h2>
-        <p class="lede">Every card shows all six platforms in the same order, coloured by where it stands. The card’s status line names whatever needs work. <strong>Cards move themselves</strong>: to Scheduled once every platform it’s going to is scheduled or live, to Published once every one is live.</p>
-      </header>
-      <ul class="legend" data-reveal>
-        {legend.map((l) => (
-          <li>
-            <span class={`lg-dot lg--${l.cls}`} aria-hidden="true">{l.mark}</span>
-            <strong>{l.name}</strong>
-            <span>{l.note}</span>
-          </li>
-        ))}
-      </ul>
-      <p class="fine mt-2" data-reveal>Checked every minute by the background dispatcher, whether the app is open or running headless. YouTube is confirmed with YouTube.</p>
-    </div>
-  </section>
-
-  <section class="stage stage--lift" id="prepare-to-publish" aria-labelledby="ptp-title">
-    <div class="wrap">
-      <div class="split split--flip">
-        <div data-reveal>
-          <p class="eyebrow">Prepare to Publish</p>
-          <h2 id="ptp-title" class="title">For the platforms you post to yourself.</h2>
-          <p class="lede">Reelay never posts to TikTok, Instagram or Snapchat for you. It does everything up to the button, <strong>you post in their app</strong>, which keeps sounds, tags and Shop links, and then you mark it posted.</p>
+        </AccordionRow>
+        <AccordionRow id="coverage" kicker="Coverage map" title="Six platforms. One glance." size="md">
+      <div class="row-wrap">
+        <div class="row-intro">
+          <p class="lede">Every card shows all six platforms in the same order, coloured by where it stands. The card’s status line names whatever needs work. <strong>Cards move themselves</strong>: to Scheduled once every platform it’s going to is scheduled or live, to Published once every one is live.</p>
         </div>
-        <ol class="steps" data-reveal style="--reveal-delay:.08s">
-          {handoff.map((s, i) => (
-            <li><span class="step-n">{i + 1}</span><span>{s}</span></li>
+        <ul class="legend">
+          {legend.map((l) => (
+            <li>
+              <span class={`lg-dot lg--${l.cls}`} aria-hidden="true">{l.mark}</span>
+              <strong>{l.name}</strong>
+              <span>{l.note}</span>
+            </li>
           ))}
-        </ol>
+        </ul>
+        <p class="fine mt-2">Checked every minute by the background dispatcher, whether the app is open or running headless. YouTube is confirmed with YouTube.</p>
       </div>
-    </div>
-  </section>
 
-  <PublishSection />
+        </AccordionRow>
+        <AccordionRow id="prepare-to-publish" kicker="Prepare to Publish" title="For the platforms you post to yourself." size="md">
+      <div class="row-wrap">
+        <div class="split split--flip">
+          <div>
+            <p class="lede">Reelay never posts to TikTok, Instagram or Snapchat for you. It does everything up to the button, <strong>you post in their app</strong>, which keeps sounds, tags and Shop links, and then you mark it posted.</p>
+          </div>
+          <ol class="steps">
+            {handoff.map((s, i) => (
+              <li><span class="step-n">{i + 1}</span><span>{s}</span></li>
+            ))}
+          </ol>
+        </div>
+      </div>
 
-  <section class="stage" aria-labelledby="more-title">
-    <div class="wrap">
-      <header class="chapter-head" data-reveal>
-        <p class="eyebrow">Built for a real backlog</p>
-        <h2 id="more-title" class="headline">Hundreds of tickets.<br /><span class="text-silver">No surprises.</span></h2>
-      </header>
-      <div class="feature-grid" data-reveal>
-        <div class="feature"><h3>Change history</h3><p>Every saved change is logged with the time, who made it (you, a rule or an agent), the field, and the old and new values. Restore any earlier value; the restore is logged too. If logging fails, nothing is saved.</p></div>
-        <div class="feature"><h3>Durable sends</h3><p>Every send is recorded before it runs. A send cut off by a crash or a sleeping Mac becomes interrupted and waits for you: Try Again, It Was Posted, or Cancel.</p></div>
-        <div class="feature"><h3>Import Sheet</h3><p>Fill tickets from a CSV or a shared Google Sheet. Every row is previewed first, empty cells never erase anything, and the whole import is one transaction.</p></div>
-        <div class="feature"><h3>Bulk edit</h3><p>⌘-click or Shift-click cards to set permission, type, topic, keywords, creator or hashtags on all of them at once, or to fill, fetch transcripts or archive them together.</p></div>
-        <div class="feature"><h3>Your own columns</h3><p>Rename, add, remove and reorder columns per profile. Reelay’s four steps always live somewhere, so automatic moves keep working.</p></div>
-        <div class="feature"><h3>Filters that answer questions</h3><p>Show: Ready, Not ready, or Blocking a platform. Archive hides a video without deleting anything; Archived… brings it back.</p></div>
+        </AccordionRow>
+        <AccordionRow id="more-tools" kicker="Built for a real backlog" title="Hundreds of tickets. No surprises." size="md">
+      <div class="row-wrap">
+        <div class="row-intro">
+        </div>
+        <div class="feature-grid">
+          <div class="feature"><h3>Change history</h3><p>Every saved change is logged with the time, who made it (you, a rule or an agent), the field, and the old and new values. Restore any earlier value; the restore is logged too. If logging fails, nothing is saved.</p></div>
+          <div class="feature"><h3>Durable sends</h3><p>Every send is recorded before it runs. A send cut off by a crash or a sleeping Mac becomes interrupted and waits for you: Try Again, It Was Posted, or Cancel.</p></div>
+          <div class="feature"><h3>Import Sheet</h3><p>Fill tickets from a CSV or a shared Google Sheet. Every row is previewed first, empty cells never erase anything, and the whole import is one transaction.</p></div>
+          <div class="feature"><h3>Bulk edit</h3><p>⌘-click or Shift-click cards to set permission, type, topic, keywords, creator or hashtags on all of them at once, or to fill, fetch transcripts or archive them together.</p></div>
+          <div class="feature"><h3>Your own columns</h3><p>Rename, add, remove and reorder columns per profile. Reelay’s four steps always live somewhere, so automatic moves keep working.</p></div>
+          <div class="feature"><h3>Filters that answer questions</h3><p>Show: Ready, Not ready, or Blocking a platform. Archive hides a video without deleting anything; Archived… brings it back.</p></div>
+        </div>
+      </div>
+
+        </AccordionRow>
+      </Accordion>
       </div>
     </div>
   </section>
