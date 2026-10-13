@@ -320,7 +320,11 @@ const { items = [], heading = 'On this page', selector = 'main h2[id]' } = Astro
   // A heading may name its entry (data-pn-label), e.g. a hero whose heading
   // is a logo image; otherwise its text, else its image's alt.
   function labelOf(el: HTMLElement): string {
-    const text = (el.textContent ?? '').replace(/\s+/g, ' ').trim();
+    // A <br> separates words visually but not in textContent ("No cloud.No
+    // cloud bill."), so it counts as a space here.
+    const copy = el.cloneNode(true) as HTMLElement;
+    copy.querySelectorAll('br').forEach((br) => br.replaceWith(' '));
+    const text = (copy.textContent ?? '').replace(/\s+/g, ' ').trim();
     return el.dataset.pnLabel || text || el.querySelector('img')?.alt || '';
   }
 

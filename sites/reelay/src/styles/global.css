@@ -609,7 +609,8 @@ pre, pre code { white-space: pre-wrap; overflow-wrap: anywhere; }
   background: var(--r-fill-2);
 }
 #top .site-nav .wordmark-logo, #top .site-footer .footer-logo { color: var(--r-ink); }
-#top .site-nav .mobile-menu { background: var(--r-glass-strong); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+/* Opaque: at 94% the page's own headline ghosted through the menu items. */
+#top .site-nav .mobile-menu { background: var(--page-bg); }
 #top .site-nav .mobile-main-link {
   font-family: var(--font-display);
   font-size: 1.6rem;
@@ -784,3 +785,69 @@ pre, pre code { white-space: pre-wrap; overflow-wrap: anywhere; }
 .r-acc .row-intro { max-width: 46rem; margin-bottom: clamp(1.5rem, 3vw, 2.25rem); }
 .r-acc .row-intro .lede { margin-top: 0; }
 .r-acc .split > :first-child .lede { margin-top: 0; }
+
+/* Legal pages carry their own contents column from 1080px; the side pane
+   would repeat it, so it steps aside there (it stays on phones and tablets). */
+@media (min-width: 1080px) { html:has(.doc-toc) .page-nav { display: none !important; } }
+
+/* ── The side pane (@andrew/ui PageNav), in Reelay's clothes ───────────
+   The shared pane is drawn for the personal site's black page. Here it is
+   frosted glass in either scheme, with Reelay's ink: its own colours read
+   --text, which Reelay maps to dark ink in light mode, so the current
+   section's label vanished on the pane's dark glass. */
+#top .page-nav,
+#top .page-nav.is-open,
+#top .page-nav:focus-within {
+  background: var(--r-glass-strong);
+  border-color: var(--hairline-strong);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: var(--r-float-shadow);
+}
+#top .page-nav .pn-head { font-family: var(--font-body); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; color: var(--r-amber-text); }
+#top .page-nav .pn-list a { font-family: var(--font-body); color: var(--r-ink-2); }
+#top .page-nav .pn-list a:hover,
+#top .page-nav .pn-list a:focus-visible,
+#top .page-nav .pn-list a.active { color: var(--r-ink); }
+#top .page-nav .pn-tick { background: var(--r-ink-4); }
+#top .page-nav .pn-list a:hover .pn-tick { background: var(--r-ink-2); }
+#top .page-nav .pn-list a.active .pn-tick { background: var(--r-amber-text); }
+@media (hover: hover) and (pointer: fine) and (min-width: 1200px) {
+  /* At rest on a desktop the pane is just its ticks, with no glass. */
+  #top .page-nav:not(:hover):not(:focus-within):not(.is-open) { background: transparent; border-color: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+/* Touch screens and narrow windows: closed, the pane is a small solid tab
+   with a list icon, and its section list isn't drawn at all. A tick column
+   that re-highlighted the current section as you scrolled, on frosted glass
+   fixed over the page, cost touch scrolls their momentum (measured: 2 to 4
+   cut-short swipes per run down the phone homepage; with this, the same as
+   with no pane at all). Tapped open, it's the full glass panel. */
+@media (hover: none), (max-width: 1199px) {
+  #top .page-nav:not(.is-open):not(:focus-within) {
+    width: 44px;
+    min-height: 52px;
+    padding: 0;
+    background: var(--r-tile);
+    border-color: var(--hairline-strong);
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  #top .page-nav:not(.is-open):not(:focus-within) .pn-list,
+  #top .page-nav:not(.is-open):not(:focus-within) .pn-head { display: none; }
+  #top .page-nav:not(.is-open) .pn-handle::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 18px;
+    height: 14px;
+    background:
+      linear-gradient(currentColor, currentColor) 0 0 / 100% 2px no-repeat,
+      linear-gradient(currentColor, currentColor) 0 50% / 70% 2px no-repeat,
+      linear-gradient(currentColor, currentColor) 0 100% / 85% 2px no-repeat;
+    color: var(--r-ink-2);
+  }
+  #top .page-nav .pn-tick,
+  #top .page-nav .pn-list a { transition: none; }
+}

@@ -9,6 +9,8 @@
  *   already has its own h2 takes 3.
  * - `size`: 'lg' (default, page-level rows) or 'md' (rows inside a section).
  * - The `media` slot puts a small image in the header (a work row's thumb).
+ * - data-pn-label carries the title, so a PageNav that selects rows
+ *   (`[data-accordion-row]`) lists each by its title, not its whole text.
  *
  * Collapsed is a CSS state only while the script runs (html.acc-js, set by
  * Accordion.astro before its rows are parsed): without JavaScript every row
@@ -26,14 +28,16 @@ interface Props {
   open?: boolean;
   level?: 2 | 3;
   size?: 'lg' | 'md';
+  /** The row's name in a PageNav, when the title is a sentence (default: the title). */
+  navLabel?: string;
 }
-const { id, kicker, title, progressCount, progressTotal, open = false, level = 2, size = 'lg' } = Astro.props;
+const { id, kicker, title, progressCount, progressTotal, open = false, level = 2, size = 'lg', navLabel } = Astro.props;
 const hasProgress = progressCount !== undefined && progressTotal !== undefined;
 const progressPercent = hasProgress ? Math.round((progressCount / Math.max(1, progressTotal)) * 100) : 0;
 const Heading = level === 3 ? 'h3' : 'h2';
 const hasMedia = Astro.slots.has('media');
 ---
-<div class:list={['accordion-row', `accordion-row--${size}`, { 'is-expanded': open, 'is-settled': open }]} id={id} data-accordion-row>
+<div class:list={['accordion-row', `accordion-row--${size}`, { 'is-expanded': open, 'is-settled': open }]} id={id} data-accordion-row data-pn-label={navLabel ?? title}>
   <Heading class="accordion-heading">
     <button
       type="button"

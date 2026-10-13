@@ -11,6 +11,7 @@ import '@andrew/tokens/tokens.css';
 import '../styles/theme.css';
 import '@andrew/ui/styles/base.css';
 import '../styles/global.css';
+import PageNav from '@andrew/ui/PageNav.astro';
 import Nav from '@andrew/ui/Nav.astro';
 import Footer from '@andrew/ui/Footer.astro';
 import ChromeMeta from '@andrew/ui/ChromeMeta.astro';
@@ -26,6 +27,10 @@ interface Props {
   /** Structured data for this page (schema.org JSON-LD). */
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
   noindex?: boolean;
+  /** The side pane's title: the page's own name (default: the title before its colon). */
+  pane?: string;
+  /** The side pane's entries, when the page's headings can't supply them (DocPage's contents). */
+  paneItems?: { id: string; label: string }[];
 }
 
 const {
@@ -34,7 +39,10 @@ const {
   subnav = false,
   jsonLd,
   noindex: pageNoindex = false,
+  pane,
+  paneItems,
 } = Astro.props;
+const paneHeading = pane ?? title.split(':')[0].trim();
 /* REELAY_NOINDEX=1 marks a whole build as a preview (the GitHub Pages copy). */
 const noindex = pageNoindex || import.meta.env.REELAY_NOINDEX === '1';
 
@@ -88,6 +96,10 @@ const ld = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
   <body id="top">
     <a class="skip-link" href="#main-content">Skip to content</a>
     <Nav logo={logoAsset} homeHref={homeUrl} links={NAV_LINKS} />
+    {/* The page's sections live here, not in the menu: the phone menu is top
+        level only (Nav.astro). Titled with the page's name; it lists the
+        accordion rows by their titles and any other visible <h2 id>. */}
+    <PageNav heading={paneHeading} items={paneItems} selector="main [data-accordion-row], main h2[id]:not([data-pn-skip])" />
     <main id="main-content">
       <slot />
     </main>
