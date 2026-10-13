@@ -35,8 +35,14 @@ body {
   flex-direction: column;
   background: var(--page-bg);
   color: var(--r-ink);
-  overflow-x: hidden;
 }
+/* Clip sideways overflow WITHOUT making a scroll box. The shared base.css
+   sets overflow-x: hidden on html and body; with both set, the body becomes
+   its own scroller, and on a phone that nested scroller stalls when you
+   scroll back up and can scroll on past the footer into empty black.
+   `clip` hides the same overflow and scrolls nothing. (Older Safari, which
+   lacks clip, keeps hidden.) */
+html, body { overflow-x: hidden; overflow-x: clip; }
 /* No film grain on Reelay: the product pages are lit glass, not film. */
 body::before { display: none !important; }
 
@@ -717,7 +723,12 @@ html[data-subnav] .page-hero { padding-top: clamp(3.5rem, 8vw, 7rem); }
 }
 #top .r-acc .accordion-chevron { color: var(--r-ink-3); }
 #top .r-acc .accordion-row.is-expanded .accordion-chevron { color: var(--r-amber-text); }
-#top .r-acc .accordion-body-inner { padding-inline: 0.25rem; }
+/* A collapsed row clips its content, but an absolutely positioned child
+   (a screen-reader label, an overlay) is placed against the nearest
+   POSITIONED ancestor, the row itself, and escapes that clip. The capability
+   table's labels did, and stretched the homepage 850px past its footer on a
+   phone. Positioning the clipping box keeps them inside it. */
+#top .r-acc .accordion-body-inner { position: relative; padding-inline: 0.25rem; }
 #top .r-acc .accordion-row.is-expanded .accordion-body-inner { padding-bottom: 2.25rem; }
 
 #top .r-acc--cards .accordion-group { gap: 0.6rem; background: none; border: 0; }

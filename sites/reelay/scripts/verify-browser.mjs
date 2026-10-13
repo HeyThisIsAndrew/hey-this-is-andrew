@@ -577,6 +577,38 @@ async function runVerification() {
     }
 
     // -------------------------------------------------------------
+    // TEST SUITE 14: The page ends at the footer, and only the page scrolls
+    // -------------------------------------------------------------
+    // On a phone the homepage once scrolled past its footer into ~850px of
+    // black and stalled when scrolled back up: overflow-x: hidden on both
+    // html and body made the body its own scroller, and a collapsed row's
+    // absolutely positioned labels escaped the row's clip to fill it.
+    console.log('\n--- 14. Testing Page End and Single Scroller (phone) ---');
+    {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+      const pg = await ctx.newPage();
+      let bad = 0;
+      for (const r of routes) {
+        await pg.goto(`${baseUrl}${r}`, { waitUntil: 'load' });
+        const m = await pg.evaluate(() => {
+          const foot = document.querySelector('.site-footer');
+          return {
+            bodyScrolls: ['auto', 'scroll'].includes(getComputedStyle(document.body).overflowY),
+            doc: document.documentElement.scrollHeight,
+            body: document.body.scrollHeight,
+            footer: Math.round(foot.getBoundingClientRect().bottom + scrollY),
+          };
+        });
+        if (m.bodyScrolls || m.body > m.doc + 1 || m.doc > m.footer + 1) {
+          failures.push(`${r} at 390px: body scrolls ${m.bodyScrolls}, body ${m.body}px, page ${m.doc}px, footer ends ${m.footer}px`);
+          bad++;
+        }
+      }
+      if (!bad) passedChecks.push(`Phone: on all ${routes.length} routes only the page scrolls, and it ends at the footer`);
+      await ctx.close();
+    }
+
+    // -------------------------------------------------------------
     // TEST SUITE 7: Responsive Layout & Overflow across 9 Viewports
     // -------------------------------------------------------------
     console.log('\n--- 7. Testing Responsive Layouts across 9 Viewports ---');
