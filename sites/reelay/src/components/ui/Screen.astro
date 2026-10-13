@@ -3,7 +3,8 @@
  * Screen: a real app screenshot slot (src/data/screens.json). Light and dark
  * captures swap with the visitor's colour scheme. Until the files exist in
  * public/screens/, a labelled placeholder shows exactly what goes there, so
- * a missing screenshot is never silently skipped.
+ * a missing screenshot is never silently skipped. The file names it waits for
+ * are on data-screen-files (and in SCREENS.md), not printed for visitors.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -32,11 +33,10 @@ const label = alt ?? `Reelay: ${slot.title}`;
       <img src={`${base}screens/${file(light ? 'light' : 'dark')}`} width={w} height={h} alt={label} loading="lazy" decoding="async" />
     </picture>
   ) : (
-    <div class="slot" style={`aspect-ratio:${slot.width}/${slot.height}`} role="img" aria-label={`Screenshot to come: ${slot.title}`}>
-      <span class="slot-k">Screenshot slot</span>
+    <div class="slot" style={`aspect-ratio:${slot.width}/${slot.height}`} role="img" aria-label={`Screenshot to come: ${slot.title}`}
+      data-screen-files={themes.map((t) => `public/screens/${file(t)}`).join(' ')}>
+      <span class="slot-k">Screenshot to come</span>
       <span class="slot-t">{slot.title}</span>
-      <code class="slot-f">public/screens/{themes.map((t) => file(t)).join(' + ')}</code>
-      <span class="slot-d">{slot.width} × {slot.height} px · {themes.join(' and ')}</span>
     </div>
   )}
   {caption && <figcaption>{caption}</figcaption>}
@@ -60,7 +60,5 @@ const label = alt ?? `Reelay: ${slot.title}`;
   }
   .slot-k { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--r-amber-text); }
   .slot-t { max-width: 34rem; font-size: 0.98rem; font-weight: 600; color: var(--r-ink); }
-  .slot-f { max-width: 100%; font-size: 0.75rem; color: var(--r-ink-3); overflow-wrap: anywhere; }
-  .slot-d { font-size: 0.78rem; color: var(--r-ink-3); }
   figcaption { margin-top: 0.75rem; font-size: 0.85rem; color: var(--r-ink-3); text-align: center; }
 </style>

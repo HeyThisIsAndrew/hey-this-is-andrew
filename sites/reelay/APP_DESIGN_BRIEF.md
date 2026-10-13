@@ -131,3 +131,18 @@ When you're done, report:
 - what changed, with before and after screenshots;
 - the test results;
 - every place where a rendering shows something the app doesn't do.
+
+## When the screens match: capturing them for the site
+
+The site has 34 slots waiting for real captures. `sites/reelay/SCREENS.md` in the website repo lists every one, generated from `src/data/screens.json`:
+- the slot id and the page it appears on;
+- what it must show;
+- the exact size, in pixels;
+- the exact file names.
+
+Rules:
+- **A demo profile only, never real customer data.**
+- Images are PNG at 2x, normally 2880 × 1800. Where a slot lists both themes, capture the app twice, once in Light and once in Dark: `<id>-light@2x.png` and `<id>-dark@2x.png`. The site swaps them with the visitor's colour scheme.
+- Screencasts are `<id>.mp4` (H.264, no audio needed), with `<id>.vtt` captions and `<id>-poster.png`.
+- Drop the files into `sites/reelay/public/screens/`. A slot renders as soon as all of its files are there; nothing else needs editing.
+- The reviewer slots (consent screens, each permission in use, the three review demos) are what Google, TikTok and Meta check. Capture them from the build you submit.

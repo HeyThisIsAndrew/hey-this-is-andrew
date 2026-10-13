@@ -11,6 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { manifest, manifestPath } from './screens-manifest.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.resolve(process.argv[2] || path.join(root, 'dist'));
@@ -146,6 +147,8 @@ const FORBIDDEN = [
   [/\$79|\$199|money-back|one-time license/i, 'no pricing is set; the beta is free'],
   [/5-stage|five-stage|5 Stages/i, 'the board has four columns'],
   [/posts? (?:automatically )?to (?:TikTok|Instagram)|auto-?posts? to (?:TikTok|Instagram)/i, 'Reelay never posts to TikTok or Instagram'],
+  [/\bSYS \d+\b|\bSUBSYSTEM\b|\/\/ ?WORKSTATION/, 'Reelay is a creator product: no developer-console headers'],
+  [/mobile (?:companion )?app|cloud sync|Reelay cloud account/i, 'no mobile app or cloud sync has shipped'],
 ];
 for (const p of pages) {
   const rel = path.relative(dist, p);
@@ -182,6 +185,13 @@ for (const p of pages) {
     if (!html.includes(link)) fail(`${rel} footer is missing ${link}`);
   }
   if (!html.includes('TikTok is a trademark of ByteDance Ltd.')) fail(`${rel} footer is missing the trademark line`);
+  // The footer never prints the operator's {{PLACEHOLDERS}} (the legal pages do, on purpose).
+  const footer = (html.match(/<footer\b[\s\S]*?<\/footer>/) || [''])[0];
+  if (/\{\{[A-Z_]+\}\}/.test(footer)) fail(`${rel} prints a {{PLACEHOLDER}} in its footer`);
+  // One element per id: a repeated id breaks #links, labels and aria references.
+  const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]);
+  const dupes = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
+  if (dupes.length) fail(`${rel} repeats id ${dupes.map((d) => `"${d}"`).join(', ')}`);
   const thirdParty = html.match(/<(?:script|img|iframe|source|video)[^>]+src="https?:\/\/[^"]+"|<link[^>]+href="https?:\/\/(?!reelay\.app)[^"]+"[^>]*>/g) || [];
   for (const t of thirdParty) {
     if (/rel="canonical"/.test(t)) continue;
@@ -230,6 +240,7 @@ for (const [k, where] of placeholders) warnings.push(`{{${k}}} still on ${[...wh
 const missing = screens.slots.filter((s) => s.kind === 'image'
   ? !s.themes.every((t) => fs.existsSync(path.join(root, 'public/screens', `${s.id}-${t}@2x.png`)))
   : !fs.existsSync(path.join(root, 'public/screens', `${s.id}.mp4`)));
+if (fs.readFileSync(manifestPath, 'utf8') !== manifest()) fail('SCREENS.md is out of date with src/data/screens.json (run npm run screens)');
 if (missing.length) warnings.push(`${missing.length} of ${screens.slots.length} screenshot and screencast slots are still empty (see src/data/screens.json)`);
 if (RELEASE) for (const w of warnings) fail(`release: ${w}`);
 
@@ -249,4 +260,5 @@ console.log('✓ Meta: data deletion steps, Platform Terms statement. TikTok and
 console.log(`✓ Permissions: every name on the site is in permissions.json (${perms.platforms.reduce((n, p) => n + p.scopes.length, 0)} scopes).`);
 console.log('✓ Truth guard: no forbidden wording or retired claims on any page.');
 console.log('✓ Every page: privacy, terms, data deletion and reviewer links, trademark line, Open Graph, no third-party resources.');
+console.log('✓ Every page: no repeated ids, no {{PLACEHOLDER}} in the footer. SCREENS.md matches screens.json.');
 console.log('✓ Download facts, SoftwareApplication data and security.txt.\n');
