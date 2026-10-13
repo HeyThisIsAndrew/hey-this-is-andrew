@@ -609,6 +609,54 @@ async function runVerification() {
     }
 
     // -------------------------------------------------------------
+    // TEST SUITE 15: Touch scrolling never stalls (phone homepage)
+    // -------------------------------------------------------------
+    // Real touch swipes, down the whole homepage and back up. Every swipe
+    // must carry the page about as far as the others. The Statement once gave
+    // each word a colour fade restarted on every scroll frame; the repaints
+    // cut the scroll's momentum under the app preview, and on an iPhone the
+    // page stalled and bounced there.
+    console.log('\n--- 15. Testing Touch Scrolling (phone homepage) ---');
+    {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 });
+      const pg = await ctx.newPage();
+      await pg.goto(`${baseUrl}/`, { waitUntil: 'load' });
+      await pg.waitForTimeout(2000); // let the hero's entrance finish
+      const cdp = await ctx.newCDPSession(pg);
+      const swipe = async (dy) => {
+        let y = dy < 0 ? 600 : 300;
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 195, y }] });
+        for (let i = 0; i < 12; i++) {
+          y += dy / 12;
+          await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 195, y }] });
+          await new Promise((r) => setTimeout(r, 16));
+        }
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await pg.waitForTimeout(300);
+        return pg.evaluate(() => scrollY);
+      };
+      const max = await pg.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+      const steps = [];
+      let at = 0;
+      for (let dir of [-300, 300]) {
+        for (let i = 0; i < 20; i++) {
+          const next = await swipe(dir);
+          const moved = Math.abs(next - at);
+          at = next;
+          const edge = dir < 0 ? next >= max - 2 : next <= 2;
+          if (edge) break;          // the last swipe into an end is short by design
+          steps.push(moved);
+        }
+      }
+      const sorted = [...steps].sort((a, b) => a - b);
+      const median = sorted[Math.floor(sorted.length / 2)];
+      const short = steps.filter((s) => s < median * 0.85);
+      if (!steps.length || short.length) failures.push(`Touch scrolling stalls on the phone homepage: swipes moved ${steps.map(Math.round).join(', ')}px (median ${Math.round(median)})`);
+      else passedChecks.push(`Touch scrolling on the phone homepage: ${steps.length} swipes down and up, every one within 15% of the median (${Math.round(median)}px)`);
+      await ctx.close();
+    }
+
+    // -------------------------------------------------------------
     // TEST SUITE 7: Responsive Layout & Overflow across 9 Viewports
     // -------------------------------------------------------------
     console.log('\n--- 7. Testing Responsive Layouts across 9 Viewports ---');

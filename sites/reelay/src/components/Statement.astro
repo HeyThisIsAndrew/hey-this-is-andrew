@@ -38,7 +38,11 @@ const lines = [
   .st-line { display: block; }
   .st-line + .st-line { margin-top: 0.35em; }
   .st-line--soft { font-size: 0.62em; line-height: 1.2; letter-spacing: -0.03em; max-width: 26ch; margin-top: 0.9em !important; }
-  .w { transition: color 0.5s ease; }
+  /* No colour transition on the words. Lighting already follows the scroll
+     position, so a fade adds nothing, and a fade on every word of display
+     type, restarted as you scroll, repaints the whole sentence each frame.
+     On phones that cut the scroll's momentum short right here, under the
+     app preview: the page stalled and bounced instead of scrolling. */
   :global(html.js) .w { color: var(--r-fill-3); }
   :global(html.js) .w.lit { color: var(--r-ink); }
   :global(html.js) .st-line--soft .w.lit { color: var(--r-amber-text); }
@@ -54,6 +58,7 @@ const lines = [
     const words = Array.from(block.querySelectorAll<HTMLElement>('.w'));
     if (reduce) { words.forEach((w) => w.classList.add('lit')); return; }
     let ticking = false;
+    let lit = -1;
     const update = () => {
       ticking = false;
       const r = block.getBoundingClientRect();
@@ -65,6 +70,8 @@ const lines = [
       const total = r.height + (start - end);
       const p = Math.min(1, Math.max(0, (start - r.top) / total));
       const n = Math.round(p * words.length);
+      if (n === lit) return;              // nothing changed: touch nothing
+      lit = n;
       words.forEach((w, i) => w.classList.toggle('lit', i < n));
     };
     const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };
