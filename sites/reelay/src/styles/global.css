@@ -133,6 +133,8 @@ code, pre, kbd { font-family: var(--font-mono); font-size: 0.88em; letter-spacin
   line-height: 0.98;
   letter-spacing: -0.045em;
 }
+/* Folding phones (280px): at 3rem "Publish everywhere." ran off both edges. */
+@media (max-width: 340px) { .display { font-size: 2.4rem; } }
 .headline {
   font-size: clamp(2.4rem, 6.2vw, 5rem);
   font-weight: 700;
@@ -507,7 +509,31 @@ html[data-subnav] .page-hero { padding-top: clamp(3.5rem, 8vw, 7rem); }
 .legal-content dl.facts > div { display: grid; gap: 0.25rem 1.5rem; padding: 0.7rem 0; border-bottom: 1px solid var(--hairline); }
 @media (min-width: 700px) { .legal-content dl.facts > div { grid-template-columns: 12rem minmax(0, 1fr); } }
 .legal-content dl.facts dt { color: var(--r-ink); font-weight: 600; }
-.table-scroll { overflow-x: auto; }
+/* A table wider than a phone scrolls sideways; the edge shadows (the
+   classic background-attachment: local trick, no script) show there's more. */
+.table-scroll {
+  overflow-x: auto;
+  background:
+    linear-gradient(90deg, var(--page-bg) 30%, transparent) left / 2rem 100% no-repeat local,
+    linear-gradient(270deg, var(--page-bg) 30%, transparent) right / 2rem 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.5), transparent) left / 0.9rem 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.5), transparent) right / 0.9rem 100% no-repeat scroll;
+}
+@media (prefers-color-scheme: light) {
+  .table-scroll {
+    background:
+      linear-gradient(90deg, var(--page-bg) 30%, transparent) left / 2rem 100% no-repeat local,
+      linear-gradient(270deg, var(--page-bg) 30%, transparent) right / 2rem 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.18), transparent) left / 0.9rem 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.18), transparent) right / 0.9rem 100% no-repeat scroll;
+  }
+}
+/* Commands and code wrap instead of hiding part of each line behind a
+   sideways scroll: the Windows steps on /download ran off a phone, and in
+   the two-column cards on a laptop they still hid a third of a line. */
+pre, pre code { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Contact addresses are links on their own line: give them a real target. */
+.spec-label a { display: inline-block; padding-block: 0.2rem; min-height: 24px; }
 
 /* ── Header: Apple's thin, frosted global nav ────────────────────────── */
 #top .site-nav {

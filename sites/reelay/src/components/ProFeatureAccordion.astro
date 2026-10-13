@@ -187,7 +187,7 @@ const panels = [
       <Accordion exclusive>
         {panels.map((p, i) => (
           <AccordionRow id={`pillar-${p.id}`} kicker={`${p.num} · ${p.kicker}`} title={p.title} level={3} size="md" open={i === 0}>
-            <div class="panel-inner">
+            <div class:list={['panel-inner', { 'panel-inner--stack': p.id === 'platforms' }]}>
               <div class="panel-narrative">
                 <p class="panel-title">{p.headline}</p>
                 <p class="panel-body-text">{p.body}</p>
@@ -346,6 +346,10 @@ const panels = [
   }
   @media (min-width: 960px) {
     .panel-inner { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 2.5rem; align-items: start; }
+    /* The capability table has six columns: beside the text it ran off a
+       1024px screen, so this row puts it under the text, full width. */
+    .panel-inner--stack { grid-template-columns: minmax(0, 1fr); gap: 1.75rem; }
+    .panel-inner--stack .panel-narrative { max-width: 46rem; }
   }
   .panel-narrative { display: flex; flex-direction: column; gap: 0.9rem; }
   .panel-title { font-family: var(--font-display); font-size: clamp(1.35rem, 2.4vw, 1.9rem); font-weight: 700; line-height: 1.15; letter-spacing: -0.025em; color: var(--r-ink); }
@@ -384,6 +388,14 @@ const panels = [
   }
   .workflow-step-tab[aria-selected='true'], .topology-tab[aria-selected='true'] { background: var(--r-ink); color: var(--r-on-ink); }
   .workflow-step-tab[aria-selected='true'] .wf-num, .topology-tab[aria-selected='true'] .wf-num { color: inherit; opacity: 0.7; }
+  /* A narrow box (a phone, or the picture column at 1024px): four tabs as
+     an even 2 x 2 grid, all visible. As a sideways strip with no scrollbar,
+     up to half of them sat out of sight. */
+  .ws { container-type: inline-size; }
+  @container (max-width: 560px) {
+    .ws-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; border-radius: 14px; overflow: visible; }
+    .workflow-step-tab, .topology-tab { border-radius: 10px; white-space: normal; text-align: center; line-height: 1.2; padding: 0.4rem 0.5rem; min-height: 44px; }
+  }
   .wf-num { font-size: 0.72rem; font-variant-numeric: tabular-nums; color: var(--r-amber-text); }
   .ws-note { font-size: 0.8rem; color: var(--r-ink-4); }
 
@@ -394,7 +406,7 @@ const panels = [
     box-shadow: inset 0 0 0 1px var(--hairline);
   }
   .ticket-card { display: grid; gap: 0.6rem; }
-  .tc-top { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
+  .tc-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.4rem 0.75rem; }
   .tc-title { font-weight: 600; color: var(--r-ink); }
   .tc-badge { flex: none; font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 999px; background: var(--r-fill-2); color: var(--r-ink-2); }
   .tc-badge--staging { background: var(--r-amber-soft); color: var(--r-amber-text); }

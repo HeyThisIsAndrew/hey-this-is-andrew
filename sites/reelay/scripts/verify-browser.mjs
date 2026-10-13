@@ -657,6 +657,67 @@ async function runVerification() {
     }
 
     // -------------------------------------------------------------
+    // TEST SUITE 16: Nothing cut off at the screen edge
+    // -------------------------------------------------------------
+    // Sections clip sideways overflow, so a too-wide box never makes the page
+    // scroll sideways (suite 8 can't see it): it just loses its right side.
+    // That is how the Windows install steps on /download ran off a phone.
+    // With every accordion row and <details> open, no visible text, code,
+    // table, image or control may cross the screen edge, unless it sits in
+    // a box that scrolls and that box fits. And outside tables (which
+    // scroll sideways on purpose, with an edge cue), nothing may hide
+    // content behind a sideways scroll.
+    console.log('\n--- 16. Testing Nothing Cut Off at the Screen Edge ---');
+    for (const width of [280, 390, 1024]) {
+      const ctx = await browser.newContext({ viewport: { width, height: 800 }, isMobile: width < 800, hasTouch: width < 800, reducedMotion: 'reduce' });
+      const pg = await ctx.newPage();
+      let bad = 0;
+      for (const r of routes) {
+        await pg.goto(`${baseUrl}${r}`, { waitUntil: 'load' });
+        await pg.evaluate(() => {
+          document.querySelectorAll('[data-accordion-row]').forEach((row) => {
+            row.classList.add('is-expanded', 'is-settled');
+            const body = row.querySelector('.accordion-body');
+            if (body) body.inert = false;
+          });
+          document.querySelectorAll('details').forEach((d) => { d.open = true; });
+        });
+        await pg.waitForTimeout(100);
+        const found = await pg.evaluate((vw) => {
+          const out = new Set();
+          const skip = (el) => el.closest('[aria-hidden="true"], .sr-only, svg, .mobile-menu, [hidden]');
+          const scrollerOf = (el) => {
+            for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+              if (['auto', 'scroll'].includes(getComputedStyle(a).overflowX)) return a;
+            }
+            return null;
+          };
+          for (const el of document.querySelectorAll('body *')) {
+            if (skip(el)) continue;
+            const cs = getComputedStyle(el);
+            if (cs.display === 'none' || cs.visibility === 'hidden' || cs.position === 'fixed') continue;
+            const rect = el.getBoundingClientRect();
+            if (!rect.width || !rect.height) continue;
+            const ownText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+            const media = ['IMG', 'VIDEO', 'PRE', 'TABLE', 'INPUT', 'BUTTON'].includes(el.tagName);
+            if ((ownText || media) && (rect.right > vw + 1 || rect.left < -1)) {
+              const sc = scrollerOf(el);
+              const sr = sc && sc.getBoundingClientRect();
+              if (!sr || sr.right > vw + 1 || sr.left < -1) out.add(`${el.tagName.toLowerCase()}.${[...el.classList].join('.')} runs to ${Math.round(rect.left)}..${Math.round(rect.right)}px`);
+            }
+            if (['auto', 'scroll'].includes(cs.overflowX) && el.scrollWidth > el.clientWidth + 2 && !el.querySelector('table')) {
+              out.add(`${el.tagName.toLowerCase()}.${[...el.classList].join('.')} hides ${el.scrollWidth - el.clientWidth}px behind a sideways scroll`);
+            }
+          }
+          return [...out].slice(0, 5);
+        }, width);
+        for (const f of found) { failures.push(`${r} at ${width}px: ${f}`); bad++; }
+      }
+      if (!bad) passedChecks.push(`Nothing cut off at ${width}px: every route, every row and drawer open`);
+      await ctx.close();
+    }
+
+    // -------------------------------------------------------------
     // TEST SUITE 7: Responsive Layout & Overflow across 9 Viewports
     // -------------------------------------------------------------
     console.log('\n--- 7. Testing Responsive Layouts across 9 Viewports ---');
