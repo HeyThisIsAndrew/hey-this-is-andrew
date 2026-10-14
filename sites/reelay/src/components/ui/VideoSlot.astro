@@ -2,14 +2,15 @@
 /**
  * VideoSlot: a screencast slot (src/data/screens.json, kind "video").
  * Never autoplays: muted, captioned, with the browser's own controls (play
- * and pause). Until public/screens/<id>.mp4 exists, a labelled placeholder.
+ * and pause). Until public/screens/<id>.mp4 exists, a labelled placeholder,
+ * or nothing at all with onlyWhenReady (the Help Center's optional videos).
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import screens from '../../data/screens.json';
 
-interface Props { id: string; class?: string }
-const { id, class: cls } = Astro.props;
+interface Props { id: string; class?: string; onlyWhenReady?: boolean }
+const { id, class: cls, onlyWhenReady = false } = Astro.props;
 const slot = screens.slots.find((s) => s.id === id);
 if (!slot) throw new Error(`Unknown video slot "${id}" (add it to src/data/screens.json)`);
 const pub = path.resolve('public/screens');
@@ -18,7 +19,7 @@ const ready = fs.existsSync(path.join(pub, `${id}.mp4`));
 const hasVtt = fs.existsSync(path.join(pub, `${id}.vtt`));
 const hasPoster = fs.existsSync(path.join(pub, `${id}-poster.png`));
 ---
-<figure class:list={['vslot', cls]} data-video-slot={id} data-video-ready={ready ? '' : undefined}>
+{(ready || !onlyWhenReady) && <figure class:list={['vslot', cls]} data-video-slot={id} data-video-ready={ready ? '' : undefined}>
   {ready ? (
     <video controls muted playsinline preload="none" width={slot.width / 2} height={slot.height / 2} poster={hasPoster ? `${base}screens/${id}-poster.png` : undefined} aria-label={slot.title}>
       <source src={`${base}screens/${id}.mp4`} type="video/mp4" />
@@ -32,7 +33,7 @@ const hasPoster = fs.existsSync(path.join(pub, `${id}-poster.png`));
     </div>
   )}
   <figcaption>{slot.title}</figcaption>
-</figure>
+</figure>}
 
 <style>
   .vslot { margin: 0; }

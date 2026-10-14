@@ -8,6 +8,7 @@
  *   REELAY_RELEASE=1 node scripts/audit-dist.mjs  also fails on {{PLACEHOLDERS}}
  *                                                and missing screenshots
  */
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -44,6 +45,7 @@ const textOf = (html) => html
   .replace(/\s+/g, ' ');
 
 const failures = [];
+let helpSummary = '';
 const warnings = [];
 const fail = (m) => failures.push(m);
 
@@ -161,6 +163,12 @@ for (const p of pages) {
       const before = t.slice(Math.max(0, at - 30), at);
       // "never posts to TikTok" / "doesn’t post to Instagram" are the truth, not a claim.
       if (/posts? .*to (TikTok|Instagram)/i.test(m[0]) && /(never|n['’]t|not|no)\s*(\w+\s*){0,2}$/i.test(before)) continue;
+      // So is an instruction to the reader (capital "Post to", the imperative)
+      // that says they post it themselves: "Post to TikTok or Instagram in their
+      // own uploader", from the app's own Help Center. A claim reads "Reelay
+      // posts to…", which still fails.
+      const after = t.slice(at + m[0].length, at + m[0].length + 60);
+      if (/^Post to/.test(m[0]) && /their own (?:uploader|app)|by hand|yourself/i.test(after)) continue;
       fail(`${rel} contains "${m[0]}" (${why})`);
     }
   }
@@ -238,11 +246,37 @@ for (const p of pages) for (const m of fs.readFileSync(p, 'utf8').matchAll(/\{\{
   placeholders.set(m[1], set);
 }
 for (const [k, where] of placeholders) warnings.push(`{{${k}}} still on ${[...where].join(', ')}`);
-const missing = screens.slots.filter((s) => s.kind === 'image'
+const missing = screens.slots.filter((s) => !s.optional).filter((s) => s.kind === 'image'
   ? !s.themes.every((t) => fs.existsSync(path.join(root, 'public/screens', `${s.id}-${t}@2x.png`)))
   : !fs.existsSync(path.join(root, 'public/screens', `${s.id}.mp4`)));
 if (fs.readFileSync(manifestPath, 'utf8') !== manifest()) fail('SCREENS.md is out of date with src/data/screens.json (run npm run screens)');
 for (const f of staleWebScreens()) fail(`${f} is missing or was made from a different capture (run npm run screens)`);
+
+/* The Help Center (/support) renders the app's own help: src/data/help.json
+   and public/help/, both written by scripts/sync-help.mjs. Every picture it
+   names must be there in both themes and byte-for-byte the app's (hand edits
+   would make the website and the app disagree), with nothing left over, and
+   every tour step and guide must be on the page with its Markdown rendered. */
+{
+  const helpPath = path.join(root, 'src/data/help.json');
+  if (!fs.existsSync(helpPath)) fail('src/data/help.json is missing (run node scripts/sync-help.mjs <app checkout>)');
+  else {
+    const help = JSON.parse(fs.readFileSync(helpPath, 'utf8'));
+    const helpDir = path.join(root, 'public/help');
+    const want = new Set(help.shots.flatMap((s) => [`${s}-light.webp`, `${s}-dark.webp`]));
+    for (const f of want) {
+      const file = path.join(helpDir, f);
+      if (!fs.existsSync(file)) fail(`public/help/${f} is missing (run scripts/sync-help.mjs)`);
+      else if (crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex') !== help.source.files[f]) fail(`public/help/${f} differs from the app's copy (run scripts/sync-help.mjs)`);
+    }
+    for (const f of fs.existsSync(helpDir) ? fs.readdirSync(helpDir) : []) if (!want.has(f)) fail(`public/help/${f} isn't used by help.json`);
+    const page = read('support/index.html');
+    const ids = [...help.tour.map((t) => `tour-${t.key}`), ...help.categories.flatMap((c) => [c.key, ...c.guides.map((g) => g.key)])];
+    for (const id of ids) if (!page.includes(`id="${id}"`)) fail(`/support has no #${id} (help.json)`);
+    if (/\*\*/.test(textOf(page))) fail('/support shows a literal ** (help text Markdown not rendered)');
+    helpSummary = `${help.tour.length} tour steps and ${ids.length - help.tour.length - help.categories.length} guides from app ${help.source.commit}, ${want.size} screenshots`;
+  }
+}
 
 /* Scroll-driven animations: the CSS minifier folds animation-timeline into
    the animation shorthand ("animation: x linear both scroll(root)"), which
@@ -254,7 +288,10 @@ for (const f of files.filter((f) => f.endsWith('.css') || f.endsWith('.html'))) 
     fail(`${path.relative(dist, f)}: "${m[0]}" puts a scroll timeline in the animation shorthand, which browsers drop (give animation-timeline a rule of its own)`);
   }
 }
-if (missing.length) warnings.push(`${missing.length} of ${screens.slots.length} screenshot and screencast slots are still empty (see src/data/screens.json)`);
+const required = screens.slots.filter((s) => !s.optional);
+if (missing.length) warnings.push(`${missing.length} of ${required.length} screenshot and screencast slots are still empty (see src/data/screens.json)`);
+const helpVideos = screens.slots.filter((s) => s.optional);
+const helpToRecord = helpVideos.filter((s) => !fs.existsSync(path.join(root, 'public/screens', `${s.id}.mp4`)));
 if (RELEASE) for (const w of warnings) fail(`release: ${w}`);
 
 // ── Report ──────────────────────────────────────────────────────────────
@@ -274,4 +311,5 @@ console.log(`✓ Permissions: every name on the site is in permissions.json (${p
 console.log('✓ Truth guard: no forbidden wording or retired claims on any page.');
 console.log('✓ Every page: privacy, terms, data deletion and reviewer links, trademark line, Open Graph, no third-party resources.');
 console.log('✓ Every page: no repeated ids, no {{PLACEHOLDER}} in the footer. SCREENS.md matches screens.json.');
-console.log('✓ Download facts, SoftwareApplication data and security.txt.\n');
+console.log('✓ Download facts, SoftwareApplication data and security.txt.');
+console.log(`✓ Help Center: ${helpSummary}; ${helpToRecord.length} of ${helpVideos.length} optional help videos still to record (SCREENS.md).\n`);

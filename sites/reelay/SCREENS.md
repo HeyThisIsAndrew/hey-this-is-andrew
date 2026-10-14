@@ -10,6 +10,11 @@ page swaps them with the visitor's colour scheme. Screencasts are `public/screen
 A slot renders the moment all of its files exist. Until then the page shows a "Screenshot to come" card, and
 `npm run test` lists it (`REELAY_RELEASE=1` makes it fatal).
 
+**Help Center videos** are the slots marked *optional* (`help-tour-*`, `help-*`): one per tour step and guide,
+written by `npm run help -- <app checkout>`, which also copies the app's help text and screenshots in. Record each
+from the demo profile following that guide's steps. A guide shows its video the moment the files exist; until then it
+shows nothing in its place, and the audit only counts them.
+
 | Slot id | Kind | Themes | Size (px) | Page | What it shows | Files |
 |---|---|---|---|---|---|---|
 | `library-grid` | image | light, dark | 2880 × 1800 | `/features/library` | Library grid with hover-scrub, tile slider and page size | `library-grid-light@2x.png` `library-grid-dark@2x.png` |
@@ -46,3 +51,34 @@ A slot renders the moment all of its files exist. Until then the page shows a "S
 | `google-demo` | video | light | 2880 × 1800 | `/reviewers` | Google review demo: sign in with Google, the consent screen, upload and schedule, Check YouTube for Updates, Disconnect | `google-demo.mp4` `google-demo.vtt` `google-demo-poster.png` |
 | `tiktok-demo` | video | light | 2880 × 1800 | `/reviewers` | TikTok review demo: Continue with TikTok, the authorization screen, the connected account card, Disconnect | `tiktok-demo.mp4` `tiktok-demo.vtt` `tiktok-demo-poster.png` |
 | `meta-demo` | video | light | 2880 × 1800 | `/reviewers` | Meta review demo: Instagram, Threads and Facebook sign-in, each permission in use, Disconnect and data deletion | `meta-demo.mp4` `meta-demo.vtt` `meta-demo-poster.png` |
+| `help-tour-profiles` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Get Started, Pick a profile | `help-tour-profiles.mp4` `help-tour-profiles.vtt` `help-tour-profiles-poster.png` |
+| `help-tour-library` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Get Started, Bring videos in | `help-tour-library.mp4` `help-tour-library.vtt` `help-tour-library-poster.png` |
+| `help-tour-prepare` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Get Started, Prepare a video | `help-tour-prepare.mp4` `help-tour-prepare.vtt` `help-tour-prepare-poster.png` |
+| `help-tour-readiness` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Get Started, Check readiness | `help-tour-readiness.mp4` `help-tour-readiness.vtt` `help-tour-readiness-poster.png` |
+| `help-tour-publish` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Get Started, Publish or schedule | `help-tour-publish.mp4` `help-tour-publish.vtt` `help-tour-publish-poster.png` |
+| `help-tour-find` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Get Started, Find your work | `help-tour-find.mp4` `help-tour-find.vtt` `help-tour-find-poster.png` |
+| `help-library-add` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Add videos | `help-library-add.mp4` `help-library-add.vtt` `help-library-add-poster.png` |
+| `help-library-sources` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Download Sources | `help-library-sources.mp4` `help-library-sources.vtt` `help-library-sources-poster.png` |
+| `help-library-select` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Select and download | `help-library-select.mp4` `help-library-select.vtt` `help-library-select-poster.png` |
+| `help-library-views` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Filters and pages | `help-library-views.mp4` `help-library-views.vtt` `help-library-views-poster.png` |
+| `help-library-files` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Files and names | `help-library-files.mp4` `help-library-files.vtt` `help-library-files-poster.png` |
+| `help-library-player` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Watch a video | `help-library-player.mp4` `help-library-player.vtt` `help-library-player-poster.png` |
+| `help-board-overview` | video *optional* | light | 2880 × 1800 | `/support` | Help video: The Board | `help-board-overview.mp4` `help-board-overview.vtt` `help-board-overview-poster.png` |
+| `help-board-captions` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Write captions | `help-board-captions.mp4` `help-board-captions.vtt` `help-board-captions-poster.png` |
+| `help-board-readiness` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Readiness | `help-board-readiness.mp4` `help-board-readiness.vtt` `help-board-readiness-poster.png` |
+| `help-board-details` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Details and video tools | `help-board-details.mp4` `help-board-details.vtt` `help-board-details-poster.png` |
+| `help-board-find` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Find, filter and archive | `help-board-find.mp4` `help-board-find.vtt` `help-board-find-poster.png` |
+| `help-publish-which` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Where Reelay posts | `help-publish-which.mp4` `help-publish-which.vtt` `help-publish-which-poster.png` |
+| `help-accounts-connect` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Connect an account | `help-accounts-connect.mp4` `help-accounts-connect.vtt` `help-accounts-connect-poster.png` |
+| `help-publish-schedule` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Schedule or publish | `help-publish-schedule.mp4` `help-publish-schedule.vtt` `help-publish-schedule-poster.png` |
+| `help-publish-by-hand` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Post by hand | `help-publish-by-hand.mp4` `help-publish-by-hand.vtt` `help-publish-by-hand-poster.png` |
+| `help-auto-rules` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Make a rule | `help-auto-rules.mp4` `help-auto-rules.vtt` `help-auto-rules-poster.png` |
+| `help-auto-recipes` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Quick-start recipes | `help-auto-recipes.mp4` `help-auto-recipes.vtt` `help-auto-recipes-poster.png` |
+| `help-auto-test` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Test, run and review | `help-auto-test.mp4` `help-auto-test.vtt` `help-auto-test-poster.png` |
+| `help-profiles` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Profiles | `help-profiles.mp4` `help-profiles.vtt` `help-profiles-poster.png` |
+| `help-branding` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Branding and themes | `help-branding.mp4` `help-branding.vtt` `help-branding-poster.png` |
+| `help-settings-tips` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Helpful tips | `help-settings-tips.mp4` `help-settings-tips.vtt` `help-settings-tips-poster.png` |
+| `help-settings-posting` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Automatic posting | `help-settings-posting.mp4` `help-settings-posting.vtt` `help-settings-posting-poster.png` |
+| `help-settings-more` | video *optional* | light | 2880 × 1800 | `/support` | Help video: More settings | `help-settings-more.mp4` `help-settings-more.vtt` `help-settings-more-poster.png` |
+| `help-privacy-local` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Where your data lives | `help-privacy-local.mp4` `help-privacy-local.vtt` `help-privacy-local-poster.png` |
+| `help-trouble` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Fix common problems | `help-trouble.mp4` `help-trouble.vtt` `help-trouble-poster.png` |

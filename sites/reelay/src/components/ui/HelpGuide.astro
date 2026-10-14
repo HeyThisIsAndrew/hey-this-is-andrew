@@ -1,0 +1,217 @@
+---
+/**
+ * HelpGuide: one guide (or tour step) of the Help Center, as a collapsible
+ * <details>. Same pattern as the app's guides: what you're doing (the
+ * summary line), numbered steps that match the numbered markers on the
+ * picture, what to expect, optional details (closed), and related guides.
+ * Its screencast appears once the video exists (screens.json slot
+ * help-<id>); until then nothing stands in for it.
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import HelpPicture from './HelpPicture.astro';
+import VideoSlot from './VideoSlot.astro';
+
+interface Props {
+  id: string;
+  index: string;
+  title: string;
+  doing: string;
+  pill: string;
+  visual: any;
+  steps: { text: string; mark: string }[];
+  expectLabel: string;
+  expect: string;
+  note?: string;
+  details?: { title: string; lines: string[] }[];
+  related?: { id: string; title: string }[];
+  keywords?: string;
+  aliases?: string[];
+  video: string;
+}
+const p = Astro.props;
+const videoReady = fs.existsSync(path.resolve('public/screens', `${p.video}.mp4`));
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const md = (s: string) => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+const plain = (s: string) => s.replace(/\*\*/g, '');
+const searchText = [p.title, p.doing, p.expect, p.note ?? '', p.keywords ?? '', ...p.steps.map((s) => s.text),
+  ...(p.details ?? []).flatMap((d) => [d.title, ...d.lines])].map(plain).join(' ').toLowerCase();
+---
+<details class="help-guide" id={p.id} data-guide-item data-aliases={p.aliases?.join(',')} data-search-text={searchText}>
+  <summary class="help-summary">
+    <span class="guide-index">{p.index}</span>
+    <span class="guide-head-text">
+      <strong class="guide-title">{p.title}</strong>
+      <span class="guide-subtitle" set:html={md(p.doing)} />
+    </span>
+    <span class="guide-pill">{p.pill}</span>
+    <span class="guide-chevron" aria-hidden="true"></span>
+  </summary>
+
+  <div class="help-body">
+    <div class="guide-columns">
+      <div class="guide-instructions">
+        <ol class="guide-steps">
+          {p.steps.map((s, i) => (
+            <li><span class="step-num" aria-hidden="true">{i + 1}</span><span set:html={md(s.text)} /></li>
+          ))}
+        </ol>
+        <p class="guide-expect"><strong>{p.expectLabel}</strong> <span set:html={md(p.expect)} /></p>
+        {p.note && <p class="guide-note" set:html={md(p.note)} />}
+
+        {p.details && p.details.length > 0 && (
+          <div class="guide-details-list">
+            {p.details.map((d) => (
+              <details class="guide-detail">
+                <summary>{plain(d.title)}</summary>
+                {d.lines.map((line) => <p set:html={md(line)} />)}
+              </details>
+            ))}
+          </div>
+        )}
+
+        {p.related && p.related.length > 0 && (
+          <div class="guide-related">
+            <span>Need more help?</span>
+            <ul>{p.related.map((r) => <li><a href={`#${r.id}`}>{r.title}</a></li>)}</ul>
+          </div>
+        )}
+      </div>
+
+      {(p.visual || videoReady) && (
+        <div class="guide-media">
+          {p.visual && <HelpPicture visual={p.visual} steps={p.steps} />}
+          <VideoSlot id={p.video} onlyWhenReady />
+        </div>
+      )}
+    </div>
+  </div>
+</details>
+
+<style>
+  .help-guide {
+    border-radius: 18px;
+    background: var(--r-tile);
+    border: 1px solid var(--hairline);
+    scroll-margin-top: 5.5rem;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+  }
+  .help-guide[open] { background: var(--r-panel); border-color: var(--hairline-strong); box-shadow: var(--shadow-sm); }
+  .help-summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.15rem 1.35rem;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 18px;
+  }
+  .help-summary::-webkit-details-marker { display: none; }
+  .guide-index {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    min-width: 2.5rem;
+    height: 2rem;
+    padding: 0 0.45rem;
+    border-radius: 999px;
+    background: var(--r-amber-soft);
+    color: var(--r-amber-text);
+    font-size: 0.8rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .guide-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.2rem; }
+  .guide-title { font-size: 1.08rem; font-weight: 650; color: var(--r-ink); line-height: 1.3; }
+  .guide-subtitle { font-size: 0.9rem; color: var(--r-ink-3); line-height: 1.4; }
+  .guide-pill {
+    flex: none;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    background: var(--r-fill-2);
+    color: var(--r-ink-2);
+  }
+  .guide-chevron { flex: none; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--r-fill-2); position: relative; }
+  .guide-chevron::before,
+  .guide-chevron::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    background: var(--r-ink-2);
+    transform: translate(-50%, -50%);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  .guide-chevron::before { width: 10px; height: 1.8px; }
+  .guide-chevron::after { width: 1.8px; height: 10px; }
+  .help-guide[open] .guide-chevron::after { transform: translate(-50%, -50%) scaleY(0); opacity: 0; }
+
+  .help-body { padding: 1.25rem 1.35rem 1.45rem; border-top: 1px solid var(--hairline); }
+  .guide-columns { display: flex; flex-direction: column; gap: 1.5rem; }
+  @media (min-width: 960px) {
+    .guide-columns { flex-direction: row; align-items: flex-start; }
+    .guide-instructions { flex: 1; min-width: 0; }
+    .guide-media { flex: 1.1; min-width: 0; }
+  }
+  .guide-steps { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+  .guide-steps li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 0.7rem 0.9rem;
+    border-radius: 12px;
+    background: var(--r-fill);
+    color: var(--r-ink-2);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .guide-steps li :global(strong), .guide-expect :global(strong), .guide-detail :global(strong) { color: var(--r-ink); }
+  .step-num {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: 50%;
+    background: var(--r-amber);
+    color: var(--r-on-amber);
+    font-size: 0.75rem;
+    font-weight: 800;
+  }
+  .guide-expect, .guide-note {
+    margin-top: 0.9rem;
+    padding: 0.8rem 0.95rem;
+    border-radius: 12px;
+    background: var(--r-fill-2);
+    color: var(--r-ink-2);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  .guide-note { background: transparent; padding: 0 0.2rem; font-size: 0.86rem; color: var(--r-ink-3); }
+  .guide-details-list { margin-top: 1rem; display: grid; gap: 0.5rem; }
+  .guide-detail { border-radius: 12px; border: 1px solid var(--hairline); background: var(--r-tile); }
+  .guide-detail summary {
+    cursor: pointer;
+    padding: 0.7rem 0.95rem;
+    font-size: 0.9rem;
+    font-weight: 650;
+    color: var(--r-ink);
+    border-radius: 12px;
+  }
+  .guide-detail p { padding: 0 0.95rem 0.75rem; color: var(--r-ink-2); font-size: 0.88rem; line-height: 1.5; overflow-wrap: anywhere; }
+  /* One link per line: a wrapping row would leave an odd one out. */
+  .guide-related { margin-top: 1.1rem; display: grid; gap: 0.35rem; font-size: 0.88rem; color: var(--r-ink-3); }
+  .guide-related ul { list-style: none; display: grid; gap: 0.3rem; }
+  .guide-related a { color: var(--r-amber-text); font-weight: 600; }
+  .guide-media { display: grid; gap: 0.9rem; }
+
+  @media (max-width: 640px) {
+    .help-summary { padding: 0.95rem 1rem; gap: 0.7rem; }
+    .guide-pill { display: none; }
+    .help-body { padding: 1rem 1rem 1.15rem; }
+  }
+</style>

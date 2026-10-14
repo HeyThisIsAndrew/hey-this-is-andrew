@@ -22,7 +22,7 @@ export const slotFiles = (s) => (s.kind === 'image'
 
 export function manifest() {
   const { slots } = JSON.parse(fs.readFileSync(path.join(root, 'src/data/screens.json'), 'utf8'));
-  const rows = slots.map((s) => `| \`${s.id}\` | ${s.kind} | ${s.themes.join(', ')} | ${s.width} × ${s.height} | \`${s.page}\` | ${s.title} | ${slotFiles(s).map((f) => `\`${f}\``).join(' ')} |`);
+  const rows = slots.map((s) => `| \`${s.id}\` | ${s.kind}${s.optional ? ' *optional*' : ''} | ${s.themes.join(', ')} | ${s.width} × ${s.height} | \`${s.page}\` | ${s.title} | ${slotFiles(s).map((f) => `\`${f}\``).join(' ')} |`);
   return `# Screenshot and screencast slots
 
 Generated from \`src/data/screens.json\` (the registry the pages and the audit read) by
@@ -34,6 +34,11 @@ page swaps them with the visitor's colour scheme. Screencasts are \`public/scree
 \`<id>.vtt\` English captions and \`<id>-poster.png\`. They never autoplay; no audio is needed.
 A slot renders the moment all of its files exist. Until then the page shows a "Screenshot to come" card, and
 \`npm run test\` lists it (\`REELAY_RELEASE=1\` makes it fatal).
+
+**Help Center videos** are the slots marked *optional* (\`help-tour-*\`, \`help-*\`): one per tour step and guide,
+written by \`npm run help -- <app checkout>\`, which also copies the app's help text and screenshots in. Record each
+from the demo profile following that guide's steps. A guide shows its video the moment the files exist; until then it
+shows nothing in its place, and the audit only counts them.
 
 | Slot id | Kind | Themes | Size (px) | Page | What it shows | Files |
 |---|---|---|---|---|---|---|
