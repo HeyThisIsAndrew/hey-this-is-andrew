@@ -2,11 +2,12 @@
 /**
  * BoardScene: a faithful rendering of Reelay's main window. Sidebar, the
  * four-column Board of media-first tickets with their coverage maps, and the
- * inspector with the player, readiness and a copy block. The layout follows
- * the real app (reelay/gui: main_window, board_page, inspector, player).
+ * side panel with the player, readiness, the Platforms choices and the
+ * Save Changes / Schedule dock. The layout follows the real app (reelay/gui:
+ * main_window, board_page, post_panel, ticket_widgets, player).
  *
  * Sized in em off one container-relative font-size, so the whole window
- * scales like a screenshot. On a phone the inspector is shown on its own,
+ * scales like a screenshot. On a phone the side panel is shown on its own,
  * large enough to read, instead of a shrunken desktop.
  */
 import AppWindow from './ui/AppWindow.astro';
@@ -16,28 +17,36 @@ import { DEMO_CARDS, OPEN_TICKET, CREATOR } from '../data/demo';
 import { STAGES, SITE } from '../data/site';
 
 const open = OPEN_TICKET.card;
-/* Readiness as the app checks it (readiness.py): platforms you post by
- * hand are "not checked" and never block. */
+/* Readiness as the app shows it (ticket_widgets._readiness_row): one compact
+ * row per platform. Platforms you post by hand count as ready and never block. */
 const readiness = [
-  { p: 'youtube', name: 'YouTube', state: 'ok', note: 'Title and description written' },
-  { p: 'threads', name: 'Threads', state: 'ok', note: 'Within 500' },
-  { p: 'tiktok', name: 'TikTok', state: 'skip', note: 'Not checked: you post it' },
-  { p: 'instagram', name: 'Instagram', state: 'skip', note: 'Not checked: you post it' },
-  { p: 'bluesky', name: 'Bluesky', state: 'skip', note: 'Not posting' },
+  { p: 'youtube', name: 'YouTube', state: 'ok', note: 'Ready to post' },
+  { p: 'threads', name: 'Threads', state: 'ok', note: 'Ready to post' },
+  { p: 'tiktok', name: 'TikTok', state: 'hand', note: 'Posted by hand' },
+  { p: 'instagram', name: 'Instagram', state: 'hand', note: 'Posted by hand' },
 ] as const;
-const captionLength = [...OPEN_TICKET.caption].length;
+const MARK = { ok: '✓', hand: '–', bad: '!' } as const;
+const ringPct = 100;
+/* The Platforms section (ticket_widgets.PlatformRow): one choice per platform. */
+const CHOICES = ['Not posting', 'Preparing', 'Scheduled', 'Posted'];
+const platformRows = [
+  { p: 'youtube', name: 'YouTube', choice: 'Preparing', note: 'Preparing: Reelay can post it for you (Schedule below)' },
+] as const;
 ---
 <div class="scale-stage">
   <div class="scene">
-    <AppWindow title="Reelay" label="Reelay's Board: four columns of video tickets, each with a coverage map, and an inspector showing the selected video, its readiness checklist and its TikTok caption.">
+    <AppWindow title="Reelay" label="Reelay's Board: four columns of video tickets, each with its platform logos and a status line, and the side panel showing the selected video, its readiness, where it is going and the Schedule button.">
       <div class="layout">
         <aside class="side">
           <div class="profile">
             <span class="avatar">{CREATOR.initials}</span>
-            <span class="pname">{CREATOR.name}</span>
+            <span class="pwho">
+              <span class="pname">{CREATOR.name}</span>
+              <span class="ptag">{CREATOR.tagline}</span>
+            </span>
           </div>
           <ul class="snav">
-            <li>Download</li>
+            <li>Library</li>
             <li class="on">Board</li>
             <li>Automations</li>
             <li>Accounts</li>
@@ -54,10 +63,14 @@ const captionLength = [...OPEN_TICKET.caption].length;
             <span class="bname">Board</span>
             <span class="search">
               <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5 14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-              Search captions, transcripts, tags
+              Search titles, captions and what was said
             </span>
-            <span class="bchip">Show: All</span>
-            <span class="bchip">All hashtags</span>
+            <span class="bbtn">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4h11M4.5 8h7M6.5 12h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              Filter
+            </span>
+            <span class="bicon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.8v2.6h-2.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="bicon" aria-hidden="true"><svg viewBox="0 0 16 16"><circle cx="3.5" cy="8" r="1.2" fill="currentColor"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="12.5" cy="8" r="1.2" fill="currentColor"/></svg></span>
           </header>
           <div class="cols">
             {STAGES.map((stage) => {
@@ -67,10 +80,14 @@ const captionLength = [...OPEN_TICKET.caption].length;
                   <div class="col-head"><span>{stage}</span><b>{cards.length}</b></div>
                   {cards.map((card) => (
                     <div class:list={['card', { selected: card.id === open.id }]}>
-                      <div class={`thumb still still--${card.still}`}><span class="len">{card.length}</span></div>
+                      <div class={`thumb still still--${card.still}`}>
+                        <span class="kind">{card.kind}</span>
+                        <span class="len">{card.length}</span>
+                      </div>
                       <div class="card-body">
                         <span class="ctitle">{card.title}</span>
-                        <Coverage coverage={card.coverage} class="ccov" />
+                        <span class="cmeta">{card.date} · {card.views} views</span>
+                        <Coverage coverage={card.coverage} brand class="ccov" />
                         <span class={`cstatus tone-${card.tone}`}>{card.status}</span>
                       </div>
                     </div>
@@ -82,33 +99,56 @@ const captionLength = [...OPEN_TICKET.caption].length;
         </section>
 
         <aside class="inspector">
-          <div class={`player still still--${open.still}`}>
-            <span class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg></span>
-            <div class="scrub"><i style="width:41%"></i></div>
-            <span class="time">0:09 / {open.length}</span>
-          </div>
-          <div class="ititle">
-            <span>{open.title}</span>
-            <span class="ready-badge">READY</span>
-          </div>
-          <div class="checks">
-            {readiness.map((r) => (
-              <div class:list={['check', `check--${r.state}`]}>
-                <PlatformIcon name={r.p} />
-                <span class="cname">{r.name}</span>
-                <span class="cnote">{r.note}</span>
-                <span class="cmark">{r.state === 'ok' ? '✓' : '–'}</span>
-              </div>
-            ))}
-          </div>
-          <div class="copyblock">
-            <div class="cb-head">
-              <PlatformIcon name="tiktok" />
-              <span>TikTok caption</span>
-              <span class="count">{captionLength} / 4,000</span>
+          <div class="ibody">
+            <div class={`player still still--${open.still}`}>
+              <span class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg></span>
+              <div class="scrub"><i style="width:41%"></i></div>
+              <span class="time">0:09 / {open.length}</span>
             </div>
-            <p class="cb-text">{OPEN_TICKET.caption}</p>
-            <span class="copy-btn">Copy</span>
+            <div class="ititle">
+              <span>{open.title}</span>
+              <span class="stage-pill">{open.stage}</span>
+            </div>
+            <span class="imeta">{open.kind} · {open.date} · {open.views} views</span>
+
+            <div class="ready">
+              <div class="ready-top">
+                <span class="ring" style={`--pct:${ringPct}`}><b>4/4</b></span>
+                <span class="rsum">Ready for YouTube, Threads, TikTok (by hand), Instagram (by hand).</span>
+              </div>
+              {readiness.map((r) => (
+                <div class="rrow">
+                  <PlatformIcon name={r.p} brand />
+                  <span class="rname">{r.name}</span>
+                  <span class="rnote">{r.note}</span>
+                  <span class={`rmark rmark--${r.state}`}>{MARK[r.state]}</span>
+                </div>
+              ))}
+            </div>
+
+            <div class="sect">
+              <div class="sect-h"><span>Platforms</span><em>4 preparing · 0 scheduled · 0 posted</em></div>
+              {platformRows.map((row) => (
+                <div class="prow">
+                  <div class="prow-top">
+                    <PlatformIcon name={row.p} brand />
+                    <b>{row.name}</b>
+                    <span>{row.note}</span>
+                  </div>
+                  <div class="seg">
+                    {CHOICES.map((c) => <span class:list={[{ on: c === row.choice }]}>{c}</span>)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div class="dock">
+            <span class="dock-sum">Goes live Tue 9:00 AM on YouTube, Threads.</span>
+            <div class="dock-btns">
+              <span class="dbtn">Save Changes</span>
+              <span class="dbtn dbtn--primary">Schedule</span>
+            </div>
           </div>
         </aside>
       </div>
@@ -121,6 +161,9 @@ const captionLength = [...OPEN_TICKET.caption].length;
   .scene {
     font-size: calc(100cqw / 76);
     --cov-ok: var(--app-ok); --cov-info: var(--app-info); --cov-warn: var(--app-warn); --cov-bad: var(--app-bad);
+    --cov-ring: var(--app-surface);
+    /* The Board's recessed column wells and raised cards (theme.bg_well, card_fill). */
+    --well: color-mix(in srgb, var(--app-ink) 5%, var(--app-bg));
   }
   .layout {
     display: grid;
@@ -132,9 +175,11 @@ const captionLength = [...OPEN_TICKET.caption].length;
 
   /* Sidebar */
   .side { display: flex; flex-direction: column; padding: 1em 0.7em; background: var(--app-bg); box-shadow: inset -0.0625em 0 0 var(--app-border); }
-  .profile { display: flex; align-items: center; gap: 0.6em; padding: 0.2em 0.4em 1em; }
-  .avatar { display: grid; place-items: center; width: 1.9em; height: 1.9em; border-radius: 50%; background: linear-gradient(135deg, #f5c56b, #d9653b); color: #1a0f04; font-size: 0.72em; font-weight: 700; }
-  .pname { font-size: 0.82em; font-weight: 600; }
+  .profile { display: flex; align-items: center; gap: 0.6em; padding: 0.2em 0.4em 1em; min-width: 0; }
+  .avatar { flex: none; display: grid; place-items: center; width: 1.9em; height: 1.9em; border-radius: 50%; background: linear-gradient(135deg, #f5c56b, #d9653b); color: #1a0f04; font-size: 0.72em; font-weight: 700; }
+  .pwho { display: grid; min-width: 0; }
+  .pname { font-size: 0.82em; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ptag { font-size: 0.66em; color: var(--app-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .snav { list-style: none; display: grid; gap: 0.15em; }
   .snav li { font-size: 0.82em; padding: 0.55em 0.75em; border-radius: 0.55em; color: var(--app-ink-2); }
   .snav li.on { background: var(--app-hover); color: var(--app-ink); font-weight: 600; }
@@ -143,61 +188,87 @@ const captionLength = [...OPEN_TICKET.caption].length;
 
   /* Board */
   .board { display: flex; flex-direction: column; min-width: 0; padding: 0.9em 1em 0; }
-  .bhead { display: flex; align-items: center; gap: 0.6em; margin-bottom: 0.9em; }
+  .bhead { display: flex; align-items: center; gap: 0.5em; margin-bottom: 0.9em; }
   .bname { font-size: 1.15em; font-weight: 700; letter-spacing: -0.02em; margin-right: 0.4em; }
   .search { flex: 1; display: flex; align-items: center; gap: 0.5em; height: 2.1em; padding: 0 0.75em; border-radius: 0.6em; background: var(--app-raised); box-shadow: inset 0 0 0 0.0625em var(--app-border); font-size: 0.74em; color: var(--app-muted); white-space: nowrap; overflow: hidden; }
   .search svg { width: 1em; height: 1em; flex: none; }
-  .bchip { font-size: 0.72em; padding: 0.5em 0.8em; border-radius: 0.6em; background: var(--app-raised); box-shadow: inset 0 0 0 0.0625em var(--app-border); color: var(--app-ink-2); white-space: nowrap; }
+  .bbtn { display: inline-flex; align-items: center; gap: 0.45em; font-size: 0.72em; font-weight: 600; padding: 0.5em 0.85em; border-radius: 0.6em; background: var(--app-raised); box-shadow: inset 0 0 0 0.0625em var(--app-border); color: var(--app-ink); white-space: nowrap; }
+  .bbtn svg { width: 1em; height: 1em; }
+  .bicon { display: grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 0.45em; color: var(--app-ink-2); }
+  .bicon svg { width: 0.85em; height: 0.85em; }
   .cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.7em; flex: 1; min-height: 0; }
-  .col { display: flex; flex-direction: column; gap: 0.6em; padding: 0.55em; border-radius: 0.8em 0.8em 0 0; background: color-mix(in srgb, var(--app-ink) 4%, transparent); min-width: 0; overflow: hidden; }
-  .col-head { display: flex; justify-content: space-between; align-items: center; padding: 0.15em 0.25em 0.2em; font-size: 0.74em; font-weight: 600; color: var(--app-ink); }
-  .col-head b { font-weight: 600; color: var(--app-muted); }
-  .card { border-radius: 0.7em; background: var(--app-surface); overflow: hidden; box-shadow: 0 0 0 0.0625em var(--app-border), 0 0.3em 0.9em rgba(0, 0, 0, 0.12); }
+  .col { display: flex; flex-direction: column; gap: 0.6em; padding: 0.55em; border-radius: 0.875em 0.875em 0 0; background: var(--well); box-shadow: inset 0 0 0 0.0625em var(--app-border); min-width: 0; overflow: hidden; }
+  .col-head { display: flex; justify-content: space-between; align-items: center; padding: 0.15em 0.25em 0.2em; font-size: 0.74em; font-weight: 600; color: var(--app-ink-2); }
+  .col-head b { font-size: 0.85em; font-weight: 600; color: var(--app-ink-2); padding: 0.05em 0.6em; border-radius: 1em; background: var(--app-surface); box-shadow: inset 0 0 0 0.0625em var(--app-border); }
+  .card { flex: none; border-radius: 0.875em; background: var(--app-surface); overflow: hidden; box-shadow: 0 0 0 0.0625em var(--app-border), 0 0.0625em 0 rgba(0, 0, 0, 0.08); }
   .card.selected { box-shadow: 0 0 0 0.14em var(--app-accent), 0 0.6em 2em rgba(0, 0, 0, 0.2); }
-  .thumb { aspect-ratio: 16 / 9.5; }
-  .len { position: absolute; z-index: 1; right: 0.45em; bottom: 0.4em; font-size: 0.6em; font-weight: 600; padding: 0.15em 0.4em; border-radius: 0.35em; background: rgba(0, 0, 0, 0.6); color: #fff; }
-  .card-body { display: grid; gap: 0.45em; padding: 0.55em 0.6em 0.65em; }
+  .thumb { aspect-ratio: 16 / 9; }
+  .kind, .len { position: absolute; z-index: 1; font-size: 0.56em; font-weight: 700; padding: 0.18em 0.45em; border-radius: 0.35em; background: rgba(0, 0, 0, 0.6); color: #fff; white-space: nowrap; }
+  .kind { left: 0.45em; top: 0.4em; }
+  .len { right: 0.45em; bottom: 0.4em; }
+  .card-body { display: grid; gap: 0.4em; padding: 0.55em 0.6em 0.65em; }
   .ctitle { font-size: 0.7em; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .card-body :global(.ccov) { font-size: 0.72em; }
+  .cmeta { font-size: 0.58em; color: var(--app-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-body :global(.ccov) { font-size: 0.72em; padding: 0.15em 0 0.1em; }
   .cstatus { font-size: 0.6em; color: var(--app-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tone-needs { color: var(--app-bad); }
-  .tone-ready { color: var(--app-warn); }
-  .tone-sched { color: var(--app-info); }
+  .tone-ready { color: var(--app-ink-2); }
+  .tone-muted { color: var(--app-muted); }
+  .tone-sched { color: var(--app-ink); }
   .tone-live { color: var(--app-ok); }
 
-  /* Inspector: the Command Center */
-  .inspector { display: flex; flex-direction: column; gap: 0.8em; padding: 0.9em; background: var(--app-surface); box-shadow: inset 0.0625em 0 0 var(--app-border); min-width: 0; }
-  .player { position: relative; height: 16.5em; border-radius: 0.7em; }
-  .play { position: absolute; z-index: 2; left: 50%; top: 45%; display: grid; place-items: center; width: 3em; height: 3em; margin: -1.5em 0 0 -1.5em; border-radius: 50%; background: rgba(255, 255, 255, 0.22); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: #fff; }
-  .play svg { width: 1.3em; height: 1.3em; margin-left: 0.15em; }
+  /* Side panel: the ticket */
+  .inspector { display: flex; flex-direction: column; background: var(--app-surface); box-shadow: inset 0.0625em 0 0 var(--app-border); min-width: 0; min-height: 0; }
+  .ibody { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 0.7em; padding: 0.9em 0.9em 0.4em; }
+  .player { flex: none; position: relative; height: 11.5em; border-radius: 0.7em; }
+  .play { position: absolute; z-index: 2; left: 50%; top: 45%; display: grid; place-items: center; width: 2.6em; height: 2.6em; margin: -1.3em 0 0 -1.3em; border-radius: 50%; background: rgba(255, 255, 255, 0.22); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: #fff; }
+  .play svg { width: 1.2em; height: 1.2em; margin-left: 0.15em; }
   .scrub { position: absolute; z-index: 2; left: 0.8em; right: 0.8em; bottom: 2em; height: 0.25em; border-radius: 1em; background: rgba(255, 255, 255, 0.25); }
   .scrub i { display: block; height: 100%; border-radius: inherit; background: #fff; position: relative; }
   .scrub i::after { content: ''; position: absolute; right: -0.4em; top: 50%; width: 0.8em; height: 0.8em; margin-top: -0.4em; border-radius: 50%; background: #fff; box-shadow: 0 0 0.6em rgba(0, 0, 0, 0.5); }
   .time { position: absolute; z-index: 2; left: 0.8em; bottom: 0.6em; font-size: 0.66em; font-weight: 600; font-variant-numeric: tabular-nums; color: #fff; }
-  .ititle { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.6em; }
-  .ititle > span:first-child { font-size: 0.92em; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
-  .ready-badge { flex: none; font-size: 0.58em; font-weight: 800; letter-spacing: 0.08em; padding: 0.35em 0.6em; border-radius: 0.4em; background: color-mix(in srgb, var(--app-ok) 18%, transparent); color: var(--app-ok); }
-  .checks { display: grid; gap: 0.1em; padding: 0.4em 0.55em; border-radius: 0.7em; background: var(--app-raised); }
-  .check { display: grid; grid-template-columns: 1.1em 4.6em minmax(0, 1fr) 1em; align-items: center; gap: 0.5em; padding: 0.38em 0; font-size: 0.68em; }
-  .check + .check { box-shadow: inset 0 0.0625em 0 var(--app-border); }
-  .check :global(svg) { width: 1.05em; height: 1.05em; color: var(--app-ink-2); }
-  .cname { font-weight: 600; }
-  .cnote { color: var(--app-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .cmark { text-align: right; color: var(--app-ok); font-weight: 700; }
-  .check--skip { opacity: 0.6; }
-  .check--skip .cmark { color: var(--app-ink-2); }
-  .copyblock { position: relative; padding: 0.7em 0.75em 0.8em; border-radius: 0.7em; background: var(--app-raised); }
-  .cb-head { display: flex; align-items: center; gap: 0.45em; font-size: 0.68em; font-weight: 600; margin-bottom: 0.5em; }
-  .cb-head :global(svg) { width: 1.05em; height: 1.05em; }
-  .count { margin-left: auto; color: var(--app-ok); font-variant-numeric: tabular-nums; font-weight: 500; }
-  .cb-text { font-size: 0.66em; line-height: 1.45; color: var(--app-ink-2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .copy-btn { display: inline-block; margin-top: 0.6em; font-size: 0.62em; font-weight: 600; padding: 0.4em 0.9em; border-radius: 0.5em; background: var(--app-accent); color: var(--app-on-accent); }
+  .ititle { display: flex; align-items: center; justify-content: space-between; gap: 0.6em; margin-bottom: -0.45em; }
+  .ititle > span:first-child { font-size: 0.92em; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stage-pill { flex: none; font-size: 0.58em; font-weight: 600; padding: 0.25em 0.75em; border-radius: 1em; background: var(--app-raised); box-shadow: inset 0 0 0 0.0625em var(--app-border); color: var(--app-ink-2); }
+  .imeta { font-size: 0.62em; color: var(--app-muted); }
 
-  /* Phone: the inspector on its own, readable, like a cropped close-up. */
+  .ready { display: grid; gap: 0.25em; }
+  .ready-top { display: flex; align-items: center; gap: 0.6em; margin-bottom: 0.2em; }
+  .ring { flex: none; position: relative; display: grid; place-items: center; width: 2.4em; height: 2.4em; border-radius: 50%; background: conic-gradient(var(--app-ok) calc(var(--pct) * 1%), var(--app-border) 0); }
+  .ring::before { content: ''; position: absolute; inset: 0.22em; border-radius: 50%; background: var(--app-surface); }
+  .ring b { position: relative; font-size: 0.6em; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rsum { font-size: 0.6em; line-height: 1.35; color: var(--app-ink-2); }
+  .rrow { display: grid; grid-template-columns: 0.9em 5em minmax(0, 1fr) 0.8em; align-items: center; gap: 0.55em; padding: 0.42em 0.7em 0.42em 0.55em; border-radius: 0.5em; background: var(--app-raised); font-size: 0.64em; }
+  .rrow :global(svg) { width: 0.9em; height: 0.9em; }
+  .rname { font-weight: 600; }
+  .rnote { color: var(--app-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rmark { text-align: right; font-weight: 700; }
+  .rmark--ok { color: var(--app-ok); }
+  .rmark--hand { color: var(--app-muted); }
+  .rmark--bad { color: var(--app-bad); }
+
+  .sect { display: grid; gap: 0.5em; }
+  .sect-h { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6em; font-size: 0.68em; font-weight: 600; color: var(--app-ink-2); }
+  .sect-h em { font-style: normal; font-weight: 400; font-size: 0.9em; color: var(--app-muted); white-space: nowrap; }
+  .prow { display: grid; gap: 0.35em; }
+  .prow-top { display: flex; align-items: center; gap: 0.5em; font-size: 0.64em; min-width: 0; }
+  .prow-top :global(svg) { flex: none; width: 1.15em; height: 1.15em; }
+  .prow-top span { color: var(--app-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .seg { display: flex; padding: 0.15em; border-radius: 0.55em; background: var(--app-raised); box-shadow: inset 0 0 0 0.0625em var(--app-border); }
+  .seg span { flex: 1; text-align: center; font-size: 0.56em; font-weight: 600; padding: 0.45em 0.2em; border-radius: 0.45em; color: var(--app-ink-2); white-space: nowrap; }
+  .seg span.on { background: var(--app-surface); color: var(--app-ink); box-shadow: 0 0 0 0.0625em var(--app-border), 0 0.0625em 0.2em rgba(0, 0, 0, 0.15); }
+
+  .dock { flex: none; display: grid; gap: 0.5em; padding: 0.7em 0.9em 0.85em; box-shadow: inset 0 0.0625em 0 var(--app-border); background: var(--app-surface); }
+  .dock-sum { font-size: 0.6em; color: var(--app-ink-2); }
+  .dock-btns { display: flex; justify-content: flex-end; gap: 0.5em; }
+  .dbtn { font-size: 0.64em; font-weight: 600; padding: 0.5em 1em; border-radius: 0.55em; background: var(--app-raised); box-shadow: inset 0 0 0 0.0625em var(--app-border); color: var(--app-ink); }
+  .dbtn--primary { background: var(--app-accent); color: var(--app-on-accent); box-shadow: none; }
+
+  /* Phone: the side panel on its own, readable, like a cropped close-up. */
   @container (max-width: 620px) {
     .scene { font-size: calc(100cqw / 21); }
     .layout { grid-template-columns: minmax(0, 1fr); height: auto; }
     .side, .board { display: none; }
-    .player { height: 22em; }
+    .player { height: 18em; }
   }
 </style>

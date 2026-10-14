@@ -1,56 +1,78 @@
 ---
 /**
- * CommandCenterScene: the Board's side panel (reelay/gui/board_page.py,
- * help.md "Watching videos and the Command Center"): the video on top, the
- * readiness ring (how many of the platforms it's going to are ready), the
- * platforms, the captions, and Schedule pinned at the bottom with one line
- * saying exactly what will happen.
+ * CommandCenterScene: the Board's side panel (reelay/gui/post_panel.py,
+ * ticket_widgets.py): the video on top, the readiness ring (how many of the
+ * platforms it's going to are ready, posted-by-hand ones included) over one
+ * compact row per platform, the Platforms choice (Not posting · Preparing ·
+ * Scheduled · Posted), the caption, and Save Changes / Schedule pinned at the
+ * bottom with one line saying exactly what will happen.
  */
 import PlatformIcon from './ui/PlatformIcon.astro';
 import { OPEN_TICKET } from '../data/demo';
 
 const card = OPEN_TICKET.card;
-/* Hand-posted platforms are "not checked" and never block (readiness.py). */
+/* ticket_widgets._readiness_row: ✓ ready, – posted by hand, ! blocking (its first problem as the note). */
 const platforms = [
-  { p: 'youtube', name: 'YouTube', state: 'Ready', how: 'Uploads and schedules', tone: 'ok' },
-  { p: 'threads', name: 'Threads', state: 'Ready', how: 'Posts at the time (turned on)', tone: 'ok' },
-  { p: 'facebook', name: 'Facebook', state: 'Needs its text', how: 'Facebook schedules it (turned on)', tone: 'bad' },
-  { p: 'tiktok', name: 'TikTok', state: 'Not checked', how: 'You post it', tone: 'skip' },
+  { p: 'youtube', name: 'YouTube', note: 'Ready to post', tone: 'ok' },
+  { p: 'threads', name: 'Threads', note: 'Ready to post', tone: 'ok' },
+  { p: 'facebook', name: 'Facebook', note: 'Write the Facebook text', tone: 'bad' },
+  { p: 'tiktok', name: 'TikTok', note: 'Posted by hand', tone: 'hand' },
 ] as const;
-const checked = platforms.filter((p) => p.tone !== 'skip');
-const ready = checked.filter((p) => p.tone === 'ok').length;
+const MARK = { ok: '✓', hand: '–', bad: '!' } as const;
+const ready = platforms.filter((p) => p.tone !== 'bad').length;
+const total = platforms.length;
 const C = 2 * Math.PI * 15.5;
+const CHOICES = ['Not posting', 'Preparing', 'Scheduled', 'Posted'];
 ---
-<div class="ccs" role="img" aria-label={`The Command Center: ${card.title} playing above a readiness ring showing ${ready} of ${checked.length} checked platforms ready, the platforms, the caption and a Schedule button.`}>
+<div class="ccs" role="img" aria-label={`The side panel: ${card.title} playing above a readiness ring showing ${ready} of ${total} platforms ready, a row per platform, the Platforms choice, the caption, and Save Changes and Schedule buttons.`}>
   <div class="cc-panel">
     <div class={`cc-video still still--${card.still}`}>
       <span class="cc-play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg></span>
       <span class="cc-time">0:09 / {card.length}</span>
     </div>
+    <div class="cc-titlebar">
+      <strong>{card.title}</strong>
+      <span class="cc-stage">{card.stage}</span>
+    </div>
     <div class="cc-head">
       <svg class="ring" viewBox="0 0 36 36" aria-hidden="true">
         <circle cx="18" cy="18" r="15.5" class="ring-bg" />
-        <circle cx="18" cy="18" r="15.5" class="ring-fg" stroke-dasharray={`${(ready / checked.length) * C} ${C}`} />
-        <text x="18" y="21.5" text-anchor="middle">{ready}/{checked.length}</text>
+        <circle cx="18" cy="18" r="15.5" class="ring-fg" stroke-dasharray={`${(ready / total) * C} ${C}`} />
+        <text x="18" y="21.5" text-anchor="middle">{ready}/{total}</text>
       </svg>
-      <span class="cc-title"><strong>{card.title}</strong><small>{ready} of {checked.length} platforms ready</small></span>
+      <span class="cc-sum">Ready for YouTube, Threads, TikTok (by hand). Not ready for Facebook.</span>
     </div>
     <ul class="cc-pfs">
       {platforms.map((p) => (
         <li>
-          <PlatformIcon name={p.p} />
-          <span class="n">{p.name}<small>{p.how}</small></span>
-          <span class={`st st--${p.tone}`}>{p.tone === 'ok' ? '✓ ' : p.tone === 'bad' ? '! ' : ''}{p.state}</span>
+          <PlatformIcon name={p.p} brand />
+          <span class="n">{p.name}</span>
+          <span class="note">{p.note}</span>
+          <span class={`mk mk--${p.tone}`}>{MARK[p.tone]}</span>
         </li>
       ))}
     </ul>
-    <div class="cc-copy">
-      <span class="cc-copy-h"><PlatformIcon name="tiktok" /> TikTok caption <em>124 / 4,000</em></span>
-      <p>{OPEN_TICKET.caption}</p>
+    <div class="cc-sect">
+      <span class="cc-sect-h">Platforms <em>4 preparing · 0 scheduled · 0 posted</em></span>
+      <div class="cc-prow">
+        <PlatformIcon name="youtube" brand />
+        <b>YouTube</b>
+        <span>Preparing: Reelay can post it for you (Schedule below)</span>
+      </div>
+      <div class="cc-seg">
+        {CHOICES.map((c) => <span class:list={[{ on: c === 'Preparing' }]}>{c}</span>)}
+      </div>
     </div>
-    <div class="cc-schedule">
-      <span class="cc-btn">Schedule</span>
-      <span class="cc-what">Uploads to YouTube now; YouTube publishes it Tue 9:00 AM. Threads posts at 9:00 AM. Facebook needs its text first. TikTok: post it yourself.</span>
+    <div class="cc-copy">
+      <span class="cc-copy-h">Caption <em>124 / 4,000</em></span>
+      <div class="cc-box"><p>{OPEN_TICKET.caption}</p></div>
+    </div>
+    <div class="cc-dock">
+      <span class="cc-what">Goes live Tue 9:00 AM on YouTube, Threads.</span>
+      <div class="cc-btns">
+        <span class="cc-btn">Save Changes</span>
+        <span class="cc-btn cc-btn--primary">Schedule</span>
+      </div>
     </div>
   </div>
 </div>
@@ -60,7 +82,7 @@ const C = 2 * Math.PI * 15.5;
   .cc-panel {
     width: min(100%, 420px);
     display: grid;
-    gap: 0.9rem;
+    gap: 0.85rem;
     padding: 1rem;
     border-radius: 22px;
     background: var(--app-surface);
@@ -68,35 +90,44 @@ const C = 2 * Math.PI * 15.5;
     box-shadow: var(--app-frame);
     font-size: 0.9rem;
   }
-  .cc-video { position: relative; aspect-ratio: 9 / 11; border-radius: 14px; }
+  .cc-video { position: relative; aspect-ratio: 9 / 10; border-radius: 14px; }
   .cc-play { position: absolute; z-index: 2; left: 50%; top: 46%; display: grid; place-items: center; width: 3.4rem; height: 3.4rem; margin: -1.7rem 0 0 -1.7rem; border-radius: 50%; background: rgba(255, 255, 255, 0.22); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: #fff; }
   .cc-play svg { width: 1.4rem; height: 1.4rem; margin-left: 0.15rem; }
   .cc-time { position: absolute; z-index: 2; left: 0.8rem; bottom: 0.7rem; font-size: 0.75rem; font-weight: 600; color: #fff; }
+  .cc-titlebar { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+  .cc-titlebar strong { font-size: 1.05rem; letter-spacing: -0.02em; color: var(--app-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cc-stage { flex: none; font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.65rem; border-radius: 999px; background: var(--app-raised); box-shadow: inset 0 0 0 1px var(--app-border); color: var(--app-ink-2); }
   .cc-head { display: flex; align-items: center; gap: 0.8rem; }
-  .ring { width: 3.2rem; height: 3.2rem; flex: none; transform: rotate(-90deg); }
+  .ring { width: 3rem; height: 3rem; flex: none; transform: rotate(-90deg); }
   .ring circle { fill: none; stroke-width: 3.5; }
   .ring-bg { stroke: var(--app-raised); }
   .ring-fg { stroke: var(--app-ok); stroke-linecap: round; }
   .ring text { transform: rotate(90deg); transform-origin: 18px 18px; font-size: 9px; font-weight: 700; fill: var(--app-ink); font-family: var(--font-body); }
-  .cc-title { display: grid; gap: 0.15rem; }
-  .cc-title strong { font-size: 1.05rem; letter-spacing: -0.02em; color: var(--app-ink); }
-  .cc-title small { font-size: 0.8rem; color: var(--app-ink-2); }
-  .cc-pfs { list-style: none; display: grid; padding: 0.3rem 0.75rem; border-radius: 12px; background: var(--app-raised); }
-  .cc-pfs li { display: grid; grid-template-columns: 1.2rem minmax(0, 1fr) auto; align-items: center; gap: 0.6rem; padding: 0.55rem 0; }
-  .cc-pfs li + li { box-shadow: inset 0 1px 0 var(--app-border); }
-  .cc-pfs :global(svg) { width: 1.1rem; height: 1.1rem; color: var(--app-ink-2); }
-  .n { font-weight: 600; font-size: 0.86rem; display: grid; }
-  .n small { font-weight: 400; font-size: 0.74rem; color: var(--app-ink-2); }
-  .st { font-size: 0.78rem; font-weight: 600; text-align: right; }
-  .st--ok { color: var(--app-ok); }
-  .st--bad { color: var(--app-bad); }
-  .st--skip { color: var(--app-muted); font-weight: 500; }
-  .cc-copy { padding: 0.75rem; border-radius: 12px; background: var(--app-raised); }
-  .cc-copy-h { display: flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; font-weight: 600; }
-  .cc-copy-h :global(svg) { width: 1rem; height: 1rem; }
-  .cc-copy-h em { margin-left: auto; font-style: normal; font-weight: 500; color: var(--app-ok); }
-  .cc-copy p { margin-top: 0.4rem; font-size: 0.8rem; line-height: 1.45; color: var(--app-ink-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .cc-schedule { display: grid; gap: 0.5rem; padding-top: 0.8rem; box-shadow: inset 0 1px 0 var(--app-border); }
-  .cc-btn { justify-self: stretch; text-align: center; padding: 0.65rem; border-radius: 10px; background: var(--app-accent); color: var(--app-on-accent); font-weight: 700; }
+  .cc-sum { font-size: 0.8rem; line-height: 1.4; color: var(--app-ink-2); }
+  .cc-pfs { list-style: none; display: grid; gap: 0.3rem; }
+  .cc-pfs li { display: grid; grid-template-columns: 1rem 5.2rem minmax(0, 1fr) 0.8rem; align-items: center; gap: 0.6rem; padding: 0.45rem 0.8rem 0.45rem 0.65rem; border-radius: 9px; background: var(--app-raised); font-size: 0.82rem; }
+  .cc-pfs :global(svg) { width: 1rem; height: 1rem; }
+  .n { font-weight: 600; }
+  .note { color: var(--app-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mk { text-align: right; font-weight: 700; }
+  .mk--ok { color: var(--app-ok); }
+  .mk--bad { color: var(--app-bad); }
+  .mk--hand { color: var(--app-muted); }
+  .cc-sect { display: grid; gap: 0.5rem; }
+  .cc-sect-h, .cc-copy-h { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; font-size: 0.82rem; font-weight: 600; color: var(--app-ink-2); }
+  .cc-sect-h em, .cc-copy-h em { font-style: normal; font-weight: 400; font-size: 0.76rem; color: var(--app-muted); }
+  .cc-prow { display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; min-width: 0; }
+  .cc-prow :global(svg) { flex: none; width: 1.15rem; height: 1.15rem; }
+  .cc-prow span { color: var(--app-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.78rem; }
+  .cc-seg { display: flex; padding: 3px; border-radius: 10px; background: var(--app-raised); box-shadow: inset 0 0 0 1px var(--app-border); }
+  .cc-seg span { flex: 1; text-align: center; font-size: 0.74rem; font-weight: 600; padding: 0.4rem 0.2rem; border-radius: 8px; color: var(--app-ink-2); white-space: nowrap; }
+  .cc-seg span.on { background: var(--app-surface); color: var(--app-ink); box-shadow: 0 0 0 1px var(--app-border), 0 1px 3px rgba(0, 0, 0, 0.15); }
+  .cc-copy { display: grid; gap: 0.4rem; }
+  .cc-box { padding: 0.6rem 0.75rem; border-radius: 10px; background: var(--app-raised); }
+  .cc-copy p { font-size: 0.8rem; line-height: 1.45; color: var(--app-ink-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .cc-dock { display: grid; gap: 0.55rem; padding-top: 0.8rem; box-shadow: inset 0 1px 0 var(--app-border); }
   .cc-what { font-size: 0.78rem; line-height: 1.4; color: var(--app-ink-2); }
+  .cc-btns { display: flex; justify-content: flex-end; gap: 0.5rem; }
+  .cc-btn { text-align: center; padding: 0.55rem 1rem; border-radius: 10px; background: var(--app-raised); box-shadow: inset 0 0 0 1px var(--app-border); color: var(--app-ink); font-weight: 600; font-size: 0.84rem; }
+  .cc-btn--primary { background: var(--app-accent); color: var(--app-on-accent); box-shadow: none; font-weight: 700; }
 </style>

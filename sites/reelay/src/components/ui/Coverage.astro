@@ -3,6 +3,11 @@
  * The coverage map every ticket shows: all six platforms in the app's fixed
  * order, coloured by state (coverage.py): published, scheduled, ready,
  * needs work, or faint for "not going there".
+ *
+ * brand: the app's own look (board_page._draw_platforms): each platform's
+ * official colour mark with a small status badge in its corner (green ✓
+ * published, blue clock scheduled, amber dot ready, red ! needs work), and a
+ * faint mark with no badge where the video isn't going.
  */
 import PlatformIcon from './PlatformIcon.astro';
 import { PLATFORM_ORDER, type Cover, type PlatformKey } from '../../data/demo';
@@ -10,19 +15,39 @@ import { PLATFORM_ORDER, type Cover, type PlatformKey } from '../../data/demo';
 interface Props {
   coverage: Record<PlatformKey, Cover>;
   class?: string;
+  brand?: boolean;
 }
-const { coverage, class: cls } = Astro.props;
+const { coverage, class: cls, brand = false } = Astro.props;
 const labels: Record<Cover, string> = {
   live: 'published', sched: 'scheduled', ready: 'ready to publish', needs: 'needs work', off: 'not going',
 };
 ---
-<span class:list={['coverage', cls]}>
-  {PLATFORM_ORDER.map((p) => (
-    <span class={`cv cv--${coverage[p]}`} title={`${p}: ${labels[coverage[p]]}`}>
-      <PlatformIcon name={p} />
-    </span>
-  ))}
-</span>
+{brand ? (
+  <span class:list={['coverage', 'coverage--brand', cls]}>
+    {PLATFORM_ORDER.map((p) => (
+      <span class={`cvb cvb--${coverage[p]}`} title={`${p}: ${labels[coverage[p]]}`}>
+        <PlatformIcon name={p} brand />
+        {coverage[p] !== 'off' && (
+          <i class="cvb-badge" aria-hidden="true">
+            <svg viewBox="0 0 12 12">
+              {coverage[p] === 'live' && <path d="M3.4 6.1l1.9 1.9 3.4-4" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />}
+              {coverage[p] === 'sched' && <path d="M6 6V3.2M6 6h2.2" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" />}
+              {coverage[p] === 'needs' && <path d="M6 3.2v3.4M6 8.6v.01" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" />}
+            </svg>
+          </i>
+        )}
+      </span>
+    ))}
+  </span>
+) : (
+  <span class:list={['coverage', cls]}>
+    {PLATFORM_ORDER.map((p) => (
+      <span class={`cv cv--${coverage[p]}`} title={`${p}: ${labels[coverage[p]]}`}>
+        <PlatformIcon name={p} />
+      </span>
+    ))}
+  </span>
+)}
 
 <style>
   .coverage { display: inline-flex; gap: 0.32em; align-items: center; }
@@ -41,4 +66,19 @@ const labels: Record<Cover, string> = {
   .cv--ready { color: var(--cov-warn, var(--r-warn)); background: color-mix(in srgb, var(--cov-warn, var(--r-warn)) 15%, transparent); }
   .cv--needs { color: var(--cov-bad, var(--r-bad)); background: color-mix(in srgb, var(--cov-bad, var(--r-bad)) 15%, transparent); }
   .cv--off { color: var(--r-ink-4); opacity: 0.4; }
+
+  .coverage--brand { gap: 0.55em; }
+  .cvb { position: relative; display: inline-grid; place-items: center; width: 1.25em; height: 1.25em; }
+  .cvb :global(svg.pf-icon) { width: 100%; height: 100%; }
+  .cvb--off :global(svg.pf-icon) { opacity: 0.22; }
+  .cvb-badge {
+    position: absolute; right: -0.25em; bottom: -0.25em;
+    display: grid; place-items: center; width: 0.72em; height: 0.72em; border-radius: 50%;
+    box-shadow: 0 0 0 0.1em var(--cov-ring, var(--app-raised, #302f2d));
+  }
+  .cvb-badge svg { width: 100%; height: 100%; }
+  .cvb--live .cvb-badge { background: var(--cov-ok, var(--r-ok)); }
+  .cvb--sched .cvb-badge { background: var(--cov-info, var(--r-info)); }
+  .cvb--ready .cvb-badge { background: var(--cov-warn, var(--r-warn)); }
+  .cvb--needs .cvb-badge { background: var(--cov-bad, var(--r-bad)); }
 </style>

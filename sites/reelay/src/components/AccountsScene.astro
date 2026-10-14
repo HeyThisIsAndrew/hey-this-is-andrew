@@ -10,6 +10,10 @@
  * note, so it is a full-width strip under the grid rather than a seventh
  * card (seven is what made the app's grid 3-3-1). Cards stretch to the
  * tallest in the grid and pin their action to the bottom edge.
+ *
+ * Each card's name has a small "?" (Learn more) beside it, and a card with an
+ * account attached shows "Manage…" on its account line (accounts_page.py
+ * account_line).
  */
 import AppWindow from './ui/AppWindow.astro';
 import PlatformIcon from './ui/PlatformIcon.astro';
@@ -38,11 +42,11 @@ const total = cards.length;
           {cards.map((c) => (
             <div class="acard">
               <div class="ac-top">
-                <PlatformIcon name={c.key} />
-                <span class="ac-names"><b>{c.name}</b><span class="ac-mode">{c.mode}</span></span>
+                <PlatformIcon name={c.key} brand />
+                <span class="ac-names"><span class="ac-title"><b>{c.name}</b><span class="ac-help" aria-hidden="true">?</span></span><span class="ac-mode">{c.mode}</span></span>
                 <span class={`pill pill--${c.tone}`}>{c.status}</span>
               </div>
-              <p class="ac-line">{c.line}</p>
+              <p class="ac-line"><span>{c.line}</span>{c.tone !== 'off' && <span class="ac-link">Manage…</span>}</p>
               <div class="ac-foot">
                 <span class:list={['ac-btn', { primary: c.action.startsWith('Sign in') || c.action.startsWith('Connect') }]}>{c.action}</span>
                 {'extra' in c && <span class="ac-more">{c.extra}…</span>}
@@ -51,7 +55,7 @@ const total = cards.length;
           ))}
         </div>
         <div class="astrip">
-          <span class="snap" aria-hidden="true">S</span>
+          <PlatformIcon name="snapchat" brand />
           <b>Snapchat</b>
           <span class="pill pill--off">Posted by hand</span>
           <span class="astrip-line">Copy the caption from a ticket and post Spotlight from the Snapchat app.</span>
@@ -81,7 +85,11 @@ const total = cards.length;
   .pill--ok { background: color-mix(in srgb, var(--app-ok) 18%, transparent); color: var(--app-ok); }
   .pill--warn { background: color-mix(in srgb, var(--app-warn) 18%, transparent); color: var(--app-warn); }
   .pill--off { background: var(--app-raised); color: var(--app-ink-2); }
-  .ac-line { font-size: 0.7em; color: var(--app-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ac-title { display: flex; align-items: center; gap: 0.35em; min-width: 0; }
+  .ac-help { display: inline-grid; place-items: center; flex: none; width: 1.25em; height: 1.25em; border-radius: 50%; font-size: 0.6em; font-weight: 700; color: var(--app-muted); box-shadow: inset 0 0 0 0.1em var(--app-border); }
+  .ac-line { display: flex; gap: 0.7em; min-width: 0; font-size: 0.7em; color: var(--app-ink-2); white-space: nowrap; }
+  .ac-line > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .ac-link { flex: none; color: var(--app-info); font-weight: 600; }
   /* The action sits on the card's bottom edge, so a row of cards lines up. */
   .ac-foot { margin-top: auto; display: flex; align-items: center; gap: 0.8em; padding-top: 0.2em; }
   .ac-btn { font-size: 0.68em; font-weight: 600; padding: 0.4em 0.8em; border-radius: 0.5em; background: var(--app-raised); color: var(--app-ink); white-space: nowrap; }
@@ -91,7 +99,7 @@ const total = cards.length;
   .astrip b { font-size: 0.8em; }
   .astrip .pill { margin-left: 0; }
   .astrip-line { font-size: 0.66em; color: var(--app-ink-2); min-width: 0; }
-  .snap { display: inline-grid; place-items: center; flex: none; width: 1.3em; height: 1.3em; border-radius: 0.35em; background: #fffc00; color: #000; font-size: 0.75em; font-weight: 800; }
+  .astrip :global(svg) { flex: none; width: 1.3em; height: 1.3em; }
   @container (max-width: 760px) {
     .ascene { font-size: calc(100cqw / 36); }
     .agrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
