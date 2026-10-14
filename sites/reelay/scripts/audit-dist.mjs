@@ -242,7 +242,7 @@ const missing = screens.slots.filter((s) => s.kind === 'image'
   ? !s.themes.every((t) => fs.existsSync(path.join(root, 'public/screens', `${s.id}-${t}@2x.png`)))
   : !fs.existsSync(path.join(root, 'public/screens', `${s.id}.mp4`)));
 if (fs.readFileSync(manifestPath, 'utf8') !== manifest()) fail('SCREENS.md is out of date with src/data/screens.json (run npm run screens)');
-for (const f of staleWebScreens()) fail(`${f} is missing or older than its capture (run npm run screens)`);
+for (const f of staleWebScreens()) fail(`${f} is missing or was made from a different capture (run npm run screens)`);
 
 /* Scroll-driven animations: the CSS minifier folds animation-timeline into
    the animation shorthand ("animation: x linear both scroll(root)"), which
