@@ -1,0 +1,398 @@
+---
+/**
+ * WorkflowStory: how a video leaves the building, in five steps, told with
+ * the real app's screens (public/screens/web, made by scripts/screens-web.mjs
+ * from the captures in public/screens).
+ *
+ * Every step is checked against the app (README "Board", help.md "Ready
+ * check", "Prepare to Publish", the Command Center's Schedule / Publish Now
+ * dock, Mark as Posted). Nothing here implies posting that Reelay doesn't do:
+ * TikTok and Instagram are posted by the person, in their own apps.
+ *
+ * TWO LAYOUTS, ONE MARKUP
+ * - Pinned (wide screens, JavaScript on, motion allowed): the steps scroll
+ *   on the left while one sticky frame on the right shows the matching
+ *   screen. An IntersectionObserver marks a step current when it crosses the
+ *   middle of the viewport, and that one attribute (data-stage) drives the
+ *   frame: which screen, where it's zoomed, the highlight, the status line.
+ *   No scroll handler, nothing per frame, and the wheel is never touched:
+ *   the page scrolls exactly as it always does.
+ * - Stacked (phones, reduced motion, no JavaScript): each step carries its
+ *   own picture, in reading order. Nothing is pinned or animated, and
+ *   nothing is only reachable through motion.
+ */
+import { DEMO_CARDS, OPEN_TICKET } from '../data/demo';
+import PlatformIcon from './ui/PlatformIcon.astro';
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const shot = (id: string, theme: string, w: number) => `${base}screens/web/${id}-${theme}-${w}.webp`;
+const caption = OPEN_TICKET.caption;
+const tags = (caption.match(/#\w+/g) || []).length;
+
+type Ring = { l: number; t: number; w: number; h: number };
+const steps = [
+  {
+    id: 'library',
+    label: 'Library',
+    title: 'A video comes into your library.',
+    body: 'List a profile you own or manage, tick the videos you want, and Reelay downloads them into your library folder, each with where it came from: the platform, the original link, the date and the creator.',
+    facts: ['Your library folder, on your computer', 'Provenance recorded on every video'],
+    status: 'In your library · Downloaded',
+    screen: 'library-grid',
+    alt: 'Reelay’s Library: a grid of downloaded videos, Golden hour at Big Sur first.',
+    zoom: { s: 1.3, x: 0, y: 12 },
+    ring: { l: 17.6, t: 22.8, w: 19.4, h: 23.6 } as Ring,
+  },
+  {
+    id: 'preparation',
+    label: 'Preparation',
+    title: 'It becomes a ticket, with copy for each platform.',
+    body: 'On the Board the video is a ticket. You write its caption once per platform, with live counts against each one’s own limits, so nothing gets cut short when it posts.',
+    facts: ['YouTube title, 100 characters', 'TikTok 4,000 · Instagram 2,200 and 30 hashtags'],
+    status: 'Backlog → Staging',
+    screen: 'board',
+    alt: 'The Board, with Golden hour at Big Sur in the Staging column.',
+    zoom: { s: 1.25, x: 36, y: 22 },
+    ring: { l: 37.4, t: 12.8, w: 19, h: 32.2 } as Ring,
+    overlay: 'copy',
+  },
+  {
+    id: 'readiness',
+    label: 'Readiness',
+    title: 'Reelay checks it’s ready to leave.',
+    body: 'The top of the ticket lists every platform it’s going to, each with a tick or a warning that names what’s missing. It counts as ready when at least one platform is. Platforms you post by hand never hold it back.',
+    facts: ['One row per platform, ✓ or ⚠', 'Hand-posted platforms never block'],
+    status: 'Ready for 4 of 4',
+    screen: 'command-center',
+    alt: 'The Command Center: a readiness ring at 4 of 4, YouTube ready to post, TikTok and Instagram posted by hand.',
+    zoom: { s: 1.45, x: 100, y: 66 },
+    ring: { l: 70.4, t: 52.8, w: 27.4, h: 25.4 } as Ring,
+  },
+  {
+    id: 'approval',
+    label: 'Approval',
+    title: 'You decide when it goes.',
+    body: 'Press Schedule or Publish Now, and the line above the button says exactly what will happen. Scheduling refuses any platform that isn’t ready. TikTok and Instagram you post yourself: Prepare to Publish copies the caption and opens their uploader, then you click Mark as Posted.',
+    facts: ['One line says what will happen', 'Hand-posted platforms: Mark as Posted'],
+    status: 'Your call · Schedule or Publish Now',
+    screen: 'command-center',
+    alt: 'The bottom of the Command Center: “Publishes on YouTube as soon as it’s uploaded” above Save Changes and Publish Now.',
+    zoom: { s: 1.8, x: 100, y: 100 },
+    ring: { l: 70.2, t: 88.6, w: 28, h: 9.8 } as Ring,
+    overlay: 'handoff',
+  },
+  {
+    id: 'published',
+    label: 'Published',
+    title: 'It keeps the record of where it went.',
+    body: 'Once every platform it’s going to is live, the card moves itself to Published. Check YouTube for Updates confirms what went out, and the ticket lists every post, automatic or by hand.',
+    facts: ['Cards move themselves', 'Every post on one list'],
+    status: 'Published · on every platform it was going to',
+    screen: 'board',
+    alt: 'The Board’s Published column: cards marked Posted outside Reelay.',
+    zoom: { s: 1.3, x: 100, y: 34 },
+    ring: { l: 78.4, t: 7.6, w: 20.6, h: 72.6 } as Ring,
+  },
+];
+const screens = ['library-grid', 'board', 'command-center'];
+const ringStyle = (r: Ring) => `left:${r.l}%;top:${r.t}%;width:${r.w}%;height:${r.h}%`;
+const copyRows = [
+  { p: 'youtube', name: 'YouTube title', n: OPEN_TICKET.card.title.length, max: '100' },
+  { p: 'tiktok', name: 'TikTok', n: caption.length, max: '4,000' },
+  { p: 'instagram', name: 'Instagram', n: caption.length, max: `2,200 · ${tags}/30 #` },
+] as const;
+void DEMO_CARDS;
+---
+<section class="stage story" id="interactive-workflow" aria-labelledby="story-title" data-story>
+  <div class="wrap">
+    <header class="chapter-head story-head">
+      <p class="eyebrow">How it works</p>
+      <h2 id="story-title" class="headline">Five steps from your library<br /><span class="text-silver">to everywhere it goes.</span></h2>
+    </header>
+
+    <ol class="story-index" aria-label="The five steps">
+      {steps.map((s, i) => (
+        <li><a href={`#story-${s.id}`} data-story-link={i + 1} aria-current={i === 0 ? 'step' : undefined}><span class="si-n">0{i + 1}</span> {s.label}</a></li>
+      ))}
+    </ol>
+
+    <div class="story-grid">
+      <div class="story-steps">
+        {steps.map((s, i) => (
+          <article class="story-step" id={`story-${s.id}`} data-step={i + 1} aria-labelledby={`story-${s.id}-title`}>
+            <p class="step-k"><span class="step-n">0{i + 1}</span> {s.label}</p>
+            <h3 id={`story-${s.id}-title`} class="step-title">{s.title}</h3>
+            <p class="step-body">{s.body}</p>
+            <ul class="step-facts">{s.facts.map((f) => <li>{f}</li>)}</ul>
+            {/* Stacked layout: this step's own picture. */}
+            <figure class="step-figure">
+              <div class="frame" data-crop>
+                <div class="shot is-on" style={`--s:${s.zoom.s};--x:${s.zoom.x}%;--y:${s.zoom.y}%`}>
+                  <picture>
+                    <source media="(prefers-color-scheme: dark)" type="image/webp" srcset={`${shot(s.screen, 'dark', 960)} 960w, ${shot(s.screen, 'dark', 1440)} 1440w`} sizes="(min-width: 760px) 640px, 92vw" />
+                    <img src={shot(s.screen, 'light', 960)} srcset={`${shot(s.screen, 'light', 960)} 960w, ${shot(s.screen, 'light', 1440)} 1440w`} sizes="(min-width: 760px) 640px, 92vw" width="1440" height="900" alt={s.alt} loading="lazy" decoding="async" />
+                  </picture>
+                  <span class="ring" style={ringStyle(s.ring)} aria-hidden="true"></span>
+                </div>
+              </div>
+              <figcaption class="step-status"><span class="dot" aria-hidden="true"></span>{s.status}</figcaption>
+            </figure>
+          </article>
+        ))}
+      </div>
+
+      {/* Pinned layout: one sticky frame. Decorative: the steps say it all. */}
+      <div class="story-stage" aria-hidden="true">
+        <div class="stage-box">
+          <div class="stage-bar"><span class="stage-fill"></span></div>
+          <div class="frame frame--stage" data-crop>
+            {screens.map((id) => (
+              <div class="shot" data-shot={id}>
+                <picture>
+                  <source media="(prefers-color-scheme: dark)" type="image/webp" srcset={`${shot(id, 'dark', 960)} 960w, ${shot(id, 'dark', 1440)} 1440w`} sizes="(min-width: 1024px) 72vw, 92vw" />
+                  <img src={shot(id, 'light', 960)} srcset={`${shot(id, 'light', 960)} 960w, ${shot(id, 'light', 1440)} 1440w`} sizes="(min-width: 1024px) 72vw, 92vw" width="1440" height="900" alt="" loading="lazy" decoding="async" />
+                </picture>
+                {steps.map((s, i) => s.screen === id && <span class="ring" data-ring={i + 1} style={ringStyle(s.ring)}></span>)}
+              </div>
+            ))}
+            <div class="ov ov--copy" data-ov="2">
+              <p class="ov-k">Ticket copy · {OPEN_TICKET.card.title}</p>
+              {copyRows.map((r) => (
+                <p class="ov-row"><PlatformIcon name={r.p} /><span>{r.name}</span><b>{r.n} / {r.max}</b></p>
+              ))}
+            </div>
+            <div class="ov ov--handoff" data-ov="4">
+              <p class="ov-k">Posted by hand</p>
+              <p class="ov-row"><PlatformIcon name="tiktok" /><PlatformIcon name="instagram" /><span>Prepare to Publish, then <b>Mark as Posted</b></span></p>
+            </div>
+          </div>
+          <div class="stage-status">
+            {steps.map((s, i) => <p data-status={i + 1}><span class="dot"></span><span class="st-n">0{i + 1}</span> {s.status}</p>)}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .story { padding-top: clamp(2rem, 5vw, 4rem); }
+  .story-head { margin-bottom: clamp(1.5rem, 3vw, 2.25rem); }
+
+  /* The step index: five numbered links, in a row that wraps cleanly. */
+  .story-index {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.4rem;
+    list-style: none;
+    margin-bottom: clamp(1.75rem, 4vw, 3rem);
+    border-top: 1px solid var(--hairline-strong);
+  }
+  .story-index a {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+    min-height: 44px;
+    padding-top: 0.75rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--r-ink-3);
+    text-decoration: none;
+    border-top: 2px solid transparent;
+    margin-top: -1px;
+    transition: color 0.3s ease, border-color 0.3s ease;
+  }
+  .story-index a:hover { color: var(--r-ink); }
+  .story-index a[aria-current='step'] { color: var(--r-ink); border-top-color: var(--r-amber-text); }
+  .si-n, .step-n, .st-n { font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600; color: var(--r-amber-text); font-variant-numeric: tabular-nums; }
+  @media (max-width: 640px) {
+    .story-index { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.2rem; }
+    .story-index a { flex-direction: column; gap: 0.1rem; font-size: 0.72rem; }
+  }
+
+  /* ── Stacked (default): text, then its picture, step after step ─────── */
+  .story-steps { display: grid; gap: clamp(3rem, 7vw, 5rem); }
+  .story-step { scroll-margin-top: calc(var(--nav-bar-h) + 1.5rem); }
+  .step-k { display: flex; gap: 0.5rem; align-items: baseline; font-size: 0.85rem; font-weight: 600; color: var(--r-ink-2); }
+  .step-title { margin-top: 0.5rem; font-family: var(--font-display); font-size: clamp(1.6rem, 3.2vw, 2.4rem); font-weight: 700; line-height: 1.1; letter-spacing: -0.03em; color: var(--r-ink); max-width: 22ch; }
+  .step-body { margin-top: 0.9rem; max-width: 34rem; font-size: 1.05rem; line-height: 1.55; color: var(--r-ink-2); }
+  .step-facts { display: flex; flex-direction: column; gap: 0.35rem; margin-top: 1rem; list-style: none; }
+  .step-facts li { display: flex; gap: 0.55rem; align-items: baseline; font-size: 0.92rem; color: var(--r-ink-3); }
+  .step-facts li::before { content: ''; flex: none; width: 0.9rem; height: 1px; background: var(--r-amber-text); transform: translateY(-0.25em); }
+  .step-figure { margin-top: 1.5rem; }
+
+  /* The frame: a window onto the real screen, zoomed where the step is. */
+  .frame {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border-radius: 14px;
+    background: var(--r-tile);
+    box-shadow: var(--app-frame);
+  }
+  .shot {
+    position: absolute;
+    inset: 0;
+    transform-origin: var(--x, 50%) var(--y, 50%);
+    transform: scale(var(--s, 1));
+  }
+  .shot img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .ring {
+    position: absolute;
+    border-radius: calc(10px / var(--s, 1));
+    box-shadow: 0 0 0 calc(2px / var(--s, 1)) var(--r-amber), 0 0 0 calc(7px / var(--s, 1)) color-mix(in srgb, var(--r-amber) 22%, transparent);
+    pointer-events: none;
+  }
+  .step-status, .stage-status p {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.85rem;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--r-ink-2);
+  }
+  .dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--r-amber-text); flex: none; }
+
+  .story-stage { display: none; }
+
+  /* Stacked on a wide screen (reduced motion, or no JavaScript): each step
+     is its text beside its picture, so the section stays compact without
+     pinning anything. */
+  @media (min-width: 1024px) {
+    .story:not([data-pinned]) .story-step {
+      display: grid;
+      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+      grid-template-areas: 'k fig' 't fig' 'b fig' 'f fig' '. fig';
+      grid-template-rows: auto auto auto auto 1fr;
+      column-gap: clamp(2.5rem, 5vw, 4.5rem);
+      align-items: start;
+    }
+    .story:not([data-pinned]) .step-k { grid-area: k; }
+    .story:not([data-pinned]) .step-title { grid-area: t; }
+    .story:not([data-pinned]) .step-body { grid-area: b; }
+    .story:not([data-pinned]) .step-facts { grid-area: f; }
+    .story:not([data-pinned]) .step-figure { grid-area: fig; margin-top: 0; }
+  }
+
+  /* ── Pinned (wide, JS, motion allowed) ───────────────────────────────── */
+  .story[data-pinned] .story-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: clamp(2.5rem, 5vw, 4.5rem);
+    align-items: start;
+  }
+  .story[data-pinned] .story-steps { gap: 0; }
+  .story[data-pinned] .story-step {
+    min-height: 44vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-block: 2rem;
+    opacity: 0.38;
+    transition: opacity 0.45s ease;
+  }
+  .story[data-pinned] .story-step:last-child { min-height: 52vh; }
+  .story[data-pinned] .story-step.is-current { opacity: 1; }
+  .story[data-pinned] .step-figure { display: none; }
+  .story[data-pinned] .story-stage {
+    display: block;
+    position: sticky;
+    top: calc(var(--nav-bar-h) + max(1.5rem, (100vh - var(--nav-bar-h) - 34rem) / 2));
+  }
+  .stage-bar { height: 2px; margin-bottom: 1rem; background: var(--hairline-strong); border-radius: 2px; overflow: hidden; }
+  .stage-fill { display: block; height: 100%; background: var(--r-amber-text); transform-origin: 0 50%; transform: scaleX(var(--progress, 0.2)); transition: transform 0.5s var(--r-ease); }
+  .frame--stage .shot { opacity: 0; transition: opacity 0.5s ease, transform 0.8s var(--r-ease); }
+  .frame--stage .shot.is-on { opacity: 1; }
+  .frame--stage .ring { opacity: 0; transition: opacity 0.4s ease 0.25s; }
+  .frame--stage .ring.is-on { opacity: 1; }
+  .stage-status { position: relative; min-height: 1.6rem; margin-top: 0.85rem; }
+  .stage-status p { position: absolute; inset: 0 auto auto 0; margin: 0; opacity: 0; transition: opacity 0.35s ease; }
+  .stage-status p.is-on { opacity: 1; }
+
+  /* Overlays: the ticket's copy (step 2), the hand-off (step 4). */
+  .ov {
+    position: absolute;
+    display: grid;
+    gap: 0.45rem;
+    min-width: 15.5rem;
+    padding: 0.85rem 1rem;
+    border-radius: 14px;
+    background: var(--r-surface);
+    box-shadow: inset 0 0 0 1px var(--hairline-strong), var(--r-float-shadow);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.4s ease 0.2s, transform 0.5s var(--r-ease) 0.2s;
+  }
+  .ov.is-on { opacity: 1; transform: none; }
+  .ov--copy { right: 4%; bottom: 7%; }
+  .ov--handoff { left: 4%; top: 7%; }
+  .ov-k { font-size: 0.72rem; font-weight: 600; color: var(--r-amber-text); }
+  .ov-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.86rem; color: var(--r-ink-2); }
+  .ov-row :global(svg) { width: 1.05rem; height: 1.05rem; flex: none; }
+  .ov-row b { margin-left: auto; font-weight: 600; color: var(--r-ink); font-variant-numeric: tabular-nums; }
+  .ov--handoff .ov-row b { margin-left: 0; }
+  .ov--handoff .ov-row span { margin-left: 0.15rem; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .story-index a, .story-step, .frame--stage .shot, .frame--stage .ring, .ov, .stage-status p, .stage-fill { transition: none !important; }
+  }
+</style>
+
+<script>
+  /* Pinned mode is a progressive enhancement: wide screen, JavaScript, and
+     motion allowed. The observer only reports which step crosses the middle
+     band of the viewport; it never scrolls or blocks anything. */
+  function initStory() {
+    document.querySelectorAll<HTMLElement>('[data-story]').forEach((root) => {
+      if (root.dataset.ready) return;
+      root.dataset.ready = '1';
+      const steps = Array.from(root.querySelectorAll<HTMLElement>('.story-step'));
+      const shots = Array.from(root.querySelectorAll<HTMLElement>('.frame--stage .shot'));
+      const rings = Array.from(root.querySelectorAll<HTMLElement>('.frame--stage .ring'));
+      const overlays = Array.from(root.querySelectorAll<HTMLElement>('[data-ov]'));
+      const statuses = Array.from(root.querySelectorAll<HTMLElement>('[data-status]'));
+      const links = Array.from(root.querySelectorAll<HTMLAnchorElement>('[data-story-link]'));
+      const zooms = steps.map((s) => s.querySelector<HTMLElement>('.step-figure .shot')?.getAttribute('style') ?? '');
+      const screenOf = steps.map((s) => (s.querySelector('.step-figure img')?.getAttribute('src') ?? '').match(/web\/(.+)-(?:light|dark)-/)?.[1] ?? '');
+      let current = 0;
+      const show = (n: number) => {
+        if (n === current) return;
+        current = n;
+        root.dataset.stage = String(n);
+        root.style.setProperty('--progress', String(n / steps.length));
+        steps.forEach((s, i) => s.classList.toggle('is-current', i + 1 === n));
+        shots.forEach((el) => {
+          const on = el.dataset.shot === screenOf[n - 1];
+          el.classList.toggle('is-on', on);
+          if (on) el.setAttribute('style', zooms[n - 1]);
+        });
+        rings.forEach((r) => r.classList.toggle('is-on', r.dataset.ring === String(n)));
+        overlays.forEach((o) => o.classList.toggle('is-on', o.dataset.ov === String(n)));
+        statuses.forEach((p) => p.classList.toggle('is-on', p.dataset.status === String(n)));
+        links.forEach((a) => (a.dataset.storyLink === String(n) ? a.setAttribute('aria-current', 'step') : a.removeAttribute('aria-current')));
+      };
+      const mq = window.matchMedia('(min-width: 1024px) and (prefers-reduced-motion: no-preference)');
+      let io: IntersectionObserver | null = null;
+      const apply = () => {
+        io?.disconnect();
+        io = null;
+        if (!mq.matches) {
+          delete root.dataset.pinned;
+          return;
+        }
+        root.dataset.pinned = '';
+        current = 0;
+        show(1);
+        io = new IntersectionObserver((entries) => {
+          for (const e of entries) if (e.isIntersecting) show(Number((e.target as HTMLElement).dataset.step));
+        }, { rootMargin: '-48% 0px -48% 0px' });
+        steps.forEach((s) => io!.observe(s));
+      };
+      apply();
+      mq.addEventListener('change', apply);
+    });
+  }
+  initStory();
+  document.addEventListener('astro:page-load', initStory);
+</script>

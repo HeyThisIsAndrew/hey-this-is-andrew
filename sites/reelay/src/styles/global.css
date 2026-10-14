@@ -347,7 +347,9 @@ code, pre, kbd { font-family: var(--font-mono); font-size: 0.88em; letter-spacin
 .feature code { font-size: 0.85em; color: var(--r-ink); }
 
 /* ── Split: copy beside a visual ─────────────────────────────────────── */
-.split { display: grid; gap: clamp(2.5rem, 6vw, 6rem); align-items: center; }
+/* One column by default with a zero minimum, so a wide visual (a drawn app
+   panel) shrinks to the column instead of widening it past a phone. */
+.split { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(2.5rem, 6vw, 6rem); align-items: center; }
 @media (min-width: 960px) {
   .split { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); }
   .split--flip > :first-child { order: 2; }
@@ -850,4 +852,19 @@ pre, pre code { white-space: pre-wrap; overflow-wrap: anywhere; }
   }
   #top .page-nav .pn-tick,
   #top .page-nav .pn-list a { transition: none; }
+}
+
+/* Phones: the pane's tab is a small round button in the bottom-left
+   corner, not a tab halfway down the left edge, where it sat over the
+   start of a line of text (the hero's lede). Opened, it grows upward. */
+@media (hover: none) and (max-width: 760px) {
+  #top .page-nav {
+    top: auto;
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    left: calc(0.75rem + env(safe-area-inset-left, 0px));
+    transform: none;
+    border-left: 1px solid var(--hairline-strong);
+    border-radius: 14px;
+  }
+  #top .page-nav:not(.is-open):not(:focus-within) { width: 44px; min-height: 44px; border-radius: 50%; }
 }

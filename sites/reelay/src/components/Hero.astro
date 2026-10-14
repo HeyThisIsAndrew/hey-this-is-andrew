@@ -1,16 +1,35 @@
 ---
 /**
- * Hero: the announcement. Product name, a headline at full scale, one
- * sentence of substance, one primary action, and then the product itself,
- * lit from below like a device on a black set.
+ * Hero: the announcement. Product name, a two-line headline, one sentence of
+ * substance, the primary action, and then the product itself.
+ *
+ * LAYERED DEPTH. Three layers move at slightly different speeds as the page
+ * scrolls away from the hero, all CSS scroll-driven animations of transform
+ * and opacity (no script, nothing per frame on the main thread):
+ *   1. the light: a key light and a faint dot texture, slower than the page;
+ *   2. the product: the real Board (BoardScene) settles in, a small lift and
+ *      scale, never a 3D tilt;
+ *   3. three interface details lifted from that same Board's open ticket
+ *      (the ticket, its readiness, its scheduled status), a little faster.
+ * The details are decoration (aria-hidden): everything they say is in the
+ * Board itself. Without scroll-timeline support, or with reduced motion,
+ * every layer simply sits in its finished place.
+ *
+ * The headline is sized so the Download button is in the first screen at
+ * laptop sizes: a four-line display headline used to push it below the fold.
  */
 import BoardScene from './BoardScene.astro';
+import PlatformIcon from './ui/PlatformIcon.astro';
 import { SITE, DOWNLOADS } from '../data/site';
+import { OPEN_TICKET } from '../data/demo';
+
+const ticket = OPEN_TICKET.card;
 ---
 <section class="hero" aria-labelledby="hero-title">
+  <div class="hero-light" aria-hidden="true"><span class="hero-dots"></span></div>
   <div class="wrap hero-copy">
     <p class="eyebrow eyebrow--glow hero-in" style="--d:0s">Reelay Studio</p>
-    <h1 id="hero-title" class="display hero-in" style="--d:.08s">
+    <h1 id="hero-title" class="display hero-display hero-in" style="--d:.08s">
       <span class="line">Publish everywhere.</span>
       <span class="line text-glow">Never lose control.</span>
     </h1>
@@ -31,57 +50,84 @@ import { SITE, DOWNLOADS } from '../data/site';
       In development, not yet released · {SITE.version} · {DOWNLOADS.macArm.requirements}
     </p>
   </div>
-
   <div id="studio-preview" class="wrap-wide product">
     <div class="horizon" aria-hidden="true"></div>
-    <div class="product-tilt">
+    <div class="product-settle">
       <BoardScene />
     </div>
     <div class="floor" aria-hidden="true"></div>
+
+    <div class="details" aria-hidden="true">
+      <div class="detail detail--ticket" style="--lift:-90px">
+        <span class="d-thumb still still--dusk"></span>
+        <span class="d-text">
+          <b>{ticket.title}</b>
+          <small>{ticket.stage} · {ticket.kind} · {ticket.length}</small>
+        </span>
+      </div>
+      <div class="detail detail--ready" style="--lift:-150px">
+        <span class="d-ring"><span>4/4</span></span>
+        <span class="d-text">
+          <b>Ready for 4 platforms</b>
+          <small>TikTok and Instagram posted by hand</small>
+        </span>
+      </div>
+      <div class="detail detail--status" style="--lift:-60px">
+        <span class="d-icons"><PlatformIcon name="youtube" /><PlatformIcon name="threads" /></span>
+        <span class="d-text">
+          <b>Scheduled</b>
+          <small>Goes live Tue 9:00 AM</small>
+        </span>
+      </div>
+    </div>
   </div>
 </section>
 
 <style>
   .hero {
     position: relative;
-    padding-top: clamp(3.5rem, 8vw, 6.5rem);
-    padding-bottom: clamp(5rem, 10vw, 9rem);
+    padding-top: clamp(3rem, 6.5vw, 5.5rem);
+    padding-bottom: clamp(4rem, 8vw, 7rem);
     text-align: center;
     overflow: clip;
     isolation: isolate;
   }
-  .hero::before {
-    /* a high, cool key light over the headline */
-    content: '';
+
+  /* Layer 1: the light. A high key light, and a dot texture that fades out
+     toward the edges. Gradients only, no filter, so moving it is cheap. */
+  .hero-light {
     position: absolute;
     z-index: -1;
-    left: 50%;
-    top: -10%;
-    width: min(1400px, 160vw);
-    height: 900px;
-    transform: translateX(-50%);
-    background:
-      radial-gradient(36% 30% at 50% 22%, rgba(255, 236, 205, 0.1), transparent 70%),
-      radial-gradient(60% 50% at 50% 30%, rgba(240, 160, 50, 0.08), transparent 75%);
+    inset: -10% -10% 30% -10%;
     pointer-events: none;
+    background:
+      radial-gradient(34% 26% at 50% 18%, rgba(255, 236, 205, 0.11), transparent 70%),
+      radial-gradient(56% 44% at 50% 26%, rgba(240, 160, 50, 0.09), transparent 75%);
   }
-  :global(html[data-subnav]) .hero { padding-top: clamp(3.5rem, 8vw, 6.5rem); }
-  .hero-copy { display: flex; flex-direction: column; align-items: center; }
-  .display .line { display: block; padding-bottom: 0.04em; }
-  .hero .lede { margin-top: clamp(1.5rem, 3vw, 2.25rem); max-width: 40rem; }
-  .hero .cta-row { justify-content: center; margin-top: clamp(2rem, 3.5vw, 2.75rem); }
-  .hero-fine { margin-top: 1.25rem; }
+  .hero-dots {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.075) 1px, transparent 1.6px) 0 0 / 26px 26px;
+    -webkit-mask-image: radial-gradient(60% 52% at 50% 32%, #000 0%, transparent 78%);
+    mask-image: radial-gradient(60% 52% at 50% 32%, #000 0%, transparent 78%);
+  }
+  @media (prefers-color-scheme: light) {
+    .hero-light { background: radial-gradient(56% 44% at 50% 26%, rgba(240, 160, 50, 0.1), transparent 75%); }
+    .hero-dots { background-image: radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.07) 1px, transparent 1.6px); }
+  }
 
-  .product {
-    position: relative;
-    margin-top: clamp(4rem, 8vw, 7rem);
-    perspective: 2400px;
-  }
+  .hero-copy { display: flex; flex-direction: column; align-items: center; }
+  /* Two lines on a laptop, so the Download button is in the first screen. */
+  .hero-display { font-size: clamp(2.6rem, 6.2vw, 6rem); line-height: 1; }
+  .hero-display .line { display: block; padding-bottom: 0.04em; }
+  .hero .lede { margin-top: clamp(1.25rem, 2.4vw, 1.75rem); max-width: 38rem; }
+  .hero .cta-row { justify-content: center; margin-top: clamp(1.75rem, 3vw, 2.25rem); }
+  .hero-fine { margin-top: 1rem; }
+
+  /* Layer 2: the product. */
+  .product { position: relative; margin-top: clamp(3rem, 6vw, 5rem); }
   .product .horizon { bottom: -6%; height: 90%; }
-  .product-tilt {
-    position: relative;
-    transform-origin: 50% 100%;
-  }
+  .product-settle { position: relative; transform-origin: 50% 0; }
   .floor {
     position: absolute;
     left: 10%;
@@ -93,21 +139,106 @@ import { SITE, DOWNLOADS } from '../data/site';
     z-index: -1;
   }
 
-  /* Entrance: copy rises in sequence; the product settles from a tilt as
-     it scrolls into view (scroll-driven, so it costs no script). */
+  /* Layer 3: details from the open ticket, over the window's edges. */
+  .details { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+  .detail {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.7rem 0.95rem 0.7rem 0.7rem;
+    border-radius: 16px;
+    background: var(--r-surface);
+    box-shadow: inset 0 0 0 1px var(--hairline-strong), var(--r-float-shadow);
+    text-align: left;
+    white-space: nowrap;
+  }
+  /* Each over a quiet part of the window: the sidebar's empty middle, the
+     player, the empty foot of the Scheduled column. */
+  .detail--ticket { left: 2.5%; top: 52%; }
+  .detail--ready { right: 1.5%; top: 13%; }
+  .detail--status { left: 47%; bottom: 7%; }
+  .d-text { display: grid; gap: 0.1rem; line-height: 1.25; }
+  .d-text b { font-size: 0.92rem; font-weight: 600; color: var(--r-ink); }
+  .d-text small { font-size: 0.78rem; color: var(--r-ink-3); }
+  .d-thumb { width: 2.6rem; height: 3.25rem; border-radius: 8px; flex: none; }
+  .d-ring {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 50%;
+    background: conic-gradient(var(--r-ok-text) 100%, var(--r-fill-3) 0);
+    -webkit-mask: radial-gradient(circle, transparent 54%, #000 56%);
+    mask: radial-gradient(circle, transparent 54%, #000 56%);
+  }
+  /* The ring's label sits outside the mask. */
+  .detail--ready { padding-left: 0.7rem; }
+  .detail--ready .d-ring { position: relative; }
+  .detail--ready .d-ring span { display: none; }
+  .detail--ready::after {
+    content: '4/4';
+    position: absolute;
+    left: 0.7rem;
+    width: 2.6rem;
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--r-ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .d-icons { display: flex; gap: 0.3rem; }
+  .d-icons :global(svg) { width: 1.3rem; height: 1.3rem; }
+
+  /* Tablets: smaller, and kept inside the window's edges. */
+  @media (max-width: 1100px) {
+    .detail { padding: 0.55rem 0.75rem 0.55rem 0.55rem; border-radius: 13px; }
+    .detail--ticket { left: 1.5%; }
+    .detail--ready { right: 1%; }
+    .detail--status { left: 40%; }
+    .d-text b { font-size: 0.82rem; }
+    .d-text small { font-size: 0.72rem; }
+  }
+  /* Phones: the Board shows its side panel alone; the details would only
+     cover it, so they step out. */
+  @media (max-width: 760px) { .details { display: none; } }
+
+  /* Motion. The copy rises in on load; the layers follow the scroll. */
   @media (prefers-reduced-motion: no-preference) {
     .hero-in { animation: rise 1.1s var(--r-ease) both; animation-delay: var(--d, 0s); }
     @keyframes rise { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
-    @supports (animation-timeline: view()) {
-      .product-tilt {
-        animation: settle linear both;
-        animation-timeline: view();
-        animation-range: entry 0% cover 45%;
+
+    @supports (animation-timeline: scroll()) {
+      .hero-light {
+        animation: hero-light linear both;
+        animation-range: 0 120vh;
       }
-      @keyframes settle {
-        from { transform: rotateX(18deg) scale(0.92); opacity: 0.4; }
-        to { transform: none; opacity: 1; }
+      @keyframes hero-light { to { transform: translateY(22vh); } }
+
+      .product-settle {
+        animation: hero-settle linear both;
+        animation-range: 0 70vh;
       }
+      @keyframes hero-settle {
+        from { transform: translateY(56px) scale(0.94); }
+        to { transform: none; }
+      }
+
+      .detail {
+        animation: hero-float linear both;
+        animation-range: 0 130vh;
+      }
+      @keyframes hero-float {
+        from { transform: translateY(28px); }
+        to { transform: translateY(var(--lift, -80px)); }
+      }
+
+      /* The timeline goes in a rule of its own. Left beside the animation
+         shorthand, the CSS minifier folds it into that shorthand
+         ("animation: ... scroll(root)"), which browsers reject whole, and
+         the build shipped with every layer standing still. */
+      .hero .hero-light, .hero .product-settle, .hero .detail { animation-timeline: scroll(root); }
     }
   }
 </style>

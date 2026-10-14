@@ -12,6 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { manifest, manifestPath } from './screens-manifest.mjs';
+import { stale as staleWebScreens } from './screens-web.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.resolve(process.argv[2] || path.join(root, 'dist'));
@@ -241,6 +242,18 @@ const missing = screens.slots.filter((s) => s.kind === 'image'
   ? !s.themes.every((t) => fs.existsSync(path.join(root, 'public/screens', `${s.id}-${t}@2x.png`)))
   : !fs.existsSync(path.join(root, 'public/screens', `${s.id}.mp4`)));
 if (fs.readFileSync(manifestPath, 'utf8') !== manifest()) fail('SCREENS.md is out of date with src/data/screens.json (run npm run screens)');
+for (const f of staleWebScreens()) fail(`${f} is missing or older than its capture (run npm run screens)`);
+
+/* Scroll-driven animations: the CSS minifier folds animation-timeline into
+   the animation shorthand ("animation: x linear both scroll(root)"), which
+   browsers reject whole. The hero and the accordion's pictures once shipped
+   standing still that way. Timelines must survive as their own property. */
+for (const f of files.filter((f) => f.endsWith('.css') || f.endsWith('.html'))) {
+  const css = fs.readFileSync(f, 'utf8');
+  for (const m of css.matchAll(/animation:[^;}]*\b(?:scroll|view)\([^;}]*/g)) {
+    fail(`${path.relative(dist, f)}: "${m[0]}" puts a scroll timeline in the animation shorthand, which browsers drop (give animation-timeline a rule of its own)`);
+  }
+}
 if (missing.length) warnings.push(`${missing.length} of ${screens.slots.length} screenshot and screencast slots are still empty (see src/data/screens.json)`);
 if (RELEASE) for (const w of warnings) fail(`release: ${w}`);
 

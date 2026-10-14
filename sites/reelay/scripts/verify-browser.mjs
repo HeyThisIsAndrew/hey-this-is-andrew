@@ -120,69 +120,89 @@ async function runVerification() {
     }
 
     // -------------------------------------------------------------
-    // TEST SUITE 2: Interactive 4-Stage Publishing Workflow
+    // TEST SUITE 2: The workflow story (scroll-driven, never scroll-jacked)
     // -------------------------------------------------------------
-    console.log('\n--- 2. Testing Interactive 4-Stage Publishing Workflow ---');
-    const workflowTabs = await page.$$('.workflow-step-tab');
-    if (workflowTabs.length !== 4) {
-      failures.push(`Expected 4 workflow tabs, found ${workflowTabs.length}`);
-    } else {
-      passedChecks.push('Found exactly 4 workflow stage tabs');
-    }
+    // Wide, with motion: the steps scroll beside one sticky frame, and the
+    // step crossing the middle of the screen decides what the frame shows.
+    // The page must scroll exactly as usual (no wheel handling), and the
+    // step links must work. Reduced motion, and phones: nothing pinned,
+    // every step's own picture visible.
+    console.log('\n--- 2. Testing the Workflow Story ---');
+    {
+      const expect = ['library-grid', 'board', 'command-center', 'command-center', 'board'];
+      const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      const pg = await ctx.newPage();
+      await pg.goto(`${baseUrl}/`, { waitUntil: 'load' });
+      const pinned = await pg.$eval('[data-story]', (s) => s.hasAttribute('data-pinned'));
+      const sticky = await pg.$eval('.story-stage', (el) => getComputedStyle(el).position);
+      if (!pinned || sticky !== 'sticky') failures.push(`Story at 1440: pinned ${pinned}, stage position ${sticky}`);
+      let bad = 0;
+      for (let i = 1; i <= 5; i++) {
+        await pg.evaluate((i) => {
+          const r = document.querySelector(`.story-step[data-step="${i}"]`).getBoundingClientRect();
+          window.scrollTo(0, r.top + window.scrollY + r.height / 2 - window.innerHeight / 2);
+        }, i);
+        await pg.waitForTimeout(700);
+        const st = await pg.evaluate(() => {
+          const s = document.querySelector('[data-story]');
+          const stage = document.querySelector('.story-stage').getBoundingClientRect();
+          return {
+            stage: s.dataset.stage,
+            shot: [...s.querySelectorAll('.frame--stage .shot.is-on')].map((x) => x.dataset.shot).join(),
+            status: s.querySelector('[data-status].is-on')?.dataset.status,
+            link: s.querySelector('[data-story-link][aria-current="step"]')?.dataset.storyLink,
+            stageOnScreen: stage.top >= 0 && stage.bottom <= window.innerHeight,
+          };
+        });
+        if (st.stage !== String(i) || st.shot !== expect[i - 1] || st.status !== String(i) || st.link !== String(i) || !st.stageOnScreen) {
+          failures.push(`Story step ${i}: ${JSON.stringify(st)}`); bad++;
+        }
+      }
+      if (!bad) passedChecks.push('Workflow story at 1440: each step, scrolled to the middle, shows its own screen, status and index mark; the frame stays on screen');
 
-    // Click each tab and verify panel updates
-    for (let i = 0; i < workflowTabs.length; i++) {
-      await workflowTabs[i].click();
-      await page.waitForTimeout(100);
+      // Natural scrolling: every wheel turn moves the page by about its delta.
+      // The site scrolls smoothly, so jump there instantly and let it settle:
+      // a smooth scroll still running would be counted against the wheel.
+      await pg.evaluate(() => window.scrollTo({ top: document.querySelector('[data-story]').getBoundingClientRect().top + window.scrollY, behavior: 'instant' }));
+      await pg.waitForTimeout(400);
+      await pg.mouse.move(700, 450);
+      const moves = [];
+      for (let i = 0; i < 6; i++) {
+        const before = await pg.evaluate(() => window.scrollY);
+        await pg.mouse.wheel(0, 300);
+        await pg.waitForTimeout(350);
+        moves.push(Math.round((await pg.evaluate(() => window.scrollY)) - before));
+      }
+      if (moves.some((m) => m < 240 || m > 360)) failures.push(`Wheel scrolling through the story isn't natural: ${moves.join(', ')}px per 300px turn`);
+      else passedChecks.push(`Wheel scrolling through the story is untouched: ${moves.join(', ')}px per 300px turn`);
 
-      const isSelected = await workflowTabs[i].getAttribute('aria-selected');
-      const targetId = await workflowTabs[i].getAttribute('data-step-target');
-      const panel = await page.$(`#panel-${targetId}`);
-      const isHidden = panel ? await panel.getAttribute('hidden') : null;
+      // The index links take you to the step, and the frame follows.
+      await pg.click('[data-story-link="4"]');
+      await pg.waitForTimeout(900);
+      const viaLink = await pg.$eval('[data-story]', (s) => s.dataset.stage);
+      if (viaLink !== '4') failures.push(`Story index link 04 left the frame at stage ${viaLink}`);
+      else passedChecks.push('Story index: the 04 link scrolls to Approval and the frame shows it');
+      await ctx.close();
 
-      if (isSelected !== 'true' || isHidden !== null) {
-        failures.push(`Workflow tab ${i + 1} (${targetId}) failed click synchronization`);
+      for (const [label, opts] of [['reduced motion at 1440', { viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' }], ['a 390px phone', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }]]) {
+        const c = await browser.newContext(opts);
+        const p2 = await c.newPage();
+        await p2.goto(`${baseUrl}/`, { waitUntil: 'load' });
+        const r = await p2.evaluate(() => {
+          const s = document.querySelector('[data-story]');
+          const figs = [...s.querySelectorAll('.step-figure')];
+          return {
+            pinned: s.hasAttribute('data-pinned'),
+            stageShown: getComputedStyle(s.querySelector('.story-stage')).display !== 'none',
+            figures: figs.filter((f) => f.getBoundingClientRect().height > 100).length,
+            alts: figs.filter((f) => (f.querySelector('img')?.alt || '').length > 10).length,
+          };
+        });
+        if (r.pinned || r.stageShown || r.figures !== 5 || r.alts !== 5) failures.push(`Story on ${label}: ${JSON.stringify(r)}`);
+        else passedChecks.push(`Story on ${label}: nothing pinned, all 5 steps with their own picture and alt text`);
+        await c.close();
       }
     }
-    passedChecks.push('All 4 workflow tabs synchronize with panels on mouse click');
-
-    // Test Keyboard APG Navigation (ArrowRight, ArrowLeft, Home, End)
-    await workflowTabs[0].focus();
-    await page.keyboard.press('ArrowRight');
-    await page.waitForTimeout(100);
-    const tab2Selected = await workflowTabs[1].getAttribute('aria-selected');
-    if (tab2Selected !== 'true') {
-      failures.push('Workflow keyboard ArrowRight failed to select Step 02');
-    } else {
-      passedChecks.push('Workflow keyboard navigation: ArrowRight activates next tab');
-    }
-
-    await page.keyboard.press('End');
-    await page.waitForTimeout(100);
-    const tab4Selected = await workflowTabs[3].getAttribute('aria-selected');
-    if (tab4Selected !== 'true') {
-      failures.push('Workflow keyboard End failed to select Step 04');
-    } else {
-      passedChecks.push('Workflow keyboard navigation: End key activates Step 04');
-    }
-
-    await page.keyboard.press('Home');
-    await page.waitForTimeout(100);
-    const tab1Selected = await workflowTabs[0].getAttribute('aria-selected');
-    if (tab1Selected !== 'true') {
-      failures.push('Workflow keyboard Home failed to return to Step 01');
-    } else {
-      passedChecks.push('Workflow keyboard navigation: Home key returns to Step 01');
-    }
-
-    // Check Simulation Disclaimer
-    const disclaimer = await page.$('.workflow-simulation-disclaimer');
-    if (!disclaimer) {
-      failures.push('Missing explicit simulation disclaimer in InteractiveWorkflow');
-    } else {
-      passedChecks.push('Explicit simulation disclaimer present in workflow header');
-    }
-
     // -------------------------------------------------------------
     // TEST SUITE 3: Interactive Data-Flow Topology
     // -------------------------------------------------------------
@@ -373,7 +393,7 @@ async function runVerification() {
       await pg.goto(`${baseUrl}/`, { waitUntil: 'load' });
       const rm = await pg.evaluate(() => {
         const hidden = [...document.querySelectorAll('[data-reveal]')].filter((el) => getComputedStyle(el).opacity !== '1').length;
-        const moving = [...document.querySelectorAll('.hero-in, .product-tilt, .caret')].filter((el) => {
+        const moving = [...document.querySelectorAll('.hero-in, .product-settle, .detail, .hero-light, .panel-visual > .ws, .shotframe img, .caret')].filter((el) => {
           const cs = getComputedStyle(el);
           return cs.animationName !== 'none' && parseFloat(cs.animationDuration) > 0.01;
         }).length;
@@ -637,24 +657,62 @@ async function runVerification() {
       };
       const max = await pg.evaluate(() => document.documentElement.scrollHeight - innerHeight);
       const steps = [];
+      const mids = [];
       let at = 0;
       for (let dir of [-300, 300]) {
         for (let i = 0; i < 20; i++) {
           const next = await swipe(dir);
           const moved = Math.abs(next - at);
+          const mid = (at + next) / 2; // the stretch of page this swipe covered
           at = next;
           const edge = dir < 0 ? next >= max - 2 : next <= 2;
           if (edge) break;          // the last swipe into an end is short by design
           steps.push(moved);
+          mids.push(mid);
         }
       }
       const sorted = [...steps].sort((a, b) => a - b);
       const median = sorted[Math.floor(sorted.length / 2)];
-      const short = steps.filter((s) => s < median * 0.85);
-      // One short swipe in a run is this emulator's noise (it happens with
-      // the page stripped bare); every real stall measured cut 2 to 5.
-      if (!steps.length || short.length > 1) failures.push(`Touch scrolling stalls on the phone homepage: swipes moved ${steps.map(Math.round).join(', ')}px (median ${Math.round(median)})`);
-      else passedChecks.push(`Touch scrolling on the phone homepage: ${steps.length} swipes down and up, no more than one swipe short of the median (${Math.round(median)}px), which is emulator noise`);
+      const shortAt = steps.map((s, i) => (s < median * 0.85 ? mids[i] : null)).filter((m) => m !== null);
+      // This emulator drops a swipe's momentum now and then on its own: on a
+      // blank page of the same height, 3 of 238 swipes (1.3%); on this
+      // homepage 1.9%, and 2% on the shorter one before it. So the allowance
+      // is a rate, one short swipe per 20, which is the "one per run" this
+      // check began with when the page took 20 swipes.
+      // A real stall is at a PLACE, and comes back every time: the one this
+      // guards against cut 2 to 5 swipes a run under the app preview. So a
+      // run with two or more short swipes (which this check used to fail
+      // outright) swipes through each of those places 16 more times. Noise
+      // gives 0 or 1 there (measured: 1 to 2 in 96); a stall gives most of
+      // them, and fails. More than twice the allowance fails outright.
+      const allowed = Math.ceil(steps.length / 20);
+      const where = shortAt.map((m) => `~${Math.round(m)}px`).join(', ');
+      const retests = [];
+      if (shortAt.length >= 2 && shortAt.length <= 2 * allowed) {
+        for (const place of shortAt) {
+          await pg.evaluate((y) => window.scrollTo({ top: y, behavior: 'instant' }), Math.max(0, place - 600));
+          await pg.waitForTimeout(400);
+          let pos = await pg.evaluate(() => scrollY);
+          let dir = -300;
+          let n = 0;
+          for (let i = 0; i < 16; i++) {
+            if (pos > place + 600) dir = 300;
+            else if (pos < place - 600) dir = -300;
+            const next = await swipe(dir);
+            const atEnd = next >= max - 2 || next <= 2;
+            if (!atEnd && Math.abs(next - pos) < median * 0.85) n++;
+            pos = next;
+          }
+          retests.push([Math.round(place), n]);
+        }
+      }
+      const reproduced = retests.filter(([, n]) => n >= 3);
+      const retold = retests.map(([p, n]) => `~${p}px ${n}/16`).join(', ');
+      if (!steps.length || shortAt.length > 2 * allowed || reproduced.length) {
+        failures.push(`Touch scrolling stalls on the phone homepage: ${shortAt.length} of ${steps.length} swipes short of the median (${Math.round(median)}px) at ${where}${retests.length ? `; swiped again there: ${retold}` : ''}; swipes moved ${steps.map(Math.round).join(', ')}px`);
+      } else {
+        passedChecks.push(`Touch scrolling on the phone homepage: ${steps.length} swipes down and up, ${shortAt.length} short of the median (${Math.round(median)}px)${retests.length ? `; swiped 16 more times at each of those places, it didn't recur (${retold})` : ''}`);
+      }
       await ctx.close();
     }
 
@@ -703,6 +761,12 @@ async function runVerification() {
             const ownText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
             const media = ['IMG', 'VIDEO', 'PRE', 'TABLE', 'INPUT', 'BUTTON'].includes(el.tagName);
             if ((ownText || media) && (rect.right > vw + 1 || rect.left < -1)) {
+              // A deliberate crop (a zoomed screenshot in its frame) is fine
+              // as long as the frame itself is on screen. Opt-in only: every
+              // section clips too, and that clipping is what this catches.
+              const crop = el.closest('[data-crop]');
+              const cr = crop && crop !== el && crop.getBoundingClientRect();
+              if (cr && cr.right <= vw + 1 && cr.left >= -1) continue;
               const sc = scrollerOf(el);
               const sr = sc && sc.getBoundingClientRect();
               if (!sr || sr.right > vw + 1 || sr.left < -1) out.add(`${el.tagName.toLowerCase()}.${[...el.classList].join('.')} runs to ${Math.round(rect.left)}..${Math.round(rect.right)}px`);
@@ -758,6 +822,43 @@ async function runVerification() {
         failures.push(`Side pane on /features/library: ${JSON.stringify({ ...pane, opened, top: Math.round(top) })}`);
       } else passedChecks.push(`Side pane: titled "${pane.name}", ${pane.entries.length} entries; picking Transcripts opens its row and scrolls to it`);
       await ctx.close();
+    }
+
+    // -------------------------------------------------------------
+    // TEST SUITE 18: The hero (layered depth, Download in the first screen)
+    // -------------------------------------------------------------
+    console.log('\n--- 18. Testing the Hero ---');
+    for (const [w, h] of [[1440, 900], [1280, 800]]) {
+      const c = await browser.newContext({ viewport: { width: w, height: h } });
+      const p2 = await c.newPage();
+      await p2.goto(`${baseUrl}/`, { waitUntil: 'load' });
+      await p2.waitForTimeout(1600);
+      const r = await p2.evaluate(() => {
+        const btn = document.querySelector('.hero .btn-primary');
+        const b = btn.getBoundingClientRect();
+        const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+        const tf = (sel) => getComputedStyle(document.querySelector(sel)).transform;
+        return { bottom: Math.round(b.bottom), inView: b.bottom <= window.innerHeight, hits: btn.contains(hit), detail: tf('.detail--ready'), product: tf('.product-settle') };
+      });
+      await p2.evaluate(() => window.scrollTo(0, 500));
+      await p2.waitForTimeout(500);
+      const moved = await p2.evaluate(() => [getComputedStyle(document.querySelector('.detail--ready')).transform, getComputedStyle(document.querySelector('.product-settle')).transform]);
+      if (!r.inView || !r.hits) failures.push(`Hero at ${w}px: Download button bottom ${r.bottom}px of ${h}, clickable ${r.hits}`);
+      else passedChecks.push(`Hero at ${w}x${h}: Download for Mac is in the first screen and nothing covers it`);
+      if (moved[0] === r.detail || moved[1] === r.product) failures.push(`Hero at ${w}px: the layers didn't move with the scroll (${r.detail} -> ${moved[0]})`);
+      else passedChecks.push(`Hero at ${w}px: the preview and its details move at their own speeds as the page scrolls`);
+      await c.close();
+    }
+    {
+      const c = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+      const p2 = await c.newPage();
+      await p2.goto(`${baseUrl}/`, { waitUntil: 'load' });
+      await p2.evaluate(() => window.scrollTo(0, 500));
+      await p2.waitForTimeout(300);
+      const still = await p2.evaluate(() => ['.detail--ready', '.product-settle', '.hero-light'].map((s) => getComputedStyle(document.querySelector(s)).transform));
+      if (still.some((t) => t !== 'none')) failures.push(`Hero with reduced motion still moves: ${still.join(' | ')}`);
+      else passedChecks.push('Hero with reduced motion: every layer at rest, details shown in place');
+      await c.close();
     }
 
     // -------------------------------------------------------------
