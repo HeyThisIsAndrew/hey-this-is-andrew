@@ -8,6 +8,829 @@ import { SITE, DATA_PATHS, AGENT_API, href } from '../data/site';
 import { RELEASE } from '../data/release';
 import { CONTACTS } from '../data/operator';
 
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+interface GuideDetail {
+  title: string;
+  lines: string[];
+}
+
+interface HelpGuide {
+  id: string;
+  aliases?: string[];
+  title: string;
+  doing: string;
+  slot:
+    | 'branding'
+    | 'library-grid'
+    | 'download-sources'
+    | 'command-center'
+    | 'board'
+    | 'automations'
+    | 'agents-settings'
+    | 'accounts';
+  shotAlt: string;
+  steps: string[];
+  expect: string;
+  details?: GuideDetail[];
+  keywords: string;
+  videoTitle?: string;
+}
+
+interface HelpCategory {
+  id: string;
+  number: string;
+  title: string;
+  blurb: string;
+  badge: string;
+  guides: HelpGuide[];
+}
+
+/* 6-Step Studio Tour (ported from Content_Downloader/reelay/gui/help_content.py TOUR) */
+const tourSteps: HelpGuide[] = [
+  {
+    id: 'tour-profiles',
+    title: 'Step 1 · Pick a profile',
+    doing: 'A profile is one creator or channel, with its own videos, Board, sources and accounts.',
+    slot: 'branding',
+    shotAlt: 'The profile menu at the top of the sidebar with creator profiles, New Profile, and Edit Profile & Branding.',
+    steps: [
+      'Click the name at the top of the sidebar to see your profiles and switch between them.',
+      'Choose <strong>New Profile…</strong> to add another creator or channel.',
+      '<strong>Edit Profile &amp; Branding…</strong> sets its name, tagline, logo and colours.',
+    ],
+    expect: 'Switching only changes what you see; nothing is moved or deleted. Next, bring some videos in.',
+    keywords: 'tour profiles switch new profile branding logo tagline creator channel',
+    videoTitle: 'Quick Tour 01: Switching & Branding Creator Profiles',
+  },
+  {
+    id: 'tour-library',
+    title: 'Step 2 · Bring videos in',
+    doing: 'List the videos from a profile or link, then choose which ones to download.',
+    slot: 'library-grid',
+    shotAlt: 'The Library with Download Sources, the link field, selection strip, video cover grid and Download button.',
+    steps: [
+      'Paste a profile or video link, or pick a saved account in <strong>Download Sources</strong>.',
+      'Click <strong>List Videos</strong>. You see every video first; nothing downloads yet.',
+      'Tick the videos you want, or click <strong>Select All</strong>.',
+      'Click <strong>Download</strong>. Each video becomes a ticket on the Board.',
+    ],
+    expect: 'Downloaded videos wait in the Board’s first column, ready to prepare. Only import media you own or have permission to manage.',
+    keywords: 'tour library bring videos in list videos select all download sources',
+    videoTitle: 'Quick Tour 02: Listing & Downloading Owned Media',
+  },
+  {
+    id: 'tour-prepare',
+    title: 'Step 3 · Prepare a video',
+    doing: 'Each ticket holds a caption for every platform, hashtags, a cover and a transcript.',
+    slot: 'command-center',
+    shotAlt: 'A ticket open beside the Board showing platform copy sections, live character counts and Copy buttons.',
+    steps: [
+      'On the <strong>Board</strong>, click a card to open its ticket on the right.',
+      '<strong>Fill Empty from Original Post</strong> writes the empty captions from the original post.',
+      'Edit each platform’s caption in its own section. The count turns red if it’s too long.',
+      '<strong>Copy</strong> puts that caption on the clipboard, ready to paste.',
+    ],
+    expect: 'The transcript, cover and topic are further down, under Details and provenance.',
+    keywords: 'tour prepare ticket caption copy fill empty original post character count',
+    videoTitle: 'Quick Tour 03: Writing Platform-Specific Captions',
+  },
+  {
+    id: 'tour-readiness',
+    title: 'Step 4 · Check readiness',
+    doing: 'See at a glance which platforms are ready and what still needs work.',
+    slot: 'command-center',
+    shotAlt: 'The Command Center readiness ring reading 4/4 above compact platform check rows.',
+    steps: [
+      'The ring counts the platforms that are ready. Each row shows <strong>✓</strong> ready, <strong>–</strong> you post it by hand, or <strong>!</strong> something to fix, with the note saying what.',
+      'On the card, each logo has a badge: green published, blue scheduled, amber ready, red needs work.',
+      'Hover a row or a card to see every check.',
+    ],
+    expect: 'Fix anything marked !, then choose where the video goes.',
+    keywords: 'tour readiness ring check badges coverage ready needs work',
+    videoTitle: 'Quick Tour 04: Reading the Readiness Ring & Coverage Badges',
+  },
+  {
+    id: 'tour-publish',
+    title: 'Step 5 · Publish or schedule',
+    doing: 'Reelay posts to some platforms for you; for the rest, it sets everything up and you post.',
+    slot: 'command-center',
+    shotAlt: 'The ticket Platforms section and bottom Schedule action dock.',
+    steps: [
+      'Under <strong>Platforms</strong>, set each place the video is going to <strong>Preparing</strong>.',
+      'TikTok and Instagram are posted by hand: <strong>Publish…</strong> copies the caption, opens the uploader and shows the video file.',
+      'For YouTube (and Bluesky, Threads or Facebook once turned on), choose when, then click <strong>Schedule</strong> or <strong>Publish Now</strong>.',
+    ],
+    expect: 'Cards move to Scheduled and Published by themselves as each platform goes live.',
+    keywords: 'tour publish schedule youtube tiktok instagram handoff preparing',
+    videoTitle: 'Quick Tour 05: Scheduling YouTube & Guided Manual Handoff',
+  },
+  {
+    id: 'tour-find',
+    title: 'Step 6 · Find your work',
+    doing: 'Every video keeps its status, its posts and its history, and nothing is ever deleted by archiving.',
+    slot: 'board',
+    shotAlt: 'The Board showing the four columns, search bar, Filter button, and Archived Videos menu.',
+    steps: [
+      '<strong>Scheduled</strong> holds videos waiting to go live; <strong>Published</strong> holds the ones live everywhere they were going.',
+      'Search finds a video by its title, any caption, or what’s said in it.',
+      '<strong>⋯ → Archived Videos…</strong> brings back anything you archived.',
+      'In a ticket, <strong>Where it’s been posted</strong> lists every post with its link and time.',
+    ],
+    expect: 'That’s the whole loop. Use the 25 topic guides below whenever you need more detail.',
+    keywords: 'tour find search scheduled published archived history',
+    videoTitle: 'Quick Tour 06: Searching Transcripts & Restoring Archives',
+  },
+];
+
+/* 25 Visual Guides organized across the 6 Primary Creator Help Center Categories
+   (ported from Content_Downloader/reelay/gui/help_content.py) */
+const categories: HelpCategory[] = [
+  {
+    id: 'getting-started',
+    number: '01',
+    title: 'Getting Started',
+    blurb: 'Profiles, custom branding, hover tips, automatic posting switches, and sharing a team database.',
+    badge: '6-step tour + 5 guides',
+    guides: [
+      {
+        id: 'profiles',
+        title: 'Profiles',
+        doing: 'Keep each creator or channel separate.',
+        slot: 'branding',
+        shotAlt: 'The profile switcher menu in the sidebar and Edit Profile & Branding dialog.',
+        steps: [
+          'Click the name at the top of the sidebar to switch profiles.',
+          '<strong>New Profile…</strong> adds one.',
+          '<strong>Edit Profile &amp; Branding…</strong> changes its name, tagline, logo and colours.',
+        ],
+        expect: 'Every profile has its own download folder, Board, sources and accounts.',
+        details: [
+          {
+            title: 'Good to know',
+            lines: [
+              'Switching only changes what you see. Nothing is moved or deleted.',
+              'You can’t switch while a download is running: let it finish, or stop it.',
+              'My Channel is the starting profile.',
+            ],
+          },
+        ],
+        keywords: 'profile profiles switch creator channel new delete getting started',
+      },
+      {
+        id: 'branding',
+        title: 'Branding and themes',
+        doing: 'Make it obvious whose account you’re working in.',
+        slot: 'branding',
+        shotAlt: 'Edit Profile & Branding showing logo, tagline, and Custom brand colours.',
+        steps: [
+          'In <strong>Edit Profile &amp; Branding…</strong>, add a logo and a tagline; <strong>Match Logo</strong> picks colours from it.',
+          'Choose Light, Dark, Black or <strong>Custom</strong> under <strong>Settings → Appearance</strong>.',
+        ],
+        expect: 'The logo becomes the profile’s icon, and a thin bar in its colour runs across the top of the sidebar.',
+        details: [
+          {
+            title: 'Custom theme',
+            lines: [
+              'Custom shows Reelay in the current profile’s brand colours, and switching profiles switches them. Reelay keeps text readable whatever colours you pick.',
+            ],
+          },
+        ],
+        keywords: 'branding brand logo tagline colours colors theme dark light black custom appearance',
+      },
+      {
+        id: 'settings-tips',
+        title: 'Helpful tips',
+        doing: 'Hover almost anything to see what it does.',
+        slot: 'agents-settings',
+        shotAlt: 'Settings page controls with hover explanations.',
+        steps: [
+          'Hover a button, field or label for a short explanation.',
+          'Turn tips off or on with <strong>Show helpful tips</strong> in <strong>Settings → Appearance</strong>.',
+        ],
+        expect: 'Turn them back on any time you want a reminder of what something does.',
+        keywords: 'tips tooltips hover hints turn off settings appearance',
+      },
+      {
+        id: 'settings-posting',
+        title: 'Automatic posting',
+        doing: 'Choose which platforms besides YouTube Reelay posts to.',
+        slot: 'agents-settings',
+        shotAlt: 'Settings page showing Automatic posting switches and AI agent controls.',
+        steps: [
+          'Connect the account under <strong>Accounts</strong> first.',
+          'Tick <strong>Post to Bluesky / Threads / Facebook automatically</strong> under <strong>Settings → Automatic posting</strong>.',
+          'Restart Reelay: changes apply after a restart.',
+        ],
+        expect: 'YouTube can always post automatically. Every other platform stays copy-and-paste until turned on here.',
+        details: [
+          {
+            title: 'Timing',
+            lines: [
+              'Facebook holds the video until the set time. Bluesky and Threads are posted by Reelay at the set time, so Reelay must be running and the Mac awake then.',
+            ],
+          },
+        ],
+        keywords: 'automatic posting bluesky threads facebook turn on enable restart settings',
+      },
+      {
+        id: 'settings-more',
+        title: 'More settings (Local AI, Brand voice & Team database)',
+        doing: 'Writing help, AI agents and sharing, in short.',
+        slot: 'agents-settings',
+        shotAlt: 'Settings → AI agents showing the loopback API address, Copy Access Key, and Make a New Key.',
+        steps: [
+          '<strong>Local AI helper</strong>: free writing help on this computer, used from <strong>Assist ▾</strong> in captions.',
+          '<strong>Brand voice</strong>: your tone, words to avoid, default hashtags and example captions.',
+          '<strong>AI agents (advanced)</strong>: let AI assistants on this Mac read the Board and edit tickets, with an access key.',
+          '<strong>Data → Move Database…</strong>: share one Board with your team through a shared folder.',
+        ],
+        expect: 'Each of these is optional; Reelay works without them.',
+        details: [
+          {
+            title: 'AI agents',
+            lines: [
+              'Reelay only listens on this Mac (127.0.0.1:8471), and every request needs the access key from Settings → AI agents.',
+              'If a ticket isn’t ready, scheduling through an agent is refused with the list of problems, unless the agent explicitly asks to go ahead.',
+            ],
+          },
+          {
+            title: 'Sharing the database',
+            lines: [
+              'Move it into a Google Drive, Dropbox or iCloud Drive folder; teammates use Open Shared Database….',
+              'One person edits at a time; others see changes view-only and nothing posts from their computer.',
+              'Take Over is for when someone forgot to quit. Sign-ins stay in each person’s own keychain.',
+            ],
+          },
+        ],
+        keywords: 'ai agents api access key ollama languagetool brand voice share database team dropbox drive icloud',
+      },
+    ],
+  },
+  {
+    id: 'media-library',
+    number: '02',
+    title: 'Media Library',
+    blurb: 'Bring in videos you own or manage, organize Download Sources, filter by hashtag or product, and name files cleanly.',
+    badge: '5 guides',
+    guides: [
+      {
+        id: 'library-add',
+        title: 'Add videos',
+        doing: 'Bring in videos from TikTok, Instagram, YouTube or Snapchat.',
+        slot: 'library-grid',
+        shotAlt: 'The Library link bar, Download Sources button, and List Videos button.',
+        steps: [
+          'Paste a profile link, or one or more video links separated by spaces.',
+          'Or open <strong>Download Sources</strong> and click <strong>List Videos</strong> on a saved account.',
+          'Click <strong>List Videos</strong>. You see every video before anything downloads.',
+        ],
+        expect: 'The videos appear in the Library unticked, so nothing downloads by surprise. Only import media you own or have permission to manage.',
+        details: [
+          {
+            title: 'Which links work',
+            lines: [
+              'TikTok, Instagram and YouTube profile or video links.',
+              'Snapchat Spotlight video links. Snapchat doesn’t let apps list a profile’s videos, so paste the videos’ links.',
+              'YouTube channels you connect under Accounts appear in Download Sources by themselves. Their private and scheduled videos are listed but left unticked.',
+            ],
+          },
+          {
+            title: 'Private videos and Instagram',
+            lines: [
+              'Use browser sign-in (in Download Settings, the gear) borrows your sign-in from a web browser. Instagram usually needs it, as do your own private YouTube videos.',
+              'Reelay never sees your password.',
+            ],
+          },
+          {
+            title: 'What Reelay records',
+            lines: [
+              'Every imported video keeps where it came from: the platform, the original link, when it was imported, and the permission you have to use it.',
+            ],
+          },
+        ],
+        keywords: 'import list fetch paste link url profile tiktok instagram youtube snapchat spotlight private',
+      },
+      {
+        id: 'library-sources',
+        title: 'Download Sources',
+        doing: 'Keep the accounts you import from one click away.',
+        slot: 'download-sources',
+        shotAlt: 'The Download Sources window with one section per platform, Mine toggles, and List Videos buttons.',
+        steps: [
+          'Click <strong>Download Sources</strong> (left of the link field).',
+          'To add an account, type its @username or paste its profile link, then click <strong>Add</strong>.',
+          'Turn <strong>Mine</strong> on for this profile’s own accounts.',
+          'Click <strong>List Videos</strong> on a source to list its videos in the Library.',
+        ],
+        expect: 'The button shows which source the link field holds. The same sources are on the Accounts page.',
+        details: [
+          {
+            title: 'Managing sources',
+            lines: [
+              'Use a source’s ⋯ menu to rename or remove it.',
+              'Snapchat’s section takes Spotlight links to list right away.',
+            ],
+          },
+        ],
+        keywords: 'source saved account username handle mine add remove rename download sources',
+      },
+      {
+        id: 'library-select',
+        title: 'Select and download',
+        doing: 'Choose exactly which videos to download.',
+        slot: 'library-grid',
+        shotAlt: 'The Library selection strip with Select All, Unselect All, More menu, and Download button.',
+        steps: [
+          'Pick a platform tab to work on one platform’s videos, or stay on <strong>All</strong>.',
+          'Tick videos one by one (or press <strong>Space</strong>), or click <strong>Select All</strong>.',
+          'Click <strong>Download</strong>.',
+        ],
+        expect: 'A line along each thumbnail shows progress; a green check means it’s downloaded and on the Board.',
+        details: [
+          {
+            title: 'More ways to select',
+            lines: [
+              'Select All ticks every video shown: only your search, filter or tab, if you’ve used one. Videos already downloaded are skipped.',
+              'More ▾ selects only the newest few, only what your search shows, or the highlighted videos.',
+              'Unselect All clears the selection. The selection strip always says what will download.',
+            ],
+          },
+          {
+            title: 'While downloading',
+            lines: [
+              'Stop finishes the current video and keeps the ones already done.',
+              'TikTok downloads are the original file with the creator’s own audio.',
+            ],
+          },
+        ],
+        keywords: 'select tick choose download stop progress tabs platform all space',
+      },
+      {
+        id: 'library-views',
+        title: 'Filters and pages',
+        doing: 'Find the videos you want in a big library.',
+        slot: 'library-grid',
+        shotAlt: 'The Library search field, Filter button, tile-size slider, Grid/List toggle, and page controls.',
+        steps: [
+          'Type in search to match captions, hashtags, product names, your names and file names.',
+          '<strong>Filter</strong> shows all, not downloaded or downloaded videos, one hashtag, a brand or product, and the sort order.',
+          'Drag the slider (or press ⌘+ and ⌘−) for smaller or bigger tiles.',
+          'Switch between the picture grid and a dense list.',
+        ],
+        expect: 'A new search, filter or sort starts at page 1. Choose 24, 48, 96 or All per page at the bottom left.',
+        details: [
+          {
+            title: 'Reading a tile & hover-scrubbing',
+            lines: [
+              'Badges say what kind of video it is (Short · 1080p, Long-form · 4K) and its length.',
+              'Move the mouse across a downloaded video’s thumbnail to flip through it.',
+            ],
+          },
+          {
+            title: 'Tagged products (TikTok Shop)',
+            lines: [
+              'Reelay looks up which products are tagged on each TikTok video in the background. Filter by a brand or product, or type a brand in search.',
+            ],
+          },
+        ],
+        keywords: 'search filter sort hashtag brand product grid list tiles size zoom page pages per page',
+      },
+      {
+        id: 'library-files',
+        title: 'Files and names',
+        doing: 'Choose where videos go and how files are named.',
+        slot: 'library-grid',
+        shotAlt: 'The Library settings gear and Open Video List button.',
+        steps: [
+          'The gear holds where videos are saved, the quality, browser sign-in and how files are named.',
+          '<strong>Open Video List</strong> shows every downloaded video in a table you can search, sort and export.',
+        ],
+        expect: 'File names follow your naming choice; Rename Files… shows every change before anything happens.',
+        details: [
+          {
+            title: 'Naming files',
+            lines: [
+              'The default is platform, date and video ID, such as TikTok_20261002_7692175258450677023.mp4.',
+              'Custom pattern… combines {date}, {custom}, {platform}, {id}, {title} and {uploader}.',
+              'Use Suggest Names ▾ to fill short names from the first words of captions.',
+            ],
+          },
+          {
+            title: 'The video list',
+            lines: [
+              'Show in Finder, Copy Video Link and Play Preview for any video.',
+              'Export the list as a CSV spreadsheet or as a Markdown manifest.',
+            ],
+          },
+        ],
+        keywords: 'folder save where quality naming rename file names manifest csv export finder',
+      },
+    ],
+  },
+  {
+    id: 'the-board',
+    number: '03',
+    title: 'The Board',
+    blurb: 'Move tickets across four columns, write platform-specific copy, verify readiness, and search spoken transcripts.',
+    badge: '5 guides',
+    guides: [
+      {
+        id: 'board-overview',
+        title: 'The Board',
+        doing: 'Follow every video from downloaded to posted.',
+        slot: 'board',
+        shotAlt: 'The Board with four columns (Backlog, Staging, Scheduled, Published), coverage maps, and search bar.',
+        steps: [
+          'Downloaded videos start in <strong>Backlog</strong>.',
+          'Drag a card to <strong>Staging</strong> when you start preparing it.',
+          'Cards move to <strong>Scheduled</strong> and <strong>Published</strong> by themselves as platforms go live.',
+          '<strong>⋯ → Edit Columns…</strong> renames, adds, removes or reorders columns.',
+        ],
+        expect: 'Each profile has its own Board and its own columns.',
+        details: [
+          {
+            title: 'Marks on cards',
+            lines: [
+              '⚡ an Automation acted on the video, ⏳ an AI assistant’s change is waiting for your approval, ✦ an AI assistant last edited the caption.',
+              'Filter → Cards switches between large cards and compact ones.',
+              'The sidebar’s Up next shows the next post going out for this profile.',
+            ],
+          },
+        ],
+        keywords: 'board columns backlog staging scheduled published drag cards edit columns',
+      },
+      {
+        id: 'board-captions',
+        title: 'Write captions',
+        doing: 'Write each platform’s caption once, within its limits.',
+        slot: 'command-center',
+        shotAlt: 'The Command Center showing platform copy blocks, character counters, and Assist menu.',
+        steps: [
+          'Click a card to open its ticket.',
+          '<strong>Fill Empty from Original Post</strong> fills empty captions, title, tags and hashtags.',
+          'Each platform has its own section with a live count against its limit.',
+          '<strong>Copy</strong> puts the caption on the clipboard.',
+        ],
+        expect: 'Red means too long. Reelay never cuts your text short.',
+        details: [
+          {
+            title: 'Writing help (Assist ▾) & Sheet Import',
+            lines: [
+              'Runs on this computer: no paid AI service, nothing sent anywhere.',
+              'Check Spelling & Grammar lists possible mistakes; Rewrite suggests versions using a local model through Ollama.',
+              'Get SEO Suggestions (YouTube section) shows what people search for and scores the title and tags.',
+              '⋯ → Import Sheet… fills tickets from a CSV file or a shared Google Sheets link in one transaction.',
+            ],
+          },
+        ],
+        keywords: 'caption captions copy text write hashtags title description limit fill original assist spelling rewrite seo brand voice import sheet csv',
+      },
+      {
+        id: 'board-readiness',
+        title: 'Readiness',
+        doing: 'Know what still needs work before you post.',
+        slot: 'command-center',
+        shotAlt: 'A ticket readiness ring and compact per-platform check rows.',
+        steps: [
+          'The ring counts the ready platforms. <strong>✓</strong> ready, <strong>–</strong> posted by hand, <strong>!</strong> needs work.',
+          'Card badges: green published, blue scheduled, amber ready, red needs work.',
+          'Hover a row for every check behind it.',
+        ],
+        expect: 'A ticket can go when at least one of its platforms is ready. Platforms you post by hand never block.',
+        details: [
+          {
+            title: 'What’s checked',
+            lines: [
+              'Whether each platform’s copy is written and within its limit, and whether the video file is downloaded.',
+              '#Shorts is only added for vertical videos of 3 minutes or less. Bluesky (3 minutes) and Threads (5 minutes) say so when a video is too long for them.',
+              'Filter → Show narrows the Board to tickets that are ready, not ready, or blocked on one platform.',
+            ],
+          },
+        ],
+        keywords: 'ready readiness check checklist ring blocked blocking needs work badge coverage',
+      },
+      {
+        id: 'board-details',
+        title: 'Details and video tools',
+        doing: 'Add the transcript and cover, or edit the video.',
+        slot: 'command-center',
+        shotAlt: 'A ticket open in the Command Center showing transcript, cover, and video tools.',
+        steps: [
+          'Open <strong>Details and provenance</strong> for the transcript, cover, topic, keywords and where the video came from.',
+          '<strong>Video</strong> (above it) removes or replaces the sound, or adds captions to the picture.',
+          '<strong>Where it’s been posted</strong> (below it) lists every post of this video.',
+        ],
+        expect: 'Video edits make one edited copy (.edited.mp4) that Reelay posts; the original download is never changed.',
+        details: [
+          {
+            title: 'Transcripts & Video tools',
+            lines: [
+              'Get from Original Post uses the original post’s captions as the transcript, when the platform has them.',
+              'Remove Sound makes a silent copy; Replace Sound… adds music you have the rights to.',
+              'Add Captions… draws captions from a .srt, .vtt or .ass file, or makes them automatically if the free faster-whisper add-on is installed.',
+            ],
+          },
+        ],
+        keywords: 'details transcript cover topic keywords provenance video sound music captions subtitles srt edit',
+      },
+      {
+        id: 'board-find',
+        title: 'Find, filter and archive',
+        doing: 'Find any video and keep the Board tidy.',
+        slot: 'board',
+        shotAlt: 'The Board search bar, Published column, and ⋯ menu.',
+        steps: [
+          'Search by title, any caption, topic, notes or what’s said in the video.',
+          '<strong>Published</strong> keeps every video that’s gone live.',
+          '<strong>⋯ → Archived Videos…</strong> brings archived videos back.',
+          'Right-click a card (or ⌘-click several) to archive, fill, mark as posted or see history.',
+        ],
+        expect: 'Archiving hides a video from the Board and the Library. Its file, ticket and history are kept.',
+        details: [
+          {
+            title: 'Change history & Bulk edit',
+            lines: [
+              'Change History… lists every saved change: what, when, and whether you, the app or an AI agent made it. Highlight one and click Restore the Earlier Value.',
+              '⌘-click or Shift-click cards in a column to set permission, type, topic, keywords, creator or hashtags on all of them at once.',
+            ],
+          },
+        ],
+        keywords: 'find search archive archived restore bring back history undo change published right-click select multiple',
+      },
+    ],
+  },
+  {
+    id: 'automations',
+    number: '04',
+    title: 'Automations',
+    blurb: 'Create When/If/Then rules, start from one-click recipes, preview rules on existing videos, and audit the Activity log.',
+    badge: '3 guides',
+    guides: [
+      {
+        id: 'auto-rules',
+        title: 'Make a rule',
+        doing: 'Let Reelay do the repetitive parts of preparing tickets.',
+        slot: 'automations',
+        shotAlt: 'The Automations page showing a When/If/Then rule and its Activity log.',
+        steps: [
+          'On <strong>Automations</strong>, click <strong>New Rule</strong>.',
+          '<strong>When</strong>: a video is added to the board, or moved to a column.',
+          '<strong>If</strong>: words in the caption, title, a hashtag, a product or brand, the length, or the source.',
+          '<strong>Then</strong>: fill an empty field from a template, add hashtags, choose platforms, set a field, move it, or schedule it.',
+        ],
+        expect: 'Saved rules act on videos added from now on, and everything they do is listed under Activity.',
+        details: [
+          {
+            title: 'Template placeholders & safety rules',
+            lines: [
+              'Available placeholders: {hook} {caption} {hashtags} {title} {topic} {creator}.',
+              'Each rule acts on a video once, so it never undoes your edits.',
+              'Templates only fill empty fields, and scheduling only happens if the ticket is ready.',
+            ],
+          },
+        ],
+        keywords: 'automation automations rule rules when if then template trigger condition action schedule hashtags',
+      },
+      {
+        id: 'auto-recipes',
+        title: 'Quick-start recipes',
+        doing: 'Add a ready-made rule in one click.',
+        slot: 'automations',
+        shotAlt: 'The Automations page with the Recipes menu and New Rule button.',
+        steps: [
+          'Click <strong>Recipes ▾</strong> (or a recipe card on the empty Automations page).',
+          'Pick one; it’s added as a rule you can edit.',
+        ],
+        expect: 'The recipe starts with videos added from now on.',
+        details: [
+          {
+            title: 'Built-in recipes',
+            lines: [
+              'Cross-post short-form: TikTok and Instagram videos get YouTube Shorts and Threads captions with a link-in-bio line.',
+              'Auto-hashtag by topic: fitness, tech and recipe hashtag bundles you can customize.',
+              'Ready queue: tickets moved to Staging are scheduled for the next Tuesday at 9:00 if they’re ready.',
+            ],
+          },
+        ],
+        keywords: 'recipe recipes cross-post hashtag ready queue quick start template',
+      },
+      {
+        id: 'auto-test',
+        title: 'Test, run and review',
+        doing: 'See what a rule would do before it does anything.',
+        slot: 'automations',
+        shotAlt: 'An Automation rule card with Run on Existing Videos and the Activity log.',
+        steps: [
+          'In a rule, <strong>Test this rule on a video</strong> shows whether it would run and what it would write.',
+          '<strong>Run on Existing Videos…</strong> applies it to videos already on the Board, after showing how many match.',
+          '<strong>Activity</strong> lists everything rules did, newest first.',
+        ],
+        expect: 'Nothing changes until you save a rule and it runs.',
+        keywords: 'test run existing activity log what happened automations',
+      },
+    ],
+  },
+  {
+    id: 'accounts-signin',
+    number: '05',
+    title: 'Accounts & Sign-in',
+    blurb: 'Understand automatic vs. manual handoff, connect YouTube with Google or your own project, and schedule safely.',
+    badge: '4 guides',
+    guides: [
+      {
+        id: 'publish-which',
+        title: 'Where Reelay posts',
+        doing: 'Know what Reelay can post for you, and what you post.',
+        slot: 'accounts',
+        shotAlt: 'The Accounts page showing six equal platform cards and the Snapchat hand-off strip.',
+        steps: [
+          'Connect the accounts you post to on <strong>Accounts</strong>.',
+          'Turn on Bluesky, Threads or Facebook under <strong>Settings → Automatic posting</strong> if you want Reelay to post there.',
+          'Everything else, Reelay prepares and you post in that platform’s own app.',
+        ],
+        expect: 'Every ticket always holds ready-to-paste text for every platform, so you can always post by hand.',
+        details: [
+          {
+            title: 'Why TikTok and Instagram are by hand',
+            lines: [
+              'TikTok only allows automatic posting from developer apps it has approved, and Instagram needs an approved Meta app. Signing in to them (where available) attaches your account.',
+              'Downloading, preparing captions, readiness, automations and copying all work locally without connecting anything.',
+            ],
+          },
+        ],
+        keywords: 'platforms which automatic manual by hand youtube tiktok instagram bluesky threads facebook snapchat post publish',
+      },
+      {
+        id: 'accounts-connect',
+        aliases: ['connecting-youtube', 'youtube-setup'],
+        title: 'Connect an account (YouTube, Google Cloud & social sign-ins)',
+        doing: 'Let Reelay post to a platform for this profile.',
+        slot: 'accounts',
+        shotAlt: 'The Accounts page showing YouTube Connected, Advanced Setup, and 3 of 6 connected.',
+        steps: [
+          'On YouTube’s card, click <strong>Sign in with Google</strong> and sign in in your browser.',
+          'Or use <strong>Advanced Setup… → Set Up YouTube…</strong> to connect through your own free Google Cloud project (create project, enable YouTube Data API v3, set External consent screen with test users, create a Desktop app client ID, and paste or load JSON).',
+          'Bluesky connects with an <strong>App Password</strong>, a separate password just for Reelay.',
+          'Threads and Facebook use their sign-in when available, or your own Meta app’s token.',
+        ],
+        expect: 'The card says Connected, and the count at the top goes up.',
+        details: [
+          {
+            title: 'YouTube with your own Google project (3 limits)',
+            lines: [
+              'Private until audited: uploads from a project that hasn’t passed YouTube’s free API compliance audit stay private, so scheduled videos won’t go public. Reelay flags it on the card.',
+              'Weekly sign-in: while your project is in Testing mode, Google expires sign-ins every 7 days.',
+              'Daily quota: YouTube’s default API quota caps uploads per day until you request more.',
+            ],
+          },
+          {
+            title: 'Disconnecting & Keychain security',
+            lines: [
+              'Disconnect removes the account from the profile and revokes access where the platform allows it (Google, TikTok, Facebook).',
+              'Passwords and tokens are kept in your Mac’s Keychain, never in files or SQLite.',
+            ],
+          },
+        ],
+        keywords: 'connect account sign in login google youtube bluesky app password threads facebook meta token disconnect keychain advanced setup connecting-youtube youtube-setup',
+      },
+      {
+        id: 'publish-schedule',
+        title: 'Schedule or publish',
+        doing: 'Post a ready video from Reelay, now or later.',
+        slot: 'command-center',
+        shotAlt: 'The Command Center showing the readiness checklist, platform states, and Schedule button.',
+        steps: [
+          'Under <strong>Platforms</strong>, set the platforms it’s going to <strong>Preparing</strong>.',
+          'In <strong>Post automatically</strong>, choose the channel and who can see it.',
+          'Choose <strong>Publish as soon as it’s uploaded</strong> or <strong>Schedule for a date and time</strong>.',
+          'Check the summary line above the buttons, then click <strong>Publish Now</strong> or <strong>Schedule</strong>.',
+        ],
+        expect: 'YouTube and Facebook get the video now and publish it at your time, even if Reelay is closed. Bluesky and Threads are posted by Reelay at the time, so it must be running then.',
+        details: [
+          {
+            title: 'If Reelay is interrupted',
+            lines: [
+              'Every send is written down before it starts. Closing Reelay during a YouTube upload pauses it; it carries on next time.',
+              'If Reelay can’t tell whether a post went out, it never guesses or double-posts: it asks Try Again, It Was Posted or Cancel It.',
+            ],
+          },
+        ],
+        keywords: 'schedule publish post now later time date upload youtube private public unlisted interrupted check youtube',
+      },
+      {
+        id: 'publish-by-hand',
+        title: 'Post by hand (TikTok, Instagram & Snapchat hand-off)',
+        doing: 'Hand off a ready video and its caption to TikTok or Instagram in their own uploader.',
+        slot: 'command-center',
+        shotAlt: 'The Command Center showing TikTok caption copy and hand-off controls.',
+        steps: [
+          'In the ticket’s <strong>Platforms</strong>, click <strong>Publish…</strong> next to TikTok or Instagram.',
+          'Reelay checks the video file and the caption.',
+          '<strong>Copy Caption, Open TikTok &amp; Show Video</strong> copies the caption, opens the upload page and shows the file in Finder.',
+          'Post it there, then paste the post’s link back and click <strong>Record as Published</strong>.',
+        ],
+        expect: 'Reelay saves the link and the time, and the card moves on.',
+        details: [
+          {
+            title: 'Snapchat & manual marks',
+            lines: [
+              'For Snapchat, copy the caption from the ticket and post Spotlight from the Snapchat app.',
+              'Already posted? Set the platform’s row to Posted, or right-click the card and choose Mark as Posted….',
+            ],
+          },
+        ],
+        keywords: 'manual by hand tiktok instagram snapchat publish prepare copy caption uploader record link posted',
+      },
+    ],
+  },
+  {
+    id: 'video-player',
+    number: '06',
+    title: 'Video Player',
+    blurb: 'Watch local videos beside your copy, generate 4K preview copies, understand local SQLite storage, and fix common issues.',
+    badge: '3 guides',
+    guides: [
+      {
+        id: 'library-player',
+        title: 'Watch a video & keyboard shortcuts',
+        doing: 'Play a downloaded video right in Reelay.',
+        slot: 'command-center',
+        shotAlt: 'The video player at the top of the right-hand side panel above the ticket.',
+        steps: [
+          'Select a downloaded video; it plays at the top of the side panel.',
+          'Press <strong>Space</strong> to play or pause. <strong>J</strong> and <strong>L</strong> skip 10 seconds, the arrow keys skip 5, and <strong>M</strong> mutes.',
+          'The buttons beside the bar change the speed, loop, or open it in its own window or QuickTime.',
+        ],
+        expect: 'The side panel only opens when something is selected. It shows the cover until you press play, never autoplays, and closes with ✕ or Esc.',
+        details: [
+          {
+            title: 'If a 4K video won’t play',
+            lines: [
+              'Often a 4K YouTube video (VP9/AV1). Click Make a Preview Copy: Reelay makes a small H.264 copy in the background that plays smoothly.',
+              'The original file is never changed, and preview copies are cleaned up automatically.',
+            ],
+          },
+        ],
+        keywords: 'play watch player video preview speed loop quicktime keyboard shortcuts 4k won’t play space mute',
+      },
+      {
+        id: 'privacy-local',
+        title: 'Where your data lives (Local SQLite & Keychain)',
+        doing: 'Reelay keeps your work on this Mac.',
+        slot: 'agents-settings',
+        shotAlt: 'Settings showing local configuration and security controls.',
+        steps: [
+          `<strong>Videos</strong>: the folder under Where videos go, in Download Settings (by default <code>${DATA_PATHS.library}</code>).`,
+          `<strong>Database</strong>: one local SQLite file (<code>${DATA_PATHS.dbName}</code> in <code>${DATA_PATHS.mac}</code>), shown at the top of <strong>Settings → Data</strong>.`,
+          `<strong>Caches and logs</strong>: <strong>Settings → Open Data Folder</strong> and <strong>Open Logs</strong> (<code>${DATA_PATHS.logs}</code>).`,
+          '<strong>Passwords and tokens</strong>: your Mac’s Keychain.',
+        ],
+        expect: 'Reelay has no cloud of its own: it doesn’t sync or back up your work anywhere.',
+        details: [
+          {
+            title: 'When Reelay goes online',
+            lines: [
+              'Only to do what you ask: list and download videos, sign in to and post on the platforms you connect, look up tagged products, read a Google Sheets link you import, and fetch YouTube search suggestions when you ask for SEO help.',
+              'Writing help runs on this computer and sends nothing anywhere.',
+            ],
+          },
+        ],
+        keywords: 'privacy data local where stored storage files folder database sqlite reelay.db keychain backup offline',
+      },
+      {
+        id: 'trouble',
+        title: 'Fix common problems',
+        doing: 'Quick fixes for the problems people hit most.',
+        slot: 'board',
+        shotAlt: 'The Board showing status indicators on video tickets.',
+        steps: [
+          '<strong>“This account is private” or Instagram lists nothing</strong>: set <strong>Use browser sign-in</strong> (the gear on the Library) to a browser where you’re signed in, then try again.',
+          '<strong>YouTube says you’re signed out</strong>: click <strong>Sign in with Google</strong> again. With your own project in Testing, this happens weekly.',
+          '<strong>Scheduled YouTube videos stay private</strong>: your Google project hasn’t passed YouTube’s audit yet.',
+          '<strong>A video won’t play</strong>: click <strong>Make a Preview Copy</strong>.',
+        ],
+        expect: 'Still stuck? Settings → Open Logs has the diagnostic details to share.',
+        details: [
+          {
+            title: 'A post shows ⚠ Interrupted',
+            lines: [
+              'Reelay stopped mid-send and won’t guess whether it went out. Open the ticket and choose Try Again, It Was Posted (paste the link) or Cancel It.',
+            ],
+          },
+          {
+            title: 'Built-in environment self-test',
+            lines: [
+              'Run /Applications/Reelay.app/Contents/MacOS/Reelay --self-test in Terminal to verify yt-dlp, ffmpeg, Keychain, SQLite FTS5, and the player without opening a window.',
+            ],
+          },
+        ],
+        keywords: 'troubleshooting problem error fix broken private instagram signed out youtube private won’t play interrupted logs help stuck self-test',
+      },
+    ],
+  },
+];
+
 const faq = [
   { q: 'Where are my videos and my database?', a: `<p>Videos go into the library folder you choose, by default <code>${DATA_PATHS.library}</code>. Everything else is in one database, <code>${DATA_PATHS.dbName}</code>, in <code>${DATA_PATHS.mac}</code>. You can move the database under <strong>Settings → Data</strong>.</p>` },
   { q: 'Where do transcripts come from?', a: '<p>From the original post’s own captions: the creator’s subtitles first, otherwise the platform’s automatic captions. Use <strong>Get from Original Post</strong> on a ticket. Reelay doesn’t run speech recognition to make transcripts, so a video posted without captions has none to fetch.</p>' },
@@ -21,73 +844,266 @@ const faq = [
 
 <BaseLayout
   title={`Support: ${SITE.fullName}`}
-  description="Help with Reelay: getting started on your Mac, opening it the first time, connecting YouTube, common questions, and how to reach us."
+  description="Interactive Creator Help Center for Reelay Studio: 6-step Quick Tour, 25 visual step-by-step guides across Media Library, The Board, Automations, Accounts & Sign-in, and Video Player."
 >
-  <PageHero eyebrow="Support">
-    <Fragment slot="title">How can we help?</Fragment>
-    <Fragment slot="lede">Getting started, connecting YouTube, and answers to the questions people ask most. <strong>Reviewing Reelay for Google, TikTok or Meta?</strong> Start with the <a href={href('/reviewers')}>reviewer notes</a>.</Fragment>
+  <PageHero eyebrow="Creator Help Center">
+    <Fragment slot="title">How Reelay works,<br /><span class="text-glow">step by step.</span></Fragment>
+    <Fragment slot="lede">
+      Explore the 6-step studio tour and 25 interactive visual guides mirroring the in-app Help Center.
+      <strong>Reviewing Reelay for Google, TikTok or Meta?</strong> Jump to the <a href={href('/reviewers')}>reviewer notes</a> or <a href="#demo-verification">requested permissions</a>.
+    </Fragment>
+
+    <div class="help-search-shell">
+      <label class="sr-only" for="help-search-input">Search Help Center guides</label>
+      <div class="help-search-bar">
+        <svg class="help-search-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <circle cx="8.5" cy="8.5" r="5.75" stroke="currentColor" stroke-width="1.8" />
+          <path d="M13 13l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+        <input
+          id="help-search-input"
+          class="help-search-input"
+          type="search"
+          placeholder="Search 25 guides (e.g., YouTube, captions, readiness, TikTok, SQLite)…"
+          autocomplete="off"
+          data-help-search
+        />
+        <button type="button" class="help-search-clear" data-help-clear hidden>Clear</button>
+      </div>
+      <div class="help-search-meta">
+        <span data-help-status>Showing all 25 visual guides &amp; 6-step studio tour</span>
+        <div class="help-search-actions">
+          <button type="button" class="help-action-btn" data-expand-all>Expand all guides</button>
+          <button type="button" class="help-action-btn" data-collapse-all>Collapse all</button>
+        </div>
+      </div>
+    </div>
   </PageHero>
 
-  <section class="stage stage--flush-top" aria-label="Help topics">
+  <!-- 1. TOP CATEGORIES BENTO (6 Primary Topics: 3x2 Desktop, 2x3 Tablet, 1x6 Mobile) -->
+  <section class="stage stage--flush-top" aria-label="Primary Help Categories">
     <div class="wrap">
       <div class="bento" data-reveal>
-        <a class="tile span-2 topic" href="#get-started"><h3>Get started</h3><p>Install, open and bring your first videos in.</p><span class="link-more">Start</span></a>
-        <a class="tile span-2 topic" href="#youtube-setup"><h3>Connect YouTube</h3><p>Sign in with Google, or bring your own project.</p><span class="link-more">Set up</span></a>
-        <a class="tile span-2 topic" href={href('/data-deletion')}><h3>Delete your data</h3><p>Disconnect one account, or remove everything.</p><span class="link-more">Instructions</span></a>
+        {categories.map((cat) => (
+          <a class="tile span-2 cat-card" href={`#${cat.id}`}>
+            <div class="cat-card-top">
+              <span class="cat-num">{cat.number}</span>
+              <span class="cat-badge">{cat.badge}</span>
+            </div>
+            <h3>{cat.title}</h3>
+            <p>{cat.blurb}</p>
+            <span class="link-more">Explore {cat.title}</span>
+          </a>
+        ))}
       </div>
     </div>
   </section>
 
-  <section class="stage stage--lift" id="get-started" aria-labelledby="start-title">
-    <div class="wrap">
-      <div class="split">
-        <div data-reveal>
-          <p class="eyebrow">Get started</p>
-          <h2 id="start-title" class="title" data-pn-label="Getting started">From download to your first ticket.</h2>
-          <div class="recommend">
-            <p class="rec-v">Reelay for Mac</p>
-            <a class="btn btn-primary" href={href('/download')}>Download</a>
-            <p class="fine">{RELEASE.requirements}</p>
-          </div>
-        </div>
-        <ol class="steps" data-reveal style="--reveal-delay:.08s">
-          <li><span class="step-n">1</span><span><strong>Install.</strong> Open the .dmg and drag Reelay to Applications.</span></li>
-          <li><span class="step-n">2</span><span><strong>Open it the first time</strong>, as shown below.</span></li>
-          <li><span class="step-n">3</span><span><strong>Bring videos in.</strong> In <strong>Download Sources</strong>, add an account you own or manage by @username or link, click List Videos, tick what you want and Download.</span></li>
-          <li><span class="step-n">4</span><span><strong>Open the Board.</strong> Every video is a ticket in Backlog, ready for its copy.</span></li>
-        </ol>
-      </div>
-      <div class="mt-3" data-reveal><GatekeeperSteps /></div>
-      <div class="selftest" data-reveal>
-        <p><strong>Something not working?</strong> Reelay has a built-in environment check that runs without opening a window. Send us what it prints.</p>
-        <pre><code>/Applications/Reelay.app/Contents/MacOS/Reelay --self-test</code></pre>
-      </div>
-    </div>
-  </section>
-
-  <section class="stage" id="youtube-setup" aria-labelledby="yt-title">
+  <!-- 2. GETTING STARTED: 6-STEP QUICK TOUR + FIRST LAUNCH -->
+  <section class="stage stage--lift" id="get-started" aria-labelledby="tour-heading" data-help-section>
     <div class="wrap">
       <header class="chapter-head" data-reveal>
-        <p class="eyebrow">Connecting YouTube</p>
-        <h2 id="yt-title" class="headline" data-pn-label="Connecting YouTube">Sign in with Google.<br /><span class="text-silver">Or bring your own project.</span></h2>
-        <p class="lede">Reelay’s one-click Google sign-in turns on once Google approves Reelay’s app. Until then, and whenever you prefer, connect through a free Google Cloud project you own: <strong>Accounts → Set Up YouTube…</strong> walks you through it.</p>
+        <p class="eyebrow">00 · Interactive Studio Tour</p>
+        <h2 id="tour-heading" class="title" data-pn-label="6-Step Studio Tour">The 6-step loop from import to published.</h2>
+        <p class="lede">
+          New to Reelay on macOS ({RELEASE.requirements})? <a href={href('/download')}>Download Reelay</a>, then open any step below to see what you’re doing, the exact numbered workflow, and the matching studio view.
+        </p>
       </header>
-      <ol class="steps steps--wide" data-reveal>
-        <li><span class="step-n">1</span><span>Create a project.</span></li>
-        <li><span class="step-n">2</span><span>Enable the YouTube Data API v3.</span></li>
-        <li><span class="step-n">3</span><span>Set up the sign-in screen as External, adding each Google account you’ll connect as a test user.</span></li>
-        <li><span class="step-n">4</span><span>Create a Desktop app client ID.</span></li>
-        <li><span class="step-n">5</span><span>Paste the client ID and secret into Reelay, or load the downloaded JSON.</span></li>
-      </ol>
-      <p class="lede mt-2" data-reveal>With your own project, three limits apply:</p>
-      <div class="feature-grid" data-reveal>
-        <div class="feature"><h3>Private until audited</h3><p>Uploads from a project that hasn’t passed YouTube’s API compliance audit are locked to private, so scheduled videos won’t go public. Reelay flags it on the card.</p></div>
-        <div class="feature"><h3>Weekly sign-in</h3><p>While the project is in Testing mode, Google expires sign-ins every seven days, so you’ll need to reconnect.</p></div>
-        <div class="feature"><h3>A daily upload limit</h3><p>YouTube’s default API quota caps uploads per day. You can ask Google for more.</p></div>
+
+      <div class="guide-stack" data-reveal>
+        {tourSteps.map((step, idx) => (
+          <details
+            class="help-guide"
+            id={step.id}
+            data-guide-item
+            data-search-text={`${step.title} ${step.doing} ${step.steps.join(' ')} ${step.expect} ${step.keywords}`.toLowerCase()}
+          >
+            <summary class="help-summary">
+              <span class="guide-index">0{idx + 1}</span>
+              <span class="guide-head-text">
+                <strong class="guide-title">{step.title}</strong>
+                <span class="guide-subtitle">{step.doing}</span>
+              </span>
+              <span class="guide-pill">Quick Tour</span>
+              <span class="guide-chevron" aria-hidden="true"></span>
+            </summary>
+
+            <div class="help-body">
+              <div class="guide-doing-box">
+                <span class="doing-kicker">What you’re doing</span>
+                <p>{step.doing}</p>
+              </div>
+
+              <div class="guide-columns">
+                <div class="guide-instructions">
+                  <h4 class="guide-subhead">Step-by-step instructions</h4>
+                  <ol class="guide-steps">
+                    {step.steps.map((s, sIdx) => (
+                      <li>
+                        <span class="step-num">{sIdx + 1}</span>
+                        <span set:html={s} />
+                      </li>
+                    ))}
+                  </ol>
+                  <div class="guide-expect">
+                    <strong>What to expect:</strong> {step.expect}
+                  </div>
+                </div>
+
+                <div class="guide-media">
+                  <figure class="guide-screenshot" data-screen-slot={step.slot}>
+                    <picture>
+                      <source srcset={`${base}screens/${step.slot}-dark@2x.png`} media="(prefers-color-scheme: dark)" />
+                      <img
+                        src={`${base}screens/${step.slot}-light@2x.png`}
+                        width="1440"
+                        height="900"
+                        alt={step.shotAlt}
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    </picture>
+                    <figcaption>{step.shotAlt}</figcaption>
+                  </figure>
+
+                  <div class="video-embed-placeholder" data-video-slot={step.id}>
+                    <div class="video-placeholder-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z" /></svg>
+                    </div>
+                    <div class="video-placeholder-copy">
+                      <span class="video-placeholder-kicker">Walkthrough Video Slot</span>
+                      <strong>{step.videoTitle || `Walkthrough: ${step.title}`}</strong>
+                      <span>Ready for MP4 / YouTube walkthrough embed</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        ))}
+      </div>
+
+      <div class="mt-3" data-reveal>
+        <GatekeeperSteps />
       </div>
     </div>
   </section>
 
+  <!-- 3. THE 6 PRIMARY CATEGORIES & 25 INTERACTIVE VISUAL GUIDES -->
+  {categories.map((cat, cIdx) => (
+    <section
+      class:list={['stage', { 'stage--lift': cIdx % 2 === 1 }]}
+      id={cat.id}
+      aria-labelledby={`${cat.id}-heading`}
+      data-help-section
+    >
+      <div class="wrap">
+        {cat.id === 'accounts-signin' && (
+          <>
+            <span id="connecting-youtube" class="anchor-alias" aria-hidden="true"></span>
+            <span id="youtube-setup" class="anchor-alias" aria-hidden="true"></span>
+          </>
+        )}
+        <header class="chapter-head" data-reveal>
+          <p class="eyebrow">Category {cat.number} · {cat.badge}</p>
+          <h2 id={`${cat.id}-heading`} class="title" data-pn-label={cat.title}>{cat.title}</h2>
+          <p class="lede">{cat.blurb}</p>
+        </header>
+
+        <div class="guide-stack" data-reveal>
+          {cat.guides.map((guide, gIdx) => (
+            <details
+              class="help-guide"
+              id={guide.id}
+              data-guide-item
+              data-aliases={guide.aliases ? guide.aliases.join(',') : undefined}
+              data-search-text={`${cat.title} ${guide.title} ${guide.doing} ${guide.steps.join(' ')} ${guide.expect} ${guide.keywords} ${(guide.details || []).map((d) => `${d.title} ${d.lines.join(' ')}`).join(' ')}`.toLowerCase()}
+            >
+              <summary class="help-summary">
+                <span class="guide-index">{cat.number}.{gIdx + 1}</span>
+                <span class="guide-head-text">
+                  <strong class="guide-title">{guide.title}</strong>
+                  <span class="guide-subtitle">{guide.doing}</span>
+                </span>
+                <span class="guide-pill">{cat.title}</span>
+                <span class="guide-chevron" aria-hidden="true"></span>
+              </summary>
+
+              <div class="help-body">
+                <div class="guide-doing-box">
+                  <span class="doing-kicker">What you’re doing</span>
+                  <p>{guide.doing}</p>
+                </div>
+
+                <div class="guide-columns">
+                  <div class="guide-instructions">
+                    <h4 class="guide-subhead">Step-by-step instructions</h4>
+                    <ol class="guide-steps">
+                      {guide.steps.map((s, sIdx) => (
+                        <li>
+                          <span class="step-num">{sIdx + 1}</span>
+                          <span set:html={s} />
+                        </li>
+                      ))}
+                    </ol>
+
+                    <div class="guide-expect">
+                      <strong>What to expect:</strong> {guide.expect}
+                    </div>
+
+                    {guide.details && guide.details.length > 0 && (
+                      <div class="guide-details-list">
+                        {guide.details.map((det) => (
+                          <div class="guide-detail-block">
+                            <h5>{det.title}</h5>
+                            <ul>
+                              {det.lines.map((line) => (
+                                <li>{line}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div class="guide-media">
+                    <figure class="guide-screenshot" data-screen-slot={guide.slot}>
+                      <picture>
+                        <source srcset={`${base}screens/${guide.slot}-dark@2x.png`} media="(prefers-color-scheme: dark)" />
+                        <img
+                          src={`${base}screens/${guide.slot}-light@2x.png`}
+                          width="1440"
+                          height="900"
+                          alt={guide.shotAlt}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </picture>
+                      <figcaption>{guide.shotAlt}</figcaption>
+                    </figure>
+
+                    <div class="video-embed-placeholder" data-video-slot={guide.id}>
+                      <div class="video-placeholder-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z" /></svg>
+                      </div>
+                      <div class="video-placeholder-copy">
+                        <span class="video-placeholder-kicker">Walkthrough Video Slot</span>
+                        <strong>{guide.videoTitle || `Walkthrough: ${guide.title}`}</strong>
+                        <span>Ready for MP4 / YouTube walkthrough embed</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+  ))}
+
+  <!-- 4. OAUTH PERMISSIONS & REVIEWER VERIFICATION -->
   <section class="stage stage--lift" id="demo-verification" aria-labelledby="review-title">
     <div class="wrap">
       <header class="chapter-head" data-reveal>
@@ -99,13 +1115,15 @@ const faq = [
     </div>
   </section>
 
+  <!-- 5. COMMON QUESTIONS (FAQ) -->
   <section class="stage" aria-labelledby="faq-title">
     <div class="wrap-narrow">
-      <h2 id="faq-title" class="title" data-reveal>Questions</h2>
+      <h2 id="faq-title" class="title" data-reveal>Common Questions</h2>
       <div class="mt-2" data-reveal><Faq items={faq} /></div>
     </div>
   </section>
 
+  <!-- 6. CONTACT -->
   <section class="stage stage--tight" aria-labelledby="contact-title">
     <div class="wrap">
       <h2 id="contact-title" class="title center" data-reveal>Contact</h2>
@@ -119,20 +1137,599 @@ const faq = [
   </section>
 </BaseLayout>
 
+<script>
+  const searchInput = document.querySelector<HTMLInputElement>('[data-help-search]');
+  const clearBtn = document.querySelector<HTMLButtonElement>('[data-help-clear]');
+  const statusEl = document.querySelector<HTMLElement>('[data-help-status]');
+  const expandAllBtn = document.querySelector<HTMLButtonElement>('[data-expand-all]');
+  const collapseAllBtn = document.querySelector<HTMLButtonElement>('[data-collapse-all]');
+  const guideItems = [...document.querySelectorAll<HTMLDetailsElement>('[data-guide-item]')];
+  const helpSections = [...document.querySelectorAll<HTMLElement>('[data-help-section]')];
+
+  function filterGuides(rawQuery: string) {
+    const words = rawQuery
+      .toLowerCase()
+      .split(/\s+/)
+      .map((w) => w.trim())
+      .filter(Boolean);
+
+    if (clearBtn) clearBtn.hidden = words.length === 0;
+
+    if (!words.length) {
+      guideItems.forEach((item) => {
+        item.hidden = false;
+      });
+      helpSections.forEach((sec) => {
+        sec.hidden = false;
+      });
+      if (statusEl) {
+        statusEl.textContent = 'Showing all 25 visual guides & 6-step studio tour';
+      }
+      return;
+    }
+
+    let matchedCount = 0;
+    guideItems.forEach((item) => {
+      const hay = item.dataset.searchText || '';
+      const hit = words.every((w) => hay.includes(w));
+      item.hidden = !hit;
+      if (hit) {
+        item.open = true;
+        matchedCount++;
+      }
+    });
+
+    helpSections.forEach((sec) => {
+      const visibleInSec = sec.querySelectorAll('[data-guide-item]:not([hidden])').length;
+      sec.hidden = visibleInSec === 0;
+    });
+
+    if (statusEl) {
+      statusEl.textContent =
+        matchedCount === 0
+          ? `No guides matched "${rawQuery.trim()}" — try another keyword like "YouTube", "captions", or "readiness".`
+          : `Found ${matchedCount} matching guide${matchedCount === 1 ? '' : 's'} for "${rawQuery.trim()}"`;
+    }
+  }
+
+  searchInput?.addEventListener('input', () => {
+    filterGuides(searchInput.value);
+  });
+
+  clearBtn?.addEventListener('click', () => {
+    if (!searchInput) return;
+    searchInput.value = '';
+    filterGuides('');
+    searchInput.focus();
+  });
+
+  expandAllBtn?.addEventListener('click', () => {
+    guideItems.forEach((item) => {
+      if (!item.hidden) item.open = true;
+    });
+  });
+
+  collapseAllBtn?.addEventListener('click', () => {
+    guideItems.forEach((item) => {
+      item.open = false;
+    });
+  });
+
+  // Direct URL anchor deep-linking (e.g. /support#connecting-youtube, /support#accounts-connect, /support#auto-rules)
+  function openGuideFromHash() {
+    const rawHash = window.location.hash.replace(/^#/, '').trim();
+    if (!rawHash) return;
+    let id = rawHash;
+    try {
+      id = decodeURIComponent(rawHash);
+    } catch {
+      id = rawHash;
+    }
+
+    // Check direct <details id="..."> match or alias match (e.g. #connecting-youtube -> #accounts-connect)
+    const directDetails =
+      document.querySelector<HTMLDetailsElement>(`details#${CSS.escape(id)}`) ||
+      guideItems.find((item) => (item.dataset.aliases || '').split(',').includes(id));
+
+    if (directDetails) {
+      directDetails.hidden = false;
+      directDetails.open = true;
+      const parentSec = directDetails.closest<HTMLElement>('[data-help-section]');
+      if (parentSec) parentSec.hidden = false;
+      requestAnimationFrame(() => {
+        directDetails.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      return;
+    }
+
+    // Check if hash points inside a <details> or to a category section
+    const target = document.getElementById(id);
+    if (!target) return;
+    const parentDetails = target.closest<HTMLDetailsElement>('details.help-guide');
+    if (parentDetails) {
+      parentDetails.hidden = false;
+      parentDetails.open = true;
+    }
+  }
+
+  openGuideFromHash();
+  window.addEventListener('hashchange', openGuideFromHash);
+  document.addEventListener('click', (e) => {
+    const link = (e.target as Element | null)?.closest?.('a[href*="#"]') as HTMLAnchorElement | null;
+    if (!link) return;
+    const hrefAttr = link.getAttribute('href') || '';
+    const hashIdx = hrefAttr.indexOf('#');
+    if (hashIdx === -1) return;
+    const hash = hrefAttr.slice(hashIdx + 1);
+    if (!hash) return;
+    setTimeout(() => openGuideFromHash(), 20);
+  });
+</script>
+
 <style>
-  .topic { display: flex; flex-direction: column; color: var(--r-ink); transition: transform 0.4s var(--r-ease), background-color 0.3s ease; }
-  .topic:hover { color: var(--r-ink); background: var(--r-tile-2); transform: translateY(-3px); }
-  .topic p { color: var(--r-ink-3); flex: 1; }
-  .topic .link-more { margin-top: 1rem; }
-  .recommend { margin-top: 2rem; display: grid; justify-items: start; gap: 0.6rem; }
-  .rec-v { font-size: 1.25rem; font-weight: 600; color: var(--r-ink); }
-  .steps { list-style: none; display: grid; }
-  .steps li { display: flex; align-items: flex-start; gap: 1.1rem; padding: 1.15rem 0; border-top: 1px solid var(--hairline); font-size: 1.05rem; color: var(--r-ink-2); }
-  .steps li:last-child { border-bottom: 1px solid var(--hairline); }
-  .steps strong { color: var(--r-ink); }
-  .step-n { display: grid; place-items: center; flex: none; width: 2rem; height: 2rem; border-radius: 50%; background: var(--r-amber-soft); color: var(--r-amber-text); font-size: 0.9rem; font-weight: 700; }
-  .steps--wide { margin-bottom: 1rem; }
-  .selftest { margin-top: clamp(3rem, 6vw, 4.5rem); max-width: 46rem; }
-  .selftest pre { margin-top: 0.85rem; padding: 1rem 1.15rem; border-radius: 14px; background: var(--r-code-bg); overflow-x: auto; font-size: 0.88rem; color: var(--r-ink); }
-  .spec-label a { color: var(--r-amber-text); font-size: 1.05rem; }
+  /* Search Shell in PageHero */
+  .help-search-shell {
+    margin: 2rem auto 0;
+    max-width: 44rem;
+    text-align: left;
+  }
+  .help-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.75rem 0.55rem 1.1rem;
+    border-radius: 999px;
+    background: var(--r-panel);
+    border: 1px solid var(--hairline-strong);
+    box-shadow: var(--shadow-sm);
+  }
+  .help-search-bar:focus-within {
+    border-color: var(--r-amber);
+    box-shadow: 0 0 0 3px var(--r-amber-soft);
+  }
+  .help-search-icon {
+    width: 1.2rem;
+    height: 1.2rem;
+    flex: none;
+    color: var(--r-ink-3);
+  }
+  .help-search-input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: var(--r-ink);
+    font-size: 1rem;
+    line-height: 1.4;
+    outline: none;
+  }
+  .help-search-input::placeholder {
+    color: var(--r-ink-4);
+  }
+  .help-search-clear {
+    flex: none;
+    padding: 0.35rem 0.85rem;
+    border: 1px solid var(--hairline-strong);
+    border-radius: 999px;
+    background: var(--r-fill-2);
+    color: var(--r-ink-2);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .help-search-clear:hover {
+    color: var(--r-ink);
+  }
+  .help-search-meta {
+    margin-top: 0.85rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0 0.35rem;
+    font-size: 0.86rem;
+    color: var(--r-ink-3);
+  }
+  .help-search-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .help-action-btn {
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    background: var(--r-tile);
+    color: var(--r-ink-2);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .help-action-btn:hover {
+    color: var(--r-ink);
+    border-color: var(--hairline-strong);
+  }
+
+  /* 6-Topic Bento Grid */
+  .cat-card {
+    display: flex;
+    flex-direction: column;
+    color: var(--r-ink);
+    text-decoration: none;
+    transition: transform 0.35s var(--r-ease), background-color 0.25s ease;
+  }
+  .cat-card:hover {
+    color: var(--r-ink);
+    background: var(--r-tile-2);
+    transform: translateY(-3px);
+  }
+  .cat-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .cat-num {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--r-amber-text);
+  }
+  .cat-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    background: var(--r-fill-2);
+    color: var(--r-ink-2);
+  }
+  .cat-card p {
+    color: var(--r-ink-3);
+    flex: 1;
+  }
+  .cat-card .link-more {
+    margin-top: 1rem;
+  }
+
+  .anchor-alias {
+    display: block;
+    position: relative;
+    top: -5rem;
+    visibility: hidden;
+  }
+
+  /* Collapsible Guide Accordions (<details> / <summary>) */
+  .guide-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+  .help-guide {
+    border-radius: 18px;
+    background: var(--r-tile);
+    border: 1px solid var(--hairline);
+    overflow: hidden;
+    scroll-margin-top: 5.5rem;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+  }
+  .help-guide[open] {
+    background: var(--r-panel);
+    border-color: var(--hairline-strong);
+    box-shadow: var(--shadow-sm);
+  }
+  .help-summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.15rem 1.35rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .help-summary::-webkit-details-marker {
+    display: none;
+  }
+  .guide-index {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    min-width: 2.5rem;
+    height: 2rem;
+    padding: 0 0.45rem;
+    border-radius: 999px;
+    background: var(--r-amber-soft);
+    color: var(--r-amber-text);
+    font-size: 0.8rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .guide-head-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .guide-title {
+    font-size: 1.08rem;
+    font-weight: 650;
+    color: var(--r-ink);
+    line-height: 1.3;
+  }
+  .guide-subtitle {
+    font-size: 0.9rem;
+    color: var(--r-ink-3);
+    line-height: 1.4;
+  }
+  .guide-pill {
+    flex: none;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    background: var(--r-fill-2);
+    color: var(--r-ink-2);
+  }
+  .guide-chevron {
+    flex: none;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    background: var(--r-fill-2);
+    position: relative;
+  }
+  .guide-chevron::before,
+  .guide-chevron::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    background: var(--r-ink-2);
+    transform: translate(-50%, -50%);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  .guide-chevron::before {
+    width: 10px;
+    height: 1.8px;
+  }
+  .guide-chevron::after {
+    width: 1.8px;
+    height: 10px;
+  }
+  .help-guide[open] .guide-chevron::after {
+    transform: translate(-50%, -50%) scaleY(0);
+    opacity: 0;
+  }
+
+  .help-body {
+    padding: 0 1.35rem 1.45rem;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .guide-doing-box {
+    margin-top: 1.15rem;
+    padding: 0.9rem 1.1rem;
+    border-radius: 12px;
+    background: var(--r-fill);
+    border-left: 3px solid var(--r-amber);
+  }
+  .doing-kicker {
+    display: block;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--r-amber-text);
+    margin-bottom: 0.2rem;
+  }
+  .guide-doing-box p {
+    margin: 0;
+    font-size: 0.98rem;
+    font-weight: 500;
+    color: var(--r-ink);
+  }
+
+  .guide-columns {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  @media (min-width: 960px) {
+    .guide-columns {
+      flex-direction: row;
+      align-items: flex-start;
+    }
+    .guide-instructions {
+      flex: 1.05;
+      min-width: 0;
+    }
+    .guide-media {
+      flex: 0.95;
+      min-width: 0;
+    }
+  }
+
+  .guide-subhead {
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--r-ink-3);
+    margin: 0 0 0.75rem;
+  }
+  .guide-steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+  .guide-steps li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 0.75rem 0.9rem;
+    border-radius: 12px;
+    background: var(--r-fill);
+    color: var(--r-ink-2);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .guide-steps li :global(strong) {
+    color: var(--r-ink);
+  }
+  .guide-steps li :global(code) {
+    font-size: 0.86em;
+    color: var(--r-amber-text);
+    overflow-wrap: anywhere;
+  }
+  .step-num {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 1.65rem;
+    height: 1.65rem;
+    border-radius: 50%;
+    background: var(--r-amber-soft);
+    color: var(--r-amber-text);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .guide-expect {
+    margin-top: 0.9rem;
+    padding: 0.8rem 0.95rem;
+    border-radius: 12px;
+    background: var(--r-fill-2);
+    color: var(--r-ink-2);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  .guide-expect strong {
+    color: var(--r-ink);
+  }
+
+  .guide-details-list {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .guide-detail-block {
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--hairline);
+    background: var(--r-tile);
+  }
+  .guide-detail-block h5 {
+    margin: 0 0 0.45rem;
+    font-size: 0.88rem;
+    font-weight: 650;
+    color: var(--r-ink);
+  }
+  .guide-detail-block ul {
+    margin: 0;
+    padding-left: 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    color: var(--r-ink-2);
+    font-size: 0.88rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .guide-media {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+  .guide-screenshot {
+    margin: 0;
+  }
+  .guide-screenshot img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    border: 1px solid var(--hairline-strong);
+    box-shadow: var(--app-frame);
+  }
+  .guide-screenshot figcaption {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--r-ink-3);
+    text-align: center;
+  }
+
+  .video-embed-placeholder {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    background: var(--r-fill);
+    border: 1px dashed var(--hairline-strong);
+  }
+  .video-placeholder-icon {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: var(--r-amber-soft);
+    color: var(--r-amber-text);
+  }
+  .video-placeholder-icon svg {
+    width: 1.15rem;
+    height: 1.15rem;
+    margin-left: 0.1rem;
+  }
+  .video-placeholder-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+  .video-placeholder-kicker {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--r-amber-text);
+  }
+  .video-placeholder-copy strong {
+    font-size: 0.9rem;
+    color: var(--r-ink);
+    overflow-wrap: anywhere;
+  }
+  .video-placeholder-copy span:last-child {
+    font-size: 0.8rem;
+    color: var(--r-ink-3);
+  }
+
+  .spec-label a {
+    color: var(--r-amber-text);
+    font-size: 1.05rem;
+    overflow-wrap: anywhere;
+  }
+
+  @media (max-width: 640px) {
+    .help-summary {
+      padding: 0.95rem 1rem;
+      gap: 0.7rem;
+    }
+    .guide-pill {
+      display: none;
+    }
+    .help-body {
+      padding: 0 1rem 1.15rem;
+    }
+  }
 </style>
