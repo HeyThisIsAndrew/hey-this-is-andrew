@@ -229,6 +229,34 @@ async function runVerification() {
         });
         if (boxes.length) failures.push(`Story on a phone: the pinned frame sits inside clipping or isolating boxes (${boxes.join(', ')}), which makes it shake on iPhone`);
         else passedChecks.push('Story on a phone: nothing between the pinned frame and the page clips, isolates or transforms it');
+        // In the middle of its pinned stretch the frame is held with
+        // position: fixed (iPhone Safari wobbles sticky boxes; fixed ones it
+        // holds still), and the switches in and out must not move the frame
+        // or the text: scroll through in small steps and compare.
+        const seam = await p2.evaluate(async () => {
+          const grid = document.querySelector('.story-grid');
+          const stage = document.querySelector('.story-stage');
+          const frame = document.querySelector('.frame--stage');
+          const probe = document.querySelector('.story-step[data-step="3"] .step-title');
+          const a = grid.getBoundingClientRect().top + scrollY - 300, z = grid.getBoundingClientRect().bottom + scrollY;
+          const frameOf = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+          let prev = null; let fixedSeen = 0; const issues = [];
+          for (let y = a; y < z; y += 15) {
+            window.scrollTo({ top: y, behavior: 'instant' });
+            await frameOf();
+            const f = frame.getBoundingClientRect();
+            const cur = { fixed: stage.classList.contains('is-fixed'), top: f.top, left: f.left, w: f.width, text: probe.getBoundingClientRect().top + scrollY };
+            if (cur.fixed) fixedSeen++;
+            if (prev) {
+              if (Math.abs(cur.text - prev.text) > 0.5) issues.push(`text moved ${(cur.text - prev.text).toFixed(2)}px at ${Math.round(y)}`);
+              if (prev.fixed !== cur.fixed && (Math.abs(cur.top - prev.top) > 0.5 || Math.abs(cur.left - prev.left) > 0.5 || Math.abs(cur.w - prev.w) > 0.5)) issues.push(`frame moved switching at ${Math.round(y)}`);
+            }
+            prev = cur;
+          }
+          return { fixedSeen, issues: issues.slice(0, 4) };
+        });
+        if (!seam.fixedSeen || seam.issues.length) failures.push(`Story on a phone: fixed hold ${JSON.stringify(seam)}`);
+        else passedChecks.push(`Story on a phone: the frame is held fixed through the middle of its stretch (${seam.fixedSeen} of the sampled positions), and switching in and out moves neither it nor the text`);
         const wrong = res.map((r, i) => (r.pinned && r.stage === String(i + 1) && r.shot === expect[i] && r.stuck ? null : `${i + 1}: ${JSON.stringify(r)}`)).filter(Boolean);
         if (wrong.length) failures.push(`Story on a 390px phone isn't pinned right: ${wrong.join('; ')}`);
         else passedChecks.push('Story on a 390px phone: the frame stays pinned under the nav and each step, scrolled into the space below, shows its own screen');

@@ -142,6 +142,7 @@ void DEMO_CARDS;
       </div>
 
       {/* Pinned layout: one sticky frame. Decorative: the steps say it all. */}
+      <div class="stage-spacer" aria-hidden="true"></div>
       <div class="story-stage" aria-hidden="true">
         <div class="stage-box">
           <div class="stage-bar"><span class="stage-fill"></span></div>
@@ -263,6 +264,7 @@ void DEMO_CARDS;
   .dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--r-amber-text); flex: none; }
 
   .story-stage { display: none; }
+  .stage-spacer { display: none; }
 
   /* Stacked on a wide screen (reduced motion, or no JavaScript): each step
      is its text beside its picture, so the section stays compact without
@@ -351,6 +353,17 @@ void DEMO_CARDS;
       );
       pointer-events: none;
     }
+    /* Held by the script (see initStory): the same place as sticky gives
+       it, under the nav and edge to edge, with the same inset. */
+    .story[data-pinned] .story-stage.is-fixed {
+      position: fixed;
+      left: 0;
+      right: 0;
+      margin: 0;
+      padding-inline: var(--pad, 0px);
+    }
+    .story[data-pinned] .stage-spacer { display: block; order: -1; flex: none; height: 0; }
+    /* Scroll anchoring is off for phone pages (global.css): see there. */
     .story[data-pinned] .stage-box { max-width: 34rem; margin-inline: auto; }
     /* A hairline instead of the frame's deep shadow, which the band would
        cut off in a visible line. */
@@ -449,13 +462,72 @@ void DEMO_CARDS;
       const mq = window.matchMedia('(prefers-reduced-motion: no-preference) and (min-width: 1024px), (prefers-reduced-motion: no-preference) and (min-height: 600px)');
       const wide = window.matchMedia('(min-width: 1024px)');
       let io: IntersectionObserver | null = null;
+      // ── Phones: hold the pinned frame with position: fixed ──────────────
+      // iPhone Safari moves a sticky element a little behind the scroll: in
+      // a screen recording the pinned frame wandered over 8 device pixels
+      // from frame to frame while the fixed nav above it held to 0.001px.
+      // So once the frame is well inside its pinned stretch, it's switched
+      // to fixed at the same spot, and switched back to sticky shortly
+      // before the stretch ends. Both put it exactly under the nav there,
+      // so neither switch moves it; sticky still does the arriving and
+      // leaving. A spacer keeps its place in the page meanwhile.
+      const grid = root.querySelector<HTMLElement>('.story-grid');
+      const stage = root.querySelector<HTMLElement>('.story-stage');
+      const spacer = root.querySelector<HTMLElement>('.stage-spacer')!;
+      const MARGIN = 48;   // px into the stretch before fixing, and before its end
+      let fixed = false;
+      let queued = false;
+      const unfix = () => {
+        if (!fixed || !stage) return;
+        fixed = false;
+        stage.classList.remove('is-fixed');
+        stage.style.removeProperty('--pad');
+        spacer.style.height = '0px';
+      };
+      const hold = () => {
+        queued = false;
+        if (!grid || !stage || !root.hasAttribute('data-pinned') || wide.matches) return unfix();
+        const top = parseFloat(getComputedStyle(stage).top) || 0;
+        const g = grid.getBoundingClientRect();
+        const h = (fixed ? spacer : stage).getBoundingClientRect().height;   // exact, not rounded: the text below mustn't shift
+        // Hysteresis: switch in 48px into the stretch, out 24px before its
+        // end, so the two tests can never flip it back and forth.
+        const m = fixed ? MARGIN / 2 : MARGIN;
+        const inside = g.top < top - m && g.bottom - h > top + m;
+        if (inside && !fixed) {
+          fixed = true;
+          spacer.style.height = `${h}px`;
+          stage.style.setProperty('--pad', getComputedStyle(stage).paddingLeft);
+          stage.classList.add('is-fixed');
+        } else if (!inside && fixed) unfix();
+      };
+      const queue = () => { if (!queued) { queued = true; requestAnimationFrame(hold); } };
+      window.addEventListener('scroll', queue, { passive: true });
+      // Phones fire resize as the browser's toolbars slide in and out while
+      // scrolling: never let go there, only re-measure (a turned phone
+      // changes the frame's size and inset).
+      window.addEventListener('resize', () => {
+        if (fixed && stage) {
+          stage.classList.remove('is-fixed');
+          spacer.style.height = '0px';
+          const h = stage.getBoundingClientRect().height;
+          const pad = getComputedStyle(stage).paddingLeft;
+          spacer.style.height = `${h}px`;
+          stage.style.setProperty('--pad', pad);
+          stage.classList.add('is-fixed');
+        }
+        queue();
+      }, { passive: true });
+
       const apply = () => {
         io?.disconnect();
         io = null;
+        unfix();
         if (!mq.matches) {
           delete root.dataset.pinned;
           return;
         }
+        queue();
         root.dataset.pinned = '';
         current = 0;
         show(1);
