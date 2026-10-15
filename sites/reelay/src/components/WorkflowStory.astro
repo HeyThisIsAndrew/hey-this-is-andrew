@@ -313,28 +313,37 @@ void DEMO_CARDS;
      scrolling up beneath it, each one taking over the frame as it reaches
      the middle of the space below. Nothing is intercepted: it's ordinary
      scrolling past a sticky box, so a swipe carries on as it always does.
-     The frame's band is opaque (the steps pass under it), widened to the
-     screen edges with a shadow rather than with layout. */
+
+     The band is opaque (the steps pass under it) and reaches the screen
+     edges through negative margins, plain layout. Never through clip-path
+     or a huge box-shadow: on a sticky box, iPhone Safari repositions those
+     a frame late, and the picture shook up and down while scrolling.
+     Its foot is feathered, so the text below fades out under it rather
+     than being cut by a hard edge. */
   @media (max-width: 1023.98px) {
     .story[data-pinned] .story-grid { display: flex; flex-direction: column; }
     .story[data-pinned] .story-stage {
       order: -1;
       z-index: 2;
       top: var(--nav-bar-h);
-      padding: 0.75rem 0 0.9rem;
+      margin-inline: calc(50% - 50vw);
+      padding: 0.75rem calc(50vw - 50%) 0.35rem;
       background: var(--r-bg);
-      box-shadow: 0 0 0 100vmax var(--r-bg);
-      clip-path: inset(0 -100vmax -1.5rem);
     }
     .story[data-pinned] .story-stage::after {
       content: '';
       position: absolute;
-      left: -100vmax;
-      right: -100vmax;
+      left: 0;
+      right: 0;
       top: 100%;
-      height: 1.5rem;
-      background: linear-gradient(var(--r-bg), transparent);
-      box-shadow: none;
+      height: 3.5rem;
+      background: linear-gradient(
+        var(--r-bg) 0%,
+        color-mix(in srgb, var(--r-bg) 82%, transparent) 25%,
+        color-mix(in srgb, var(--r-bg) 45%, transparent) 55%,
+        color-mix(in srgb, var(--r-bg) 15%, transparent) 80%,
+        transparent 100%
+      );
       pointer-events: none;
     }
     .story[data-pinned] .stage-box { max-width: 34rem; margin-inline: auto; }
