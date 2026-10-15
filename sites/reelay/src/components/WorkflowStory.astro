@@ -9,15 +9,19 @@
  * dock, Mark as Posted). Nothing here implies posting that Reelay doesn't do:
  * TikTok and Instagram are posted by the person, in their own apps.
  *
+ * A sticky header stays under the nav for the whole story: the headline on
+ * one line (once the big one has scrolled away) and the five steps, each
+ * under a bar that fills as you read through it.
+ *
  * TWO LAYOUTS, ONE MARKUP
- * - Pinned (wide screens, JavaScript on, motion allowed): the steps scroll
- *   on the left while one sticky frame on the right shows the matching
- *   screen. An IntersectionObserver marks a step current when it crosses the
- *   middle of the viewport, and that one attribute (data-stage) drives the
- *   frame: which screen, where it's zoomed, the highlight, the status line.
- *   No scroll handler, nothing per frame, and the wheel is never touched:
- *   the page scrolls exactly as it always does.
- * - Stacked (phones, reduced motion, no JavaScript): each step carries its
+ * - Pinned (JavaScript on, motion allowed): one sticky frame shows the
+ *   current step's screen, beside the steps on a wide screen or a phone on
+ *   its side, above them on a phone or tablet held upright. A step is
+ *   current while it crosses the anchor line (the middle of the room left
+ *   for reading), and that one attribute (data-stage) drives the frame:
+ *   which screen, where it's zoomed, the highlight, the status line. The
+ *   wheel and touch are never intercepted: the page scrolls as it always does.
+ * - Stacked (reduced motion, no JavaScript, or no room): each step carries its
  *   own picture, in reading order. Nothing is pinned or animated, and
  *   nothing is only reachable through motion.
  */
@@ -110,17 +114,23 @@ void DEMO_CARDS;
       <h2 id="story-title" class="headline">Five steps from your library<br /><span class="text-silver">to everywhere it goes.</span></h2>
     </header>
 
-    <ol class="story-index" aria-label="The five steps">
-      {steps.map((s, i) => (
-        <li><a href={`#story-${s.id}`} data-story-link={i + 1} aria-current={i === 0 ? 'step' : undefined}><span class="si-n">0{i + 1}</span> {s.label}</a></li>
-      ))}
-    </ol>
+    {/* Sticky under the nav for the whole story: the headline again, on one
+        line (shown once the big one has scrolled away), and the five steps,
+        each with a bar that fills as you read through it. */}
+    <div class="story-top-spacer" aria-hidden="true"></div>
+    <div class="story-top" data-story-top>
+      <p class="story-mini" aria-hidden="true"><span class="sm-k">How it works</span> <span class="sm-t">Five steps from your library to everywhere it goes.</span></p>
+      <ol class="story-index" aria-label="The five steps">
+        {steps.map((s, i) => (
+          <li><a href={`#story-${s.id}`} data-story-link={i + 1} aria-current={i === 0 ? 'step' : undefined}><span class="si-bar" aria-hidden="true"><i></i></span><span class="si-n">0{i + 1}</span> {s.label}</a></li>
+        ))}
+      </ol>
+    </div>
 
     <div class="story-grid">
       <div class="story-steps">
         {steps.map((s, i) => (
           <article class="story-step" id={`story-${s.id}`} data-step={i + 1} aria-labelledby={`story-${s.id}-title`}>
-            <p class="step-k"><span class="step-n">0{i + 1}</span> {s.label}</p>
             <h3 id={`story-${s.id}-title`} class="step-title">{s.title}</h3>
             <p class="step-body">{s.body}</p>
             <ul class="step-facts">{s.facts.map((f) => <li>{f}</li>)}</ul>
@@ -135,7 +145,7 @@ void DEMO_CARDS;
                   <span class="ring" style={ringStyle(s.ring)} aria-hidden="true"></span>
                 </div>
               </div>
-              <figcaption class="step-status"><span class="dot" aria-hidden="true"></span>{s.status}</figcaption>
+              <figcaption class="step-status"><span class="dot" aria-hidden="true"></span><span class="st-n">0{i + 1}</span> {s.status}</figcaption>
             </figure>
           </article>
         ))}
@@ -145,7 +155,6 @@ void DEMO_CARDS;
       <div class="stage-spacer" aria-hidden="true"></div>
       <div class="story-stage" aria-hidden="true">
         <div class="stage-box">
-          <div class="stage-bar"><span class="stage-fill"></span></div>
           <div class="frame frame--stage" data-crop>
             {screens.map((id) => (
               <div class="shot" data-shot={id}>
@@ -178,52 +187,127 @@ void DEMO_CARDS;
 
 <style>
   .story { padding-top: clamp(2rem, 5vw, 4rem); }
-  .story-head { margin-bottom: clamp(1.5rem, 3vw, 2.25rem); }
+  /* No clipping or stacking box between the story's sticky parts (the
+     header, the frame) and the page: every section clips sideways (.stage),
+     and inside a clipping box iPhone and iPad Safari move a sticky element
+     a frame late, so it shook up and down while scrolling. Nothing here
+     spills sideways (the root clips the viewport). */
+  .story { overflow: visible; isolation: auto; }
+  .story-head { margin-bottom: 0; }
 
-  /* The step index: five numbered links, in a row that wraps cleanly. */
+  /* ── The sticky header: one line of title, then the five steps ────────
+     Sticky under the nav for the whole story (its containing block is the
+     story's .wrap). Its height never changes: the one-line title has its
+     room reserved at rest, where it's the gap under the big headline, and
+     only fades in once the header is stuck and the big headline has gone
+     under the nav. So becoming stuck moves nothing on the page. */
+  .story-top-spacer { height: 0; }
+  .story-top {
+    position: sticky;
+    top: var(--nav-bar-h);
+    z-index: 3;
+    margin-inline: calc(50% - 50vw);
+    padding-inline: calc(50vw - 50%);
+    margin-bottom: clamp(1.75rem, 4vw, 3rem);
+    background: var(--r-bg);
+  }
+  /* Held with position: fixed on touch screens (see initStory), in the
+     same place and size sticky gave it. */
+  .story-top.is-fixed {
+    position: fixed;
+    top: var(--nav-bar-h);
+    left: var(--fx-left, 0px);
+    width: var(--fx-w, 100%);
+    margin: 0;
+    padding-inline: var(--pad, 0px);
+  }
+  .story-top::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 1.75rem;
+    background: linear-gradient(var(--r-bg), color-mix(in srgb, var(--r-bg) 0%, transparent));
+    opacity: 0;
+    pointer-events: none;
+  }
+  .story-top[data-stuck]::after { opacity: 1; }
+  .story-mini {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    height: 2.6rem;
+    padding-top: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 650;
+    letter-spacing: -0.015em;
+    color: var(--r-ink);
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+  .sm-k { flex: none; color: var(--r-amber-text); }
+  .sm-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .story-top[data-stuck] .story-mini { opacity: 1; transform: none; }
+  /* Opacity and transform only: the compositor runs them, so they never
+     cost a touch scroll its momentum (a colour fade did; see below). */
+  @media (prefers-reduced-motion: no-preference) {
+    .story-mini { transition: opacity 0.35s ease, transform 0.45s var(--r-ease); }
+    .story-top::after { transition: opacity 0.35s ease; }
+  }
+
+  /* The step index: five numbered links, each under a bar that fills as
+     you read through its step (the script sets each bar's scaleX). */
   .story-index {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 0.4rem;
     list-style: none;
-    margin-bottom: clamp(1.75rem, 4vw, 3rem);
-    border-top: 1px solid var(--hairline-strong);
   }
   .story-index a {
+    position: relative;
     display: flex;
     align-items: baseline;
     gap: 0.45rem;
     min-height: 44px;
-    padding-top: 0.75rem;
+    padding-top: 0.8rem;
     font-size: 0.92rem;
     font-weight: 600;
     color: var(--r-ink-3);
     text-decoration: none;
-    border-top: 2px solid transparent;
-    margin-top: -1px;
     transition: none;   /* overrides the site-wide link fade; see below */
   }
+  .si-bar { position: absolute; left: 0; right: 0; top: 0; height: 2px; border-radius: 2px; background: var(--hairline-strong); overflow: hidden; }
+  .si-bar i { display: block; height: 100%; background: var(--r-amber-text); transform-origin: 0 50%; transform: scaleX(0); will-change: transform; }
+  /* Without the script: the current (first) step's bar is full. */
+  .story-index a[aria-current='step'] .si-bar i { transform: scaleX(1); }
   /* The current step's mark changes colour gently with a mouse. On a touch
      screen it switches instantly: a colour fade runs on the main thread
      every frame, and fired mid-swipe (as the pinned story does on a phone)
      it cut the swipe's momentum. Measured: 4 to 7 short swipes a run with
      the fade, 0 to 1 without, the same as before the phone was pinned. */
   @media (hover: hover) {
-    .story-index a { transition: color 0.3s ease, border-color 0.3s ease; }
+    .story-index a { transition: color 0.3s ease; }
   }
   .story-index a:hover { color: var(--r-ink); }
-  .story-index a[aria-current='step'] { color: var(--r-ink); border-top-color: var(--r-amber-text); }
-  .si-n, .step-n, .st-n { font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600; color: var(--r-amber-text); font-variant-numeric: tabular-nums; }
+  .story-index a[aria-current='step'] { color: var(--r-ink); }
+  .si-n, .st-n { font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600; color: var(--r-amber-text); font-variant-numeric: tabular-nums; }
   @media (max-width: 640px) {
-    .story-index { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.2rem; }
-    .story-index a { flex-direction: column; gap: 0.1rem; font-size: 0.72rem; }
+    .story-index { gap: 0.2rem; }
+    .story-index a { flex-direction: column; gap: 0.1rem; padding-top: 0.6rem; font-size: 0.72rem; }
+    /* One line on a phone: the headline alone, sized to the width (it's
+       about 25.2 font-sizes long), so it fits whole from 320px up. */
+    .story-mini { height: 2.3rem; padding-top: 0.7rem; font-size: clamp(0.7rem, calc((100vw - 2 * var(--r-gutter)) / 26), 0.9rem); }
+    .sm-k { display: none; }
   }
 
   /* ── Stacked (default): text, then its picture, step after step ─────── */
   .story-steps { display: grid; gap: clamp(3rem, 7vw, 5rem); }
-  .story-step { scroll-margin-top: calc(var(--nav-bar-h) + 1.5rem); }
-  .step-k { display: flex; gap: 0.5rem; align-items: baseline; font-size: 0.85rem; font-weight: 600; color: var(--r-ink-2); }
-  .step-title { margin-top: 0.5rem; font-family: var(--font-display); font-size: clamp(1.6rem, 3.2vw, 2.4rem); font-weight: 700; line-height: 1.1; letter-spacing: -0.03em; color: var(--r-ink); max-width: 22ch; }
+  .story-step { scroll-margin-top: calc(var(--nav-bar-h) + var(--sth, 6rem) + 1rem); }
+  .step-title { font-family: var(--font-display); font-size: clamp(1.6rem, 3.2vw, 2.4rem); font-weight: 700; line-height: 1.1; letter-spacing: -0.03em; color: var(--r-ink); max-width: 22ch; }
   .step-body { margin-top: 0.9rem; max-width: 34rem; font-size: 1.05rem; line-height: 1.55; color: var(--r-ink-2); }
   .step-facts { display: flex; flex-direction: column; gap: 0.35rem; margin-top: 1rem; list-style: none; }
   .step-facts li { display: flex; gap: 0.55rem; align-items: baseline; font-size: 0.92rem; color: var(--r-ink-3); }
@@ -273,12 +357,11 @@ void DEMO_CARDS;
     .story:not([data-pinned]) .story-step {
       display: grid;
       grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-      grid-template-areas: 'k fig' 't fig' 'b fig' 'f fig' '. fig';
-      grid-template-rows: auto auto auto auto 1fr;
+      grid-template-areas: 't fig' 'b fig' 'f fig' '. fig';
+      grid-template-rows: auto auto auto 1fr;
       column-gap: clamp(2.5rem, 5vw, 4.5rem);
       align-items: start;
     }
-    .story:not([data-pinned]) .step-k { grid-area: k; }
     .story:not([data-pinned]) .step-title { grid-area: t; }
     .story:not([data-pinned]) .step-body { grid-area: b; }
     .story:not([data-pinned]) .step-facts { grid-area: f; }
@@ -299,8 +382,9 @@ void DEMO_CARDS;
   .story[data-pinned] .story-stage { display: block; position: sticky; }
 
   /* Wide, or a phone on its side: the steps on the left, the frame pinned
-     beside them. (Pinned under the nav, as upright, a phone on its side
-     would have no room left for the text: the screen is 390px tall.) */
+     beside them, under the sticky header and centred in the room left.
+     (Pinned under the header, as upright, a phone on its side would have no
+     room left for the text: the screen is 390px tall.) */
   @media (min-width: 1024px), (orientation: landscape) and (min-width: 640px) and (max-height: 599.98px) {
     .story[data-pinned] .story-grid {
       display: grid;
@@ -310,36 +394,47 @@ void DEMO_CARDS;
     }
     .story[data-pinned] .story-step { min-height: 44vh; padding-block: 2rem; }
     .story[data-pinned] .story-step:last-child { min-height: 52vh; }
-    .story[data-pinned] .story-stage { top: calc(var(--nav-bar-h) + max(1.5rem, (100vh - var(--nav-bar-h) - 34rem) / 2)); }
+    .story[data-pinned] .story-stage {
+      top: calc(var(--nav-bar-h) + var(--sth, 0px) + max(1rem, (100svh - var(--nav-bar-h) - var(--sth, 0px) - 34rem) / 2));
+    }
+    /* Never taller than the room under the header (16:10 plus the status line). */
+    .story[data-pinned] .stage-box { max-width: calc((100svh - var(--nav-bar-h) - var(--sth, 0px) - 5rem) * 1.6); margin-inline: auto; }
+    /* Held by the script on touch screens (see initStory) where sticky put
+       it: the same top, and the column's measured left edge and width. */
+    .story[data-pinned] .story-stage.is-fixed { position: fixed; left: var(--fx-left, 0px); width: var(--fx-w, auto); margin: 0; }
   }
 
-  /* A phone on its side: the same, scaled to a short screen. The frame is
-     as wide as fits the height under the nav (16:10 plus its status line),
-     the steps' type steps down, and each step is most of a screen tall so
-     one at a time holds the middle. */
+  /* A phone on its side: the same, scaled to a short screen, with a tighter
+     header. Each step is most of a screen tall so one holds the middle. */
   @media (orientation: landscape) and (min-width: 640px) and (max-width: 1023.98px) and (max-height: 599.98px) {
+    .story-mini { height: 2.1rem; padding-top: 0.55rem; font-size: 0.88rem; }
+    .story-index a { padding-top: 0.6rem; font-size: 0.82rem; }
     .story[data-pinned] .story-grid { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: clamp(1.5rem, 4vw, 2.5rem); }
-    .story[data-pinned] .story-stage { top: calc(var(--nav-bar-h) + 0.75rem); }
-    .story[data-pinned] .stage-box { max-width: calc((100svh - var(--nav-bar-h) - 3.75rem) * 1.6); margin-inline: auto; }
-    /* Held by the script (see initStory) where sticky put it: the same top,
-       and the column's measured left edge and width. */
-    .story[data-pinned] .story-stage.is-fixed { position: fixed; left: var(--fx-left, 0px); width: var(--fx-w, auto); margin: 0; }
+    .story[data-pinned] .story-stage { top: calc(var(--nav-bar-h) + var(--sth, 0px) + 0.5rem); }
+    .story[data-pinned] .stage-box { max-width: calc((100svh - var(--nav-bar-h) - var(--sth, 0px) - 3.25rem) * 1.6); }
     .story[data-pinned] .story-step { min-height: 78svh; padding-block: 1rem; }
     .story[data-pinned] .story-step:last-child { min-height: 86svh; }
     .story[data-pinned] .step-title { font-size: clamp(1.3rem, 3.4vw, 1.6rem); }
     .story[data-pinned] .step-body { margin-top: 0.6rem; font-size: 0.92rem; line-height: 1.5; }
     .story[data-pinned] .step-facts { margin-top: 0.7rem; }
     .story[data-pinned] .step-facts li { font-size: 0.82rem; }
-    /* The page's own progress line is under the nav: one line, not two. */
-    .story[data-pinned] .stage-bar { display: none; }
     .story[data-pinned] .stage-status { margin-top: 0.5rem; min-height: 1.4rem; }
     .story[data-pinned] .stage-status p { font-size: 0.8rem; }
   }
 
-  /* Phones and tablets held upright: the frame pinned under the nav, and the steps
-     scrolling up beneath it, each one taking over the frame as it reaches
-     the middle of the space below. Nothing is intercepted: it's ordinary
-     scrolling past a sticky box, so a swipe carries on as it always does.
+  /* The frame is small on any phone: the overlays shrink with it. */
+  @media (max-width: 1023.98px) {
+    .story[data-pinned] .ov { min-width: 0; gap: 0.25rem; padding: 0.5rem 0.65rem; border-radius: 10px; }
+    .story[data-pinned] .ov-k { font-size: 0.62rem; }
+    .story[data-pinned] .ov-row { font-size: 0.7rem; gap: 0.35rem; }
+    .story[data-pinned] .ov-row :global(svg) { width: 0.85rem; height: 0.85rem; }
+  }
+
+  /* Phones and tablets held upright: the frame pinned under the sticky
+     header, and the steps scrolling up beneath it, each one taking over the
+     frame as it reaches the middle of the space below. Nothing is
+     intercepted: it's ordinary scrolling past sticky boxes, so a swipe
+     carries on as it always does.
 
      The band is opaque (the steps pass under it) and reaches the screen
      edges through negative margins, plain layout. Never through clip-path
@@ -347,25 +442,14 @@ void DEMO_CARDS;
      a frame late, and the picture shook up and down while scrolling.
      Its foot is feathered, so the text below fades out under it rather
      than being cut by a hard edge. */
-  @media (max-width: 1023.98px) {
-    /* No clipping or stacking box between the pinned frame and the page:
-       every section clips sideways (.stage), and inside a clipping box
-       iPhone Safari moves a sticky element a frame late, so the frame shook
-       up and down while scrolling. Nothing here spills sideways. Upright
-       or on its side alike. */
-    .story[data-pinned] { overflow: visible; isolation: auto; }
-    /* The frame is small on any phone: the overlays shrink with it. */
-    .story[data-pinned] .ov { min-width: 0; gap: 0.25rem; padding: 0.5rem 0.65rem; border-radius: 10px; }
-    .story[data-pinned] .ov-k { font-size: 0.62rem; }
-    .story[data-pinned] .ov-row { font-size: 0.7rem; gap: 0.35rem; }
-    .story[data-pinned] .ov-row :global(svg) { width: 0.85rem; height: 0.85rem; }
-  }
   @media (max-width: 639.98px), (max-width: 1023.98px) and (min-height: 600px), (max-width: 1023.98px) and (orientation: portrait) {
     .story[data-pinned] .story-grid { display: flex; flex-direction: column; }
+    /* The band below does the feathering here. */
+    .story[data-pinned] .story-top::after { display: none; }
     .story[data-pinned] .story-stage {
       order: -1;
       z-index: 2;
-      top: var(--nav-bar-h);
+      top: calc(var(--nav-bar-h) + var(--sth, 0px));
       margin-inline: calc(50% - 50vw);
       padding: 0.75rem calc(50vw - 50%) 0.35rem;
       background: var(--r-bg);
@@ -387,7 +471,7 @@ void DEMO_CARDS;
       pointer-events: none;
     }
     /* Held by the script (see initStory): the same place as sticky gives
-       it, under the nav and edge to edge, with the same inset. */
+       it, under the header and edge to edge, with the same inset. */
     .story[data-pinned] .story-stage.is-fixed {
       position: fixed;
       left: 0;
@@ -396,7 +480,7 @@ void DEMO_CARDS;
       padding-inline: var(--pad, 0px);
     }
     .story[data-pinned] .stage-spacer { display: block; order: -1; flex: none; height: 0; }
-    /* Scroll anchoring is off for phone pages (global.css): see there. */
+    /* Scroll anchoring is off for touch and phone-width pages (global.css). */
     .story[data-pinned] .stage-box { max-width: 34rem; margin-inline: auto; }
     /* A hairline instead of the frame's deep shadow, which the band would
        cut off in a visible line. */
@@ -405,14 +489,9 @@ void DEMO_CARDS;
     .story[data-pinned] .story-step:last-child { min-height: 60svh; }
     .story[data-pinned] .step-title { font-size: clamp(1.45rem, 6vw, 1.9rem); }
     .story[data-pinned] .step-body { font-size: 1rem; }
-    /* The page's own progress line runs just above, under the nav: one
-       line there, not two. */
-    .story[data-pinned] .stage-bar { display: none; }
     .story[data-pinned] .stage-status { margin-top: 0.55rem; min-height: 1.4rem; }
     .story[data-pinned] .stage-status p { font-size: 0.82rem; }
   }
-  .stage-bar { height: 2px; margin-bottom: 1rem; background: var(--hairline-strong); border-radius: 2px; overflow: hidden; }
-  .stage-fill { display: block; height: 100%; background: var(--r-amber-text); transform-origin: 0 50%; transform: scaleX(var(--progress, 0.2)); transition: transform 0.5s var(--r-ease); }
   .frame--stage .shot { opacity: 0; transition: opacity 0.5s ease, transform 0.8s var(--r-ease); }
   .frame--stage .shot.is-on { opacity: 1; }
   .frame--stage .ring { opacity: 0; transition: opacity 0.4s ease 0.25s; }
@@ -446,14 +525,30 @@ void DEMO_CARDS;
   .ov--handoff .ov-row span { margin-left: 0.15rem; }
 
   @media (prefers-reduced-motion: reduce) {
-    .story-index a, .story-step, .frame--stage .shot, .frame--stage .ring, .ov, .stage-status p, .stage-fill { transition: none !important; }
+    .story-index a, .story-step, .frame--stage .shot, .frame--stage .ring, .ov, .stage-status p, .story-mini, .story-top::after { transition: none !important; }
   }
 </style>
 
 <script>
-  /* Pinned mode is a progressive enhancement: room for it, JavaScript, and
-     motion allowed. The observer only reports which step crosses the middle
-     band of the viewport; it never scrolls or blocks anything. */
+  /* The story is a progress enhancement over plain reading. Nothing here
+     scrolls the page or touches the wheel: the page scrolls as it always
+     does, and the script only reads where things are and updates a few
+     classes and transforms.
+
+     - Which step is current: an IntersectionObserver on a thin band at the
+       "anchor" line, the middle of the room left for reading (under the
+       sticky header, and under the pinned frame on a phone held upright).
+     - The step bars: each fills from 0 to 1 as its step passes the anchor
+       line (a scaleX transform, so the compositor paints it). With reduced
+       motion they snap: steps up to the current one full, the rest empty.
+     - Touch screens (iPhone and iPad, any width): the header and the pinned
+       frame are held with position: fixed through the middle of the story.
+       Mobile Safari moves sticky boxes a little behind the scroll: in a
+       screen recording the pinned frame wandered over 8 device pixels from
+       frame to frame while the fixed nav above it held to 0.001px. Both are
+       switched to fixed at exactly the place sticky put them, and back
+       shortly before the end, so neither switch moves anything; sticky
+       still does the arriving and leaving. */
   function initStory() {
     document.querySelectorAll<HTMLElement>('[data-story]').forEach((root) => {
       if (root.dataset.ready) return;
@@ -464,15 +559,44 @@ void DEMO_CARDS;
       const overlays = Array.from(root.querySelectorAll<HTMLElement>('[data-ov]'));
       const statuses = Array.from(root.querySelectorAll<HTMLElement>('[data-status]'));
       const links = Array.from(root.querySelectorAll<HTMLAnchorElement>('[data-story-link]'));
-      const fill = root.querySelector<HTMLElement>('.stage-fill');
+      const bars = links.map((a) => a.querySelector<HTMLElement>('.si-bar i'));
+      const top = root.querySelector<HTMLElement>('[data-story-top]')!;
+      const topSpacer = root.querySelector<HTMLElement>('.story-top-spacer')!;
+      const grid = root.querySelector<HTMLElement>('.story-grid')!;
+      const wrap = top.parentElement!;
+      const stage = root.querySelector<HTMLElement>('.story-stage')!;
+      const spacer = root.querySelector<HTMLElement>('.stage-spacer')!;
       const zooms = steps.map((s) => s.querySelector<HTMLElement>('.step-figure .shot')?.getAttribute('style') ?? '');
       const screenOf = steps.map((s) => (s.querySelector('.step-figure img')?.getAttribute('src') ?? '').match(/web\/(.+)-(?:light|dark)-/)?.[1] ?? '');
+
+      // Pinned whenever motion is allowed and there's room: any wide screen,
+      // a phone or tablet held upright (the frame under the header), or a
+      // phone on its side (the frame beside the steps, as on a wide screen).
+      const NM = '(prefers-reduced-motion: no-preference)';
+      const mq = window.matchMedia(`${NM} and (min-width: 1024px), ${NM} and (min-height: 600px), ${NM} and (orientation: landscape) and (min-width: 640px)`);
+      // The frame beside the steps (the same query as the CSS).
+      const side = window.matchMedia('(min-width: 1024px), (orientation: landscape) and (min-width: 640px) and (max-height: 599.98px)');
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+      // Held with position: fixed on any touch screen (an iPad Pro is 1024 to
+      // 1366 wide, so it takes the wide layout and missed the phone-only hold),
+      // and below desktop width.
+      const touch = window.matchMedia('(hover: none) and (pointer: coarse)');
+      const narrow = window.matchMedia('(max-width: 1023.98px)');
+
+      // ── Steps ──────────────────────────────────────────────────────────
       let current = 0;
+      const shown = bars.map(() => -1);
+      const setBar = (i: number, f: number) => {
+        const v = Math.round(f * 1000) / 1000;
+        if (shown[i] === v || !bars[i]) return;
+        shown[i] = v;
+        bars[i]!.style.transform = `scaleX(${v})`;
+      };
+      const snapBars = () => bars.forEach((_, i) => setBar(i, i < current ? 1 : 0));
       const show = (n: number) => {
         if (n === current) return;
         current = n;
         root.dataset.stage = String(n);
-        fill?.style.setProperty('--progress', String(n / steps.length));   // on the bar alone: restyling the section mid-scroll costs a frame
         steps.forEach((s, i) => s.classList.toggle('is-current', i + 1 === n));
         shots.forEach((el) => {
           const on = el.dataset.shot === screenOf[n - 1];
@@ -483,107 +607,151 @@ void DEMO_CARDS;
         overlays.forEach((o) => o.classList.toggle('is-on', o.dataset.ov === String(n)));
         statuses.forEach((p) => p.classList.toggle('is-on', p.dataset.status === String(n)));
         links.forEach((a) => (a.dataset.storyLink === String(n) ? a.setAttribute('aria-current', 'step') : a.removeAttribute('aria-current')));
+        if (reduce.matches) snapBars();
       };
-      // Pinned whenever motion is allowed and there's room: any wide screen,
-      // a phone or tablet held upright (the frame under the nav), or a phone
-      // on its side (the frame beside the steps, as on a wide screen).
-      const NM = '(prefers-reduced-motion: no-preference)';
-      const mq = window.matchMedia(`${NM} and (min-width: 1024px), ${NM} and (min-height: 600px), ${NM} and (orientation: landscape) and (min-width: 640px)`);
-      // The frame beside the steps (the same query as the CSS), and the
-      // screens where it's held with position: fixed (anything narrower than
-      // a desktop: phones and small tablets, upright or on their side).
-      const side = window.matchMedia('(min-width: 1024px), (orientation: landscape) and (min-width: 640px) and (max-height: 599.98px)');
-      const wide = window.matchMedia('(min-width: 1024px)');
-      let io: IntersectionObserver | null = null;
-      // ── Phones: hold the pinned frame with position: fixed ──────────────
-      // iPhone Safari moves a sticky element a little behind the scroll: in
-      // a screen recording the pinned frame wandered over 8 device pixels
-      // from frame to frame while the fixed nav above it held to 0.001px.
-      // So once the frame is well inside its pinned stretch, it's switched
-      // to fixed at the same spot, and switched back to sticky shortly
-      // before the stretch ends. Both put it exactly under the nav there,
-      // so neither switch moves it; sticky still does the arriving and
-      // leaving. Upright, a spacer keeps its place in the page meanwhile; on
-      // its side the frame has a column of its own, which the steps beside
-      // it already make as tall as it needs to be.
-      const grid = root.querySelector<HTMLElement>('.story-grid');
-      const stage = root.querySelector<HTMLElement>('.story-stage');
-      const spacer = root.querySelector<HTMLElement>('.stage-spacer')!;
-      const MARGIN = 48;   // px into the stretch before fixing, and before its end
+
+      // ── Geometry: the header's height and the anchor line ─────────────
+      let navH = 0;
+      let anchor = 0.5;                       // fraction of the viewport height
       let fixed = false;
-      let queued = false;
-      const unfix = () => {
-        if (!fixed || !stage) return;
-        fixed = false;
-        stage.classList.remove('is-fixed');
-        for (const v of ['--pad', '--fx-left', '--fx-w']) stage.style.removeProperty(v);
-        spacer.style.height = '0px';
+      const measure = () => {
+        navH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-bar-h')) || 0;
+        const h = top.getBoundingClientRect().height;
+        root.style.setProperty('--sth', `${h}px`);
+        let from = navH + h;                  // reading room starts under the header…
+        if (root.hasAttribute('data-pinned') && !side.matches) {
+          from = parseFloat(getComputedStyle(stage).top) + stage.getBoundingClientRect().height;   // …or under the frame
+        }
+        anchor = Math.min(0.9, Math.max(0.3, (from + innerHeight) / 2 / innerHeight));
+        root.style.setProperty('--anchor', anchor.toFixed(4));
       };
-      // Fix the frame where it is now (in the page's flow, not fixed).
+      let io: IntersectionObserver | null = null;
+      const observe = () => {
+        io?.disconnect();
+        const a = anchor * 100;
+        io = new IntersectionObserver((entries) => {
+          for (const e of entries) if (e.isIntersecting) show(Number((e.target as HTMLElement).dataset.step));
+        }, { rootMargin: `-${(a - 1).toFixed(2)}% 0px -${(99 - a).toFixed(2)}% 0px` });
+        steps.forEach((s) => io!.observe(s));
+      };
+
+      // ── The touch hold ─────────────────────────────────────────────────
+      const MARGIN = 48;   // px into the stretch before fixing, and before its end
+      const holds = () => touch.matches || narrow.matches;
+      let held: HTMLElement[] = [];
+      const unfix = () => {
+        if (!fixed) return;
+        fixed = false;
+        for (const el of held) {
+          el.classList.remove('is-fixed');
+          for (const v of ['--pad', '--fx-left', '--fx-w']) el.style.removeProperty(v);
+        }
+        spacer.style.height = topSpacer.style.height = '0px';
+      };
+      // The header, and the frame when the story is pinned (stacked, with
+      // reduced motion, the header is the only sticky box).
       const fix = () => {
-        if (!stage) return;
-        const r = stage.getBoundingClientRect();   // exact, not rounded: the text below mustn't shift
+        const withStage = root.hasAttribute('data-pinned');
+        // Read everything first, then write: exact, unrounded sizes, so the
+        // text below never shifts by a fraction of a pixel.
+        const t = top.getBoundingClientRect();
+        const tcs = getComputedStyle(top);
+        const r = stage.getBoundingClientRect();
+        const spad = getComputedStyle(stage).paddingLeft;
         fixed = true;
-        if (side.matches) {
+        held = withStage ? [top, stage] : [top];
+        topSpacer.style.height = `${t.height + parseFloat(tcs.marginBottom)}px`;
+        top.style.setProperty('--fx-left', `${t.left}px`);
+        top.style.setProperty('--fx-w', `${t.width}px`);
+        top.style.setProperty('--pad', tcs.paddingLeft);
+        if (!withStage) {
+          // nothing else to hold
+        } else if (side.matches) {
           stage.style.setProperty('--fx-left', `${r.left}px`);
           stage.style.setProperty('--fx-w', `${r.width}px`);
         } else {
           spacer.style.height = `${r.height}px`;
-          stage.style.setProperty('--pad', getComputedStyle(stage).paddingLeft);
+          stage.style.setProperty('--pad', spad);
         }
-        stage.classList.add('is-fixed');
+        for (const el of held) el.classList.add('is-fixed');
       };
-      const hold = () => {
+
+      // ── Every frame the page scrolls ───────────────────────────────────
+      let queued = false;
+      const tick = () => {
         queued = false;
-        if (!grid || !stage || !root.hasAttribute('data-pinned') || wide.matches) return unfix();
-        const top = parseFloat(getComputedStyle(stage).top) || 0;
+        const t = top.getBoundingClientRect();
+        const ts = topSpacer.getBoundingClientRect();   // where the header sits in the page, stuck or not
         const g = grid.getBoundingClientRect();
-        const h = (fixed && !side.matches ? spacer : stage).getBoundingClientRect().height;
-        // Hysteresis: switch in 48px into the stretch, out 24px before its
-        // end, so the two tests can never flip it back and forth.
-        const m = fixed ? MARGIN / 2 : MARGIN;
-        const inside = g.top < top - m && g.bottom - h > top + m;
+        const rects = reduce.matches ? null : steps.map((s) => s.getBoundingClientRect());
+        let inside = false;
+        if (holds()) {
+          // Hysteresis: in 48px into a stretch, out 24px before its end, so
+          // the tests can never flip it back and forth.
+          const m = fixed ? MARGIN / 2 : MARGIN;
+          // The header inside its own stretch: stuck, and not yet leaving
+          // with the end of the story (its containing block, .wrap).
+          const hb = ts.height ? ts.height : t.height + parseFloat(getComputedStyle(top).marginBottom);
+          inside = ts.top < navH - m && wrap.getBoundingClientRect().bottom - hb > navH + m;
+          if (root.hasAttribute('data-pinned')) {
+            // And the frame inside its pinned stretch (beside the steps it pins
+            // lower than the header, so its stretch can begin while the header
+            // is still arriving).
+            const st = parseFloat(getComputedStyle(stage).top) || 0;
+            const h = (fixed && !side.matches ? spacer : stage).getBoundingClientRect().height;
+            inside = inside && g.top < st - m && g.bottom - h > st + m;
+          }
+        }
+        // Writes from here on (no layout reads after this point).
+        if (t.top <= navH + 0.5) top.setAttribute('data-stuck', '');
+        else top.removeAttribute('data-stuck');
+        if (rects) {
+          const y = innerHeight * anchor;
+          rects.forEach((r, i) => setBar(i, Math.min(1, Math.max(0, (y - r.top) / r.height))));
+        }
         if (inside && !fixed) fix();
         else if (!inside && fixed) unfix();
       };
-      const queue = () => { if (!queued) { queued = true; requestAnimationFrame(hold); } };
+      const queue = () => { if (!queued) { queued = true; requestAnimationFrame(tick); } };
       window.addEventListener('scroll', queue, { passive: true });
       // Phones fire resize as the browser's toolbars slide in and out while
       // scrolling: never let go there, only re-measure (a turned phone
-      // changes the frame's size and inset).
+      // changes the header's and the frame's size and inset).
+      let lastH = innerHeight, lastW = innerWidth;
       window.addEventListener('resize', () => {
-        if (fixed && stage) {
-          unfix();
-          fix();
-        }
+        if (fixed) { unfix(); fix(); }
+        measure();
+        if (Math.abs(innerHeight - lastH) > 80 || innerWidth !== lastW) observe();   // not for toolbar slides
+        lastH = innerHeight; lastW = innerWidth;
         queue();
       }, { passive: true });
+      new ResizeObserver(() => { if (!fixed) measure(); }).observe(top);
+
+      // The index links: land the step on the anchor line, so the frame and
+      // the bar show it (a plain jump would leave it under the header).
+      links.forEach((a) => a.addEventListener('click', (e) => {
+        const step = steps[Number(a.dataset.storyLink) - 1];
+        if (!step) return;
+        e.preventDefault();
+        const y = step.getBoundingClientRect().top + scrollY - innerHeight * anchor + 12;
+        window.scrollTo({ top: y, behavior: reduce.matches ? 'auto' : 'smooth' });
+        history.replaceState(null, '', `#${step.id}`);
+      }));
 
       const apply = () => {
-        io?.disconnect();
-        io = null;
         unfix();
-        if (!mq.matches) {
-          delete root.dataset.pinned;
-          return;
-        }
-        queue();
-        root.dataset.pinned = '';
+        if (mq.matches) root.dataset.pinned = '';
+        else delete root.dataset.pinned;
+        measure();
+        observe();
+        const was = current;
         current = 0;
-        show(1);
-        io = new IntersectionObserver((entries) => {
-          for (const e of entries) if (e.isIntersecting) show(Number((e.target as HTMLElement).dataset.step));
-        }, {
-          // The step crossing the middle of the screen, or on a phone the
-          // middle of the space under the pinned frame.
-          rootMargin: side.matches ? '-48% 0px -48% 0px' : '-68% 0px -30% 0px',
-        });
-        steps.forEach((s) => io!.observe(s));
+        show(Math.max(was, 1));
+        if (reduce.matches) snapBars();
+        queue();
       };
       apply();
-      mq.addEventListener('change', apply);
-      side.addEventListener('change', apply);
-      wide.addEventListener('change', apply);
+      for (const m of [mq, side, reduce, touch, narrow]) m.addEventListener('change', apply);
     });
   }
   initStory();

@@ -178,7 +178,9 @@ async function runVerification() {
 
       // The index links take you to the step, and the frame follows.
       await pg.click('[data-story-link="4"]');
-      await pg.waitForTimeout(900);
+      // It scrolls smoothly: wait for it to land (up to 3s), then let it settle.
+      await pg.waitForFunction(() => document.querySelector('[data-story]').dataset.stage === '4', null, { timeout: 3000 }).catch(() => {});
+      await pg.waitForTimeout(400);
       const viaLink = await pg.$eval('[data-story]', (s) => s.dataset.stage);
       if (viaLink !== '4') failures.push(`Story index link 04 left the frame at stage ${viaLink}`);
       else passedChecks.push('Story index: the 04 link scrolls to Approval and the frame shows it');
@@ -189,17 +191,22 @@ async function runVerification() {
       // reaches the space below. On its side, the frame sticks beside the
       // steps, as on a wide screen, small enough to fit under the nav. The
       // page still scrolls exactly as usual.
-      for (const [label, width, height] of [['a 390px phone', 390, 844], ['a phone on its side (844 x 390)', 844, 390]]) {
-        const side = width > height;
+      // An iPad Pro is 1024 to 1366 wide: it takes the wide layout but scrolls
+      // like an iPhone, so it gets the same treatment.
+      for (const [label, width, height] of [['a 390px phone', 390, 844], ['a phone on its side (844 x 390)', 844, 390],
+        ['an iPad Pro on its side (1366 x 1024)', 1366, 1024], ['an iPad Pro upright (1024 x 1366)', 1024, 1366]]) {
+        const side = width > height || width >= 1024;
         const c = await browser.newContext({ viewport: { width, height }, isMobile: true, hasTouch: true });
         const p2 = await c.newPage();
         await p2.goto(`${baseUrl}/`, { waitUntil: 'load' });
         const res = [];
         for (let i = 1; i <= 5; i++) {
-          await p2.evaluate(([i, band]) => {
+          await p2.evaluate((i) => {
+            // the step's middle on the anchor line (the middle of the room left for reading)
+            const band = parseFloat(document.querySelector('[data-story]').style.getPropertyValue('--anchor')) || 0.5;
             const r = document.querySelector(`.story-step[data-step="${i}"]`).getBoundingClientRect();
             window.scrollTo({ top: r.top + window.scrollY + r.height / 2 - window.innerHeight * band, behavior: 'instant' });
-          }, [i, side ? 0.5 : 0.69]);
+          }, i);
           await p2.waitForTimeout(700);
           res.push(await p2.evaluate((side) => {
             const s = document.querySelector('[data-story]');
@@ -209,10 +216,10 @@ async function runVerification() {
               pinned: s.hasAttribute('data-pinned'),
               stage: s.dataset.stage,
               shot: [...s.querySelectorAll('.frame--stage .shot.is-on')].map((x) => x.dataset.shot).join(),
-              // Pinned under the nav (or, at step 1, not yet reached it), and
-              // upright in the top half, leaving the bottom half for the step;
-              // on its side wholly on screen, in the right-hand column.
-              stuck: g.top >= (nav || 0) - 2 && (side
+              // Pinned under the sticky header (or, at step 1, not yet reached
+              // it), and upright in the top half, leaving the bottom half for
+              // the step; beside the steps wholly on screen, in the right-hand column.
+              stuck: g.top >= document.querySelector('[data-story-top]').getBoundingClientRect().bottom - 2 && (side
                 ? g.bottom <= window.innerHeight && g.left > window.innerWidth * 0.4
                 : g.bottom < window.innerHeight * 0.55),
             };
@@ -225,16 +232,19 @@ async function runVerification() {
         // the viewport.)
         const boxes = await p2.evaluate(() => {
           const out = [];
-          for (let el = document.querySelector('.story-stage').parentElement; el && el !== document.documentElement; el = el.parentElement) {
-            const cs = getComputedStyle(el);
-            const bad = [cs.overflowX, cs.overflowY].some((v) => v !== 'visible') || cs.isolation === 'isolate'
-              || cs.transform !== 'none' || cs.filter !== 'none' || cs.contain !== 'none' || cs.willChange !== 'auto';
-            if (bad) out.push(`${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`);
+          for (const sticky of ['.story-stage', '[data-story-top]']) {
+            for (let el = document.querySelector(sticky).parentElement; el && el !== document.documentElement; el = el.parentElement) {
+              const cs = getComputedStyle(el);
+              const bad = [cs.overflowX, cs.overflowY].some((v) => v !== 'visible') || cs.isolation === 'isolate'
+                || cs.transform !== 'none' || cs.filter !== 'none' || cs.contain !== 'none' || cs.willChange !== 'auto'
+                || cs.backdropFilter !== 'none';
+              if (bad) out.push(`${sticky} in ${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`);
+            }
           }
-          return out;
+          return [...new Set(out)];
         });
-        if (boxes.length) failures.push(`Story on ${label}: the pinned frame sits inside clipping or isolating boxes (${boxes.join(', ')}), which makes it shake on iPhone`);
-        else passedChecks.push(`Story on ${label}: nothing between the pinned frame and the page clips, isolates or transforms it`);
+        if (boxes.length) failures.push(`Story on ${label}: a sticky part sits inside clipping or isolating boxes (${boxes.join(', ')}), which makes it shake on iPhone and iPad`);
+        else passedChecks.push(`Story on ${label}: nothing between the sticky header or frame and the page clips, isolates or transforms them`);
         // In the middle of its pinned stretch the frame is held with
         // position: fixed (iPhone Safari wobbles sticky boxes; fixed ones it
         // holds still), and the switches in and out must not move the frame
@@ -242,6 +252,8 @@ async function runVerification() {
         const seam = await p2.evaluate(async () => {
           const grid = document.querySelector('.story-grid');
           const stage = document.querySelector('.story-stage');
+          const top = document.querySelector('[data-story-top]');
+          const bar = top.querySelector('.story-index');
           const frame = document.querySelector('.frame--stage');
           const probe = document.querySelector('.story-step[data-step="3"] .step-title');
           const a = grid.getBoundingClientRect().top + scrollY - 300, z = grid.getBoundingClientRect().bottom + scrollY;
@@ -251,21 +263,25 @@ async function runVerification() {
             window.scrollTo({ top: y, behavior: 'instant' });
             await frameOf();
             const f = frame.getBoundingClientRect();
-            const cur = { fixed: stage.classList.contains('is-fixed'), top: f.top, left: f.left, w: f.width, text: probe.getBoundingClientRect().top + scrollY };
+            const b = bar.getBoundingClientRect();
+            const cur = { fixed: stage.classList.contains('is-fixed'), held: top.classList.contains('is-fixed'), top: f.top, left: f.left, w: f.width,
+              bt: b.top, bl: b.left, bw: b.width, text: probe.getBoundingClientRect().top + scrollY };
             if (cur.fixed) fixedSeen++;
+            if (cur.fixed !== cur.held) issues.push(`header and frame held apart at ${Math.round(y)}`);
             if (prev) {
               if (Math.abs(cur.text - prev.text) > 0.5) issues.push(`text moved ${(cur.text - prev.text).toFixed(2)}px at ${Math.round(y)}`);
               if (prev.fixed !== cur.fixed && (Math.abs(cur.top - prev.top) > 0.5 || Math.abs(cur.left - prev.left) > 0.5 || Math.abs(cur.w - prev.w) > 0.5)) issues.push(`frame moved switching at ${Math.round(y)}`);
+              if (prev.held !== cur.held && (Math.abs(cur.bt - prev.bt) > 0.5 || Math.abs(cur.bl - prev.bl) > 0.5 || Math.abs(cur.bw - prev.bw) > 0.5)) issues.push(`header moved switching at ${Math.round(y)}`);
             }
             prev = cur;
           }
           return { fixedSeen, issues: issues.slice(0, 4) };
         });
         if (!seam.fixedSeen || seam.issues.length) failures.push(`Story on ${label}: fixed hold ${JSON.stringify(seam)}`);
-        else passedChecks.push(`Story on ${label}: the frame is held fixed through the middle of its stretch (${seam.fixedSeen} of the sampled positions), and switching in and out moves neither it nor the text`);
+        else passedChecks.push(`Story on ${label}: the header and frame are held fixed together through the middle of the story (${seam.fixedSeen} of the sampled positions), and switching in and out moves neither them nor the text`);
         const wrong = res.map((r, i) => (r.pinned && r.stage === String(i + 1) && r.shot === expect[i] && r.stuck ? null : `${i + 1}: ${JSON.stringify(r)}`)).filter(Boolean);
         if (wrong.length) failures.push(`Story on ${label} isn't pinned right: ${wrong.join('; ')}`);
-        else passedChecks.push(`Story on ${label}: the frame stays pinned ${side ? 'beside the steps, wholly on screen' : 'under the nav'}, and each step, scrolled into ${side ? 'the middle' : 'the space below'}, shows its own screen`);
+        else passedChecks.push(`Story on ${label}: the frame stays pinned ${side ? 'beside the steps, wholly on screen' : 'under the header'}, and each step, scrolled onto the anchor line, shows its own screen`);
         await c.close();
       }
 
@@ -285,6 +301,64 @@ async function runVerification() {
         });
         if (r.pinned || r.stageShown || r.figures !== 5 || r.alts !== 5) failures.push(`Story on ${label}: ${JSON.stringify(r)}`);
         else passedChecks.push(`Story on ${label}: nothing pinned, all 5 steps with their own picture and alt text`);
+        await c.close();
+      }
+      // The sticky header: under the nav for the whole story and the same
+      // height stuck or not (so sticking moves nothing), its one-line title
+      // shown only once stuck and never cut off. The bar above each step
+      // fills as you read through it; with reduced motion it snaps to the
+      // current step. And no step repeats its label above its own text.
+      for (const [label, opts] of [
+        ['1440', { viewport: { width: 1440, height: 900 } }],
+        ['1024 x 768 touch', { viewport: { width: 1024, height: 768 }, isMobile: true, hasTouch: true }],
+        ['768 x 1024 touch', { viewport: { width: 768, height: 1024 }, isMobile: true, hasTouch: true }],
+        ['a 390px phone', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }],
+        ['a 320px phone', { viewport: { width: 320, height: 640 }, isMobile: true, hasTouch: true }],
+        ['1440 with reduced motion', { viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' }],
+        ['a 390px phone with reduced motion', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' }],
+      ]) {
+        const reduced = opts.reducedMotion === 'reduce';
+        const c = await browser.newContext(opts);
+        const p2 = await c.newPage();
+        await p2.goto(`${baseUrl}/`, { waitUntil: 'load' });
+        await p2.waitForTimeout(400);
+        const read = () => p2.evaluate(() => {
+          const s = document.querySelector('[data-story]');
+          const top = s.querySelector('[data-story-top]');
+          const t = top.getBoundingClientRect();
+          const sm = s.querySelector('.sm-t');
+          return {
+            nav: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-bar-h')),
+            top: +t.top.toFixed(1), h: +t.height.toFixed(1),
+            stuck: top.hasAttribute('data-stuck'),
+            mini: +getComputedStyle(s.querySelector('.story-mini')).opacity,
+            fits: sm.scrollWidth <= sm.clientWidth + 1,
+            bars: [...s.querySelectorAll('.si-bar i')].map((i) => +new DOMMatrix(getComputedStyle(i).transform).a.toFixed(3)),
+            sideways: document.documentElement.scrollWidth > innerWidth,
+            kickers: s.querySelectorAll('.step-k').length + [...s.querySelectorAll('.story-step')].filter((a) => a.firstElementChild?.tagName !== 'H3').length,
+          };
+        });
+        const problems = [];
+        const rest = await read();
+        if (rest.stuck || rest.mini !== 0) problems.push(`the one-line title shows before the header is stuck (${JSON.stringify(rest)})`);
+        if (rest.kickers) problems.push(`${rest.kickers} steps carry a label above their text`);
+        for (const [n, f] of [[2, 0.5], [4, 0.25], [5, 0.85]]) {
+          await p2.evaluate(([n, f]) => {
+            const a = parseFloat(document.querySelector('[data-story]').style.getPropertyValue('--anchor')) || 0.5;
+            const r = document.querySelector(`.story-step[data-step="${n}"]`).getBoundingClientRect();
+            window.scrollTo({ top: r.top + window.scrollY + r.height * f - window.innerHeight * a, behavior: 'instant' });
+          }, [n, f]);
+          await p2.waitForTimeout(650);
+          const r = await read();
+          const want = r.bars.map((_, i) => (reduced ? (i < n ? 1 : 0) : i < n - 1 ? 1 : i === n - 1 ? f : 0));
+          const off = r.bars.some((b, i) => Math.abs(b - want[i]) > (reduced ? 0.001 : 0.06));
+          if (Math.abs(r.top - r.nav) > 0.5 || Math.abs(r.h - rest.h) > 0.5) problems.push(`step ${n}: header at ${r.top} (nav ${r.nav}), height ${r.h} (at rest ${rest.h})`);
+          if (!r.stuck || r.mini < 0.99 || !r.fits) problems.push(`step ${n}: one-line title stuck ${r.stuck}, opacity ${r.mini}, fits ${r.fits}`);
+          if (off) problems.push(`step ${n} at ${f}: bars ${r.bars.join(' ')}, expected ${want.join(' ')}`);
+          if (r.sideways) problems.push(`step ${n}: the page scrolls sideways`);
+        }
+        if (problems.length) failures.push(`Story header on ${label}: ${problems.join('; ')}`);
+        else passedChecks.push(`Story header on ${label}: sticky under the nav at one height, one-line title once stuck and whole, and the step bars ${reduced ? 'snap to the current step' : 'fill continuously as each step is read'}; no repeated step labels`);
         await c.close();
       }
     }
