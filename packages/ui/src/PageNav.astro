@@ -17,9 +17,16 @@
  * something else. Fewer than two and the panel does not show.
  *
  * The first entry is always TOP, and Top means scroll position 0: the
- * heading a page marks `data-pn-label="Top"` (a hero) is that entry, and a
- * page without one gets it added. Jumping to the hero heading instead left
- * the page scrolled past its own top by the heading's offset.
+ * element a page marks `data-pn-top` (or `data-pn-label="Top"`), a hero, is
+ * that entry under its own label, and a page without one gets it added,
+ * labelled `topLabel`. Jumping to the hero heading instead left the page
+ * scrolled past its own top by the heading's offset.
+ *
+ * SECTIONS. An entry may be a whole section (`data-sec`) rather than a
+ * heading. A jump to one lands on its header block (`data-sec-head`), the
+ * eyebrow, any logo above it and the headline, not on the headline alone:
+ * aimed at the <h2>, Reelay's Download page put "Windows" under the site
+ * header with its logo and eyebrow cut off above it.
  *
  * The labels are CLIPPED, never `display: none` (HQ): a hidden label leaves
  * a screen reader a nav of unnamed links.
@@ -31,10 +38,12 @@ interface Props {
   heading?: string;
   /** Selector for the headings to collect when `items` is not given. */
   selector?: string;
+  /** The label of the added first entry, when no element is marked as it. */
+  topLabel?: string;
 }
-const { items = [], heading = 'On this page', selector = 'main h2[id]' } = Astro.props;
+const { items = [], heading = 'On this page', selector = 'main h2[id]', topLabel = 'Top' } = Astro.props;
 ---
-<nav class="page-nav" aria-label={heading} data-page-nav data-selector={selector} hidden={items.length < 2 ? true : undefined}>
+<nav class="page-nav" aria-label={heading} data-page-nav data-selector={selector} data-top-label={topLabel} hidden={items.length < 2 ? true : undefined}>
   <button type="button" class="pn-handle" aria-expanded="false" data-pn-handle>
     <span class="pn-sr">Show the sections on this page</span>
   </button>
@@ -361,11 +370,12 @@ const { items = [], heading = 'On this page', selector = 'main h2[id]' } = Astro
         list.append(li);
       }
     }
-    // Top first. A heading labelled "Top" is it; otherwise add one, aimed at
-    // <main> (its top is the page's top once the header is cleared).
+    // Top first. An element marked as it (data-pn-top, or a heading labelled
+    // "Top") is it; otherwise add one, aimed at <main> (its top is the page's
+    // top once the header is cleared).
     const first = list.querySelector<HTMLAnchorElement>('[data-pn-link]');
     const firstEl = first ? document.getElementById(first.dataset.pnLink ?? '') : null;
-    if (first && firstEl?.dataset.pnLabel === 'Top') {
+    if (first && firstEl && ('pnTop' in firstEl.dataset || firstEl.dataset.pnLabel === 'Top')) {
       first.dataset.pnTop = '';
     } else if (first) {
       const li = document.createElement('li');
@@ -379,7 +389,7 @@ const { items = [], heading = 'On this page', selector = 'main h2[id]' } = Astro
       tick.setAttribute('aria-hidden', 'true');
       const label = document.createElement('span');
       label.className = 'pn-label';
-      label.textContent = 'Top';
+      label.textContent = nav.dataset.topLabel || 'Top';
       a.append(tick, label);
       li.append(a);
       list.prepend(li);
@@ -499,7 +509,9 @@ const { items = [], heading = 'On this page', selector = 'main h2[id]' } = Astro
           history.replaceState(null, '', location.pathname + location.search);
           return;
         }
-        target.scrollIntoView({ block: 'start', behavior });
+        // A section lands on its header block (see SECTIONS above).
+        const aim = target.matches('[data-sec]') ? target.querySelector<HTMLElement>('[data-sec-head]') ?? target : target;
+        aim.scrollIntoView({ block: 'start', behavior });
         history.replaceState(null, '', `#${id}`);
       });
     });

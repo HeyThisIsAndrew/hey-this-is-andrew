@@ -1,0 +1,248 @@
+---
+/**
+ * SectionBar: the section you're reading, on one line under the site header.
+ *
+ * The homepage's "How it works" header collapses into a one-line bar once
+ * its big headline has scrolled away (WorkflowStory's .story-mini). This is
+ * that bar for every other top-level section on the site: once a section's
+ * header has gone under the site header, the bar shows its eyebrow and
+ * headline on one line (iPad and up) or just its core phrase (phones, where
+ * "Everything in one place. Open a chapter." becomes "Everything in one
+ * place"), and it holds until the next top-level section takes over.
+ *
+ * WHAT A SECTION IS. An element marked `data-sec` (the section's extent)
+ * with a header block inside it marked `data-sec-head`. The bar reads the
+ * header's `.eyebrow` and its h1/h2; `data-sec-kicker`, `data-sec-title` and
+ * `data-sec-short` on the section override them, and the short phrase is
+ * otherwise the headline's first sentence. A long document marks its body
+ * `data-sec-children="<its title>"` and each `section[id]` in it is a
+ * section, headed by its own <h2>. A section that draws its own bar (the
+ * story) is marked `data-sec-own`, and this one stays out of its way.
+ * The same marks are what the side panel lists (BaseLayout), so the panel
+ * and the bar can never disagree about what the sections are.
+ *
+ * ONE FIXED ELEMENT, not a sticky header per section: sticky wobbles on iOS
+ * Safari while a touch scroll is moving (see WorkflowStory's fixed hold),
+ * and a fixed bar has nothing to wobble against. On a touch screen it
+ * appears without a fade, and a scroll frame reads no layout (see measure),
+ * both measured to keep a swipe's momentum. Decoration for sighted readers (aria-hidden): every word in it
+ * is the section's real heading, already on the page.
+ */
+---
+<div class="sec-bar" data-sec-bar aria-hidden="true">
+  <div class="wrap sec-bar-in">
+    <span class="sb-k" data-sb-k></span>
+    <span class="sb-t" data-sb-t></span>
+    <span class="sb-s" data-sb-s></span>
+  </div>
+</div>
+
+<style>
+  .sec-bar {
+    position: fixed;
+    top: var(--nav-bar-h);
+    left: 0;
+    right: 0;
+    /* Under the reading progress line (99) and the header (100). */
+    z-index: 98;
+    background: var(--r-bg);
+    opacity: 0;
+    transform: translateY(-0.35rem);
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .sec-bar.is-on {
+    opacity: 1;
+    transform: none;
+    visibility: visible;
+  }
+  /* The same soft edge the story's header has under it. */
+  .sec-bar::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 1.75rem;
+    background: linear-gradient(var(--r-bg), color-mix(in srgb, var(--r-bg) 0%, transparent));
+  }
+  /* Type and size are the story's one-line header (.story-mini), so the two
+     read as one pattern. */
+  .sec-bar-in {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    height: 2.6rem;
+    padding-top: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 650;
+    letter-spacing: -0.015em;
+    color: var(--r-ink);
+  }
+  .sec-bar.is-swap .sec-bar-in { opacity: 0; }
+  .sb-k { flex: none; color: var(--r-amber-text); }
+  .sb-k:empty { display: none; }
+  .sb-t, .sb-s { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .sb-s { display: none; }
+  /* A phone: the core phrase alone. */
+  @media (max-width: 640px) {
+    .sec-bar-in { height: 2.3rem; padding-top: 0.7rem; font-size: 0.9rem; }
+    .sb-k, .sb-t { display: none; }
+    .sb-s { display: block; }
+  }
+  /* A phone on its side: the story's short-screen size. */
+  @media (orientation: landscape) and (min-width: 640px) and (max-width: 1023.98px) and (max-height: 599.98px) {
+    .sec-bar-in { height: 2.1rem; padding-top: 0.55rem; font-size: 0.88rem; }
+  }
+  /* Fades with a mouse only. On a touch screen the bar simply appears:
+     measured on the phone homepage, any fade on it (even opacity alone)
+     cost about four swipes a run their momentum, and with no fade it cost
+     none (scripts/verify-browser.mjs, suite 15). */
+  @media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) {
+    .sec-bar { transition: opacity 0.3s ease, transform 0.4s var(--r-ease), visibility 0s linear 0.4s; }
+    .sec-bar.is-on { transition: opacity 0.3s ease, transform 0.4s var(--r-ease), visibility 0s; }
+    .sec-bar-in { transition: opacity 0.15s ease; }
+  }
+  /* Out of the way while a full-screen view is up. */
+  :global(html.modal-open) .sec-bar,
+  :global(html.menu-open) .sec-bar,
+  :global(html.bacc-view-open) .sec-bar {
+    visibility: hidden;
+  }
+</style>
+
+<script>
+  type Sec = { scope: HTMLElement; head: HTMLElement; kicker: string; title: string; short: string; own: boolean };
+
+  // Heading text with <br> as a space ("No cloud.No cloud bill." otherwise).
+  function textOf(el: Element | null | undefined): string {
+    if (!el) return '';
+    const copy = el.cloneNode(true) as HTMLElement;
+    copy.querySelectorAll('br').forEach((br) => br.replaceWith(' '));
+    copy.querySelectorAll('[aria-hidden="true"]').forEach((n) => n.remove());
+    return (copy.textContent ?? '').replace(/\s+/g, ' ').trim();
+  }
+  // "Everything in one place. Open a chapter." → "Everything in one place".
+  function firstSentence(title: string): string {
+    const m = title.match(/^(.+?[^.])[.!?](\s|$)/);
+    return (m ? m[1] : title).replace(/[.!?]$/, '').trim();
+  }
+
+  function collect(): Sec[] {
+    const out: Sec[] = [];
+    const nodes = document.querySelectorAll<HTMLElement>('main [data-sec], main [data-sec-children] > section[id]');
+    nodes.forEach((scope) => {
+      const parent = scope.parentElement?.closest<HTMLElement>('[data-sec-children]');
+      const child = !scope.hasAttribute('data-sec') && parent;
+      const head = child ? scope.querySelector<HTMLElement>('h2') : scope.querySelector<HTMLElement>('[data-sec-head]') ?? scope;
+      if (!head) return;
+      const heading = child || head.matches('h1, h2') ? head : head.querySelector('h1, h2');
+      const title = scope.dataset.secTitle || textOf(heading);
+      const kicker = scope.dataset.secKicker ?? (child ? parent?.dataset.secChildren ?? '' : textOf(head.querySelector('.eyebrow')));
+      out.push({
+        scope,
+        head,
+        kicker: kicker === title ? '' : kicker,
+        title,
+        short: scope.dataset.secShort || firstSentence(title),
+        own: scope.hasAttribute('data-sec-own'),
+      });
+    });
+    return out;
+  }
+
+  function initSectionBar() {
+    const bar = document.querySelector<HTMLElement>('[data-sec-bar]');
+    if (!bar || bar.dataset.ready) return;
+    bar.dataset.ready = '1';
+    const secs = collect();
+    if (!secs.length) return;
+    const k = bar.querySelector<HTMLElement>('[data-sb-k]')!;
+    const t = bar.querySelector<HTMLElement>('[data-sb-t]')!;
+    const s = bar.querySelector<HTMLElement>('[data-sb-s]')!;
+    // No cross-fade where there's no fade at all (reduced motion, touch).
+    const still = window.matchMedia('(prefers-reduced-motion: reduce), (hover: none), (pointer: coarse)');
+    let shown: Sec | null = null;
+    let swap: ReturnType<typeof setTimeout> | null = null;
+
+    const write = (sec: Sec) => {
+      k.textContent = sec.kicker;
+      t.textContent = sec.title;
+      s.textContent = sec.short;
+    };
+    const show = (sec: Sec | null) => {
+      if (sec === shown) return;
+      const was = shown;
+      shown = sec;
+      if (swap) { clearTimeout(swap); swap = null; bar.classList.remove('is-swap'); }
+      if (!sec) { bar.classList.remove('is-on'); return; }
+      if (was && !still.matches) {
+        // From one section straight to the next: the words cross-fade.
+        bar.classList.add('is-swap');
+        swap = setTimeout(() => { write(sec); bar.classList.remove('is-swap'); swap = null; }, 150);
+      } else write(sec);
+      bar.classList.add('is-on');
+    };
+
+    // Where everything is, in page coordinates, measured only when the
+    // layout changes (a resize, a row opening, an image arriving: the
+    // ResizeObserver on <main>). A scroll frame then does arithmetic and
+    // nothing else. Reading every section's box on every frame cost a phone
+    // swipe its momentum: measured, 4.4 short swipes a run with per-frame
+    // reads against 1.8 without the bar.
+    type Box = { top: number; bottom: number; headBottom: number; shown: boolean };
+    let boxes: Box[] = [];
+    let line = 0;
+    let barH = 0;
+    const measure = () => {
+      const y = window.scrollY;
+      line = document.querySelector('.site-nav')?.getBoundingClientRect().bottom ?? 0;
+      barH = bar.querySelector<HTMLElement>('.sec-bar-in')!.offsetHeight;
+      boxes = secs.map((sec) => {
+        const r = sec.scope.getBoundingClientRect();
+        return { top: r.top + y, bottom: r.bottom + y, headBottom: sec.head.getBoundingClientRect().bottom + y, shown: r.height > 0 };
+      });
+    };
+    const update = () => {
+      const y = window.scrollY;
+      // The current section is the last one that has reached the bottom of
+      // the bar (so a section that starts right under it is already current,
+      // and the one before it never covers its heading).
+      let index = -1;
+      boxes.forEach((b, i) => { if (b.shown && b.top - y <= line + barH) index = i; });
+      const sec = index >= 0 ? secs[index] : null;
+      if (!sec || sec.own || y < 4) return show(null);
+      const box = boxes[index];
+      // Only once its own header has gone under the site header.
+      if (box.headBottom - y > line + 4) return show(null);
+      // The last section lets go where it ends (the footer, a Next link).
+      const later = boxes.slice(index + 1).some((b) => b.shown);
+      if (!later && box.bottom - y < line + barH) return show(null);
+      show(sec);
+    };
+    let queued = false;
+    const queue = (remeasure = false) => {
+      if (remeasure) stale = true;
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        if (stale) { stale = false; measure(); }
+        update();
+      });
+    };
+    let stale = true;
+    window.addEventListener('scroll', () => queue(), { passive: true });
+    window.addEventListener('resize', () => queue(true), { passive: true });
+    // Rows opening, the Help Center's search hiding sections, late images.
+    new ResizeObserver(() => queue(true)).observe(document.querySelector('main') ?? document.body);
+    document.addEventListener('accordion:settled', () => queue(true));
+    queue(true);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initSectionBar);
+  else initSectionBar();
+</script>

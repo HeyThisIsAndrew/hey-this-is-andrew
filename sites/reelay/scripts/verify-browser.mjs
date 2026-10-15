@@ -1107,19 +1107,22 @@ async function runVerification() {
       else passedChecks.push('Phone menu: the 5 sections only, no sub-lists, fits the screen without scrolling');
       await pg.click('.menu-btn');
       await pg.waitForTimeout(200);
+      // The pane lists TOP-LEVEL sections only: never an accordion row, never
+      // "Top", and a jump never opens anything (the owner's rule).
       const pane = await pg.evaluate(() => {
         const n = document.querySelector('[data-page-nav]');
         return { hidden: n.hidden, name: n.getAttribute('aria-label'), entries: [...n.querySelectorAll('.pn-label')].map((l) => l.textContent) };
       });
+      const rowsBefore = await pg.$$eval('[data-accordion-row] [aria-expanded]', (bs) => bs.map((x) => x.getAttribute('aria-expanded')).join(''));
       await pg.click('[data-pn-handle]');
       await pg.waitForTimeout(300);
-      await pg.click('[data-pn-link="transcripts"]');
-      await pg.waitForTimeout(600);
-      const opened = await pg.getAttribute('#transcripts-header', 'aria-expanded');
-      const top = await pg.evaluate(() => document.getElementById('transcripts').getBoundingClientRect().top);
-      if (pane.hidden || pane.name !== 'Library and Player' || !pane.entries.includes('Transcripts') || opened !== 'true' || top < 0 || top > 300) {
-        failures.push(`Side pane on /features/library: ${JSON.stringify({ ...pane, opened, top: Math.round(top) })}`);
-      } else passedChecks.push(`Side pane: titled "${pane.name}", ${pane.entries.length} entries; picking Transcripts opens its row and scrolls to it`);
+      await pg.click('[data-pn-link="details"]');
+      await pg.waitForTimeout(700);
+      const rowsAfter = await pg.$$eval('[data-accordion-row] [aria-expanded]', (bs) => bs.map((x) => x.getAttribute('aria-expanded')).join(''));
+      const headTop = await pg.evaluate(() => document.querySelector('#details [data-sec-head]').getBoundingClientRect().top - document.querySelector('.site-nav').getBoundingClientRect().bottom);
+      if (pane.hidden || pane.name !== 'Library and Player' || JSON.stringify(pane.entries) !== JSON.stringify(['Overview', 'In detail']) || rowsBefore !== rowsAfter || headTop < 0 || headTop > 60) {
+        failures.push(`Side pane on /features/library: ${JSON.stringify({ ...pane, opened: rowsBefore !== rowsAfter, headTop: Math.round(headTop) })}`);
+      } else passedChecks.push(`Side pane: titled "${pane.name}", top-level sections only (${pane.entries.join(', ')}); a jump lands on the header and opens nothing`);
       await ctx.close();
     }
 
@@ -1152,6 +1155,90 @@ async function runVerification() {
     }
 
     // -------------------------------------------------------------
+    // TEST SUITE 20: Section bar, top-level side pane, header offsets
+    // Every top-level section collapses into one line under the site header
+    // once its own header has scrolled away (the story keeps its own); the
+    // side pane lists only those sections, never "Top", never an accordion
+    // row; and a jump lands with the whole header (logo, eyebrow) in view.
+    // ============================================================================
+    console.log('\n--- 20. Section bar, side pane, header offsets ---');
+    {
+      const routes = ['/', '/features/', '/features/library/', '/features/pipeline/', '/features/automations/', '/ai/', '/download/', '/support/', '/pricing/', '/privacy/'];
+      for (const [w, h, touch] of [[1440, 900, false], [390, 844, true], [1024, 768, true]]) {
+        const ctx = await browser.newContext({ viewport: { width: w, height: h }, isMobile: touch, hasTouch: touch, reducedMotion: 'reduce' });
+        const pg = await ctx.newPage();
+        const wrong = [];
+        for (const route of routes) {
+          await pg.goto(`${baseUrl}${route}`, { waitUntil: 'load' });
+          await pg.waitForTimeout(300);
+          const info = await pg.evaluate(() => {
+            const links = [...document.querySelectorAll('[data-page-nav] [data-pn-link]')];
+            return {
+              labels: links.map((l) => l.textContent.trim()),
+              inRow: links.filter((l) => l.dataset.pnLink && document.getElementById(l.dataset.pnLink)?.closest('[data-accordion-row]')).map((l) => l.dataset.pnLink),
+              keys: links.map((l) => l.dataset.pnLink),
+            };
+          });
+          if (info.labels.includes('Top')) wrong.push(`${route}: a "Top" entry`);
+          if (info.inRow.length) wrong.push(`${route}: entries inside accordion rows ${info.inRow}`);
+          if (route === '/' && JSON.stringify(info.labels) !== JSON.stringify(['Reelay Studio', 'How it works', 'Inside Reelay'])) wrong.push(`/: entries ${JSON.stringify(info.labels)}`);
+          if (route === '/privacy/') continue;
+          // Every jump: header in view under the site header, nothing opened.
+          for (const key of info.keys.filter(Boolean)) {
+            const before = await pg.$$eval('[data-accordion-row] [aria-expanded]', (bs) => bs.map((x) => x.getAttribute('aria-expanded')).join(''));
+            await pg.evaluate((k) => document.querySelector(`[data-pn-link="${k}"]`).click(), key);
+            await pg.waitForTimeout(250);
+            const r = await pg.evaluate((k) => {
+              const nav = document.querySelector('.site-nav').getBoundingClientRect().bottom;
+              const sec = document.getElementById(k);
+              const head = sec.querySelector('[data-sec-head]') ?? sec;
+              const end = Math.ceil(innerHeight + scrollY) >= document.documentElement.scrollHeight - 2;
+              // The opening (data-pn-top) means the top of the page itself.
+              if ('pnTop' in sec.dataset) return { top: scrollY, end };
+              return { top: head.getBoundingClientRect().top - nav, end };
+            }, key);
+            const after = await pg.$$eval('[data-accordion-row] [aria-expanded]', (bs) => bs.map((x) => x.getAttribute('aria-expanded')).join(''));
+            if (before !== after) wrong.push(`${route} ${key}: the jump opened a row`);
+            if (r.top < 0 || (r.top > 48 && !r.end)) wrong.push(`${route} ${key}: header ${Math.round(r.top)}px under the site header`);
+          }
+        }
+        // The Windows logo and eyebrow are in view after the jump (reported cut off).
+        await pg.goto(`${baseUrl}/download/`, { waitUntil: 'load' });
+        await pg.evaluate(() => document.querySelector('[data-pn-link="windows-setup"]').click());
+        await pg.waitForTimeout(300);
+        const win = await pg.evaluate(() => {
+          const nav = document.querySelector('.site-nav').getBoundingClientRect().bottom;
+          return ['#windows-setup .glyph-badge', '#windows-setup .eyebrow', '#win-title'].map((q) => Math.round(document.querySelector(q).getBoundingClientRect().top - nav));
+        });
+        if (win.some((t) => t < 0)) wrong.push(`/download Windows: logo/eyebrow/title tops ${win} (negative is under the site header)`);
+        // The bar: Inside Reelay's core phrase on a phone, eyebrow + headline wider.
+        await pg.goto(`${baseUrl}/`, { waitUntil: 'load' });
+        const barText = async () => pg.evaluate(() => {
+          const bar = document.querySelector('[data-sec-bar]');
+          if (!bar.classList.contains('is-on')) return null;
+          const r = bar.getBoundingClientRect();
+          const nav = document.querySelector('.site-nav').getBoundingClientRect().bottom;
+          const text = [...bar.querySelectorAll('span')].filter((x) => getComputedStyle(x).display !== 'none' && x.textContent).map((x) => x.textContent).join(' | ');
+          return { text, top: Math.round(r.top - nav), oneLine: bar.querySelector('.sec-bar-in').scrollHeight <= bar.querySelector('.sec-bar-in').clientHeight + 1 };
+        });
+        await pg.evaluate(() => { const r = document.querySelector('.story-step[data-step="3"]').getBoundingClientRect(); scrollTo({ top: r.top + scrollY - 300, behavior: 'instant' }); });
+        await pg.waitForTimeout(300);
+        if (await barText()) wrong.push('/: the section bar shows over the story, which has its own');
+        await pg.evaluate(() => { const r = document.querySelector('#four-pillars [data-sec-head]').getBoundingClientRect(); scrollTo({ top: r.bottom + scrollY + 150, behavior: 'instant' }); });
+        await pg.waitForTimeout(300);
+        const bar = await barText();
+        const want = w <= 640 ? 'Everything in one place' : 'Inside Reelay | Everything in one place. Open a chapter.';
+        if (!bar || bar.text !== want || bar.top !== 0 || !bar.oneLine) wrong.push(`/ Inside Reelay bar: ${JSON.stringify(bar)} (want "${want}", one line, right under the site header)`);
+        await pg.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+        await pg.waitForTimeout(300);
+        if (await barText()) wrong.push('/: the section bar shows at the top of the page');
+        if (wrong.length) failures.push(`Sections at ${w}x${h}: ${wrong.join('; ')}`);
+        else passedChecks.push(`Sections at ${w}x${h}: side pane is top level only on ${routes.length} routes (no "Top", no rows), every jump shows its whole header and opens nothing, the bar reads "${want}"`);
+        await ctx.close();
+      }
+    }
+
+    // ============================================================================
     // TEST SUITE 18: The hero (layered depth, Download in the first screen)
     // -------------------------------------------------------------
     console.log('\n--- 18. Testing the Hero ---');
