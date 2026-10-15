@@ -200,7 +200,15 @@ void DEMO_CARDS;
     text-decoration: none;
     border-top: 2px solid transparent;
     margin-top: -1px;
-    transition: color 0.3s ease, border-color 0.3s ease;
+    transition: none;   /* overrides the site-wide link fade; see below */
+  }
+  /* The current step's mark changes colour gently with a mouse. On a touch
+     screen it switches instantly: a colour fade runs on the main thread
+     every frame, and fired mid-swipe (as the pinned story does on a phone)
+     it cut the swipe's momentum. Measured: 4 to 7 short swipes a run with
+     the fade, 0 to 1 without, the same as before the phone was pinned. */
+  @media (hover: hover) {
+    .story-index a { transition: color 0.3s ease, border-color 0.3s ease; }
   }
   .story-index a:hover { color: var(--r-ink); }
   .story-index a[aria-current='step'] { color: var(--r-ink); border-top-color: var(--r-amber-text); }
@@ -275,30 +283,76 @@ void DEMO_CARDS;
     .story:not([data-pinned]) .step-figure { grid-area: fig; margin-top: 0; }
   }
 
-  /* ── Pinned (wide, JS, motion allowed) ───────────────────────────────── */
-  .story[data-pinned] .story-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-    gap: clamp(2.5rem, 5vw, 4.5rem);
-    align-items: start;
-  }
+  /* ── Pinned (JS and motion allowed; wide, or a phone held upright) ──── */
   .story[data-pinned] .story-steps { gap: 0; }
   .story[data-pinned] .story-step {
-    min-height: 44vh;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding-block: 2rem;
     opacity: 0.38;
     transition: opacity 0.45s ease;
   }
-  .story[data-pinned] .story-step:last-child { min-height: 52vh; }
   .story[data-pinned] .story-step.is-current { opacity: 1; }
   .story[data-pinned] .step-figure { display: none; }
-  .story[data-pinned] .story-stage {
-    display: block;
-    position: sticky;
-    top: calc(var(--nav-bar-h) + max(1.5rem, (100vh - var(--nav-bar-h) - 34rem) / 2));
+  .story[data-pinned] .story-stage { display: block; position: sticky; }
+
+  /* Wide: the steps on the left, the frame pinned beside them. */
+  @media (min-width: 1024px) {
+    .story[data-pinned] .story-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+      gap: clamp(2.5rem, 5vw, 4.5rem);
+      align-items: start;
+    }
+    .story[data-pinned] .story-step { min-height: 44vh; padding-block: 2rem; }
+    .story[data-pinned] .story-step:last-child { min-height: 52vh; }
+    .story[data-pinned] .story-stage { top: calc(var(--nav-bar-h) + max(1.5rem, (100vh - var(--nav-bar-h) - 34rem) / 2)); }
+  }
+
+  /* Phones and tablets: the frame pinned under the nav, and the steps
+     scrolling up beneath it, each one taking over the frame as it reaches
+     the middle of the space below. Nothing is intercepted: it's ordinary
+     scrolling past a sticky box, so a swipe carries on as it always does.
+     The frame's band is opaque (the steps pass under it), widened to the
+     screen edges with a shadow rather than with layout. */
+  @media (max-width: 1023.98px) {
+    .story[data-pinned] .story-grid { display: flex; flex-direction: column; }
+    .story[data-pinned] .story-stage {
+      order: -1;
+      z-index: 2;
+      top: var(--nav-bar-h);
+      padding: 0.75rem 0 0.9rem;
+      background: var(--r-bg);
+      box-shadow: 0 0 0 100vmax var(--r-bg);
+      clip-path: inset(0 -100vmax -1.5rem);
+    }
+    .story[data-pinned] .story-stage::after {
+      content: '';
+      position: absolute;
+      left: -100vmax;
+      right: -100vmax;
+      top: 100%;
+      height: 1.5rem;
+      background: linear-gradient(var(--r-bg), transparent);
+      box-shadow: none;
+      pointer-events: none;
+    }
+    .story[data-pinned] .stage-box { max-width: 34rem; margin-inline: auto; }
+    /* A hairline instead of the frame's deep shadow, which the band would
+       cut off in a visible line. */
+    .story[data-pinned] .frame--stage { box-shadow: 0 0 0 1px var(--hairline-strong); }
+    .story[data-pinned] .story-step { min-height: 52svh; padding-block: 1.25rem; }
+    .story[data-pinned] .story-step:last-child { min-height: 60svh; }
+    .story[data-pinned] .step-title { font-size: clamp(1.45rem, 6vw, 1.9rem); }
+    .story[data-pinned] .step-body { font-size: 1rem; }
+    .story[data-pinned] .stage-bar { margin-bottom: 0.6rem; }
+    .story[data-pinned] .stage-status { margin-top: 0.55rem; min-height: 1.4rem; }
+    .story[data-pinned] .stage-status p { font-size: 0.82rem; }
+    /* The frame is small here: the overlays shrink with it. */
+    .story[data-pinned] .ov { min-width: 0; gap: 0.25rem; padding: 0.5rem 0.65rem; border-radius: 10px; }
+    .story[data-pinned] .ov-k { font-size: 0.62rem; }
+    .story[data-pinned] .ov-row { font-size: 0.7rem; gap: 0.35rem; }
+    .story[data-pinned] .ov-row :global(svg) { width: 0.85rem; height: 0.85rem; }
   }
   .stage-bar { height: 2px; margin-bottom: 1rem; background: var(--hairline-strong); border-radius: 2px; overflow: hidden; }
   .stage-fill { display: block; height: 100%; background: var(--r-amber-text); transform-origin: 0 50%; transform: scaleX(var(--progress, 0.2)); transition: transform 0.5s var(--r-ease); }
@@ -340,7 +394,7 @@ void DEMO_CARDS;
 </style>
 
 <script>
-  /* Pinned mode is a progressive enhancement: wide screen, JavaScript, and
+  /* Pinned mode is a progressive enhancement: room for it, JavaScript, and
      motion allowed. The observer only reports which step crosses the middle
      band of the viewport; it never scrolls or blocks anything. */
   function initStory() {
@@ -372,7 +426,11 @@ void DEMO_CARDS;
         statuses.forEach((p) => p.classList.toggle('is-on', p.dataset.status === String(n)));
         links.forEach((a) => (a.dataset.storyLink === String(n) ? a.setAttribute('aria-current', 'step') : a.removeAttribute('aria-current')));
       };
-      const mq = window.matchMedia('(min-width: 1024px) and (prefers-reduced-motion: no-preference)');
+      // Pinned when motion is allowed and there's room: any wide screen, or a
+      // phone or tablet held upright (a phone on its side is too short, and
+      // gets the stacked layout).
+      const mq = window.matchMedia('(prefers-reduced-motion: no-preference) and (min-width: 1024px), (prefers-reduced-motion: no-preference) and (min-height: 600px)');
+      const wide = window.matchMedia('(min-width: 1024px)');
       let io: IntersectionObserver | null = null;
       const apply = () => {
         io?.disconnect();
@@ -386,11 +444,16 @@ void DEMO_CARDS;
         show(1);
         io = new IntersectionObserver((entries) => {
           for (const e of entries) if (e.isIntersecting) show(Number((e.target as HTMLElement).dataset.step));
-        }, { rootMargin: '-48% 0px -48% 0px' });
+        }, {
+          // The step crossing the middle of the screen, or on a phone the
+          // middle of the space under the pinned frame.
+          rootMargin: wide.matches ? '-48% 0px -48% 0px' : '-68% 0px -30% 0px',
+        });
         steps.forEach((s) => io!.observe(s));
       };
       apply();
       mq.addEventListener('change', apply);
+      wide.addEventListener('change', apply);
     });
   }
   initStory();

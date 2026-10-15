@@ -184,7 +184,41 @@ async function runVerification() {
       else passedChecks.push('Story index: the 04 link scrolls to Approval and the frame shows it');
       await ctx.close();
 
-      for (const [label, opts] of [['reduced motion at 1440', { viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' }], ['a 390px phone', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }]]) {
+      // A phone held upright pins too: the frame sticks under the nav and the
+      // steps scroll up beneath it, each taking over the frame as it reaches
+      // the space below. The page still scrolls exactly as usual.
+      {
+        const c = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+        const p2 = await c.newPage();
+        await p2.goto(`${baseUrl}/`, { waitUntil: 'load' });
+        const res = [];
+        for (let i = 1; i <= 5; i++) {
+          await p2.evaluate((i) => {
+            const r = document.querySelector(`.story-step[data-step="${i}"]`).getBoundingClientRect();
+            window.scrollTo({ top: r.top + window.scrollY + r.height / 2 - window.innerHeight * 0.69, behavior: 'instant' });
+          }, i);
+          await p2.waitForTimeout(700);
+          res.push(await p2.evaluate(() => {
+            const s = document.querySelector('[data-story]');
+            const g = document.querySelector('.story-stage').getBoundingClientRect();
+            const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-bar-h')) || 0;
+            return {
+              pinned: s.hasAttribute('data-pinned'),
+              stage: s.dataset.stage,
+              shot: [...s.querySelectorAll('.frame--stage .shot.is-on')].map((x) => x.dataset.shot).join(),
+              // Pinned under the nav (or, at step 1, not yet reached it), and in
+              // the top half, leaving the bottom half for the step.
+              stuck: g.top >= (nav || 0) - 2 && g.bottom < window.innerHeight * 0.55,
+            };
+          }));
+        }
+        const wrong = res.map((r, i) => (r.pinned && r.stage === String(i + 1) && r.shot === expect[i] && r.stuck ? null : `${i + 1}: ${JSON.stringify(r)}`)).filter(Boolean);
+        if (wrong.length) failures.push(`Story on a 390px phone isn't pinned right: ${wrong.join('; ')}`);
+        else passedChecks.push('Story on a 390px phone: the frame stays pinned under the nav and each step, scrolled into the space below, shows its own screen');
+        await c.close();
+      }
+
+      for (const [label, opts] of [['reduced motion at 1440', { viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' }], ['a 390px phone with reduced motion', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' }], ['a phone on its side (844 x 390)', { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true }]]) {
         const c = await browser.newContext(opts);
         const p2 = await c.newPage();
         await p2.goto(`${baseUrl}/`, { waitUntil: 'load' });
