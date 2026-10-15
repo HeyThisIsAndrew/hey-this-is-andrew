@@ -184,21 +184,24 @@ async function runVerification() {
       else passedChecks.push('Story index: the 04 link scrolls to Approval and the frame shows it');
       await ctx.close();
 
-      // A phone held upright pins too: the frame sticks under the nav and the
-      // steps scroll up beneath it, each taking over the frame as it reaches
-      // the space below. The page still scrolls exactly as usual.
-      {
-        const c = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+      // A phone pins too. Held upright, the frame sticks under the nav and
+      // the steps scroll up beneath it, each taking over the frame as it
+      // reaches the space below. On its side, the frame sticks beside the
+      // steps, as on a wide screen, small enough to fit under the nav. The
+      // page still scrolls exactly as usual.
+      for (const [label, width, height] of [['a 390px phone', 390, 844], ['a phone on its side (844 x 390)', 844, 390]]) {
+        const side = width > height;
+        const c = await browser.newContext({ viewport: { width, height }, isMobile: true, hasTouch: true });
         const p2 = await c.newPage();
         await p2.goto(`${baseUrl}/`, { waitUntil: 'load' });
         const res = [];
         for (let i = 1; i <= 5; i++) {
-          await p2.evaluate((i) => {
+          await p2.evaluate(([i, band]) => {
             const r = document.querySelector(`.story-step[data-step="${i}"]`).getBoundingClientRect();
-            window.scrollTo({ top: r.top + window.scrollY + r.height / 2 - window.innerHeight * 0.69, behavior: 'instant' });
-          }, i);
+            window.scrollTo({ top: r.top + window.scrollY + r.height / 2 - window.innerHeight * band, behavior: 'instant' });
+          }, [i, side ? 0.5 : 0.69]);
           await p2.waitForTimeout(700);
-          res.push(await p2.evaluate(() => {
+          res.push(await p2.evaluate((side) => {
             const s = document.querySelector('[data-story]');
             const g = document.querySelector('.story-stage').getBoundingClientRect();
             const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-bar-h')) || 0;
@@ -206,11 +209,14 @@ async function runVerification() {
               pinned: s.hasAttribute('data-pinned'),
               stage: s.dataset.stage,
               shot: [...s.querySelectorAll('.frame--stage .shot.is-on')].map((x) => x.dataset.shot).join(),
-              // Pinned under the nav (or, at step 1, not yet reached it), and in
-              // the top half, leaving the bottom half for the step.
-              stuck: g.top >= (nav || 0) - 2 && g.bottom < window.innerHeight * 0.55,
+              // Pinned under the nav (or, at step 1, not yet reached it), and
+              // upright in the top half, leaving the bottom half for the step;
+              // on its side wholly on screen, in the right-hand column.
+              stuck: g.top >= (nav || 0) - 2 && (side
+                ? g.bottom <= window.innerHeight && g.left > window.innerWidth * 0.4
+                : g.bottom < window.innerHeight * 0.55),
             };
-          }));
+          }, side));
         }
         // Nothing between the pinned frame and the page may clip, isolate or
         // transform: inside such a box iPhone Safari moves a sticky element
@@ -227,8 +233,8 @@ async function runVerification() {
           }
           return out;
         });
-        if (boxes.length) failures.push(`Story on a phone: the pinned frame sits inside clipping or isolating boxes (${boxes.join(', ')}), which makes it shake on iPhone`);
-        else passedChecks.push('Story on a phone: nothing between the pinned frame and the page clips, isolates or transforms it');
+        if (boxes.length) failures.push(`Story on ${label}: the pinned frame sits inside clipping or isolating boxes (${boxes.join(', ')}), which makes it shake on iPhone`);
+        else passedChecks.push(`Story on ${label}: nothing between the pinned frame and the page clips, isolates or transforms it`);
         // In the middle of its pinned stretch the frame is held with
         // position: fixed (iPhone Safari wobbles sticky boxes; fixed ones it
         // holds still), and the switches in and out must not move the frame
@@ -255,15 +261,15 @@ async function runVerification() {
           }
           return { fixedSeen, issues: issues.slice(0, 4) };
         });
-        if (!seam.fixedSeen || seam.issues.length) failures.push(`Story on a phone: fixed hold ${JSON.stringify(seam)}`);
-        else passedChecks.push(`Story on a phone: the frame is held fixed through the middle of its stretch (${seam.fixedSeen} of the sampled positions), and switching in and out moves neither it nor the text`);
+        if (!seam.fixedSeen || seam.issues.length) failures.push(`Story on ${label}: fixed hold ${JSON.stringify(seam)}`);
+        else passedChecks.push(`Story on ${label}: the frame is held fixed through the middle of its stretch (${seam.fixedSeen} of the sampled positions), and switching in and out moves neither it nor the text`);
         const wrong = res.map((r, i) => (r.pinned && r.stage === String(i + 1) && r.shot === expect[i] && r.stuck ? null : `${i + 1}: ${JSON.stringify(r)}`)).filter(Boolean);
-        if (wrong.length) failures.push(`Story on a 390px phone isn't pinned right: ${wrong.join('; ')}`);
-        else passedChecks.push('Story on a 390px phone: the frame stays pinned under the nav and each step, scrolled into the space below, shows its own screen');
+        if (wrong.length) failures.push(`Story on ${label} isn't pinned right: ${wrong.join('; ')}`);
+        else passedChecks.push(`Story on ${label}: the frame stays pinned ${side ? 'beside the steps, wholly on screen' : 'under the nav'}, and each step, scrolled into ${side ? 'the middle' : 'the space below'}, shows its own screen`);
         await c.close();
       }
 
-      for (const [label, opts] of [['reduced motion at 1440', { viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' }], ['a 390px phone with reduced motion', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' }], ['a phone on its side (844 x 390)', { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true }]]) {
+      for (const [label, opts] of [['reduced motion at 1440', { viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' }], ['a 390px phone with reduced motion', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' }], ['a phone on its side with reduced motion', { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' }]]) {
         const c = await browser.newContext(opts);
         const p2 = await c.newPage();
         await p2.goto(`${baseUrl}/`, { waitUntil: 'load' });
@@ -936,6 +942,34 @@ async function runVerification() {
       if (pane.hidden || pane.name !== 'Library and Player' || !pane.entries.includes('Transcripts') || opened !== 'true' || top < 0 || top > 300) {
         failures.push(`Side pane on /features/library: ${JSON.stringify({ ...pane, opened, top: Math.round(top) })}`);
       } else passedChecks.push(`Side pane: titled "${pane.name}", ${pane.entries.length} entries; picking Transcripts opens its row and scrolls to it`);
+      await ctx.close();
+    }
+
+    // A phone on its side is the same phone: the Menu button (not the
+    // desktop links, whose menus open on hover; a Pro Max on its side is 932
+    // wide), the section button in the corner (not a tab on the left edge,
+    // over the headlines), and headlines sized for the short screen.
+    for (const [w, h] of [[844, 390], [932, 430]]) {
+      const ctx = await browser.newContext({ viewport: { width: w, height: h }, isMobile: true, hasTouch: true });
+      const pg = await ctx.newPage();
+      const wrong = [];
+      for (const route of ['/', '/features/library/', '/pricing/', '/support/']) {
+        await pg.goto(`${baseUrl}${route}`, { waitUntil: 'load' });
+        const r = await pg.evaluate(() => {
+          const shown = (el) => !!el && getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0;
+          const pn = document.querySelector('.page-nav');
+          const pr = pn && !pn.hidden ? pn.getBoundingClientRect() : null;
+          return {
+            menu: shown(document.querySelector('.menu-btn')),
+            links: shown(document.querySelector('.desktop-nav')),
+            corner: pr ? pr.top > innerHeight * 0.6 && pr.width <= 46 : true,
+            h1: parseFloat(getComputedStyle(document.querySelector('h1')).fontSize) <= innerHeight * 0.14,
+          };
+        });
+        if (!r.menu || r.links || !r.corner || !r.h1) wrong.push(`${route} ${JSON.stringify(r)}`);
+      }
+      if (wrong.length) failures.push(`Phone on its side (${w} x ${h}): ${wrong.join('; ')}`);
+      else passedChecks.push(`Phone on its side (${w} x ${h}): Menu button, section button in the corner, headlines sized to the short screen, as upright`);
       await ctx.close();
     }
 

@@ -266,10 +266,10 @@ void DEMO_CARDS;
   .story-stage { display: none; }
   .stage-spacer { display: none; }
 
-  /* Stacked on a wide screen (reduced motion, or no JavaScript): each step
-     is its text beside its picture, so the section stays compact without
-     pinning anything. */
-  @media (min-width: 1024px) {
+  /* Stacked on a wide screen, or a phone on its side (reduced motion, or no
+     JavaScript): each step is its text beside its picture, so the section
+     stays compact without pinning anything. */
+  @media (min-width: 1024px), (orientation: landscape) and (min-width: 640px) and (max-height: 599.98px) {
     .story:not([data-pinned]) .story-step {
       display: grid;
       grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
@@ -285,7 +285,7 @@ void DEMO_CARDS;
     .story:not([data-pinned]) .step-figure { grid-area: fig; margin-top: 0; }
   }
 
-  /* ── Pinned (JS and motion allowed; wide, or a phone held upright) ──── */
+  /* ── Pinned (JS and motion allowed) ───────────────────────────────────── */
   .story[data-pinned] .story-steps { gap: 0; }
   .story[data-pinned] .story-step {
     display: flex;
@@ -298,8 +298,10 @@ void DEMO_CARDS;
   .story[data-pinned] .step-figure { display: none; }
   .story[data-pinned] .story-stage { display: block; position: sticky; }
 
-  /* Wide: the steps on the left, the frame pinned beside them. */
-  @media (min-width: 1024px) {
+  /* Wide, or a phone on its side: the steps on the left, the frame pinned
+     beside them. (Pinned under the nav, as upright, a phone on its side
+     would have no room left for the text: the screen is 390px tall.) */
+  @media (min-width: 1024px), (orientation: landscape) and (min-width: 640px) and (max-height: 599.98px) {
     .story[data-pinned] .story-grid {
       display: grid;
       grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
@@ -311,7 +313,30 @@ void DEMO_CARDS;
     .story[data-pinned] .story-stage { top: calc(var(--nav-bar-h) + max(1.5rem, (100vh - var(--nav-bar-h) - 34rem) / 2)); }
   }
 
-  /* Phones and tablets: the frame pinned under the nav, and the steps
+  /* A phone on its side: the same, scaled to a short screen. The frame is
+     as wide as fits the height under the nav (16:10 plus its status line),
+     the steps' type steps down, and each step is most of a screen tall so
+     one at a time holds the middle. */
+  @media (orientation: landscape) and (min-width: 640px) and (max-width: 1023.98px) and (max-height: 599.98px) {
+    .story[data-pinned] .story-grid { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: clamp(1.5rem, 4vw, 2.5rem); }
+    .story[data-pinned] .story-stage { top: calc(var(--nav-bar-h) + 0.75rem); }
+    .story[data-pinned] .stage-box { max-width: calc((100svh - var(--nav-bar-h) - 3.75rem) * 1.6); margin-inline: auto; }
+    /* Held by the script (see initStory) where sticky put it: the same top,
+       and the column's measured left edge and width. */
+    .story[data-pinned] .story-stage.is-fixed { position: fixed; left: var(--fx-left, 0px); width: var(--fx-w, auto); margin: 0; }
+    .story[data-pinned] .story-step { min-height: 78svh; padding-block: 1rem; }
+    .story[data-pinned] .story-step:last-child { min-height: 86svh; }
+    .story[data-pinned] .step-title { font-size: clamp(1.3rem, 3.4vw, 1.6rem); }
+    .story[data-pinned] .step-body { margin-top: 0.6rem; font-size: 0.92rem; line-height: 1.5; }
+    .story[data-pinned] .step-facts { margin-top: 0.7rem; }
+    .story[data-pinned] .step-facts li { font-size: 0.82rem; }
+    /* The page's own progress line is under the nav: one line, not two. */
+    .story[data-pinned] .stage-bar { display: none; }
+    .story[data-pinned] .stage-status { margin-top: 0.5rem; min-height: 1.4rem; }
+    .story[data-pinned] .stage-status p { font-size: 0.8rem; }
+  }
+
+  /* Phones and tablets held upright: the frame pinned under the nav, and the steps
      scrolling up beneath it, each one taking over the frame as it reaches
      the middle of the space below. Nothing is intercepted: it's ordinary
      scrolling past a sticky box, so a swipe carries on as it always does.
@@ -326,8 +351,16 @@ void DEMO_CARDS;
     /* No clipping or stacking box between the pinned frame and the page:
        every section clips sideways (.stage), and inside a clipping box
        iPhone Safari moves a sticky element a frame late, so the frame shook
-       up and down while scrolling. Nothing here spills sideways. */
+       up and down while scrolling. Nothing here spills sideways. Upright
+       or on its side alike. */
     .story[data-pinned] { overflow: visible; isolation: auto; }
+    /* The frame is small on any phone: the overlays shrink with it. */
+    .story[data-pinned] .ov { min-width: 0; gap: 0.25rem; padding: 0.5rem 0.65rem; border-radius: 10px; }
+    .story[data-pinned] .ov-k { font-size: 0.62rem; }
+    .story[data-pinned] .ov-row { font-size: 0.7rem; gap: 0.35rem; }
+    .story[data-pinned] .ov-row :global(svg) { width: 0.85rem; height: 0.85rem; }
+  }
+  @media (max-width: 639.98px), (max-width: 1023.98px) and (min-height: 600px), (max-width: 1023.98px) and (orientation: portrait) {
     .story[data-pinned] .story-grid { display: flex; flex-direction: column; }
     .story[data-pinned] .story-stage {
       order: -1;
@@ -377,11 +410,6 @@ void DEMO_CARDS;
     .story[data-pinned] .stage-bar { display: none; }
     .story[data-pinned] .stage-status { margin-top: 0.55rem; min-height: 1.4rem; }
     .story[data-pinned] .stage-status p { font-size: 0.82rem; }
-    /* The frame is small here: the overlays shrink with it. */
-    .story[data-pinned] .ov { min-width: 0; gap: 0.25rem; padding: 0.5rem 0.65rem; border-radius: 10px; }
-    .story[data-pinned] .ov-k { font-size: 0.62rem; }
-    .story[data-pinned] .ov-row { font-size: 0.7rem; gap: 0.35rem; }
-    .story[data-pinned] .ov-row :global(svg) { width: 0.85rem; height: 0.85rem; }
   }
   .stage-bar { height: 2px; margin-bottom: 1rem; background: var(--hairline-strong); border-radius: 2px; overflow: hidden; }
   .stage-fill { display: block; height: 100%; background: var(--r-amber-text); transform-origin: 0 50%; transform: scaleX(var(--progress, 0.2)); transition: transform 0.5s var(--r-ease); }
@@ -456,10 +484,15 @@ void DEMO_CARDS;
         statuses.forEach((p) => p.classList.toggle('is-on', p.dataset.status === String(n)));
         links.forEach((a) => (a.dataset.storyLink === String(n) ? a.setAttribute('aria-current', 'step') : a.removeAttribute('aria-current')));
       };
-      // Pinned when motion is allowed and there's room: any wide screen, or a
-      // phone or tablet held upright (a phone on its side is too short, and
-      // gets the stacked layout).
-      const mq = window.matchMedia('(prefers-reduced-motion: no-preference) and (min-width: 1024px), (prefers-reduced-motion: no-preference) and (min-height: 600px)');
+      // Pinned whenever motion is allowed and there's room: any wide screen,
+      // a phone or tablet held upright (the frame under the nav), or a phone
+      // on its side (the frame beside the steps, as on a wide screen).
+      const NM = '(prefers-reduced-motion: no-preference)';
+      const mq = window.matchMedia(`${NM} and (min-width: 1024px), ${NM} and (min-height: 600px), ${NM} and (orientation: landscape) and (min-width: 640px)`);
+      // The frame beside the steps (the same query as the CSS), and the
+      // screens where it's held with position: fixed (anything narrower than
+      // a desktop: phones and small tablets, upright or on their side).
+      const side = window.matchMedia('(min-width: 1024px), (orientation: landscape) and (min-width: 640px) and (max-height: 599.98px)');
       const wide = window.matchMedia('(min-width: 1024px)');
       let io: IntersectionObserver | null = null;
       // ── Phones: hold the pinned frame with position: fixed ──────────────
@@ -470,7 +503,9 @@ void DEMO_CARDS;
       // to fixed at the same spot, and switched back to sticky shortly
       // before the stretch ends. Both put it exactly under the nav there,
       // so neither switch moves it; sticky still does the arriving and
-      // leaving. A spacer keeps its place in the page meanwhile.
+      // leaving. Upright, a spacer keeps its place in the page meanwhile; on
+      // its side the frame has a column of its own, which the steps beside
+      // it already make as tall as it needs to be.
       const grid = root.querySelector<HTMLElement>('.story-grid');
       const stage = root.querySelector<HTMLElement>('.story-stage');
       const spacer = root.querySelector<HTMLElement>('.stage-spacer')!;
@@ -481,25 +516,35 @@ void DEMO_CARDS;
         if (!fixed || !stage) return;
         fixed = false;
         stage.classList.remove('is-fixed');
-        stage.style.removeProperty('--pad');
+        for (const v of ['--pad', '--fx-left', '--fx-w']) stage.style.removeProperty(v);
         spacer.style.height = '0px';
+      };
+      // Fix the frame where it is now (in the page's flow, not fixed).
+      const fix = () => {
+        if (!stage) return;
+        const r = stage.getBoundingClientRect();   // exact, not rounded: the text below mustn't shift
+        fixed = true;
+        if (side.matches) {
+          stage.style.setProperty('--fx-left', `${r.left}px`);
+          stage.style.setProperty('--fx-w', `${r.width}px`);
+        } else {
+          spacer.style.height = `${r.height}px`;
+          stage.style.setProperty('--pad', getComputedStyle(stage).paddingLeft);
+        }
+        stage.classList.add('is-fixed');
       };
       const hold = () => {
         queued = false;
         if (!grid || !stage || !root.hasAttribute('data-pinned') || wide.matches) return unfix();
         const top = parseFloat(getComputedStyle(stage).top) || 0;
         const g = grid.getBoundingClientRect();
-        const h = (fixed ? spacer : stage).getBoundingClientRect().height;   // exact, not rounded: the text below mustn't shift
+        const h = (fixed && !side.matches ? spacer : stage).getBoundingClientRect().height;
         // Hysteresis: switch in 48px into the stretch, out 24px before its
         // end, so the two tests can never flip it back and forth.
         const m = fixed ? MARGIN / 2 : MARGIN;
         const inside = g.top < top - m && g.bottom - h > top + m;
-        if (inside && !fixed) {
-          fixed = true;
-          spacer.style.height = `${h}px`;
-          stage.style.setProperty('--pad', getComputedStyle(stage).paddingLeft);
-          stage.classList.add('is-fixed');
-        } else if (!inside && fixed) unfix();
+        if (inside && !fixed) fix();
+        else if (!inside && fixed) unfix();
       };
       const queue = () => { if (!queued) { queued = true; requestAnimationFrame(hold); } };
       window.addEventListener('scroll', queue, { passive: true });
@@ -508,13 +553,8 @@ void DEMO_CARDS;
       // changes the frame's size and inset).
       window.addEventListener('resize', () => {
         if (fixed && stage) {
-          stage.classList.remove('is-fixed');
-          spacer.style.height = '0px';
-          const h = stage.getBoundingClientRect().height;
-          const pad = getComputedStyle(stage).paddingLeft;
-          spacer.style.height = `${h}px`;
-          stage.style.setProperty('--pad', pad);
-          stage.classList.add('is-fixed');
+          unfix();
+          fix();
         }
         queue();
       }, { passive: true });
@@ -536,12 +576,13 @@ void DEMO_CARDS;
         }, {
           // The step crossing the middle of the screen, or on a phone the
           // middle of the space under the pinned frame.
-          rootMargin: wide.matches ? '-48% 0px -48% 0px' : '-68% 0px -30% 0px',
+          rootMargin: side.matches ? '-48% 0px -48% 0px' : '-68% 0px -30% 0px',
         });
         steps.forEach((s) => io!.observe(s));
       };
       apply();
       mq.addEventListener('change', apply);
+      side.addEventListener('change', apply);
       wide.addEventListener('change', apply);
     });
   }

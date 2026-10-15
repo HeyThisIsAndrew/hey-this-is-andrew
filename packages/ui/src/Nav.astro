@@ -378,8 +378,10 @@ const isCurrent = (href: string) => {
       if (t && header && !header.contains(t)) setOpen(false);
     });
 
+    // Same query as the CSS that swaps the links for the Menu button.
+    const compact = window.matchMedia('(max-width: 860px), (orientation: landscape) and (max-height: 500px)');
     window.addEventListener('resize', () => {
-      if (window.innerWidth > 860 && isOpen()) setOpen(false);
+      if (!compact.matches && isOpen()) setOpen(false);
     });
   }
 
@@ -997,7 +999,10 @@ const isCurrent = (href: string) => {
     padding-left: 0.25rem;
   }
 
-  @media (max-width: 860px) {
+  /* Phones, upright or on their side: the links fold into the Menu button.
+     A large phone on its side is wider than 860 (932 on a Pro Max), and it
+     showed the desktop links, whose menus open on hover. */
+  @media (max-width: 860px), (orientation: landscape) and (max-height: 500px) {
     .site-nav .desktop-nav { display: none; }
     .site-nav .menu-btn { display: inline-flex; }
     .nav-inner { gap: 1rem; }
