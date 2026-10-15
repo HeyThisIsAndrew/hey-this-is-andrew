@@ -6,8 +6,11 @@
  *
  * brand: the app's own look (board_page._draw_platforms): each platform's
  * official colour mark with a small status badge in its corner (green ✓
- * published, blue clock scheduled, amber dot ready, red ! needs work), and a
- * faint mark with no badge where the video isn't going.
+ * published, blue clock scheduled, a plain neutral dot ready, red ! needs
+ * work), and a faint mark with no badge where the video isn't going. As in the
+ * app, ready has no colour (it's the normal state; amber means waiting for a
+ * decision), and the glyphs use the app's badge ink, which reads at 3:1 or
+ * more on every badge (white on green was 2.2:1).
  */
 import PlatformIcon from './PlatformIcon.astro';
 import { PLATFORM_ORDER, type Cover, type PlatformKey } from '../../data/demo';
@@ -30,9 +33,9 @@ const labels: Record<Cover, string> = {
         {coverage[p] !== 'off' && (
           <i class="cvb-badge" aria-hidden="true">
             <svg viewBox="0 0 12 12">
-              {coverage[p] === 'live' && <path d="M3.4 6.1l1.9 1.9 3.4-4" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />}
-              {coverage[p] === 'sched' && <path d="M6 6V3.2M6 6h2.2" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" />}
-              {coverage[p] === 'needs' && <path d="M6 3.2v3.4M6 8.6v.01" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" />}
+              {coverage[p] === 'live' && <path d="M3.4 6.1l1.9 1.9 3.4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />}
+              {coverage[p] === 'sched' && <path d="M6 6V3.2M6 6h2.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />}
+              {coverage[p] === 'needs' && <path d="M6 3.2v3.4M6 8.6v.01" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />}
             </svg>
           </i>
         )}
@@ -63,7 +66,7 @@ const labels: Record<Cover, string> = {
   .cv :global(svg) { width: 0.8em; height: 0.8em; }
   .cv--live { color: var(--cov-ok, var(--r-ok)); background: color-mix(in srgb, var(--cov-ok, var(--r-ok)) 15%, transparent); }
   .cv--sched { color: var(--cov-info, var(--r-info)); background: color-mix(in srgb, var(--cov-info, var(--r-info)) 15%, transparent); }
-  .cv--ready { color: var(--cov-warn, var(--r-warn)); background: color-mix(in srgb, var(--cov-warn, var(--r-warn)) 15%, transparent); }
+  .cv--ready { color: var(--r-ink-2); background: var(--r-fill-2); }
   .cv--needs { color: var(--cov-bad, var(--r-bad)); background: color-mix(in srgb, var(--cov-bad, var(--r-bad)) 15%, transparent); }
   .cv--off { color: var(--r-ink-4); opacity: 0.4; }
 
@@ -75,10 +78,11 @@ const labels: Record<Cover, string> = {
     position: absolute; right: -0.25em; bottom: -0.25em;
     display: grid; place-items: center; width: 0.72em; height: 0.72em; border-radius: 50%;
     box-shadow: 0 0 0 0.1em var(--cov-ring, var(--app-raised, #302f2d));
+    color: var(--app-badge-ink);
   }
   .cvb-badge svg { width: 100%; height: 100%; }
   .cvb--live .cvb-badge { background: var(--cov-ok, var(--r-ok)); }
   .cvb--sched .cvb-badge { background: var(--cov-info, var(--r-info)); }
-  .cvb--ready .cvb-badge { background: var(--cov-warn, var(--r-warn)); }
+  .cvb--ready .cvb-badge { background: var(--app-ink-2); }
   .cvb--needs .cvb-badge { background: var(--cov-bad, var(--r-bad)); }
 </style>
