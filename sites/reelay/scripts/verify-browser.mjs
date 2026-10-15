@@ -818,6 +818,42 @@ async function runVerification() {
     }
 
     // -------------------------------------------------------------
+    // TEST SUITE 19: Opening a row never moves the page away (phone)
+    // -------------------------------------------------------------
+    // The homepage rows open one at a time, so opening a lower row closes
+    // the open one above it. On an iPhone the page then jumped by that row's
+    // height and left the reader near the footer: Safari has no scroll
+    // anchoring, which in Chrome hid it. So anchoring is switched off here,
+    // as on Safari, and the row tapped must stay where it was on screen.
+    console.log('\n--- 19. Testing Accordion Rows Stay Put (phone) ---');
+    {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+      const pg = await ctx.newPage();
+      await pg.goto(`${baseUrl}/`, { waitUntil: 'load' });
+      await pg.addStyleTag({ content: 'html, body { overflow-anchor: none !important; }' });
+      const moved = [];
+      for (const id of ['pillar-platforms-header', 'pillar-tools-header', 'pillar-download-header']) {
+        await pg.evaluate((id) => {
+          const r = document.getElementById(id).getBoundingClientRect();
+          window.scrollTo({ top: r.top + window.scrollY - 300, behavior: 'instant' });
+        }, id);
+        await pg.waitForTimeout(300);
+        const before = await pg.evaluate((id) => document.getElementById(id).getBoundingClientRect().top, id);
+        await pg.tap(`#${id}`);
+        await pg.waitForTimeout(1100);
+        const after = await pg.evaluate((id) => ({
+          top: document.getElementById(id).getBoundingClientRect().top,
+          open: document.getElementById(id).getAttribute('aria-expanded'),
+        }), id);
+        moved.push({ id, by: Math.round(after.top - before), open: after.open });
+      }
+      const bad = moved.filter((m) => Math.abs(m.by) > 4 || m.open !== 'true');
+      if (bad.length) failures.push(`Opening a homepage row moved the page (phone, no scroll anchoring): ${JSON.stringify(bad)}`);
+      else passedChecks.push('Homepage rows on a phone: opening a row (closing the open one above) leaves the tapped row where it was, even without scroll anchoring');
+      await ctx.close();
+    }
+
+    // -------------------------------------------------------------
     // TEST SUITE 17: Phone menu is top level; sections live in the pane
     // -------------------------------------------------------------
     // The phone menu lists the five sections and fits the screen without

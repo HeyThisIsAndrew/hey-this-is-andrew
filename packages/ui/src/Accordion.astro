@@ -11,6 +11,14 @@
  *
  * Rows announce `accordion:toggle` ({ open }) on themselves, so a row's
  * content (an inline video) can load or unload with it.
+ *
+ * The row you press stays where it is on screen. In an exclusive group,
+ * opening a row closes the open one; when that one is above, everything
+ * below it rises by its height while it collapses, and on a phone the row
+ * you pressed shot off the top and left you near the footer. Chrome hides
+ * this with scroll anchoring; Safari has none. So for as long as the rows
+ * are moving, the page scrolls by however far the pressed row's header
+ * moved, until the reader scrolls for themselves.
  */
 interface Props {
   exclusive?: boolean;
@@ -72,6 +80,27 @@ const { exclusive = false } = Astro.props;
     if (parent) openRow(parent);
   }
 
+  /** Run `change`, then hold `el` at the same height on screen while the
+      rows animate (about 0.6s), unless the reader scrolls meanwhile. */
+  function keepInPlace(el: HTMLElement, change: () => void) {
+    const top = el.getBoundingClientRect().top;
+    change();
+    const until = performance.now() + (reduced() ? 0 : 900);
+    const events = ['wheel', 'touchstart', 'keydown'] as const;
+    let stopped = false;
+    const stop = () => { stopped = true; };
+    const done = () => events.forEach((t) => window.removeEventListener(t, stop));
+    events.forEach((t) => window.addEventListener(t, stop, { passive: true }));
+    const hold = () => {
+      if (stopped) return done();
+      const moved = el.getBoundingClientRect().top - top;
+      if (Math.abs(moved) > 0.5) window.scrollBy({ top: moved, behavior: 'instant' as ScrollBehavior });
+      if (performance.now() < until) requestAnimationFrame(hold);
+      else done();
+    };
+    hold();
+  }
+
   function initGroup(group: HTMLElement) {
     if (group.dataset.ready) return;
     group.dataset.ready = '1';
@@ -80,6 +109,7 @@ const { exclusive = false } = Astro.props;
       if (body) body.inert = !row.classList.contains(OPEN);
       header?.addEventListener('click', () => {
         if (row.classList.contains(OPEN)) setRow(row, false);
+        else if (header) keepInPlace(header, () => openRow(row));
         else openRow(row);
       });
     });
