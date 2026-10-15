@@ -212,6 +212,23 @@ async function runVerification() {
             };
           }));
         }
+        // Nothing between the pinned frame and the page may clip, isolate or
+        // transform: inside such a box iPhone Safari moves a sticky element
+        // a frame late, and the frame shook while scrolling. Chrome shows
+        // nothing wrong, so it's checked here. (The root may clip: that's
+        // the viewport.)
+        const boxes = await p2.evaluate(() => {
+          const out = [];
+          for (let el = document.querySelector('.story-stage').parentElement; el && el !== document.documentElement; el = el.parentElement) {
+            const cs = getComputedStyle(el);
+            const bad = [cs.overflowX, cs.overflowY].some((v) => v !== 'visible') || cs.isolation === 'isolate'
+              || cs.transform !== 'none' || cs.filter !== 'none' || cs.contain !== 'none' || cs.willChange !== 'auto';
+            if (bad) out.push(`${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`);
+          }
+          return out;
+        });
+        if (boxes.length) failures.push(`Story on a phone: the pinned frame sits inside clipping or isolating boxes (${boxes.join(', ')}), which makes it shake on iPhone`);
+        else passedChecks.push('Story on a phone: nothing between the pinned frame and the page clips, isolates or transforms it');
         const wrong = res.map((r, i) => (r.pinned && r.stage === String(i + 1) && r.shot === expect[i] && r.stuck ? null : `${i + 1}: ${JSON.stringify(r)}`)).filter(Boolean);
         if (wrong.length) failures.push(`Story on a 390px phone isn't pinned right: ${wrong.join('; ')}`);
         else passedChecks.push('Story on a 390px phone: the frame stays pinned under the nav and each step, scrolled into the space below, shows its own screen');

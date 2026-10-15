@@ -321,6 +321,11 @@ void DEMO_CARDS;
      Its foot is feathered, so the text below fades out under it rather
      than being cut by a hard edge. */
   @media (max-width: 1023.98px) {
+    /* No clipping or stacking box between the pinned frame and the page:
+       every section clips sideways (.stage), and inside a clipping box
+       iPhone Safari moves a sticky element a frame late, so the frame shook
+       up and down while scrolling. Nothing here spills sideways. */
+    .story[data-pinned] { overflow: visible; isolation: auto; }
     .story[data-pinned] .story-grid { display: flex; flex-direction: column; }
     .story[data-pinned] .story-stage {
       order: -1;
@@ -418,6 +423,7 @@ void DEMO_CARDS;
       const overlays = Array.from(root.querySelectorAll<HTMLElement>('[data-ov]'));
       const statuses = Array.from(root.querySelectorAll<HTMLElement>('[data-status]'));
       const links = Array.from(root.querySelectorAll<HTMLAnchorElement>('[data-story-link]'));
+      const fill = root.querySelector<HTMLElement>('.stage-fill');
       const zooms = steps.map((s) => s.querySelector<HTMLElement>('.step-figure .shot')?.getAttribute('style') ?? '');
       const screenOf = steps.map((s) => (s.querySelector('.step-figure img')?.getAttribute('src') ?? '').match(/web\/(.+)-(?:light|dark)-/)?.[1] ?? '');
       let current = 0;
@@ -425,7 +431,7 @@ void DEMO_CARDS;
         if (n === current) return;
         current = n;
         root.dataset.stage = String(n);
-        root.style.setProperty('--progress', String(n / steps.length));
+        fill?.style.setProperty('--progress', String(n / steps.length));   // on the bar alone: restyling the section mid-scroll costs a frame
         steps.forEach((s, i) => s.classList.toggle('is-current', i + 1 === n));
         shots.forEach((el) => {
           const on = el.dataset.shot === screenOf[n - 1];
