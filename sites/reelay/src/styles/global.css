@@ -550,6 +550,16 @@ pre, pre code { white-space: pre-wrap; overflow-wrap: anywhere; }
   #top .site-nav:not(.at-top):hover,
   #top .site-nav--home.at-top:hover { background: var(--r-glass-strong); box-shadow: inset 0 -1px 0 var(--hairline); }
 }
+/* Phones, tablets and anything touch: the shared nav turns its blur off
+   there (scrolling cost), so the bar must be solid, or the page shows
+   through behind the logo (it did: "How it works" read through the
+   wordmark). Same media as the shared rule in Nav.astro. */
+@media (max-width: 860px), (orientation: landscape) and (max-height: 500px), (pointer: coarse) {
+  #top .site-nav,
+  #top .site-nav--home.at-top,
+  #top .site-nav:not(.at-top):hover,
+  #top .site-nav--home.at-top:hover { background: var(--r-chrome); }
+}
 #top .site-nav .nav-inner {
   max-width: calc(1080px + 2 * var(--r-gutter)) !important;
   margin: 0 auto !important;
@@ -872,4 +882,57 @@ pre, pre code { white-space: pre-wrap; overflow-wrap: anywhere; }
     border-radius: 14px;
   }
   #top .page-nav:not(.is-open):not(:focus-within) { width: 44px; min-height: 44px; border-radius: 50%; }
+}
+
+/* ── Reading progress: a hairline under the nav that fills as the page
+   scrolls, as on the personal site. Under the header (z 99 against its
+   100) so an open menu paints over it and iOS never takes its colour for
+   the status bar. Driven by a scroll timeline on the compositor where
+   supported; BaseLayout's script drives it elsewhere. The timeline sits in
+   a rule of its own (see audit-dist.mjs). */
+.scroll-progress {
+  position: fixed;
+  top: var(--nav-bar-h);
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 99;
+  background: var(--r-ink);
+  transform: scaleX(var(--scroll, 0));
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+@supports (animation-timeline: scroll()) {
+  .scroll-progress { animation: scroll-progress linear both; }
+  html .scroll-progress { animation-timeline: scroll(root); }
+  @keyframes scroll-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+}
+
+/* The section pane's button on a phone, dressed like the nav's Menu
+   button: a pill outline with a faint fill. It floats over the page, so
+   under the fill sits the bar's solid colour: nothing reads through it. */
+@media (hover: none) and (max-width: 760px) {
+  #top .page-nav:not(.is-open):not(:focus-within) {
+    background: linear-gradient(var(--r-fill-2), var(--r-fill-2)), var(--r-chrome);
+    border: 1px solid var(--hairline-strong);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  }
+  #top .page-nav:not(.is-open) .pn-handle::before {
+    width: 16px;
+    height: 12px;
+    background:
+      linear-gradient(currentColor, currentColor) 0 0 / 100% 1.5px no-repeat,
+      linear-gradient(currentColor, currentColor) 0 50% / 100% 1.5px no-repeat,
+      linear-gradient(currentColor, currentColor) 0 100% / 62% 1.5px no-repeat;
+    color: var(--r-ink);
+    border-radius: 1px;
+  }
+  /* Open: the same outline and solid base, so it reads as the same object. */
+  #top .page-nav.is-open,
+  #top .page-nav:focus-within {
+    background: var(--r-chrome);
+    border: 1px solid var(--hairline-strong);
+    border-radius: 18px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  }
 }

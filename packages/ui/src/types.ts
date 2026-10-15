@@ -87,4 +87,9 @@ export interface LogoAsset {
   width: number;
   height: number;
   alt: string;
+  /** A version for dark mode, swapped in by a <picture> source. Use it
+   *  instead of a prefers-color-scheme rule inside the SVG: iPhone Safari
+   *  doesn't reliably apply that to an SVG shown as an image, and drew
+   *  Reelay's dark-mode wordmark near-black on the black bar. */
+  darkSrc?: string;
 }

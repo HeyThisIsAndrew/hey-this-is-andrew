@@ -45,7 +45,11 @@ const isCurrent = (href: string) => {
 <header class:list={['site-nav', { 'site-nav--home': isHome, 'at-top': isHome }]} id="site-header" data-home-path={homePath}>
   <div class="nav-inner">
     <a class="wordmark" href={homeHref} aria-label={homeLabel} data-logo-home={isHome ? true : undefined}>
-      <img src={logo.src} width={logo.width} height={logo.height} alt={logo.alt} class="wordmark-logo" />
+      {logo.darkSrc ? (
+        <picture class="logo-picture"><source media="(prefers-color-scheme: dark)" srcset={logo.darkSrc} /><img src={logo.src} width={logo.width} height={logo.height} alt={logo.alt} class="wordmark-logo" /></picture>
+      ) : (
+        <img src={logo.src} width={logo.width} height={logo.height} alt={logo.alt} class="wordmark-logo" />
+      )}
     </a>
     <nav aria-label={L.sections} class="desktop-nav">
       <ul class="nav-links">
@@ -544,6 +548,8 @@ const isCurrent = (href: string) => {
     text-decoration: none;
     transition: filter 0.3s ease;
   }
+  /* A logo with a dark-mode version: the <picture> takes no box of its own. */
+  .wordmark .logo-picture { display: contents; }
   .wordmark-logo {
     display: block;
     height: 3rem;

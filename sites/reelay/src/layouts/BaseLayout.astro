@@ -15,7 +15,8 @@ import PageNav from '@andrew/ui/PageNav.astro';
 import Nav from '@andrew/ui/Nav.astro';
 import Footer from '@andrew/ui/Footer.astro';
 import ChromeMeta from '@andrew/ui/ChromeMeta.astro';
-import logo from '../assets/logo.svg';
+import logo from '../assets/logo-light.svg';
+import logoDark from '../assets/logo-dark.svg';
 import { SITE, NAV_LINKS, FOOTER_EXPLORE, UTILITY_LINKS, SOCIALS, homeUrl, href } from '../data/site';
 import { OPERATOR, CONTACTS, TRADEMARKS, LIMITED_USE } from '../data/operator';
 
@@ -53,7 +54,7 @@ const canonicalURL = new URL(Astro.url.pathname, site);
 const pagePath = Astro.url.pathname.startsWith(base) ? Astro.url.pathname.slice(base.length) : Astro.url.pathname;
 const slug = pagePath.replace(/^\/|\/$/g, '').replace(/\//g, '-') || 'home';
 const ogImage = new URL(`${base}og/${slug}.png`, site).href;
-const logoAsset = { src: logo.src, width: 132, height: 32, alt: SITE.fullName };
+const logoAsset = { src: logo.src, darkSrc: logoDark.src, width: 132, height: 32, alt: SITE.fullName };
 /* Until the operator's details are filled in (src/data/operator.ts), the footer
    on every page says what Reelay is instead of printing {{PLACEHOLDERS}}. The
    legal pages still print them, so a REELAY_RELEASE=1 audit still fails. */
@@ -99,6 +100,7 @@ const ld = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
     {/* The page's sections live here, not in the menu: the phone menu is top
         level only (Nav.astro). Titled with the page's name; it lists the
         accordion rows by their titles and any other visible <h2 id>. */}
+    <div class="scroll-progress" data-scroll-progress aria-hidden="true"></div>
     <PageNav heading={paneHeading} items={paneItems} selector="main [data-accordion-row], main h2[id]:not([data-pn-skip])" />
     <main id="main-content">
       <slot />
@@ -117,6 +119,21 @@ const ld = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
     <script>
       import { initSectionAnchors } from '@andrew/ui/scripts/section-anchors.ts';
       initSectionAnchors();
+
+      // Reading progress, where CSS can't drive it from a scroll timeline.
+      const bar = document.querySelector<HTMLElement>('[data-scroll-progress]');
+      if (bar && !CSS.supports('animation-timeline: scroll()')) {
+        let queued = false;
+        const draw = () => {
+          queued = false;
+          const max = document.documentElement.scrollHeight - window.innerHeight;
+          bar.style.setProperty('--scroll', String(max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0));
+        };
+        const queue = () => { if (!queued) { queued = true; requestAnimationFrame(draw); } };
+        window.addEventListener('scroll', queue, { passive: true });
+        window.addEventListener('resize', queue, { passive: true });
+        draw();
+      }
 
       // Fade stages up as they arrive. Content is only hidden once this
       // script runs (html.js), and never under reduced motion.
