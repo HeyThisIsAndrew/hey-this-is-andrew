@@ -222,10 +222,11 @@ const hasMedia = Astro.slots.has('media');
     transform: rotate(180deg);
   }
 
+  /* A row's height changes in one step, never animated (Accordion.astro
+     says why); its content fades and slides in instead, below. */
   .accordion-body {
     display: grid;
     grid-template-rows: 1fr;
-    transition: grid-template-rows 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   }
   /* Collapsed only while the script runs (see Accordion.astro). */
   :global(html.acc-js) .accordion-row:not(.is-expanded) .accordion-body {
@@ -244,13 +245,24 @@ const hasMedia = Astro.slots.has('media');
   :global(html:not(.acc-js)) .accordion-body-inner {
     padding-bottom: 2.5rem;
   }
-  /* Open and done moving: nothing clips (an iframe inside must have no
-     clipping ancestor on iOS). */
+  /* Open: nothing clips (an iframe inside must have no clipping ancestor
+     on iOS). */
   .accordion-row.is-settled .accordion-body-inner {
     overflow: visible;
   }
+  /* Opening: the content fades in and settles 8px down into place, with an
+     ease in and out. Opacity and transform only, so the compositor runs it:
+     no layout per frame, however much is inside. Closing is instant. */
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html.acc-js) .accordion-row:not(.is-expanded) .accordion-body-inner {
+      opacity: 0;
+      transform: translate3d(0, -0.5rem, 0);
+    }
+    .accordion-row.is-expanded .accordion-body-inner {
+      transition: opacity 0.45s cubic-bezier(0.65, 0, 0.35, 1), transform 0.5s cubic-bezier(0.65, 0, 0.35, 1);
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
-    .accordion-body,
     .accordion-chevron {
       transition: none;
     }

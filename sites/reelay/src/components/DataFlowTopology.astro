@@ -160,7 +160,13 @@ const nodes = [
   .topology-tab[aria-selected='true'] .tt-num { color: var(--r-amber-text); }
 
   .topo-panel { padding: clamp(1.75rem, 3.5vw, 2.75rem); border-radius: var(--radius-xl); background: var(--r-panel); box-shadow: var(--r-panel-shadow); }
-  .topo-panel[hidden] { display: none; }
+  /* Every panel shares one grid cell and the inactive ones are only invisible
+     (visibility also takes them out of the tab order and the accessibility
+     tree), so the box is always as tall as the tallest panel: switching never
+     moves the page below. */
+  .topo-panels { display: grid; }
+  .topo-panel { grid-area: 1 / 1; min-width: 0; }
+  .topo-panel[hidden] { display: block; visibility: hidden; }
   .topo-panel:not([hidden]) { animation: tp-in 0.55s var(--r-ease) both; }
   @keyframes tp-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) { .topo-panel:not([hidden]) { animation: none; } }

@@ -213,6 +213,7 @@ const panels = [
                         </button>
                       ))}
                     </div>
+                    <div class="wf-panels">
                     {topologyNodes.map((n, idx) => (
                       <div class="wf-panel" role="tabpanel" id={`panel-${n.id}`} aria-labelledby={`top-tab-${n.id}`} hidden={idx !== 0} tabindex="0">
                         <div class="topology-detail-card">
@@ -226,6 +227,7 @@ const panels = [
                         </div>
                       </div>
                     ))}
+                    </div>
                   </div>
                 )}
 
@@ -435,6 +437,13 @@ const panels = [
   @media (prefers-reduced-motion: reduce) {
     .topology-tab { transition: none; }
   }
+  /* Every panel shares one grid cell and the inactive ones are only invisible
+     (visibility also takes them out of the tab order and the accessibility
+     tree), so the box is always as tall as the tallest panel: switching never
+     moves the page below. */
+  .wf-panels { display: grid; }
+  .wf-panels > .wf-panel { grid-area: 1 / 1; min-width: 0; }
+  .wf-panels > .wf-panel[hidden] { display: block; visibility: hidden; }
 </style>
 
 <script>

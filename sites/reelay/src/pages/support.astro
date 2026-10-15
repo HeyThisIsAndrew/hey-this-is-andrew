@@ -217,8 +217,23 @@ const faq = [
       if (first) { first.open = true; first.scrollIntoView({ block: 'start' }); first.querySelector('summary')?.focus(); }
     });
     clear.addEventListener('click', () => { input.value = ''; run(); input.focus(); });
-    shell.querySelector('[data-expand-all]')!.addEventListener('click', () => items.forEach((d) => { if (!d.hidden) d.open = true; }));
-    shell.querySelector('[data-collapse-all]')!.addEventListener('click', () => items.forEach((d) => { d.open = false; }));
+    // Opening or closing every guide changes the height of everything above
+    // the button too: keep the button where it was on screen (the same step
+    // as the shared accordions: change, measure, scroll, before any paint).
+    const holdStill = (el: HTMLElement, change: () => void) => {
+      const html = document.documentElement;
+      const anchoring = html.style.overflowAnchor;
+      html.style.overflowAnchor = 'none';
+      const top = el.getBoundingClientRect().top;
+      change();
+      const moved = el.getBoundingClientRect().top - top;
+      if (Math.abs(moved) > 0.5) window.scrollBy({ top: moved, behavior: 'instant' as ScrollBehavior });
+      requestAnimationFrame(() => requestAnimationFrame(() => { html.style.overflowAnchor = anchoring; }));
+    };
+    const expandAll = shell.querySelector<HTMLElement>('[data-expand-all]')!;
+    const collapseAll = shell.querySelector<HTMLElement>('[data-collapse-all]')!;
+    expandAll.addEventListener('click', () => holdStill(expandAll, () => items.forEach((d) => { if (!d.hidden) d.open = true; })));
+    collapseAll.addEventListener('click', () => holdStill(collapseAll, () => items.forEach((d) => { d.open = false; })));
 
     /* A link to a guide (or one of its old addresses) opens it. */
     const openFromHash = () => {

@@ -64,6 +64,7 @@ const lifecycle = ['pending', 'approved', 'executed', 'failed', 'stale', 'reject
             <button type="button" role="tab" class="ex-tab" id={`ex-tab-${e.id}`} aria-controls={`ex-panel-${e.id}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1}>{e.label}</button>
           ))}
         </div>
+        <div class="ex-panels">
         {examples.map((e, i) => (
           <div class="ex-panel" role="tabpanel" id={`ex-panel-${e.id}`} aria-labelledby={`ex-tab-${e.id}`} hidden={i !== 0}>
             <div class="ex-term">
@@ -74,6 +75,7 @@ const lifecycle = ['pending', 'approved', 'executed', 'failed', 'stale', 'reject
             <p class="ex-note">{e.note}</p>
           </div>
         ))}
+        </div>
       </div>
     </div>
   </section>
@@ -163,7 +165,13 @@ const lifecycle = ['pending', 'approved', 'executed', 'failed', 'stale', 'reject
   .ex-tab { min-height: 40px; padding: 0 1rem; border: 0; border-radius: 999px; background: var(--r-fill-2); color: var(--r-ink-2); font-size: 0.92rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; }
   .ex-tab:hover { color: var(--r-ink); }
   .ex-tab[aria-selected='true'] { background: var(--r-ink); color: var(--r-on-ink); }
-  .ex-panel[hidden] { display: none; }
+  /* Every panel shares one grid cell and the inactive ones are only invisible
+     (visibility also takes them out of the tab order and the accessibility
+     tree), so the box is always as tall as the tallest panel: switching never
+     moves the page below. */
+  .ex-panels { display: grid; }
+  .ex-panel { grid-area: 1 / 1; min-width: 0; }
+  .ex-panel[hidden] { display: block; visibility: hidden; }
   .ex-term { border-radius: 18px; background: var(--r-code-bg); box-shadow: inset 0 0 0 1px var(--hairline); overflow: hidden; }
   .ex-term pre { margin: 0; padding: 1.1rem 1.25rem; overflow-x: auto; font-size: 0.86rem; line-height: 1.65; }
   .ex-req { color: var(--r-ink); }

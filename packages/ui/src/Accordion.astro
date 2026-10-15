@@ -12,13 +12,21 @@
  * Rows announce `accordion:toggle` ({ open }) on themselves, so a row's
  * content (an inline video) can load or unload with it.
  *
- * The row you press stays where it is on screen. In an exclusive group,
- * opening a row closes the open one; when that one is above, everything
- * below it rises by its height while it collapses, and on a phone the row
- * you pressed shot off the top and left you near the footer. Chrome hides
- * this with scroll anchoring; Safari has none. So for as long as the rows
- * are moving, the page scrolls by however far the pressed row's header
- * moved, until the reader scrolls for themselves.
+ * The row you press stays exactly where it is on screen. In an exclusive
+ * group, opening a row closes the open one; when that one is above, the row
+ * you pressed rises by its height. Rows used to animate their height, both
+ * at once, while a requestAnimationFrame loop scrolled the page after the
+ * pressed header. The loop always ran a frame behind the animation, so on an
+ * iPad the header shook up and down for half a second, and both rows
+ * re-laid out their whole contents every frame. Now a row's height changes
+ * in one step: the open row closes and the pressed one opens in the same
+ * task, the page scrolls by however far the pressed header moved, and only
+ * then does the browser paint, so it never shows anything in between.
+ * Scroll anchoring is off for that one step (Chrome would correct the same
+ * move a second time). The opened row's content then fades and slides in,
+ * on the compositor (AccordionRow.astro). If the opened row's header is low
+ * on the screen, the page then scrolls it up (smoothly, unless the reader
+ * prefers less motion), towards a target that has stopped moving.
  */
 interface Props {
   exclusive?: boolean;
@@ -49,22 +57,13 @@ const { exclusive = false } = Astro.props;
     row.classList.remove(SETTLED);
     header?.setAttribute('aria-expanded', String(open));
     if (body) body.inert = !open;
-    if (open) {
-      // Stop clipping once the row is done growing (see AccordionRow.astro).
-      let done = false;
-      const settle = () => {
-        if (done || !row.classList.contains(OPEN)) return;
-        done = true;
-        row.classList.add(SETTLED);
-        row.dispatchEvent(new CustomEvent('accordion:settled', { bubbles: true }));
-      };
-      if (reduced() || !body) settle();
-      else {
-        body.addEventListener('transitionend', (e) => { if (e.target === body) settle(); }, { once: true });
-        window.setTimeout(settle, 800);
-      }
-    }
     row.dispatchEvent(new CustomEvent('accordion:toggle', { bubbles: true, detail: { open } }));
+    if (open) {
+      // The row is at its full height at once, so it stops clipping at once
+      // (see AccordionRow.astro): nothing inside it is cut off while it fades in.
+      row.classList.add(SETTLED);
+      row.dispatchEvent(new CustomEvent('accordion:settled', { bubbles: true }));
+    }
   }
 
   function rowsOf(group: HTMLElement) {
@@ -80,25 +79,29 @@ const { exclusive = false } = Astro.props;
     if (parent) openRow(parent);
   }
 
-  /** Run `change`, then hold `el` at the same height on screen while the
-      rows animate (about 0.6s), unless the reader scrolls meanwhile. */
+  /** Run `change` (rows open and close in one step), and before the browser
+      paints, scroll the page by however far `el` moved, so it stays exactly
+      where it was on screen. Scroll anchoring is off meanwhile, or Chrome
+      would make the same correction twice. */
   function keepInPlace(el: HTMLElement, change: () => void) {
+    const html = document.documentElement;
+    const anchoring = html.style.overflowAnchor;
+    html.style.overflowAnchor = 'none';
     const top = el.getBoundingClientRect().top;
     change();
-    const until = performance.now() + (reduced() ? 0 : 900);
-    const events = ['wheel', 'touchstart', 'keydown'] as const;
-    let stopped = false;
-    const stop = () => { stopped = true; };
-    const done = () => events.forEach((t) => window.removeEventListener(t, stop));
-    events.forEach((t) => window.addEventListener(t, stop, { passive: true }));
-    const hold = () => {
-      if (stopped) return done();
-      const moved = el.getBoundingClientRect().top - top;
-      if (Math.abs(moved) > 0.5) window.scrollBy({ top: moved, behavior: 'instant' as ScrollBehavior });
-      if (performance.now() < until) requestAnimationFrame(hold);
-      else done();
-    };
-    hold();
+    const moved = el.getBoundingClientRect().top - top;     // the new layout, measured now
+    if (Math.abs(moved) > 0.5) window.scrollBy({ top: moved, behavior: 'instant' as ScrollBehavior });
+    requestAnimationFrame(() => requestAnimationFrame(() => { html.style.overflowAnchor = anchoring; }));
+  }
+
+  /** A row opened with its header low on the screen: bring the header up so
+      the row's content shows. Only once the row is open, so the header has
+      stopped moving. */
+  function revealIfLow(row: HTMLElement, header: HTMLElement) {
+    const top = header.getBoundingClientRect().top;
+    if (top < window.innerHeight * 0.6) return;
+    const margin = parseFloat(getComputedStyle(row).scrollMarginTop) || 0;
+    window.scrollTo({ top: window.scrollY + row.getBoundingClientRect().top - margin, behavior: reduced() ? 'auto' : 'smooth' });
   }
 
   function initGroup(group: HTMLElement) {
@@ -108,9 +111,12 @@ const { exclusive = false } = Astro.props;
       const { header, body } = parts(row);
       if (body) body.inert = !row.classList.contains(OPEN);
       header?.addEventListener('click', () => {
-        if (row.classList.contains(OPEN)) setRow(row, false);
-        else if (header) keepInPlace(header, () => openRow(row));
-        else openRow(row);
+        if (!header) return;
+        if (row.classList.contains(OPEN)) keepInPlace(header, () => setRow(row, false));
+        else {
+          keepInPlace(header, () => openRow(row));
+          revealIfLow(row, header);
+        }
       });
     });
   }
@@ -157,6 +163,8 @@ const { exclusive = false } = Astro.props;
 
 <style>
   .accordion-group {
+    /* Rows never move the page on their own: see keepInPlace. */
+    overflow-anchor: none;
     display: flex;
     flex-direction: column;
     gap: 1px;

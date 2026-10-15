@@ -979,6 +979,110 @@ async function runVerification() {
     }
 
     // -------------------------------------------------------------
+    // TEST SUITE 19b: Switching rows on an iPad: no whipsaw, no jitter
+    // -------------------------------------------------------------
+    // Rows open one at a time, so tapping the next row closes the open one
+    // above it. Rows used to animate their heights while a frame loop chased
+    // the tapped header, a frame behind: on an iPad the header shook up and
+    // down. Now the switch happens in one step before any paint. Tapped with
+    // its header in the upper part of the screen, the header must not move
+    // at all; tapped low (its content would open below the fold), the page
+    // may bring it up, but only one way, and it ends in view. Sampled at 0,
+    // 50, 150, 300 and 500ms after the tap, and every frame in between for
+    // reversals. Scroll anchoring is off, as on Safari.
+    console.log('\n--- 19b. Testing Accordion Switching (iPad) ---');
+    for (const [w, h] of [[1024, 768], [768, 1024]]) {
+      for (const route of ['/', '/features/library/']) {
+        const ctx = await browser.newContext({ viewport: { width: w, height: h }, isMobile: true, hasTouch: true });
+        const pg = await ctx.newPage();
+        await pg.goto(`${baseUrl}${route}`, { waitUntil: 'load' });
+        await pg.addStyleTag({ content: 'html, body { overflow-anchor: none !important; }' });
+        const ids = await pg.evaluate(() => [...document.querySelector('[data-accordion-group]').querySelectorAll(':scope > [data-accordion-row] [data-accordion-header]')].slice(0, 5).map((b) => b.id));
+        const bad = [];
+        // Row 01 open first, then 02, 03, 04 and 05 in turn: held mid-screen,
+        // then the same again tapped low on the screen.
+        for (const [where, frac] of [['mid', 0.35], ['low', 0.7]]) {
+          // Each pass from a fresh page (feature pages' rows open independently).
+          await pg.goto(`${baseUrl}${route}`, { waitUntil: 'load' });
+          await pg.addStyleTag({ content: 'html, body { overflow-anchor: none !important; }' });
+          for (const [n, id] of ids.entries()) {
+            const open = await pg.evaluate((id) => document.getElementById(id).getAttribute('aria-expanded') === 'true', id);
+            if (n === 0) {
+              if (!open) { await pg.evaluate((id) => document.getElementById(id).click(), id); await pg.waitForTimeout(600); }
+              continue;
+            }
+            await pg.evaluate(([id, frac]) => {
+              const r = document.getElementById(id).getBoundingClientRect();
+              window.scrollTo({ top: r.top + window.scrollY - innerHeight * frac, behavior: 'instant' });
+            }, [id, frac]);
+            await pg.waitForTimeout(250);
+            // Sample every frame from the tap on (the tap's own click starts the clock).
+            await pg.evaluate((id) => {
+              const el = document.getElementById(id);
+              const w = window;
+              w.__acc = { before: el.getBoundingClientRect().top, samples: [] };
+              el.addEventListener('click', () => {
+                const t0 = performance.now();
+                w.__acc.samples.push([0, el.getBoundingClientRect().top]);
+                const tick = () => {
+                  const t = performance.now() - t0;
+                  w.__acc.samples.push([t, el.getBoundingClientRect().top]);
+                  if (t < 560) requestAnimationFrame(tick);
+                };
+                requestAnimationFrame(tick);
+              }, { once: true, capture: false });
+            }, id);
+            await pg.tap(`#${id}`);
+            await pg.waitForTimeout(700);
+            const r = await pg.evaluate((id) => ({ ...window.__acc, open: document.getElementById(id).getAttribute('aria-expanded'), vh: innerHeight }), id);
+            const at = (ms) => (r.samples.find(([t]) => t >= ms) || r.samples.at(-1))[1];
+            const marks = [0, 50, 150, 300, 500].map((ms) => Math.round(at(ms)));
+            let rev = 0, dir = 0, prev = r.before;
+            for (const [, y] of r.samples) { const d = y - prev; if (Math.abs(d) > 0.5) { const sgn = Math.sign(d); if (dir && sgn !== dir) rev++; dir = sgn; } prev = y; }
+            const end = at(500);
+            const still = r.samples.every(([, y]) => Math.abs(y - r.before) <= 1);
+            const ok = r.open === 'true' && rev === 0 && end >= 0 && end < r.vh && (where === 'mid' ? still : r.samples[0][1] - r.before <= 1);
+            if (!ok) bad.push(`${where} row ${n + 1}: before ${Math.round(r.before)}, at 0/50/150/300/500ms ${marks.join('/')}, reversals ${rev}, open ${r.open}`);
+          }
+        }
+        if (bad.length) failures.push(`Accordion switching on ${route} at ${w}x${h}: ${bad.join('; ')}`);
+        else passedChecks.push(`Accordion switching on ${route} at ${w}x${h}: rows 01 to 05 in turn, the tapped header holds still (mid-screen) or rises one way into view (low), never back and forth`);
+        await ctx.close();
+      }
+    }
+
+    // Tab switchers keep one height: every panel shares one grid cell, so
+    // switching tabs never moves the page below (/ai's examples moved it by
+    // up to 265px, the homepage's data map by up to 43px on a phone).
+    console.log('\n--- 19c. Testing Tab Switchers Keep Their Height ---');
+    for (const [w, h] of [[1024, 768], [390, 844]]) {
+      const ctx = await browser.newContext({ viewport: { width: w, height: h } });
+      const pg = await ctx.newPage();
+      const moved = [];
+      for (const route of ['/', '/ai/']) {
+        await pg.goto(`${baseUrl}${route}`, { waitUntil: 'load' });
+        await pg.evaluate(() => document.querySelectorAll('[data-accordion-row]').forEach((row) => {
+          row.classList.add('is-expanded', 'is-settled');
+          const body = row.querySelector('.accordion-body');
+          if (body) body.inert = false;
+        }));
+        for (const list of await pg.$$('[role="tablist"]')) {
+          const heights = [];
+          for (const tab of await list.$$('[role="tab"]')) {
+            if (!(await tab.isVisible())) continue;
+            await tab.click();
+            await pg.waitForTimeout(150);
+            heights.push(await pg.evaluate(() => document.documentElement.scrollHeight));
+          }
+          if (new Set(heights).size > 1) moved.push(`${route} [${await list.getAttribute('aria-label')}] ${heights.join('/')}`);
+        }
+      }
+      if (moved.length) failures.push(`Tab switchers change the page height at ${w}px: ${moved.join('; ')}`);
+      else passedChecks.push(`Tab switchers at ${w}px: switching tabs never changes the page's height (homepage data map, /ai examples)`);
+      await ctx.close();
+    }
+
+    // -------------------------------------------------------------
     // TEST SUITE 17: Phone menu is top level; sections live in the pane
     // -------------------------------------------------------------
     // The phone menu lists the five sections and fits the screen without
