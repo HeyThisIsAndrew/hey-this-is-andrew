@@ -19,7 +19,7 @@ shows nothing in its place, and the audit only counts them.
 |---|---|---|---|---|---|---|
 | `library-grid` | image | light, dark | 2880 × 1800 | `/features/library` | Library grid with hover-scrub, tile slider and page size | `library-grid-light@2x.png` `library-grid-dark@2x.png` |
 | `download-sources` | image | light, dark | 2880 × 1800 | `/features/library` | Download Sources: one section per platform, add by @username or link | `download-sources-light@2x.png` `download-sources-dark@2x.png` |
-| `command-center` | image | light, dark | 2880 × 1800 | `/features/pipeline` | Board with the Command Center open: player, readiness ring, platforms, Schedule | `command-center-light@2x.png` `command-center-dark@2x.png` |
+| `command-center` | image | light, dark | 2880 × 1800 | `/features/pipeline` | Board with the side panel open: player, readiness ring, platforms, Schedule | `command-center-light@2x.png` `command-center-dark@2x.png` |
 | `board` | image | light, dark | 2880 × 1800 | `/features/pipeline` | The Board: four columns of tickets with coverage maps | `board-light@2x.png` `board-dark@2x.png` |
 | `automations` | image | light, dark | 2880 × 1800 | `/features/automations` | Automations page with a rule and its Activity log | `automations-light@2x.png` `automations-dark@2x.png` |
 | `agents-settings` | image | light, dark | 2880 × 1800 | `/ai` | Settings → AI agents: API address, Copy Access Key, Make a New Key | `agents-settings-light@2x.png` `agents-settings-dark@2x.png` |

@@ -25,7 +25,7 @@ export const CHANGELOG = [
     title: 'Reelay Studio',
     items: [
       'A media-first Library and Board: image-first grids with hover-scrub previews, tile sizes from Small to XL, and 24, 48, 96 or All per page, remembered.',
-      'The Command Center: select a video on the Board to play it above its readiness ring, platforms, captions and a Schedule button that says exactly what will happen.',
+      'The side panel: select a video on the Board to play it above its readiness ring, platforms, captions and a Schedule button that says exactly what will happen.',
       'Download Sources by @username or link, one section per platform. Snapchat Spotlight links can be pasted too.',
       'Accounts as integration cards, with one-click sign-in first and your own developer keys under Advanced Setup. Disconnect revokes access where the platform allows.',
       'Snapchat joins TikTok and Instagram as a platform you post to by hand, with Prepare to Publish.',
