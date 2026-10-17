@@ -2,7 +2,7 @@
 /**
  * BoardScene: a faithful rendering of Reelay's main window. Sidebar, the
  * four-column Board of media-first tickets with their coverage maps, and the
- * side panel with the player, readiness, the Platforms choices and the
+ * side panel with the player, readiness, the Posting to chips and the
  * Save Changes / Schedule dock. The layout follows the real app (reelay/gui:
  * main_window, board_page, post_panel, ticket_widgets, player).
  *
@@ -28,10 +28,16 @@ const readiness = [
 ] as const;
 const MARK = { ok: '✓', hand: '–', bad: '!' } as const;
 const ringPct = 100;
-/* The Platforms section (ticket_widgets.PlatformRow): one choice per platform. */
-const CHOICES = ['Not posting', 'Preparing', 'Scheduled', 'Posted'];
-const platformRows = [
-  { p: 'youtube', name: 'YouTube', choice: 'Preparing', note: 'Preparing: Reelay can post it for you (Schedule below)' },
+/* "Posting to" (ticket_widgets.PlatformPicker): one chip per platform, ticked = going there. Each ticked
+ * platform then gets its caption box, whose header says where it stands, its count and a ⋯ menu
+ * (Mark as Scheduled, Mark as Posted, Back to Preparing, Publish…). */
+const CHIPS = [
+  { p: 'youtube', name: 'YouTube', on: true }, { p: 'tiktok', name: 'TikTok', on: true },
+  { p: 'instagram', name: 'Instagram', on: true }, { p: 'bluesky', name: 'Bluesky', on: false },
+  { p: 'threads', name: 'Threads', on: true }, { p: 'facebook', name: 'Facebook', on: false },
+] as const;
+const SECTIONS = [
+  { p: 'youtube', name: 'YouTube', state: 'Preparing', count: '94/5,000' },
 ] as const;
 ---
 <div class="scale-stage">
@@ -128,17 +134,19 @@ const platformRows = [
             </div>
 
             <div class="sect">
-              <div class="sect-h"><span>Platforms</span><em>4 preparing · 0 scheduled · 0 posted</em></div>
-              {platformRows.map((row) => (
-                <div class="prow">
-                  <div class="prow-top">
-                    <PlatformIcon name={row.p} brand />
-                    <b>{row.name}</b>
-                    <span>{row.note}</span>
-                  </div>
-                  <div class="seg">
-                    {CHOICES.map((c) => <span class:list={[{ on: c === row.choice }]}>{c}</span>)}
-                  </div>
+              <div class="sect-h"><span>Posting to</span><em>4 preparing · 0 scheduled · 0 posted</em></div>
+              <div class="chips">
+                {CHIPS.map((c) => (
+                  <span class:list={['chip', { on: c.on }]}><PlatformIcon name={c.p} brand />{c.name}</span>
+                ))}
+              </div>
+              {SECTIONS.map((sec) => (
+                <div class="psec">
+                  <PlatformIcon name={sec.p} brand />
+                  <b>{sec.name} ▸</b>
+                  <span class="pstate">{sec.state}</span>
+                  <span class="pcount">{sec.count}</span>
+                  <span class="pmore" aria-hidden="true">⋯</span>
                 </div>
               ))}
             </div>
@@ -221,7 +229,7 @@ const platformRows = [
   /* Side panel: the ticket */
   .inspector { display: flex; flex-direction: column; background: var(--app-surface); box-shadow: inset 0.0625em 0 0 var(--app-border); min-width: 0; min-height: 0; }
   .ibody { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 0.7em; padding: 0.9em 0.9em 0.4em; }
-  .player { flex: none; position: relative; height: 11.5em; border-radius: 0.7em; }
+  .player { flex: none; position: relative; height: 9.8em; border-radius: 0.7em; }
   .play { position: absolute; z-index: 2; left: 50%; top: 45%; display: grid; place-items: center; width: 2.6em; height: 2.6em; margin: -1.3em 0 0 -1.3em; border-radius: 50%; background: rgba(255, 255, 255, 0.22); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: #fff; }
   .play svg { width: 1.2em; height: 1.2em; margin-left: 0.15em; }
   .scrub { position: absolute; z-index: 2; left: 0.8em; right: 0.8em; bottom: 2em; height: 0.25em; border-radius: 1em; background: rgba(255, 255, 255, 0.25); }
@@ -251,13 +259,15 @@ const platformRows = [
   .sect { display: grid; gap: 0.5em; }
   .sect-h { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6em; font-size: 0.68em; font-weight: 600; color: var(--app-ink-2); }
   .sect-h em { font-style: normal; font-weight: 400; font-size: 0.9em; color: var(--app-muted); white-space: nowrap; }
-  .prow { display: grid; gap: 0.35em; }
-  .prow-top { display: flex; align-items: center; gap: 0.5em; font-size: 0.64em; min-width: 0; }
-  .prow-top :global(svg) { flex: none; width: 1.15em; height: 1.15em; }
-  .prow-top span { color: var(--app-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .seg { display: flex; padding: 0.15em; border-radius: 0.55em; background: var(--app-raised); box-shadow: inset 0 0 0 0.0625em var(--app-border); }
-  .seg span { flex: 1; text-align: center; font-size: 0.56em; font-weight: 600; padding: 0.45em 0.2em; border-radius: 0.45em; color: var(--app-ink-2); white-space: nowrap; }
-  .seg span.on { background: var(--app-surface); color: var(--app-ink); box-shadow: 0 0 0 0.0625em var(--app-border), 0 0.0625em 0.2em rgba(0, 0, 0, 0.15); }
+  .chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.3em; }
+  .chip { display: flex; align-items: center; gap: 0.35em; min-width: 0; padding: 0.4em 0.5em; border-radius: 0.5em; font-size: 0.56em; font-weight: 600; color: var(--app-ink-2); white-space: nowrap; overflow: hidden; }
+  .chip :global(svg) { flex: none; width: 1.1em; height: 1.1em; }
+  .chip.on { color: var(--app-ink); background: var(--app-raised); box-shadow: inset 0 0 0 0.0625em var(--app-border); }
+  .psec { display: grid; grid-template-columns: 1em auto minmax(0, 1fr) auto 1em; align-items: center; gap: 0.5em; padding: 0.45em 0.6em; border-radius: 0.55em; background: var(--app-raised); font-size: 0.62em; }
+  .psec :global(svg) { width: 1em; height: 1em; }
+  .pstate { color: var(--app-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pcount { color: var(--app-muted); font-variant-numeric: tabular-nums; }
+  .pmore { color: var(--app-ink-2); text-align: right; }
 
   .dock { flex: none; display: grid; gap: 0.5em; padding: 0.7em 0.9em 0.85em; box-shadow: inset 0 0.0625em 0 var(--app-border); background: var(--app-surface); }
   .dock-sum { font-size: 0.6em; color: var(--app-ink-2); }

@@ -107,11 +107,11 @@ const handoff = [
       <div class="row-wrap">
         <div class="split">
           <div>
-            <p class="lede">For each platform: is its copy written, is it within the limit, is the video downloaded. <strong>A ticket is READY when at least one of its platforms is.</strong> Platforms you post by hand (TikTok, Instagram and Snapchat, or any platform with automatic posting off) aren’t checked, so they never block.</p>
+            <p class="lede">For each platform: is its copy written, is it within the limit, is the video downloaded. <strong>A ticket can go when at least one of its platforms is ready; its ring counts them (3/4).</strong> Platforms you post by hand (TikTok, Instagram and Snapchat, or any platform with automatic posting off) aren’t checked, so they never block.</p>
             <p class="lede mt-1"><strong>The Ready gate</strong> refuses to schedule any platform that isn’t ready, and lists why. You can still go ahead after an explicit confirmation. Copying and pasting is never blocked.</p>
           </div>
           <div class="ready-card" aria-hidden="true">
-            <div class="rc-head"><span>Tokyo after midnight</span><em class="rc-ok">READY</em></div>
+            <div class="rc-head"><span>Tokyo after midnight</span><em class="rc-ring" style="--pct:75">3/4</em></div>
             <ul>
               <li><PlatformIcon name="youtube" /><span>YouTube</span><b class="ok">✓ Ready to post</b></li>
               <li class="bad"><PlatformIcon name="threads" /><span>Threads</span><b>⚠ 517 of 500 characters</b></li>
@@ -170,7 +170,7 @@ const handoff = [
           <div class="feature"><h3>Import Sheet</h3><p>Fill tickets from a CSV or a shared Google Sheet. Every row is previewed first, empty cells never erase anything, and the whole import is one transaction.</p></div>
           <div class="feature"><h3>Bulk edit</h3><p>⌘-click or Shift-click cards to set permission, type, topic, keywords, creator or hashtags on all of them at once, or to fill, fetch transcripts or archive them together.</p></div>
           <div class="feature"><h3>Your own columns</h3><p>Rename, add, remove and reorder columns per profile. Reelay’s four steps always live somewhere, so automatic moves keep working.</p></div>
-          <div class="feature"><h3>Filters that answer questions</h3><p>Show: Ready, Not ready, or Blocking a platform. Archive hides a video without deleting anything; Archived… brings it back.</p></div>
+          <div class="feature"><h3>Filters that answer questions</h3><p>Filter → Show: ready, not ready, or blocked on one platform. Filter → Format: Short-form or long-form. Archive hides a video without deleting anything; ⋯ → Archived Videos… brings it back.</p></div>
         </div>
       </div>
 
@@ -200,7 +200,9 @@ const handoff = [
     box-shadow: var(--r-panel-shadow);
   }
   .rc-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: 1.15rem; font-weight: 650; letter-spacing: -0.02em; }
-  .rc-ok { font-style: normal; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; padding: 0.3rem 0.6rem; border-radius: 6px; background: color-mix(in srgb, var(--r-ok) 16%, transparent); color: var(--r-ok-text); }
+  /* The readiness ring, as the app draws it: the share of platforms ready, and "ready/total" in the middle. */
+  .rc-ring { position: relative; isolation: isolate; flex: none; display: grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: 50%; font-style: normal; font-size: 0.72rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--r-ink); background: conic-gradient(var(--r-ok) calc(var(--pct) * 1%), var(--r-fill-2) 0); }
+  .rc-ring::before { content: ''; position: absolute; z-index: -1; inset: 0.24rem; border-radius: 50%; background: var(--r-panel); }
   .ready-card ul { list-style: none; margin-top: 1.25rem; }
   .ready-card li { display: grid; grid-template-columns: 1.4rem 6.5rem minmax(0, 1fr); align-items: center; gap: 0.75rem; padding: 0.85rem 0; border-top: 1px solid var(--r-fill-2); font-size: 0.98rem; }
   .ready-card li :global(svg) { width: 1.15rem; height: 1.15rem; color: var(--r-ink-2); }

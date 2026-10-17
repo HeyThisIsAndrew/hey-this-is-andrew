@@ -3,9 +3,10 @@
  * CommandCenterScene: the Board's side panel (reelay/gui/post_panel.py,
  * ticket_widgets.py): the video on top, the readiness ring (how many of the
  * platforms it's going to are ready, posted-by-hand ones included) over one
- * compact row per platform, the Platforms choice (Not posting · Preparing ·
- * Scheduled · Posted), the caption, and Save Changes / Schedule pinned at the
- * bottom with one line saying exactly what will happen.
+ * compact row per platform, "Posting to" (one chip per platform, ticked =
+ * going there), each ticked platform's caption box with where it stands, its
+ * count and a ⋯ menu, and Save Changes / Schedule pinned at the bottom with one
+ * line saying exactly what will happen.
  */
 import PlatformIcon from './ui/PlatformIcon.astro';
 import { OPEN_TICKET } from '../data/demo';
@@ -22,9 +23,13 @@ const MARK = { ok: '✓', hand: '–', bad: '!' } as const;
 const ready = platforms.filter((p) => p.tone !== 'bad').length;
 const total = platforms.length;
 const C = 2 * Math.PI * 15.5;
-const CHOICES = ['Not posting', 'Preparing', 'Scheduled', 'Posted'];
+const CHIPS = [
+  { p: 'youtube', name: 'YouTube', on: true }, { p: 'tiktok', name: 'TikTok', on: true },
+  { p: 'instagram', name: 'Instagram', on: false }, { p: 'bluesky', name: 'Bluesky', on: false },
+  { p: 'threads', name: 'Threads', on: true }, { p: 'facebook', name: 'Facebook', on: true },
+] as const;
 ---
-<div class="ccs" role="img" aria-label={`The side panel: ${card.title} playing above a readiness ring showing ${ready} of ${total} platforms ready, a row per platform, the Platforms choice, the caption, and Save Changes and Schedule buttons.`}>
+<div class="ccs" role="img" aria-label={`The side panel: ${card.title} playing above a readiness ring showing ${ready} of ${total} platforms ready, a row per platform, the Posting to chips, the TikTok caption, and Save Changes and Schedule buttons.`}>
   <div class="cc-panel">
     <div class={`cc-video still still--${card.still}`}>
       <span class="cc-play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg></span>
@@ -53,18 +58,14 @@ const CHOICES = ['Not posting', 'Preparing', 'Scheduled', 'Posted'];
       ))}
     </ul>
     <div class="cc-sect">
-      <span class="cc-sect-h">Platforms <em>4 preparing · 0 scheduled · 0 posted</em></span>
-      <div class="cc-prow">
-        <PlatformIcon name="youtube" brand />
-        <b>YouTube</b>
-        <span>Preparing: Reelay can post it for you (Schedule below)</span>
-      </div>
-      <div class="cc-seg">
-        {CHOICES.map((c) => <span class:list={[{ on: c === 'Preparing' }]}>{c}</span>)}
+      <span class="cc-sect-h">Posting to <em>4 preparing · 0 scheduled · 0 posted</em></span>
+      <div class="cc-chips">
+        {CHIPS.map((c) => <span class:list={['cc-chip', { on: c.on }]}><PlatformIcon name={c.p} brand />{c.name}</span>)}
       </div>
     </div>
     <div class="cc-copy">
-      <span class="cc-copy-h">Caption <em>124 / 4,000</em></span>
+      <div class="cc-psec"><PlatformIcon name="youtube" brand /><b>YouTube ▸</b><span>Preparing</span><em>94/5,000</em><i aria-hidden="true">⋯</i></div>
+      <div class="cc-psec"><PlatformIcon name="tiktok" brand /><b>TikTok ▾</b><span>Preparing</span><em>124/4,000</em><i aria-hidden="true">⋯</i></div>
       <div class="cc-box"><p>{OPEN_TICKET.caption}</p></div>
     </div>
     <div class="cc-dock">
@@ -119,12 +120,15 @@ const CHOICES = ['Not posting', 'Preparing', 'Scheduled', 'Posted'];
   .cc-sect { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.5rem; min-width: 0; }
   .cc-sect-h, .cc-copy-h { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; font-size: 0.82rem; font-weight: 600; color: var(--app-ink-2); }
   .cc-sect-h em, .cc-copy-h em { font-style: normal; font-weight: 400; font-size: 0.76rem; color: var(--app-muted); min-width: 0; text-align: right; }
-  .cc-prow { display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; min-width: 0; }
-  .cc-prow :global(svg) { flex: none; width: 1.15rem; height: 1.15rem; }
-  .cc-prow span { color: var(--app-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.78rem; }
-  .cc-seg { display: flex; min-width: 0; padding: 3px; border-radius: 10px; background: var(--app-raised); box-shadow: inset 0 0 0 1px var(--app-border); }
-  .cc-seg span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: center; font-size: 0.74rem; font-weight: 600; padding: 0.4rem 0.2rem; border-radius: 8px; color: var(--app-ink-2); white-space: nowrap; }
-  .cc-seg span.on { background: var(--app-surface); color: var(--app-ink); box-shadow: 0 0 0 1px var(--app-border), 0 1px 3px rgba(0, 0, 0, 0.15); }
+  .cc-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.35rem; }
+  .cc-chip { display: flex; align-items: center; gap: 0.4rem; min-width: 0; padding: 0.4rem 0.55rem; border-radius: 9px; font-size: 0.76rem; font-weight: 600; color: var(--app-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cc-chip :global(svg) { flex: none; width: 1rem; height: 1rem; }
+  .cc-chip.on { color: var(--app-ink); background: var(--app-raised); box-shadow: inset 0 0 0 1px var(--app-border); }
+  .cc-psec { display: grid; grid-template-columns: 1rem auto minmax(0, 1fr) auto 1rem; align-items: center; gap: 0.5rem; padding: 0.45rem 0.7rem; border-radius: 9px; background: var(--app-raised); font-size: 0.8rem; }
+  .cc-psec :global(svg) { width: 1rem; height: 1rem; }
+  .cc-psec span { color: var(--app-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cc-psec em { font-style: normal; color: var(--app-muted); font-variant-numeric: tabular-nums; }
+  .cc-psec i { font-style: normal; color: var(--app-ink-2); text-align: right; }
   .cc-copy { display: grid; gap: 0.4rem; }
   .cc-box { padding: 0.6rem 0.75rem; border-radius: 10px; background: var(--app-raised); }
   .cc-copy p { font-size: 0.8rem; line-height: 1.45; color: var(--app-ink-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -135,7 +139,8 @@ const CHOICES = ['Not posting', 'Preparing', 'Scheduled', 'Posted'];
   .cc-btn--primary { background: var(--app-accent); color: var(--app-on-accent); box-shadow: none; font-weight: 700; }
   @media (max-width: 360px) {
     .cc-panel { padding: 0.75rem; }
-    .cc-seg span { font-size: 0.64rem; padding: 0.4rem 0.1rem; }
+    .cc-chip { font-size: 0.66rem; padding: 0.35rem 0.35rem; gap: 0.25rem; }
+    .cc-psec { font-size: 0.72rem; gap: 0.35rem; padding: 0.4rem 0.5rem; }
     .cc-pfs li { grid-template-columns: 1rem 4.4rem minmax(0, 1fr) 0.8rem; gap: 0.45rem; }
     .cc-sect-h { flex-wrap: wrap; }
     .cc-sect-h em { text-align: left; }
