@@ -40,7 +40,14 @@ export const DATA_PATHS = {
 };
 
 /* The four columns every board starts with (reelay/gui/board_page.py). */
-export const STAGES = ['Backlog', 'Staging', 'Scheduled', 'Published'] as const;
+export const STAGES = ['Inbox', 'In Prep', 'Scheduled', 'Posted'] as const;
+/* The line under each column's title, as the app shows it */
+export const STAGE_SUBTITLES: Record<(typeof STAGES)[number], string> = {
+  Inbox: 'Downloaded, not started',
+  'In Prep': 'Writing captions & picking platforms',
+  Scheduled: 'Waiting to go live',
+  Posted: 'Live on your channels',
+};
 
 /* Copy limits (README, "Board (content tickets)"). Snapchat has no copy
  * block of its own: it uses the caption you copy from the ticket. */
