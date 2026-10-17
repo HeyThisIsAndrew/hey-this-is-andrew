@@ -3,19 +3,27 @@
  * ImportScene: the Library as the app lays it out (reelay/gui/
  * download_page.py): the header with search, Filter, the tile-size slider,
  * the Grid / List toggle and the settings gear; Download Sources ▾ beside the
- * link field and List Videos; the picture grid of videos with their badges,
- * and the selection strip that always says what is selected.
+ * link field and List Videos; the platform tabs (All · TikTok · YouTube); the
+ * picture grid, each video badged with the logo of where it came from; and the
+ * selection strip that always says what is selected.
  */
 import AppWindow from './ui/AppWindow.astro';
+import PlatformIcon from './ui/PlatformIcon.astro';
+import SourceBadge from './ui/SourceBadge.astro';
 
 type TileState = 'done' | 'pick' | 'none';
-const tiles: { still: string; title: string; date: string; len: string; views: string; state: TileState }[] = [
-  { still: 'dusk', title: 'golden hour at big sur, the turnout everyone drives past', date: 'Oct 8', len: '0:22', views: '18.4K', state: 'done' },
-  { still: 'neon', title: 'tokyo after midnight is a different city', date: 'Oct 6', len: '0:57', views: '9,210', state: 'pick' },
-  { still: 'desert', title: 'day four. no signal, no plan, no complaints', date: 'Oct 3', len: '0:39', views: '12.1K', state: 'pick' },
-  { still: 'snow', title: 'first snow and I was not ready', date: 'Sep 29', len: '0:18', views: '4,877', state: 'pick' },
-  { still: 'kitchen', title: 'three knife skills that changed my cooking', date: 'Sep 24', len: '0:48', views: '31.6K', state: 'done' },
-  { still: 'ocean', title: 'surf check at dawn, small but clean', date: 'Sep 21', len: '0:26', views: '7,402', state: 'none' },
+type Source = 'tiktok' | 'youtube';
+const tiles: { still: string; title: string; date: string; len: string; views: string; state: TileState; source: Source }[] = [
+  { still: 'dusk', title: 'golden hour at big sur, the turnout everyone drives past', date: 'Oct 8', len: '0:22', views: '18.4K', state: 'done', source: 'tiktok' },
+  { still: 'neon', title: 'tokyo after midnight is a different city', date: 'Oct 6', len: '0:57', views: '9,210', state: 'pick', source: 'tiktok' },
+  { still: 'desert', title: 'day four. no signal, no plan, no complaints', date: 'Oct 3', len: '0:39', views: '12.1K', state: 'pick', source: 'youtube' },
+  { still: 'snow', title: 'first snow and I was not ready', date: 'Sep 29', len: '0:18', views: '4,877', state: 'pick', source: 'tiktok' },
+  { still: 'kitchen', title: 'three knife skills that changed my cooking', date: 'Sep 24', len: '0:48', views: '31.6K', state: 'done', source: 'youtube' },
+  { still: 'ocean', title: 'surf check at dawn, small but clean', date: 'Sep 21', len: '0:26', views: '7,402', state: 'none', source: 'tiktok' },
+];
+/* The Library's platform tabs: one per platform in the list, with its count. */
+const TABS: { label: string; count: number; source?: Source }[] = [
+  { label: 'All', count: 86 }, { label: 'TikTok', count: 74, source: 'tiktok' }, { label: 'YouTube', count: 12, source: 'youtube' },
 ];
 const STATUS = { done: '✓ Downloaded', pick: 'Selected', none: 'Not downloaded' } as const;
 ---
@@ -56,6 +64,14 @@ const STATUS = { done: '✓ Downloaded', pick: 'Selected', none: 'Not downloaded
         </div>
         <span class="note">Only import media you own or have permission to manage.</span>
 
+        <div class="ptabs" aria-hidden="true">
+          {TABS.map((t, i) => (
+            <span class:list={['ptab', { on: i === 0 }]}>
+              {t.source && <PlatformIcon name={t.source} brand />}{t.label}<em>{t.count}</em>
+            </span>
+          ))}
+        </div>
+
         <div class="strip">
           <span><b>3 selected</b> · 2 already downloaded</span>
           <span class="sbtn">Select All</span>
@@ -66,7 +82,7 @@ const STATUS = { done: '✓ Downloaded', pick: 'Selected', none: 'Not downloaded
           {tiles.map((t) => (
             <div class:list={['vtile', { picked: t.state === 'pick' }]}>
               <div class={`tcover still still--${t.still}`}>
-                <span class="tkind">Short · 1080p</span>
+                <SourceBadge source={t.source} kind="Short · 1080p" />
                 <span class="tlen">{t.len}</span>
                 <span class:list={['tick', { ticked: t.state === 'pick', got: t.state === 'done' }]} aria-hidden="true">{t.state === 'none' ? '' : '✓'}</span>
               </div>
@@ -124,8 +140,13 @@ const STATUS = { done: '✓ Downloaded', pick: 'Selected', none: 'Not downloaded
   .vtile { border-radius: 0.875em; overflow: hidden; background: var(--app-surface); box-shadow: 0 0 0 0.0625em var(--app-border); }
   .vtile.picked { box-shadow: 0 0 0 0.12em var(--app-accent); }
   .tcover { position: relative; aspect-ratio: 9 / 12; }
-  .tkind, .tlen { position: absolute; z-index: 1; font-size: 0.5em; font-weight: 700; padding: 0.18em 0.45em; border-radius: 0.35em; background: rgba(0, 0, 0, 0.6); color: #fff; white-space: nowrap; }
-  .tkind { left: 0.5em; top: 0.5em; }
+  .tlen { position: absolute; z-index: 1; font-size: 0.5em; font-weight: 700; padding: 0.18em 0.45em; border-radius: 0.35em; background: rgba(0, 0, 0, 0.6); color: #fff; white-space: nowrap; }
+  .tcover :global(.src-badge) { font-size: 0.62em; }
+  .ptabs { display: flex; gap: 1.1em; margin-bottom: -0.35em; font-size: 0.72em; }
+  .ptab { display: inline-flex; align-items: center; gap: 0.4em; padding: 0.2em 0.1em 0.45em; font-weight: 600; color: var(--app-ink-2); box-shadow: inset 0 -0.14em 0 transparent; }
+  .ptab :global(svg) { width: 1em; height: 1em; }
+  .ptab em { font-style: normal; font-weight: 600; color: var(--app-muted); }
+  .ptab.on { color: var(--app-ink); box-shadow: inset 0 -0.14em 0 var(--app-accent); }
   .tlen { right: 0.5em; bottom: 0.5em; }
   .tick { position: absolute; z-index: 1; right: 0.4em; top: 0.4em; display: grid; place-items: center; width: 1.1em; height: 1.1em; border-radius: 50%; font-size: 0.66em; font-weight: 800; color: #fff; background: rgba(0, 0, 0, 0.35); box-shadow: inset 0 0 0 0.1em rgba(255, 255, 255, 0.85); }
   .tick.ticked { background: var(--app-accent); color: var(--app-on-accent); box-shadow: none; }

@@ -1,0 +1,34 @@
+---
+/**
+ * Where a video came from, as the app shows it on a thumbnail (reelay/gui/cards.py source_badge): the
+ * platform's colour logo on a small light chip, top left. A YouTube Short gets the YouTube Shorts mark, a
+ * long-form YouTube video the YouTube mark. Hover text says it in words: "From YouTube · Short · 1080p".
+ * Sized in em, so it scales with the scene it sits in.
+ */
+import PlatformIcon from './PlatformIcon.astro';
+
+interface Props {
+  source: 'youtube' | 'tiktok' | 'instagram' | 'bluesky' | 'threads' | 'facebook' | 'snapchat';
+  kind: string;            // "Short · 1080p", "Long-form · 4K"
+  class?: string;
+}
+const { source, kind, class: cls } = Astro.props;
+const LABELS: Record<string, string> = {
+  youtube: 'YouTube', tiktok: 'TikTok', instagram: 'Instagram', bluesky: 'Bluesky', threads: 'Threads',
+  facebook: 'Facebook', snapchat: 'Snapchat',
+};
+const mark = source === 'youtube' && kind.startsWith('Short') ? 'youtube_shorts' : source;
+const label = `From ${LABELS[source]} · ${kind}`;
+---
+<span class:list={['src-badge', cls]} title={label} role="img" aria-label={label}>
+  <PlatformIcon name={mark} brand />
+</span>
+
+<style>
+  .src-badge {
+    position: absolute; z-index: 1; left: 0.45em; top: 0.4em;
+    display: grid; place-items: center; width: 1.5em; height: 1.5em; border-radius: 0.45em;
+    background: rgba(255, 255, 255, 0.92);
+  }
+  .src-badge :global(svg) { width: 1em; height: 1em; }
+</style>
