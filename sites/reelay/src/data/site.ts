@@ -18,7 +18,7 @@ export const SITE = {
   fullName: 'Reelay Studio',
   tagline: 'Publish everywhere. Never lose control.',
   description:
-    'Reelay is a Mac app for creators who post short-form video to more than one platform. Bring in the videos you own or manage, turn each one into a ticket with ready-to-paste copy for every platform, and only post what is actually ready. Your library, database and sign-ins stay on your Mac.',
+    'Reelay is a Mac app for creators who post short-form video to more than one platform. Bring in the videos you own or manage, prepare tailored captions and post details for every platform, and only publish what is actually ready. Your library, database, and sign-ins stay on your Mac.',
   version: RELEASE.label,
   versionNumber: RELEASE.version,
   releaseDate: RELEASE.dateLabel,
@@ -176,7 +176,7 @@ export const NAV_LINKS: NavItem[] = [
     spy: ['four-pillars'],
     subsections: [
       { label: 'Library and Player', href: href('/features/library'), kicker: 'Bring in' },
-      { label: 'Board and Tickets', href: href('/features/pipeline'), kicker: 'Get ready' },
+      { label: 'Content Board', href: href('/features/pipeline'), kicker: 'Get ready' },
       { label: 'Automations', href: href('/features/automations'), kicker: 'Repeat' },
       { label: 'Agents', href: href('/ai'), kicker: 'Connect' },
     ],
@@ -197,7 +197,7 @@ export const NAV_LINKS: NavItem[] = [
 
 export const FOOTER_EXPLORE: FooterLink[] = [
   { label: 'Library and Player', href: href('/features/library') },
-  { label: 'Board and Tickets', href: href('/features/pipeline') },
+  { label: 'Content Board', href: href('/features/pipeline') },
   { label: 'Automations', href: href('/features/automations') },
   { label: 'Agents', href: href('/ai') },
   { label: 'Download', href: href('/download') },

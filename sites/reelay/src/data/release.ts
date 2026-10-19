@@ -52,6 +52,6 @@ export const CHANGELOG = [
     version: '0.10.0',
     date: 'October 9, 2026',
     title: 'Custom columns',
-    items: ['Rename, add, remove and reorder the Board’s columns per profile.', 'One clear choice per platform on every ticket.'],
+    items: ['Rename, add, remove and reorder the Board’s columns per profile.', 'One clear choice per platform on every card.'],
   },
 ];
