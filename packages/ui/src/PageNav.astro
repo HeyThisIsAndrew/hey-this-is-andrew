@@ -190,9 +190,11 @@ const { items = [], heading = 'On this page', selector = 'main h2[id]', topLabel
     line-height: 1.4;
     transition: max-width 0.28s ease, opacity 0.22s ease;
   }
+  /* 10rem, not 15: wider, an open panel's labels ran over the page's own
+     headings beside it. A long label ellipsizes instead. */
   .page-nav.is-open .pn-label,
   .page-nav:focus-within .pn-label {
-    max-width: 15rem;
+    max-width: 10rem;
     opacity: 1;
   }
   @media (hover: hover) and (pointer: fine) and (min-width: 1200px) {
@@ -201,7 +203,7 @@ const { items = [], heading = 'On this page', selector = 'main h2[id]', topLabel
       max-height: 2rem;
     }
     .page-nav:hover .pn-label {
-      max-width: 15rem;
+      max-width: 10rem;
       opacity: 1;
     }
   }
@@ -352,7 +354,13 @@ const { items = [], heading = 'On this page', selector = 'main h2[id]', topLabel
 
     // Build the entries from the page's headings unless they were given.
     if (!list.children.length) {
-      const headings = Array.from(document.querySelectorAll<HTMLElement>(nav.dataset.selector || 'main h2[id]')).filter((h) => visible(h) && labelOf(h));
+      let headings = Array.from(document.querySelectorAll<HTMLElement>(nav.dataset.selector || 'main h2[id]')).filter((h) => visible(h) && labelOf(h));
+      // A page built of accordion rows (/build) or whole sections has its
+      // ids on the row, not on an <h2>: list those instead (each row's
+      // data-pn-label is its title, so labelOf never reads its body).
+      if (headings.length < 2) {
+        headings = Array.from(document.querySelectorAll<HTMLElement>('main [data-accordion-row][id], main [data-sec][id]')).filter((h) => visible(h) && labelOf(h));
+      }
       for (const h of headings) {
         const li = document.createElement('li');
         li.className = 'pn-item';
@@ -509,9 +517,13 @@ const { items = [], heading = 'On this page', selector = 'main h2[id]', topLabel
           history.replaceState(null, '', location.pathname + location.search);
           return;
         }
-        // A section lands on its header block (see SECTIONS above).
+        // A section lands on its header block (see SECTIONS above), clear
+        // of the sticky site header: measured, not left to scroll-margin,
+        // which not every target carries.
         const aim = target.matches('[data-sec]') ? target.querySelector<HTMLElement>('[data-sec-head]') ?? target : target;
-        aim.scrollIntoView({ block: 'start', behavior });
+        const navH = document.querySelector('.site-nav')?.getBoundingClientRect().height ?? 76;
+        const top = aim.getBoundingClientRect().top + window.scrollY - navH - 14;
+        window.scrollTo({ top: Math.max(0, top), behavior });
         history.replaceState(null, '', `#${id}`);
       });
     });
@@ -533,8 +545,14 @@ const { items = [], heading = 'On this page', selector = 'main h2[id]', topLabel
     window.addEventListener('keydown', (e) => {
       if (SCROLL_KEYS.has(e.key)) releasePin();
     });
+    // Dragging the scrollbar fires no wheel, touch or key event, so a pin
+    // set by a click held through the drag. A large jump once the click's
+    // own scroll has settled (releaseArmed) is the reader moving the page.
     let t: ReturnType<typeof setTimeout> | null = null;
+    let lastScrollY = window.scrollY;
     window.addEventListener('scroll', () => {
+      if (pinnedId !== null && releaseArmed && Math.abs(window.scrollY - lastScrollY) > 50) pinnedId = null;
+      lastScrollY = window.scrollY;
       if (t) clearTimeout(t);
       t = setTimeout(resolveActive, 50);
     }, { passive: true });

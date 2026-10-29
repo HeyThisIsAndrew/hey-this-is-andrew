@@ -20,16 +20,10 @@ export default defineConfig({
     '/goals': withBase('/build/#goals'),
     '/services': withBase('/#services'),
     '/now': withBase('/#about'),
-    '/now/': withBase('/#about'),
     '/cafe': withBase('/gear/#brew'),
-    '/cafe/': withBase('/gear/#brew'),
     '/brands/hey-this-is-andrew': withBase('/#about'),
-    '/brands/hey-this-is-andrew/': withBase('/#about'),
     '/brands/be-unconventional-hq': withBase('/#about'),
-    '/brands/be-unconventional-hq/': withBase('/#about'),
     '/brands/capture-create-caffeinate': withBase('/#about'),
-    '/brands/capture-create-caffeinate/': withBase('/#about'),
-    
   },
   server: {
     host: '0.0.0.0',

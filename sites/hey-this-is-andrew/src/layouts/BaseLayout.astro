@@ -122,6 +122,19 @@ const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href
       href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    <script is:inline>
+      // A reload with no #section starts at the top, not wherever the reader
+      // had scrolled. Manual restoration for this load only: it goes back to
+      // auto once the page has loaded, so Back to this page still restores.
+      (function () {
+        var nav = performance.getEntriesByType ? performance.getEntriesByType('navigation') : [];
+        var isReload = nav.length > 0 && nav[0].type === 'reload';
+        if (!isReload || (location.hash && location.hash !== '#top') || !('scrollRestoration' in history)) return;
+        history.scrollRestoration = 'manual';
+        window.scrollTo(0, 0);
+        window.addEventListener('load', function () { history.scrollRestoration = 'auto'; }, { once: true });
+      })();
+    </script>
   </head>
   <body class="flex-col-layout">
     <!-- Scroll Progress Indicator Bar -->
@@ -195,6 +208,22 @@ const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href
           });
         }
 
+        // The element a #hash names. Ids are lowercase here, and a link
+        // typed or shared as /#Directory still lands on id="directory".
+        // Never querySelector(hash) bare: "#01" is not a valid selector.
+        function getTargetElement(hash: string): Element | null {
+          if (!hash || hash === '#') return null;
+          let rawId = hash.slice(1);
+          try {
+            rawId = decodeURIComponent(rawId);
+          } catch {}
+          return (
+            document.getElementById(rawId) ||
+            document.getElementById(rawId.toLowerCase()) ||
+            document.querySelector(`[id="${CSS.escape(rawId)}" i]`)
+          );
+        }
+
         // Intercept internal anchor link clicks
         document.addEventListener('click', (e) => {
           // A component that already handled its own link (the side panel)
@@ -219,7 +248,7 @@ const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href
             return;
           }
 
-          const target = document.querySelector(hash);
+          const target = getTargetElement(hash);
           if (!target) return;
 
           e.preventDefault();
@@ -228,7 +257,7 @@ const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href
 
         // Initial hash load
         if (window.location.hash) {
-          const target = document.querySelector(window.location.hash);
+          const target = getTargetElement(window.location.hash);
           if (target) {
             setTimeout(() => scrollToTarget(target, false), 150);
           }
@@ -240,7 +269,7 @@ const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href
           // own business: the page stays where it is.
           if (document.documentElement.dataset.viewPop) return;
           if (window.location.hash) {
-            const target = document.querySelector(window.location.hash);
+            const target = getTargetElement(window.location.hash);
             if (target) scrollToTarget(target, false);
           } else if (window.location.pathname === '/' || window.location.pathname === '') {
             window.scrollTo({ top: 0, behavior: 'smooth' });

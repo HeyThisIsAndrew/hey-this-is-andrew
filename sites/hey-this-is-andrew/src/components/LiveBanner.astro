@@ -3,11 +3,13 @@
  * LiveBanner — a slim takeover bar that appears only when the YouTube
  * channel is live right now.
  *
- * No API key: the client fetches the channel's /live page through a CORS
- * proxy and inspects the canonical link. YouTube serves a watch page at
- * /live when streaming (canonical → youtube.com/watch?v=…); when offline
- * the canonical points back at the channel. Everything fails silently —
- * proxy down, parse miss, timeout — the banner simply never renders.
+ * The live check is OFF on this static build. It fetched the channel's
+ * /live page through a public CORS proxy (api.allorigins.win) and read the
+ * canonical link, and that proxy refused the request in every browser: a
+ * CORS error in the console on every page, and no banner. Until there is a
+ * live source of our own (an edge route, as BE Unconventional HQ has), the
+ * check records "offline" and the banner stays hidden. A cached "live"
+ * entry still shows it, so restoring a source is a change to check() only.
  *
  * Monochrome by rule: white pulse dot, Syne label, no red.
  */
@@ -31,13 +33,9 @@
 
 <script>
   (function () {
-    const CHANNEL_ID = 'UCNn5badDO7pbspeS6noInCw';
-    const LIVE_URL = 'https://www.youtube.com/channel/' + CHANNEL_ID + '/live';
-    const PROXY = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(LIVE_URL);
     const CACHE_KEY = 'hia-live-check';
     const DISMISS_KEY = 'hia-live-dismissed';
     const CACHE_TTL = 5 * 60 * 1000;
-    const TIMEOUT_MS = 8000;
 
     const banner = document.getElementById('live-banner');
     const cta = document.getElementById('live-cta');
@@ -100,40 +98,8 @@
         if (cached.live && cached.videoId) show(cached.videoId);
         return;
       }
-      const ctrl = 'AbortController' in window ? new AbortController() : null;
-      const timer = setTimeout(function () {
-      if (ctrl) ctrl.abort();
-    }, TIMEOUT_MS);
-      const opts = ctrl ? { signal: ctrl.signal } : {};
-      fetch(PROXY, opts)
-        .then(function (res) {
-          if (!res.ok) throw new Error('proxy ' + res.status);
-          return res.text();
-        })
-        .then(function (html) {
-          const m = html.match(/<link rel="canonical" href="([^"]+)"/);
-          const canonical = m && m[1];
-          if (canonical && canonical.indexOf('watch?v=') !== -1) {
-            let vid = null;
-            try {
-              vid = new URL(canonical).searchParams.get('v');
-            } catch (e) {
-              /* malformed canonical; treat as offline */
-            }
-            if (vid) {
-              writeCache({ at: Date.now(), live: true, videoId: vid });
-              show(vid);
-              return;
-            }
-          }
-          writeCache({ at: Date.now(), live: false });
-        })
-        .catch(function () {
-          /* Fail silently: proxy down, timeout, parse miss. No banner. */
-        })
-        .finally(function () {
-          clearTimeout(timer);
-        });
+      // No live source on a static build (see above): offline, quietly.
+      writeCache({ at: Date.now(), live: false });
     }
 
     if (document.readyState === 'loading') {
