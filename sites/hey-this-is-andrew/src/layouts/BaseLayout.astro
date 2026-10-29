@@ -14,7 +14,6 @@ import Footer from '@andrew/ui/Footer.astro';
 import ChromeMeta from '@andrew/ui/ChromeMeta.astro';
 import PageNav from '@andrew/ui/PageNav.astro';
 import CommandPalette from '@andrew/ui/CommandPalette.astro';
-import LiveBanner from '../components/LiveBanner.astro';
 import VideoPlayer from '../components/VideoPlayer.astro';
 // Andrew's own logo file (restored from b9cc358) is the nav logo, shown
 // as-is: one PNG at 2x the nav's largest height (3rem), never redrawn.
@@ -124,15 +123,17 @@ const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href
     />
     <script is:inline>
       // A reload with no #section starts at the top, not wherever the reader
-      // had scrolled. Manual restoration for this load only: it goes back to
-      // auto once the page has loaded, so Back to this page still restores.
+      // had scrolled. Manual restoration for this visit only, held until the
+      // reader leaves: Chrome restores AFTER the load event, so handing back
+      // on load (as this first did) restored the old position anyway. Back
+      // in auto on pagehide, so Back/Forward to this page still restores.
       (function () {
         var nav = performance.getEntriesByType ? performance.getEntriesByType('navigation') : [];
         var isReload = nav.length > 0 && nav[0].type === 'reload';
         if (!isReload || (location.hash && location.hash !== '#top') || !('scrollRestoration' in history)) return;
         history.scrollRestoration = 'manual';
         window.scrollTo(0, 0);
-        window.addEventListener('load', function () { history.scrollRestoration = 'auto'; }, { once: true });
+        window.addEventListener('pagehide', function () { history.scrollRestoration = 'auto'; }, { once: true });
       })();
     </script>
   </head>
@@ -149,7 +150,6 @@ const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href
     >
       <CommandPalette endpoint="/api/search.json" />
     </Nav>
-    <LiveBanner />
     <div id="site-camera-stage" class="site-camera-stage">
       <main id="main-content" tabindex="-1">
         <slot />
@@ -194,11 +194,21 @@ const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href
           return nav ? nav.getBoundingClientRect().height : 72;
         }
 
+        // Layout position, not the client rect: a section still waiting on
+        // its scroll-in reveal is translated down, and a jump aimed at the
+        // translated box left the heading under the header once it rose.
+        function pageTop(el: Element): number {
+          if (!(el instanceof HTMLElement)) return el.getBoundingClientRect().top + window.scrollY;
+          let y = 0;
+          for (let n: HTMLElement | null = el; n; n = n.offsetParent as HTMLElement | null) y += n.offsetTop;
+          return y;
+        }
+
         function scrollToTarget(target: Element, pushHash = false, hash = '') {
           if (!target) return;
           const isTop = hash === '#top' || hash === '#overview' || target.id === 'overview' || target.id === 'top';
           const navH = getNavHeight();
-          const targetTop = isTop ? 0 : Math.max(0, target.getBoundingClientRect().top + window.scrollY - navH);
+          const targetTop = isTop ? 0 : Math.max(0, pageTop(target) - navH);
           if (pushHash && hash) {
             history.pushState(null, '', hash);
           }

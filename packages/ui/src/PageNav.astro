@@ -13,8 +13,10 @@
  *
  * The entries are the page's own section headings (every <h2 id> in <main>
  * that a reader can see), collected when the page loads, so a new section is
- * in the panel without anyone remembering to add it. Pass `items` to list
- * something else. Fewer than two and the panel does not show.
+ * in the panel without anyone remembering to add it. A block with no <h2>
+ * of its own (a /gear category box) opts in with `data-pn-entry` and names
+ * itself with `data-pn-label`; both kinds list in page order. Pass `items`
+ * to list something else. Fewer than two and the panel does not show.
  *
  * The first entry is always TOP, and Top means scroll position 0: the
  * element a page marks `data-pn-top` (or `data-pn-label="Top"`), a hero, is
@@ -41,7 +43,7 @@ interface Props {
   /** The label of the added first entry, when no element is marked as it. */
   topLabel?: string;
 }
-const { items = [], heading = 'On this page', selector = 'main h2[id]', topLabel = 'Top' } = Astro.props;
+const { items = [], heading = 'On this page', selector = 'main h2[id], main [data-pn-entry][id]', topLabel = 'Top' } = Astro.props;
 ---
 <nav class="page-nav" aria-label={heading} data-page-nav data-selector={selector} data-top-label={topLabel} hidden={items.length < 2 ? true : undefined}>
   <button type="button" class="pn-handle" aria-expanded="false" data-pn-handle>
@@ -339,6 +341,17 @@ const { items = [], heading = 'On this page', selector = 'main h2[id]', topLabel
     return el.dataset.pnLabel || text || el.querySelector('img')?.alt || '';
   }
 
+  // Where an element sits in the page, by layout: offsetTop ignores
+  // transforms, and a section still waiting on its scroll-in reveal is
+  // translated down (28px on Reelay). Measured with getBoundingClientRect,
+  // a jump aimed at the translated box, and the heading then rose under
+  // the header as the reveal played.
+  function pageTop(el: HTMLElement): number {
+    let y = 0;
+    for (let n: HTMLElement | null = el; n; n = n.offsetParent as HTMLElement | null) y += n.offsetTop;
+    return y;
+  }
+
   function visible(el: HTMLElement): boolean {
     if (el.closest('[hidden], [aria-hidden="true"], .sr-only, .visually-hidden')) return false;
     const r = el.getBoundingClientRect();
@@ -354,7 +367,7 @@ const { items = [], heading = 'On this page', selector = 'main h2[id]', topLabel
 
     // Build the entries from the page's headings unless they were given.
     if (!list.children.length) {
-      let headings = Array.from(document.querySelectorAll<HTMLElement>(nav.dataset.selector || 'main h2[id]')).filter((h) => visible(h) && labelOf(h));
+      let headings = Array.from(document.querySelectorAll<HTMLElement>(nav.dataset.selector || 'main h2[id], main [data-pn-entry][id]')).filter((h) => visible(h) && labelOf(h));
       // A page built of accordion rows (/build) or whole sections has its
       // ids on the row, not on an <h2>: list those instead (each row's
       // data-pn-label is its title, so labelOf never reads its body).
@@ -518,11 +531,14 @@ const { items = [], heading = 'On this page', selector = 'main h2[id]', topLabel
           return;
         }
         // A section lands on its header block (see SECTIONS above), clear
-        // of the sticky site header: measured, not left to scroll-margin,
-        // which not every target carries.
+        // of the sticky site header, measured. A site that declares more
+        // clearance in html's scroll-padding-top keeps it: Reelay's covers
+        // the section bar it pins under the header, which scrollIntoView
+        // honoured and a bare header offset parked the heading under.
         const aim = target.matches('[data-sec]') ? target.querySelector<HTMLElement>('[data-sec-head]') ?? target : target;
         const navH = document.querySelector('.site-nav')?.getBoundingClientRect().height ?? 76;
-        const top = aim.getBoundingClientRect().top + window.scrollY - navH - 14;
+        const padding = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+        const top = pageTop(aim) - Math.max(navH + 14, padding);
         window.scrollTo({ top: Math.max(0, top), behavior });
         history.replaceState(null, '', `#${id}`);
       });

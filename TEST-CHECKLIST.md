@@ -9,7 +9,7 @@ screenshots per item: `VERIFICATION.md`, `verification/screenshots/`.
 
 - [ ] 1 · `/latest/` · D · run `pnpm --filter hey-this-is-andrew test`; online, the BE "Holding a Controller" title reads `You're` (never `&apos;`)
 - [ ] 2 · `/#directory` · D+M · open Sip the Magic: monochrome cup-and-steam card, not a black box
-- [ ] 3 · `/#goals` and `/goals/` · D · "The Big Goals" group first: 100,000 subscribers / $30,000 per month, both IN PROGRESS
+- [ ] 3 · `/#goals` and `/goals/` · D · "The Big Goals" group first: Get monetized, Full-time UGC creator (QUEUED), Consistent posting, Build Reelay tool
 - [ ] 4 · `/about/` · D · black quote band after the intro, before Writing; attribution "Scott Galloway" with no dash; none on `/`
 - [ ] 5 · `/` and `/work/` · D · view source, search `cdninstagram`: zero hits
 - [ ] 6 · all pages · D+M · run section C below
@@ -32,7 +32,7 @@ screenshots per item: `VERIFICATION.md`, `verification/screenshots/`.
 - [ ] 23 · `/` scrolled so the accordion's bottom is at the window bottom · D · back-to-top button hidden, never over a strip
 - [ ] 24 · brand view · D · MEDIA BRAND chip top-left, ESC/CLOSE top-right, no overlap
 - [ ] 25 · footer Explore · D · HOME is the first link
-- [ ] 26 · `/goals/` Content Engine · D · "First hospitality brand collaboration" shows UP NEXT
+- [ ] 26 · `/goals/` Content Engine · D · "First hospitality brand collaboration" shows QUEUED
 - [ ] 27 · `/goals/` Landing Page v1 · D · every task shows a DONE tag
 - [ ] 28 · nav "Build in Public" dropdown · D · reads "02 CORE ENGINE"; `/build/` heading "Core Engine"
 - [x] 29 · retired: the carousel left `/` for hero B; nothing renders it now

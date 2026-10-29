@@ -29,16 +29,6 @@ export const BUILD_SECTIONS: PageSection[] = [
   { id: 'ccc', label: 'Capture Create Caffeinate', kicker: 'CCC' },
 ].map((s, i) => ({ ...s, kicker: s.kicker ?? String(i + 1).padStart(2, '0') }));
 
-export const GEAR_SECTIONS: PageSection[] = [
-  { id: 'gear-bodies', label: 'Camera bodies', kicker: '01' },
-  { id: 'gear-zooms', label: 'Zoom lenses', kicker: '02' },
-  { id: 'gear-primes', label: 'Prime lenses', kicker: '03' },
-  { id: 'gear-lighting', label: 'Lighting and flash', kicker: '04' },
-  { id: 'gear-audio', label: 'Audio', kicker: '05' },
-  { id: 'gear-tools', label: 'Tools', kicker: '06' },
-  { id: 'cafe', label: 'Coffee bar', kicker: '07' }
-];
-
 export const ABOUT_SECTIONS: PageSection[] = [
   { id: 'story', label: 'Story', kicker: '01' },
   { id: 'writing', label: 'Writing', kicker: '02' },
