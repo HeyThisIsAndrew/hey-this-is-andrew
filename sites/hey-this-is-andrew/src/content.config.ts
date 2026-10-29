@@ -27,7 +27,7 @@ const projects = defineCollection({
   }),
 });
 
-const statusEnum = z.enum(['done', 'in-progress', 'next']);
+const statusEnum = z.enum(['done', 'in-progress', 'queued', 'next']);
 
 // Goals: milestone groups rendered as the transparent progress checklist.
 const goals = defineCollection({

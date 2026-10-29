@@ -98,7 +98,7 @@ export default {
           required: true,
           fields: [
             { key: 'label', label: 'Goal', type: 'text', required: true },
-            { key: 'status', label: 'Status', type: 'select', required: true, options: [{ value: 'done', label: 'Done' }, { value: 'in-progress', label: 'In progress' }, { value: 'next', label: 'Next' }] },
+            { key: 'status', label: 'Status', type: 'select', required: true, options: [{ value: 'done', label: 'Done' }, { value: 'in-progress', label: 'In progress' }, { value: 'queued', label: 'Queued' }] },
             { key: 'note', label: 'Note', type: 'text' },
           ],
         },

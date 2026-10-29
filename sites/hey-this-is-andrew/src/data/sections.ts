@@ -41,7 +41,7 @@ export const GEAR_SECTIONS: PageSection[] = [
 
 export const ABOUT_SECTIONS: PageSection[] = [
   { id: 'story', label: 'Story', kicker: '01' },
-  { id: 'brands', label: 'Brands I run', kicker: '02' },
+  { id: 'writing', label: 'Writing', kicker: '02' },
   { id: 'press', label: 'Press kit', kicker: '03' },
   { id: 'contact', label: 'Contact', kicker: '04' }
 ];

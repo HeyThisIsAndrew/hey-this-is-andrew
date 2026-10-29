@@ -7,7 +7,8 @@ const { groups } = Astro.props;
 const statusLabel: Record<string, string> = {
   'done': 'Done',
   'in-progress': 'In progress',
-  'next': 'Up next',
+  'queued': 'Queued',
+  'next': 'Queued',
 };
 
 function progress(items: CollectionEntry<'goals'>['data']['items']) {
@@ -29,11 +30,11 @@ function progress(items: CollectionEntry<'goals'>['data']['items']) {
         </div>
         <ul class="goals">
           {group.data.items.map((item) => (
-            <li data-status={item.status}>
+            <li data-status={item.status === 'next' ? 'queued' : item.status}>
               <span class="box" aria-hidden="true"></span>
               <div>
                 <span class="label">{item.label}</span>
-                <span class="status" data-status={item.status}>
+                <span class="status" data-status={item.status === 'next' ? 'queued' : item.status}>
                   <span class="vh">Status: </span>{statusLabel[item.status]}
                 </span>
                 {item.note && <span class="note">{item.note}</span>}
