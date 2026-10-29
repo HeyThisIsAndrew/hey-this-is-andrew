@@ -244,6 +244,19 @@ const { items = [], heading = 'On this page', selector = 'main h2[id], main [dat
     .pn-handle {
       display: none;
     }
+    /* At rest only the ticks take the pointer. The resting box is wider
+       than its ticks (padding, the hidden labels' gap) and reached past the
+       site's gutter onto the page, so a mouse on a heading's first letters
+       opened the panel over that heading (BE's desktop test, 2026-10-28).
+       Open, the whole panel is live again, so it stays open under the
+       pointer while the reader moves through it. */
+    .page-nav:not(:hover):not(.is-open):not(:focus-within) {
+      pointer-events: none;
+    }
+    .page-nav:not(:hover):not(.is-open):not(:focus-within) .pn-list a {
+      pointer-events: auto;
+      width: max-content; /* the tick, not the column it would stretch to */
+    }
   }
   /* Touch and narrow windows: the collapsed panel is a visible tab, with
      room to hit, since there is no hover to discover it by. */
@@ -495,6 +508,7 @@ const { items = [], heading = 'On this page', selector = 'main h2[id], main [dat
     // A click (or a #hash) is an answer: pinned until the reader scrolls,
     // and not released by the smooth scroll the click itself starts.
     let releaseArmed = true;
+    let settledY = window.scrollY; // where the click's own scroll came to rest
     const armReleaseWhenSettled = () => {
       releaseArmed = false;
       let previous = window.scrollY;
@@ -506,6 +520,7 @@ const { items = [], heading = 'On this page', selector = 'main h2[id], main [dat
         previous = now;
         if (still >= 3 || Date.now() > deadline) {
           releaseArmed = true;
+          settledY = window.scrollY;
           return;
         }
         requestAnimationFrame(tick);
@@ -550,7 +565,10 @@ const { items = [], heading = 'On this page', selector = 'main h2[id], main [dat
       setActive(id);
       armReleaseWhenSettled();
     };
-    pinFromHash();
+    // A reload is not a deep link: the page starts where the browser (or
+    // the site) puts it, and the scroll position decides what is current.
+    const navEntry = performance.getEntriesByType?.('navigation')[0] as PerformanceNavigationTiming | undefined;
+    if (navEntry?.type !== 'reload') pinFromHash();
     window.addEventListener('hashchange', pinFromHash);
     const releasePin = () => {
       if (releaseArmed) pinnedId = null;
@@ -562,13 +580,13 @@ const { items = [], heading = 'On this page', selector = 'main h2[id], main [dat
       if (SCROLL_KEYS.has(e.key)) releasePin();
     });
     // Dragging the scrollbar fires no wheel, touch or key event, so a pin
-    // set by a click held through the drag. A large jump once the click's
-    // own scroll has settled (releaseArmed) is the reader moving the page.
+    // set by a click held through the drag. Once the click's own scroll has
+    // settled (releaseArmed), moving 50px from there is the reader moving
+    // the page, however slowly they drag. Measured from the rest point, not
+    // per event: a slow drag moves a few px an event and never released.
     let t: ReturnType<typeof setTimeout> | null = null;
-    let lastScrollY = window.scrollY;
     window.addEventListener('scroll', () => {
-      if (pinnedId !== null && releaseArmed && Math.abs(window.scrollY - lastScrollY) > 50) pinnedId = null;
-      lastScrollY = window.scrollY;
+      if (pinnedId !== null && releaseArmed && Math.abs(window.scrollY - settledY) > 50) pinnedId = null;
       if (t) clearTimeout(t);
       t = setTimeout(resolveActive, 50);
     }, { passive: true });

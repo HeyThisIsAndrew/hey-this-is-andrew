@@ -122,15 +122,19 @@ const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href
       rel="stylesheet"
     />
     <script is:inline>
-      // A reload with no #section starts at the top, not wherever the reader
-      // had scrolled. Manual restoration for this visit only, held until the
-      // reader leaves: Chrome restores AFTER the load event, so handing back
-      // on load (as this first did) restored the old position anyway. Back
-      // in auto on pagehide, so Back/Forward to this page still restores.
+      // A reload starts at the top: not wherever the reader had scrolled,
+      // and not dragged back down to a #section left in the address bar (a
+      // stale /#directory did exactly that). The anchor script below skips
+      // its jump on a reload and clears a section hash from the URL; an
+      // "Show all" expander's hash stays, so it still reopens in place.
+      // Manual restoration for this visit only, held until the reader
+      // leaves: Chrome restores AFTER the load event, so handing back on
+      // load restored the old position anyway. Back in auto on pagehide,
+      // so Back/Forward to this page still restores.
       (function () {
         var nav = performance.getEntriesByType ? performance.getEntriesByType('navigation') : [];
         var isReload = nav.length > 0 && nav[0].type === 'reload';
-        if (!isReload || (location.hash && location.hash !== '#top') || !('scrollRestoration' in history)) return;
+        if (!isReload || !('scrollRestoration' in history)) return;
         history.scrollRestoration = 'manual';
         window.scrollTo(0, 0);
         window.addEventListener('pagehide', function () { history.scrollRestoration = 'auto'; }, { once: true });
@@ -265,10 +269,16 @@ const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href
           scrollToTarget(target, true, hash);
         });
 
-        // Initial hash load
+        // Initial hash load. A reload is not a deep link: it stays at the
+        // top (see the head script), and a section hash is dropped so the
+        // address bar is clean. An expander's own hash is its open state
+        // (ExpandSection reopens it from the hash), so that one stays.
         if (window.location.hash) {
           const target = getTargetElement(window.location.hash);
-          if (target) {
+          const navEntry = performance.getEntriesByType?.('navigation')[0] as PerformanceNavigationTiming | undefined;
+          if (navEntry?.type === 'reload') {
+            if (!target?.closest('expand-section')) history.replaceState(null, '', location.pathname + location.search);
+          } else if (target) {
             setTimeout(() => scrollToTarget(target, false), 150);
           }
         }
