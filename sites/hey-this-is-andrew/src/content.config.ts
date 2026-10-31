@@ -61,6 +61,8 @@ const gear = defineCollection({
         brand: z.string().optional(),
         affiliateUrl: z.string().optional(),
         tag: z.string().optional(),
+        image: z.string().optional(),
+        imageAlt: z.string().optional(),
       })
     ),
   }),

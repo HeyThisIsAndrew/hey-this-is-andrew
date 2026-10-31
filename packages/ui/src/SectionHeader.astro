@@ -16,9 +16,11 @@ interface Props {
   linkExternal?: boolean;
   /** Explicit heading id for aria-labelledby. Defaults to a slug of the title. */
   id?: string;
+  /** Heading level to maintain semantic hierarchy. Defaults to h2. */
+  as?: 'h2' | 'h3' | 'h4';
 }
 
-const { index, kicker, title, lede, linkLabel, linkHref, linkExternal = false, id } = Astro.props;
+const { index, kicker, title, lede, linkLabel, linkHref, linkExternal = false, id, as: HeadingTag = 'h2' } = Astro.props;
 const headingId =
   id ?? `sec-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`;
 ---
@@ -31,7 +33,7 @@ const headingId =
     <span class="sec-kicker">{kicker}</span>
   </p>
   <div class="section-title-wrap">
-    <h2 class="section-title" id={headingId}>{title}</h2>
+    <HeadingTag class="section-title" id={headingId}>{title}</HeadingTag>
     {/* Deep link: scripts/section-anchors.ts copies it to the clipboard. */}
     <a
       href={`#${headingId}`}
