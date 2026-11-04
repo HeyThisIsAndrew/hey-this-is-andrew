@@ -415,7 +415,7 @@ const SETS = [0, 1];
     position: absolute;
     left: 0;
     right: 0;
-    height: 9%;
+    height: 8%;
     z-index: 55;
     pointer-events: none;
     opacity: 1;
@@ -611,6 +611,7 @@ const SETS = [0, 1];
     let savedScrollY = 0;
     let openVpW = 0;
     let openVpH = 0;
+    let prevScrollRestoration: ScrollRestoration = 'auto';
 
     interface Reel {
       column: HTMLElement;
@@ -915,6 +916,7 @@ const SETS = [0, 1];
       if (url) {
         watch.href = url;
         watch.hidden = false;
+        void watch.offsetHeight;
         requestAnimationFrame(() => {
           watch.classList.add('is-visible');
         });
@@ -1055,6 +1057,10 @@ const SETS = [0, 1];
       savedScrollY = window.scrollY;
       openVpW = document.documentElement.clientWidth;
       openVpH = window.innerHeight;
+      prevScrollRestoration = 'scrollRestoration' in history ? history.scrollRestoration : 'auto';
+      if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+      }
 
       // Lock scrolling without the page reflowing under the camera.
       // Because html has scrollbar-gutter: stable, only pad body if clientWidth actually changes.
@@ -1139,6 +1145,9 @@ const SETS = [0, 1];
         document.body.style.overflow = '';
         document.body.style.paddingRight = '';
         document.documentElement.classList.remove('photo-zoom-open');
+        if ('scrollRestoration' in history) {
+          history.scrollRestoration = prevScrollRestoration;
+        }
         setFrozen(null);
         reels.forEach((r) => {
           r.hoverPaused = r.column.matches(':hover');
@@ -1177,10 +1186,10 @@ const SETS = [0, 1];
     }
 
     // Clicking stage wrapper outside photo items when zoomed resets
-    stageWrap.addEventListener('click', () => {
-      if (isZoomed) {
-        resetZoom();
-      }
+    stageWrap.addEventListener('click', (e) => {
+      if (!isZoomed) return;
+      if ((e.target as HTMLElement).closest('.photo-item')) return;
+      resetZoom();
     });
 
     // ESC key resets
@@ -1196,10 +1205,17 @@ const SETS = [0, 1];
       'popstate',
       () => {
         if (!isZoomed && !expectPop) return;
+        const wasExpected = expectPop;
         expectPop = false;
         document.documentElement.dataset.viewPop = '1';
         window.setTimeout(() => delete document.documentElement.dataset.viewPop, 0);
-        if (isZoomed) resetZoom(true);
+        if (isZoomed) {
+          resetZoom(true);
+        } else if (wasExpected) {
+          if (Math.abs(window.scrollY - savedScrollY) > 2) {
+            instantScrollTo(savedScrollY);
+          }
+        }
       },
       { capture: true }
     );

@@ -210,7 +210,9 @@ export async function getInstagramPhotos(limit = 32): Promise<InstagramPhoto[]> 
 
   let rows: any[] = [];
   try {
-    const feedFile = path.resolve(process.cwd(), 'src/data/instagram-feed.json');
+    const defaultFeedUrl = new URL('../data/instagram-feed.json', import.meta.url);
+    const cwdFeedPath = path.resolve(process.cwd(), 'src/data/instagram-feed.json');
+    const feedFile = fs.existsSync(cwdFeedPath) ? cwdFeedPath : defaultFeedUrl;
     if (fs.existsSync(feedFile)) rows = JSON.parse(fs.readFileSync(feedFile, 'utf8'));
   } catch {
     rows = [];
