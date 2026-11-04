@@ -24,16 +24,12 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 const previewItems = SERVICES.slice(0, 3);
 const restItems = SERVICES.slice(3);
 
-const clientSpecs = [
-  { label: 'Starting rate', value: SERVICES_CLIENT_BLOCK.startingRate },
+const clientCards = [
+  { label: 'Starting Rate', value: SERVICES_CLIENT_BLOCK.startingRate },
   { label: 'Turnaround', value: SERVICES_CLIENT_BLOCK.turnaround },
-  { label: 'Deliverables & usage', value: SERVICES_CLIENT_BLOCK.deliverablesAndUsage },
-].filter((row): row is { label: string; value: string } => Boolean(row.value && row.value.trim()));
-
-const clientResults = (SERVICES_CLIENT_BLOCK.results ?? []).filter(
-  (r) => Boolean(r && r.client?.trim() && r.outcome?.trim())
-);
-const hasClientBlock = clientSpecs.length > 0 || clientResults.length > 0;
+  { label: 'Deliverables & Usage', value: SERVICES_CLIENT_BLOCK.deliverablesAndUsage },
+  { label: 'Client Results', value: SERVICES_CLIENT_BLOCK.clientResults },
+].filter((c): c is { label: string; value: string } => Boolean(c.value && c.value.trim()));
 ---
 <section id="services" aria-labelledby="services-heading" class="section-hairline work-section">
   <div class="container">
@@ -67,28 +63,16 @@ const hasClientBlock = clientSpecs.length > 0 || clientResults.length > 0;
       </ExpandSection>
     )}
 
-    {hasClientBlock && (
+    {clientCards.length > 0 && (
       <div class="client-block reveal" data-client-block>
-        {clientSpecs.length > 0 && (
-          <dl class="client-specs">
-            {clientSpecs.map((spec) => (
-              <div class="client-spec-item">
-                <dt class="client-spec-label font-mono">{spec.label}</dt>
-                <dd class="client-spec-value">{spec.value}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-        {clientResults.length > 0 && (
-          <ul class="client-results">
-            {clientResults.map((res) => (
-              <li class="client-result-item">
-                <strong class="client-result-name">{res.client}</strong>
-                <span class="client-result-outcome">{res.outcome}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div class="client-cards-grid">
+          {clientCards.map((card) => (
+            <div class="client-card">
+              <span class="client-card-label font-mono">{card.label}</span>
+              <p class="client-card-value">{card.value}</p>
+            </div>
+          ))}
+        </div>
       </div>
     )}
 
@@ -141,48 +125,41 @@ const hasClientBlock = clientSpecs.length > 0 || clientResults.length > 0;
   }
   .client-block {
     margin-top: 2rem;
-    padding: 1.5rem;
-    border: 1px solid var(--line);
-    background: var(--surface);
-    display: grid;
-    gap: 1.5rem;
   }
-  .client-specs {
-    margin: 0;
+  .client-cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
     gap: 1.25rem;
   }
-  .client-spec-label {
-    font-size: 0.7rem;
+  @media (max-width: 1024px) {
+    .client-cards-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 600px) {
+    .client-cards-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .client-card {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .client-card-label {
+    font-size: 0.72rem;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--muted);
-    margin-bottom: 0.35rem;
   }
-  .client-spec-value {
+  .client-card-value {
     margin: 0;
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1rem;
-    color: var(--ink);
-  }
-  .client-results {
-    list-style: none;
-    margin: 0;
-    padding: 1.25rem 0 0;
-    border-top: 1px solid var(--line);
-    display: grid;
-    gap: 0.75rem;
-  }
-  .client-result-item {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem 1rem;
     font-size: 0.9rem;
-  }
-  .client-result-outcome {
-    color: var(--muted);
+    line-height: 1.55;
+    color: var(--ink);
   }
   .work-cta-row {
     margin-top: clamp(1.75rem, 3vw, 2.5rem);

@@ -14,6 +14,7 @@ export interface ClientBlockData {
   startingRate?: string;
   turnaround?: string;
   deliverablesAndUsage?: string;
+  clientResults?: string;
   results?: ClientResult[];
 }
 
