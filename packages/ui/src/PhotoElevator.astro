@@ -37,6 +37,12 @@ export interface Props {
 
 const { photos: displayPhotos, emptyText = 'No photos configured yet.' } = Astro.props;
 
+const categoryLabels: Record<string, string> = {
+  cocktails: 'Cocktails',
+  bar: 'Bars',
+  product: 'Product',
+};
+
 // Distribute photos across 4 columns for visual rhythm.
 const COLUMN_COUNT = 4;
 const columns: number[][] = Array.from({ length: COLUMN_COUNT }, () => []);
@@ -140,6 +146,7 @@ const SETS = [0, 1];
     position: relative;
     padding: var(--space-section) 0;
     overflow: hidden;
+    overflow-anchor: none;
   }
   /* Header, grid and note sit on the site's .container measure, so this
      section lines up with every other section (it used its own max-width
@@ -147,18 +154,24 @@ const SETS = [0, 1];
   .photo-intro {
     position: relative;
     z-index: 10;
-    transition: opacity 0.4s ease;
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      opacity 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0.22s,
+      transform 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0.22s;
     width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw));
     margin: 0 auto;
   }
   .photo-section.is-zoomed .photo-intro {
     opacity: 0;
+    transform: translateY(-6px);
     pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
   }
 
   .photo-grid-container {
     width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw));
-    margin-inline: auto;
+    margin: 2rem auto 0;
     position: relative;
   }
 
@@ -169,13 +182,10 @@ const SETS = [0, 1];
     width: 100%;
     max-width: 100%;
     margin: 0 auto;
-    padding: 2rem 0 0;
+    padding: 0;
     /* Tall enough to feel like reels with proportional height across 4K displays */
     height: clamp(540px, 75vh, 1600px);
     min-height: 520px;
-    /* Fade the top and bottom edges so the reels dissolve. */
-    mask-image: linear-gradient(to bottom, transparent 0, black 8%, black 92%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 8%, black 92%, transparent 100%);
   }
 
   .photo-column {
@@ -262,15 +272,31 @@ const SETS = [0, 1];
     filter: grayscale(0.35) contrast(1.02);
     transition: filter 0.4s ease, transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
   }
-  .photo-item:hover img,
-  .photo-item:focus-visible img {
-    filter: grayscale(0) contrast(1.05);
-    transform: scale(1.03);
+  /* Mouse hover only: on a phone :hover sticks after a tap, which caused
+     the image to jump to scale(1.03) and the tag to stay stuck when zoom
+     ended. Disabled while zoomed or closing so exiting never triggers a
+     scale(1.03) pop on the hovered card. */
+  @media (hover: hover) and (pointer: fine) {
+    .photo-stage-wrap:not(.is-zoomed):not(.is-closing) .photo-item:hover img {
+      filter: grayscale(0) contrast(1.05);
+      transform: scale(1.03);
+    }
+    .photo-stage-wrap:not(.is-zoomed):not(.is-closing) .photo-item:hover {
+      border-color: rgba(255, 255, 255, 0.35);
+    }
+    .photo-stage-wrap:not(.is-zoomed):not(.is-closing) .photo-item:hover .photo-tag {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
-  .photo-item:hover,
+  .photo-item:focus-visible img,
+  .photo-item.is-active img {
+    filter: grayscale(0) contrast(1.05);
+  }
   .photo-item:focus-visible {
-    border-color: rgba(255, 255, 255, 0.35);
-    outline: none;
+    border-color: rgba(255, 255, 255, 0.6);
+    outline: 2px solid var(--focus-ring, #f0f0f0);
+    outline-offset: -2px;
   }
   .photo-item:active {
     transform: scale(0.98);
@@ -288,12 +314,18 @@ const SETS = [0, 1];
     background: rgba(0, 0, 0, 0.65);
     padding: 0.3rem 0.55rem;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transform: translateY(4px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
     pointer-events: none;
   }
-  .photo-item:hover .photo-tag,
   .photo-item:focus-visible .photo-tag {
     opacity: 1;
+    transform: translateY(0);
+  }
+  .camera-stage.is-zoomed .photo-tag,
+  .photo-stage-wrap.is-closing .photo-tag {
+    opacity: 0 !important;
+    transform: translateY(4px) !important;
   }
 
   .photo-empty {
@@ -308,11 +340,24 @@ const SETS = [0, 1];
   }
 
   .photo-note {
+    position: relative;
+    z-index: 10;
     width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw));
     margin: 2.5rem auto 0;
     font-size: 0.85rem;
     color: var(--color-white-muted, #888);
     text-align: center;
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      opacity 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0.22s,
+      transform 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0.22s;
+  }
+  .photo-section.is-zoomed .photo-note {
+    opacity: 0;
+    transform: translateY(6px);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
   }
   .photo-note a {
     color: var(--color-accent-text, #f0f0f0);
@@ -341,8 +386,10 @@ const SETS = [0, 1];
     .photo-wall {
       height: auto;
       min-height: 0;
-      mask-image: none;
-      -webkit-mask-image: none;
+    }
+    .photo-stage-wrap::before,
+    .photo-stage-wrap::after {
+      display: none;
     }
     .photo-item img {
       filter: none;
@@ -357,11 +404,43 @@ const SETS = [0, 1];
     overflow: hidden;
     position: relative;
     width: 100%;
+    clip-path: inset(0px 0px 0px 0px);
   }
+  /* Top and bottom edge dissolve scrims: unlike mask-image (which cannot
+     transition in CSS and popped back in on exit), opacity on pseudo-element
+     scrims crossfades smoothly above #camera-stage (z-index 55 > 50). */
+  .photo-stage-wrap::before,
+  .photo-stage-wrap::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 9%;
+    z-index: 55;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.18s;
+  }
+  .photo-stage-wrap::before {
+    top: 0;
+    background: linear-gradient(to bottom, var(--bg, #0a0a0a) 0%, rgba(10, 10, 10, 0) 100%);
+  }
+  .photo-stage-wrap::after {
+    bottom: 0;
+    background: linear-gradient(to top, var(--bg, #0a0a0a) 0%, rgba(10, 10, 10, 0) 100%);
+  }
+  .photo-stage-wrap.is-zoomed:not(.is-closing)::before,
+  .photo-stage-wrap.is-zoomed:not(.is-closing)::after {
+    opacity: 0;
+    transition: opacity 0.24s ease;
+  }
+
   /* `is-camera` holds from the moment the camera moves in until it has
      landed back out (longer than `is-zoomed`, which drives the backdrop and
-     the header fade), so the return is never clipped by the section. */
+     the header fade), while clip-path on .photo-stage-wrap smoothly
+     interpolates between the viewport and the resting wall box. */
   .photo-stage-wrap.is-zoomed,
+  .photo-stage-wrap.is-closing,
   .photo-section.is-camera {
     overflow: visible;
     z-index: 50;
@@ -372,16 +451,28 @@ const SETS = [0, 1];
     left: 50%;
     bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
     z-index: 60;
-    transform: translateX(-50%);
     background: #080808;
     white-space: nowrap;
+    opacity: 0;
+    transform: translate3d(-50%, 12px, 0);
+    pointer-events: none;
+    transition:
+      opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.2s ease,
+      background-color 0.2s ease;
   }
   .photo-watch[hidden] {
     display: none;
   }
-  .photo-watch:hover,
-  .photo-watch:focus-visible {
-    transform: translateX(-50%) translateY(-2px);
+  .photo-watch.is-visible {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0);
+    pointer-events: auto;
+  }
+  .photo-watch.is-visible:hover,
+  .photo-watch.is-visible:focus-visible {
+    transform: translate3d(-50%, -2px, 0);
   }
 
   .photo-zoom-backdrop {
@@ -389,7 +480,7 @@ const SETS = [0, 1];
     inset: 0;
     width: 100vw;
     height: 100vh;
-    background: #080808;
+    background: var(--bg, #0a0a0a);
     z-index: 45;
     opacity: 0;
     pointer-events: none;
@@ -398,14 +489,16 @@ const SETS = [0, 1];
        iOS Safari weighs when it colours the status bar from fixed elements
        at the top (see @andrew/ui Nav.astro). HQ has none. */
     visibility: hidden;
-    transition: opacity 0.5s ease, visibility 0s linear 0.5s;
+    transition:
+      opacity 0.48s cubic-bezier(0.22, 1, 0.36, 1) 0.08s,
+      visibility 0s linear 0.56s;
   }
   .photo-stage-wrap.is-zoomed .photo-zoom-backdrop,
   .photo-section.is-zoomed .photo-zoom-backdrop {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    transition: opacity 0.5s ease, visibility 0s linear 0s;
+    transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0s;
   }
 
   .camera-stage {
@@ -418,11 +511,6 @@ const SETS = [0, 1];
 
   .camera-stage.is-zoomed {
     z-index: 50;
-  }
-
-  .camera-stage.is-zoomed .photo-wall {
-    mask-image: none !important;
-    -webkit-mask-image: none !important;
   }
 
   .camera-stage.is-zoomed .photo-column {
@@ -459,10 +547,13 @@ const SETS = [0, 1];
      quarter of the width, and the wall sized to what the header leaves.
      Portrait phones, tablets, desktop and 4K are untouched. */
   @media (orientation: landscape) and (max-height: 500px) {
+    .photo-grid-container {
+      margin-top: 0.75rem;
+    }
     .photo-wall {
       grid-template-columns: repeat(4, 1fr);
       gap: 10px;
-      padding-top: 0.75rem;
+      padding-top: 0;
     }
     .photo-column:nth-child(2),
     .photo-column:nth-child(4) {
@@ -484,8 +575,13 @@ const SETS = [0, 1];
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .camera-stage {
+    .camera-stage,
+    .photo-stage-wrap,
+    .photo-watch,
+    .photo-intro,
+    .photo-note {
       transition-duration: 0.01ms !important;
+      transition-delay: 0ms !important;
     }
   }
 </style>
@@ -493,11 +589,11 @@ const SETS = [0, 1];
 <script>
   // Manual reel control: AUTO MOVEMENT + USER CONTROL + CAMERA ZOOM
   (() => {
-    const wall = document.querySelector('.photo-wall');
+    const wall = document.querySelector<HTMLElement>('.photo-wall');
     const stage = document.getElementById('camera-stage');
-    const stageWrap = document.querySelector('.photo-stage-wrap');
-    const photoSection = document.querySelector('.photo-section');
-    if (!wall || !stage || !('requestAnimationFrame' in window)) return;
+    const stageWrap = document.querySelector<HTMLElement>('.photo-stage-wrap');
+    const photoSection = document.querySelector<HTMLElement>('.photo-section');
+    if (!wall || !stage || !stageWrap || !('requestAnimationFrame' in window)) return;
     wall.classList.add('js-reels');
 
     const reduced = () =>
@@ -508,8 +604,13 @@ const SETS = [0, 1];
 
     let zoomPaused = false;
     let isZoomed = false;
+    let isClosing = false;
+    let expectPop = false;
     let activeTarget: HTMLElement | null = null;
     let frozenReel: Reel | null = null;
+    let savedScrollY = 0;
+    let openVpW = 0;
+    let openVpH = 0;
 
     interface Reel {
       column: HTMLElement;
@@ -526,12 +627,14 @@ const SETS = [0, 1];
     }
 
     const reels: Reel[] = [];
-    const columns = Array.from(
-      wall.querySelectorAll<HTMLElement>('.photo-column')
-    ).filter((c) => c.offsetParent !== null || c.style.display !== 'none');
+    const columns = Array.from(wall.querySelectorAll<HTMLElement>('.photo-column'));
+
+    const isColumnDisplayed = (col: HTMLElement) =>
+      getComputedStyle(col).display !== 'none';
 
     const measure = (reel: Reel) => {
-      reel.setH = reel.track.scrollHeight / 2 || 1;
+      const h = reel.track.scrollHeight / 2;
+      if (h > 0) reel.setH = h;
     };
 
     const pauseReels = () => {
@@ -580,7 +683,7 @@ const SETS = [0, 1];
 
       const updatePlayState = () => {
         if (!reel.anim) return;
-        if (reel === frozenReel) {
+        if (reel === frozenReel || !isColumnDisplayed(column)) {
           if (reel.anim.playState === 'running') reel.anim.pause();
           return;
         }
@@ -601,6 +704,7 @@ const SETS = [0, 1];
       };
 
       column.addEventListener('mouseenter', () => {
+        if (isZoomed || isClosing) return;
         reel.hoverPaused = true;
         updatePlayState();
       });
@@ -615,8 +719,10 @@ const SETS = [0, 1];
       let isPointerActive = false;
 
       column.addEventListener('pointerdown', (e) => {
-        if (isZoomed) return;
+        if (isZoomed || isClosing) return;
         if (e.isPrimary === false) return;
+        /* Touch scrolling scrolls the page naturally; mouse/pen drags scrub the reel. */
+        if (e.pointerType === 'touch') return;
         if (e.pointerType === 'mouse' && e.button !== 0) return;
         startY = e.clientY;
         startTime = typeof reel.anim?.currentTime === 'number' ? reel.anim.currentTime : 0;
@@ -625,7 +731,7 @@ const SETS = [0, 1];
       });
 
       column.addEventListener('pointermove', (e) => {
-        if (!isPointerActive || isZoomed || e.isPrimary === false) return;
+        if (!isPointerActive || isZoomed || isClosing || e.isPrimary === false) return;
         const dy = e.clientY - startY;
         moved = Math.max(moved, Math.abs(dy));
         if (moved > DRAG_THRESHOLD_PX) {
@@ -670,7 +776,7 @@ const SETS = [0, 1];
       column.addEventListener(
         'wheel',
         (e) => {
-          if (isZoomed || reel.dragging || !reel.anim) return;
+          if (isZoomed || isClosing || reel.dragging || !reel.anim) return;
           const dy = (e.deltaY || 0) * WHEEL_NUDGE;
           const dt = (dy / reel.setH) * reel.baseDuration * 1000;
           const cur = reel.anim.currentTime ?? 0;
@@ -701,11 +807,10 @@ const SETS = [0, 1];
     }
 
     reels.forEach(measure);
-    window.addEventListener('resize', () => reels.forEach(measure));
 
     /* Load every photo once the section is near: lazy images inside the
        clipped, moving reels were left as empty dark tiles. */
-    const section = photoSection as HTMLElement | null;
+    const section = photoSection;
     if (section && 'IntersectionObserver' in window) {
       const near = new IntersectionObserver((entries) => {
         if (!entries.some((en) => en.isIntersecting)) return;
@@ -716,12 +821,13 @@ const SETS = [0, 1];
     }
 
     /* ---- Camera: translate(X, Y) scale(s) about the stage's top-left ----
-       Every move (open, pan to a neighbour, close) is computed from the
-       photos' untransformed geometry, so it is exact at any zoom. */
+       Every move (open, pan to a neighbour, rotate, close) is computed from
+       the photos' untransformed geometry, so it is exact even mid-transition. */
     let s = 1;
     let X = 0;
     let Y = 0;
     let closeTimer = 0;
+    let watchTimer = 0;
     const EASE = 'cubic-bezier(0.25, 1, 0.5, 1)';
 
     const navBottom = () => {
@@ -729,41 +835,99 @@ const SETS = [0, 1];
       return nav ? Math.max(0, nav.getBoundingClientRect().bottom) : 0;
     };
 
+    const layoutTop = (el: HTMLElement): number => {
+      let y = 0;
+      for (let n: HTMLElement | null = el; n; n = n.offsetParent as HTMLElement | null) {
+        y += n.offsetTop;
+      }
+      return y;
+    };
+
+    const instantScrollTo = (y: number) => {
+      const root = document.documentElement;
+      const prev = root.style.scrollBehavior;
+      root.style.scrollBehavior = 'auto';
+      void root.offsetHeight;
+      window.scrollTo(0, Math.max(0, Math.round(y)));
+      root.style.scrollBehavior = prev;
+    };
+
     function apply(ms: number) {
-      if(stage) stage.style.transition = ms ? `transform ${ms}ms ${EASE}` : 'none';
-      if(stage) stage.style.transform = `translate(${X}px, ${Y}px) scale(${s})`;
+      stage.style.transition = ms ? `transform ${ms}ms ${EASE}` : 'none';
+      stage.style.transform = `translate3d(${X}px, ${Y}px, 0) scale(${s})`;
     }
 
-    /* Just far enough in to show the WHOLE photo: it may take at most 72%
-       of the width and 82% of the height under the header, so the
-       neighbouring reels and the photos above and below stay in view. */
-    function focusOn(target: HTMLElement, ms: number) {
-      if(!stage) return;
-      const sr = stage.getBoundingClientRect();
-      const tr = target.getBoundingClientRect();
-      const ux = (tr.left - sr.left) / s;
-      const uy = (tr.top - sr.top) / s;
-      const uw = tr.width / s;
-      const uh = tr.height / s;
+    /* Smoothly expand .photo-stage-wrap's clip-path to the active viewport on
+       zoom, and contract it back to inset(0px 0px 0px 0px) on exit so the
+       overflowing reel tracks never guillotine-snap over the header or footer. */
+    function updateStageClip(expanded: boolean, ms: number) {
+      stageWrap.style.transition = ms ? `clip-path ${ms}ms ${EASE}` : 'none';
+      if (!expanded) {
+        stageWrap.style.clipPath = 'inset(0px 0px 0px 0px)';
+        return;
+      }
+      const wr = stageWrap.getBoundingClientRect();
       const top = navBottom();
       const vw = document.documentElement.clientWidth;
       const vh = window.innerHeight;
-      const next = Math.min(3, Math.max(1.1, Math.min((vw * 0.72) / uw, ((vh - top) * 0.82) / uh)));
-      const originX = sr.left - X;
-      const originY = sr.top - Y;
+      const topInset = Math.min(0, Math.floor(top - wr.top));
+      const rightInset = Math.min(0, Math.floor(wr.right - vw));
+      const bottomInset = Math.min(0, Math.floor(wr.bottom - vh));
+      const leftInset = Math.min(0, Math.floor(-wr.left));
+      stageWrap.style.clipPath = `inset(${topInset}px ${rightInset}px ${bottomInset}px ${leftInset}px)`;
+    }
+
+    /* Just far enough in to show the WHOLE photo: it may take at most 72%
+       of the width and 82% of the height under the header (with room for the
+       Instagram CTA when present), so the neighbouring reels and the photos
+       above and below stay in view. */
+    function focusOn(target: HTMLElement, ms: number) {
+      const wr = stageWrap.getBoundingClientRect();
+      const sr = stage.getBoundingClientRect();
+      const tr = target.getBoundingClientRect();
+      const curS = (stage.offsetWidth > 0 ? sr.width / stage.offsetWidth : s) || 1;
+      const ux = (tr.left - sr.left) / curS;
+      const uy = (tr.top - sr.top) / curS;
+      const uw = target.offsetWidth || tr.width / curS || 1;
+      const uh = target.offsetHeight || tr.height / curS || 1;
+      const top = navBottom();
+      const vw = document.documentElement.clientWidth;
+      const vh = window.innerHeight;
+      const hasWatch = Boolean(target.dataset.videoUrl);
+      const bottomPad = hasWatch ? 68 : 0;
+      const availH = Math.max(180, vh - top - bottomPad);
+      const next = Math.min(3, Math.max(1.1, Math.min((vw * 0.72) / uw, (availH * 0.82) / uh)));
+      const originX = wr.left;
+      const originY = wr.top;
       s = next;
       X = vw / 2 - originX - s * (ux + uw / 2);
-      Y = top + (vh - top) / 2 - originY - s * (uy + uh / 2);
+      Y = top + availH / 2 - originY - s * (uy + uh / 2);
       apply(ms);
+      updateStageClip(true, ms);
     }
 
     // The play path of a zoomed reel; nothing for a photo.
     const watch = document.querySelector<HTMLAnchorElement>('[data-photo-watch]');
     function setWatch(target: HTMLElement | null) {
       if (!watch) return;
+      window.clearTimeout(watchTimer);
       const url = target?.dataset.videoUrl;
-      if (url) watch.href = url;
-      watch.hidden = !url;
+      if (url) {
+        watch.href = url;
+        watch.hidden = false;
+        requestAnimationFrame(() => {
+          watch.classList.add('is-visible');
+        });
+      } else {
+        watch.classList.remove('is-visible');
+        if (reduced()) {
+          watch.hidden = true;
+        } else {
+          watchTimer = window.setTimeout(() => {
+            if (!watch.classList.contains('is-visible')) watch.hidden = true;
+          }, 290);
+        }
+      }
     }
 
     function setFrozen(target: HTMLElement | null) {
@@ -774,6 +938,86 @@ const SETS = [0, 1];
       if (prev && prev !== next) prev.updatePlayState?.();
       if (next?.anim && next.anim.playState === 'running') next.anim.pause();
     }
+
+    /* If a rotation to mobile portrait hides the column of the currently
+       zoomed item (columns 2 and 4 are display:none <=767px), pick the
+       visible item closest to the vertical center of the wall. */
+    function ensureVisibleTarget(target: HTMLElement): HTMLElement {
+      const col = target.closest<HTMLElement>('.photo-column');
+      if (col && isColumnDisplayed(col)) return target;
+      const wr = stageWrap.getBoundingClientRect();
+      const centerY = wr.top + wr.height / 2;
+      let best: HTMLElement = target;
+      let bestDist = Infinity;
+      reels.forEach((r) => {
+        if (!isColumnDisplayed(r.column)) return;
+        r.column.querySelectorAll<HTMLElement>('.photo-item').forEach((item) => {
+          const ir = item.getBoundingClientRect();
+          if (ir.height <= 0) return;
+          const dist = Math.abs(ir.top + ir.height / 2 - centerY);
+          if (dist < bestDist) {
+            bestDist = dist;
+            best = item;
+          }
+        });
+      });
+      if (best !== target) {
+        target.classList.remove('is-active');
+        best.classList.add('is-active');
+        setFrozen(best);
+        setWatch(best);
+      }
+      return best;
+    }
+
+    /* Re-anchor scroll position and camera matrix when the viewport rotates
+       or resizes while zoomed so the stage stays centered and closes cleanly
+       into the new layout's wall position. */
+    function handleViewportChange() {
+      reels.forEach((r) => {
+        measure(r);
+        r.updatePlayState?.();
+      });
+      if (!isZoomed || isClosing || !activeTarget) return;
+
+      const vw = document.documentElement.clientWidth;
+      const vh = window.innerHeight;
+      const orientationOrWidthChanged = Math.abs(vw - openVpW) > 24 || Math.abs(vh - openVpH) > 120;
+
+      if (orientationOrWidthChanged) {
+        openVpW = vw;
+        openVpH = vh;
+        const top = navBottom();
+        const wrapTop = layoutTop(stageWrap);
+        const wrapH = stageWrap.offsetHeight;
+        const targetScreenTop = top + Math.max(0, (vh - top - wrapH) / 2);
+        savedScrollY = Math.max(0, Math.round(wrapTop - targetScreenTop));
+        instantScrollTo(savedScrollY);
+      } else if (Math.abs(window.scrollY - savedScrollY) > 2) {
+        instantScrollTo(savedScrollY);
+      }
+
+      activeTarget = ensureVisibleTarget(activeTarget);
+      focusOn(activeTarget, 0);
+    }
+
+    let resizeRaf = 0;
+    let settleTimer1 = 0;
+    let settleTimer2 = 0;
+    const onResizeOrRotate = () => {
+      cancelAnimationFrame(resizeRaf);
+      window.clearTimeout(settleTimer1);
+      window.clearTimeout(settleTimer2);
+      resizeRaf = requestAnimationFrame(() => {
+        handleViewportChange();
+        settleTimer1 = window.setTimeout(handleViewportChange, 120);
+        settleTimer2 = window.setTimeout(handleViewportChange, 280);
+      });
+    };
+
+    window.addEventListener('resize', onResizeOrRotate, { passive: true });
+    window.addEventListener('orientationchange', onResizeOrRotate, { passive: true });
+    window.visualViewport?.addEventListener('resize', onResizeOrRotate, { passive: true });
 
     // Delegated click listener on wall so every item click (original or loop) is handled reliably
     wall.addEventListener('click', (e) => {
@@ -798,19 +1042,37 @@ const SETS = [0, 1];
         return;
       }
       window.clearTimeout(closeTimer);
+      isClosing = false;
+      stageWrap.classList.remove('is-closing');
+
+      // Clear any hover-paused state on other columns so neighbours keep moving smoothly
+      reels.forEach((r) => {
+        r.hoverPaused = false;
+      });
       // Freeze ONLY the selected photo's reel; the neighbours keep moving.
       setFrozen(target);
 
+      savedScrollY = window.scrollY;
+      openVpW = document.documentElement.clientWidth;
+      openVpH = window.innerHeight;
+
       // Lock scrolling without the page reflowing under the camera.
-      const gutter = window.innerWidth - document.documentElement.clientWidth;
-      if (gutter > 0) document.body.style.paddingRight = `${gutter}px`;
+      // Because html has scrollbar-gutter: stable, only pad body if clientWidth actually changes.
+      const clientWBefore = document.documentElement.clientWidth;
       document.body.style.overflow = 'hidden';
+      const gutter = Math.max(0, document.documentElement.clientWidth - clientWBefore);
+      if (gutter > 0) document.body.style.paddingRight = `${gutter}px`;
+      document.documentElement.classList.add('photo-zoom-open');
+
+      if (!history.state?.photoZoom) {
+        history.pushState({ ...(history.state ?? {}), photoZoom: true }, '');
+      }
 
       isZoomed = true;
       activeTarget = target;
       target.classList.add('is-active');
-      if(stage) stage.classList.add('is-zoomed');
-      stageWrap?.classList.add('is-zoomed');
+      stage.classList.add('is-zoomed');
+      stageWrap.classList.add('is-zoomed');
       photoSection?.classList.add('is-zoomed', 'is-camera');
       setWatch(target);
       focusOn(target, reduced() ? 0 : 600);
@@ -833,18 +1095,31 @@ const SETS = [0, 1];
       focusOn(newTarget, reduced() ? 0 : 650);
     }
 
-    /* Back out from the same photo: the reel stays frozen and the zoomed
-       layout (unmasked, unclipped reels) stays in place until the camera
-       has landed, so nothing moves or re-crops under the return. */
-    function resetZoom() {
-      if (!isZoomed) return;
+    /* Back out from the same photo: the reel stays frozen while clip-path
+       contracts smoothly back to the resting wall box in lockstep with the
+       camera transform, so nothing pops or re-crops when the return lands. */
+    function resetZoom(fromHistory = false) {
+      if (!isZoomed || isClosing) return;
       isZoomed = false;
+      isClosing = true;
+
+      if (!fromHistory && history.state?.photoZoom) {
+        expectPop = true;
+        history.back();
+      }
+
+      if (Math.abs(window.scrollY - savedScrollY) > 2) {
+        instantScrollTo(savedScrollY);
+      }
+
       s = 1;
       X = 0;
       Y = 0;
       const ms = reduced() ? 0 : 600;
-      apply(ms);
+      stageWrap.classList.add('is-closing');
       photoSection?.classList.remove('is-zoomed');
+      apply(ms);
+      updateStageClip(false, ms);
       setWatch(null);
       if (activeTarget) {
         activeTarget.classList.remove('is-active');
@@ -853,17 +1128,33 @@ const SETS = [0, 1];
       const finish = () => {
         window.clearTimeout(closeTimer);
         if (isZoomed) return; // reopened meanwhile
-        if(stage) stage.style.transition = '';
-        if(stage) stage.style.transform = '';
-        if(stage) stage.classList.remove('is-zoomed');
-        stageWrap?.classList.remove('is-zoomed');
+        isClosing = false;
+        stage.style.transition = '';
+        stage.style.transform = '';
+        stageWrap.style.transition = '';
+        stageWrap.style.clipPath = '';
+        stage.classList.remove('is-zoomed');
+        stageWrap.classList.remove('is-zoomed', 'is-closing');
         photoSection?.classList.remove('is-camera');
         document.body.style.overflow = '';
         document.body.style.paddingRight = '';
+        document.documentElement.classList.remove('photo-zoom-open');
         setFrozen(null);
+        reels.forEach((r) => {
+          r.hoverPaused = r.column.matches(':hover');
+          r.updatePlayState?.();
+        });
       };
-      closeTimer = window.setTimeout(finish, ms + 40);
+      if (ms === 0) finish();
+      else closeTimer = window.setTimeout(finish, ms + 20);
     }
+
+    /* Prevent iOS Safari and desktop wheel from panning the document behind the zoomed stage. */
+    const preventBgScroll = (e: Event) => {
+      if (isZoomed || isClosing) e.preventDefault();
+    };
+    window.addEventListener('touchmove', preventBgScroll, { passive: false });
+    window.addEventListener('wheel', preventBgScroll, { passive: false });
 
     // Clicking stage background or backdrop when zoomed resets
     stage.addEventListener('click', (e) => {
@@ -886,7 +1177,7 @@ const SETS = [0, 1];
     }
 
     // Clicking stage wrapper outside photo items when zoomed resets
-    stageWrap?.addEventListener('click', (e) => {
+    stageWrap.addEventListener('click', () => {
       if (isZoomed) {
         resetZoom();
       }
@@ -900,9 +1191,17 @@ const SETS = [0, 1];
       }
     });
 
-    // Browser navigation resets
-    window.addEventListener('popstate', () => {
-      if (isZoomed) resetZoom();
-    });
+    // Browser navigation resets without letting BaseLayout scroll the page
+    window.addEventListener(
+      'popstate',
+      () => {
+        if (!isZoomed && !expectPop) return;
+        expectPop = false;
+        document.documentElement.dataset.viewPop = '1';
+        window.setTimeout(() => delete document.documentElement.dataset.viewPop, 0);
+        if (isZoomed) resetZoom(true);
+      },
+      { capture: true }
+    );
   })();
 </script>
