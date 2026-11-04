@@ -23,9 +23,18 @@ const sortedCats = [...categories].sort((a, b) => {
 });
 
 const heroCat = sortedCats.find(c => c.data.category === 'Camera Bodies') || sortedCats[0];
-const subCats = sortedCats.filter(c => c !== heroCat);
+const subCats = sortedCats.filter(c => c !== heroCat && c.data.items && c.data.items.length > 0);
 
 import { AMAZON_STOREFRONT } from '../data/storefront';
+
+const rawBase = import.meta.env.BASE_URL;
+const base = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
+const resolveAsset = (img?: string) => {
+  if (!img) return '';
+  if (img.startsWith('http://') || img.startsWith('https://')) return img;
+  const clean = img.startsWith('/') ? img : `/${img}`;
+  return `${base}${clean}`;
+};
 
 const isProductUrl = (url?: string) => Boolean(url && url.trim() && url !== AMAZON_STOREFRONT);
 const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl);
@@ -50,11 +59,20 @@ const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl)
     </div>
     <div class="gear-category-chips" role="tablist" aria-label="Gear categories">
       <button type="button" class="gear-chip active" data-cat="all" role="tab" aria-selected="true">All</button>
-      <button type="button" class="gear-chip" data-cat="bodies" role="tab" aria-selected="false">Cameras</button>
-      <button type="button" class="gear-chip" data-cat="lenses" role="tab" aria-selected="false">Lenses</button>
-      <button type="button" class="gear-chip" data-cat="lighting" role="tab" aria-selected="false">Lighting</button>
-      <button type="button" class="gear-chip" data-cat="audio" role="tab" aria-selected="false">Audio</button>
-      <button type="button" class="gear-chip" data-cat="tools" role="tab" aria-selected="false">Support</button>
+      {heroCat && heroCat.data.items && heroCat.data.items.length > 0 && (
+        <button type="button" class="gear-chip" data-cat="bodies" role="tab" aria-selected="false">Cameras</button>
+      )}
+      {subCats.map(cat => {
+        const isLenses = cat.data.category === 'Lens';
+        const isLighting = cat.data.category === 'Lighting';
+        const isAudio = cat.data.category === 'Audio';
+        const isTools = cat.data.category === 'Tools & Support';
+        const catKey = isLenses ? 'lenses' : isLighting ? 'lighting' : isAudio ? 'audio' : 'tools';
+        const label = isLenses ? 'Lenses' : isLighting ? 'Lighting' : isAudio ? 'Audio' : 'Support';
+        return (
+          <button type="button" class="gear-chip" data-cat={catKey} role="tab" aria-selected="false">{label}</button>
+        );
+      })}
     </div>
   </div>
   <div id="gear-empty-state" class="gear-empty-state" hidden>
@@ -127,7 +145,7 @@ const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl)
                 data-item-tag={item.tag || (idx === 0 ? 'Primary Workhorse' : 'Cinema Body')}
                 data-item-url={item.affiliateUrl || AMAZON_STOREFRONT}
                 data-has-product-url={hasProduct ? 'true' : 'false'}
-                data-item-image={item.image || ''}
+                data-item-image={resolveAsset(item.image)}
                 data-item-image-alt={item.imageAlt || item.name}
               >
                 <div class="camera-select-indicator" aria-hidden="true"></div>
@@ -180,7 +198,7 @@ const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl)
                 <img
                   id="preview-camera-img"
                   class="product-visual-img"
-                  src={heroCat.data.items[0]?.image || ''}
+                  src={resolveAsset(heroCat.data.items[0]?.image)}
                   alt=""
                   hidden={!heroCat.data.items[0]?.image}
                 />
@@ -298,10 +316,10 @@ const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl)
                 </div>
               )}
               {isTools && (
-                <div class="brand-badge" title="Zhiyun & Peak Design">
-                  <span class="zhiyun-text">Zhiyun</span>
-                  <span class="brand-divider">/</span>
+                <div class="brand-badge" title="Peak Design, Kupo & Sony">
                   <span class="smallrig-text">Peak Design</span>
+                  <span class="brand-divider">/</span>
+                  <span class="smallrig-text">Kupo</span>
                 </div>
               )}
 
@@ -341,7 +359,7 @@ const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl)
                     data-item-tag={item.tag || 'Production Spec'}
                     data-item-url={item.affiliateUrl || AMAZON_STOREFRONT}
                     data-has-product-url={hasProduct ? 'true' : 'false'}
-                    data-item-image={item.image || ''}
+                    data-item-image={resolveAsset(item.image)}
                     data-item-image-alt={item.imageAlt || item.name}
                   >
                     <div class="camera-select-indicator" aria-hidden="true"></div>
@@ -396,7 +414,7 @@ const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl)
                     <img
                       id={`img-${anchorId}`}
                       class="product-visual-img"
-                      src={defaultItem?.image || ''}
+                      src={resolveAsset(defaultItem?.image)}
                       alt=""
                       hidden={!defaultItem?.image}
                     />
@@ -611,6 +629,11 @@ const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl)
     border: 1px dashed var(--line, rgba(255, 255, 255, 0.2));
     background: var(--surface, #111111);
     margin-bottom: 2rem;
+  }
+  .gear-empty-state[hidden],
+  .gear-hero-box[hidden],
+  .gear-collage-box[hidden] {
+    display: none !important;
   }
   .gear-empty-text {
     font-family: var(--font-mono);
