@@ -9,8 +9,8 @@ export const HOME_SECTIONS: PageSection[] = [
   { id: 'photos', label: 'Shot on the job.', kicker: '04' },
   { id: 'work', label: 'Work', kicker: '05' },
   { id: 'latest', label: 'Latest', kicker: '06' },
-  { id: 'goals', label: 'Goals', kicker: '07' },
-  { id: 'services', label: 'What I do', kicker: '08' },
+  { id: 'services', label: 'What I do', kicker: '07' },
+  { id: 'goals', label: 'Goals', kicker: '08' },
   { id: 'gear', label: 'Gear', kicker: '09' },
   { id: 'newsletter', label: 'Newsletter', kicker: '10' }
 ];

@@ -26,6 +26,9 @@ const heroCat = sortedCats.find(c => c.data.category === 'Camera Bodies') || sor
 const subCats = sortedCats.filter(c => c !== heroCat);
 
 import { AMAZON_STOREFRONT } from '../data/storefront';
+
+const isProductUrl = (url?: string) => Boolean(url && url.trim() && url !== AMAZON_STOREFRONT);
+const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl);
 ---
 
 <div class="gear-monolith" id="gear-monolith">
@@ -89,9 +92,9 @@ import { AMAZON_STOREFRONT } from '../data/storefront';
             <span class="apple-text">Apple ProRes</span>
           </div>
 
-          <a href={AMAZON_STOREFRONT} target="_blank" rel="noopener noreferrer" class="influencer-pill" aria-label="Visit Andrew's Amazon Storefront">
+          <a href={AMAZON_STOREFRONT} target="_blank" rel="noopener noreferrer" class="influencer-pill" aria-label="Visit the storefront">
             <span class="influencer-dot"></span>
-            <span class="influencer-text">Amazon Storefront</span>
+            <span class="influencer-text">Visit the storefront</span>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 9.5L9.5 2.5M9.5 2.5H4.5M9.5 2.5V7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a>
         </div>
@@ -107,7 +110,10 @@ import { AMAZON_STOREFRONT } from '../data/storefront';
           </div>
 
           <div class="camera-items-list">
-            {heroCat.data.items.map((item, idx) => (
+            {heroCat.data.items.map((item, idx) => {
+              const hasProduct = isProductUrl(item.affiliateUrl);
+              const pillLabel = hasProduct ? `View ${item.name} on Amazon` : 'Visit the storefront';
+              return (
               <div
                 class={`camera-item-row ${idx === 0 ? 'is-active' : ''}`}
                 tabindex="0"
@@ -120,6 +126,7 @@ import { AMAZON_STOREFRONT } from '../data/storefront';
                 data-item-spec={item.spec}
                 data-item-tag={item.tag || (idx === 0 ? 'Primary Workhorse' : 'Cinema Body')}
                 data-item-url={item.affiliateUrl || AMAZON_STOREFRONT}
+                data-has-product-url={hasProduct ? 'true' : 'false'}
                 data-item-image={item.image || ''}
                 data-item-image-alt={item.imageAlt || item.name}
               >
@@ -139,15 +146,16 @@ import { AMAZON_STOREFRONT } from '../data/storefront';
                     target="_blank"
                     rel="noopener noreferrer"
                     class="btn-amazon-link"
-                    aria-label={`View ${item.name} on Amazon Storefront`}
-                    title={`Check ${item.name} on Amazon Influencer Storefront`}
+                    aria-label={pillLabel}
+                    title={pillLabel}
                     onclick="arguments[0].stopPropagation();"
                   >
-                    <span>Storefront <span aria-hidden="true">↗</span></span>
+                    <span>{hasProduct ? `View ${item.name}` : 'Visit the storefront'} <span aria-hidden="true">↗</span></span>
                   </a>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -206,18 +214,18 @@ import { AMAZON_STOREFRONT } from '../data/storefront';
 
               <div class="preview-action-block">
                 <a
-                  href={AMAZON_STOREFRONT}
+                  href={heroCat.data.items[0]?.affiliateUrl || AMAZON_STOREFRONT}
                   target="_blank"
                   rel="noopener noreferrer"
                   class="btn-primary-influencer"
                   id="preview-camera-btn"
                 >
-                  <span class="amz-btn-text">View on Amazon Storefront</span>
+                  <span class="amz-btn-text">{heroDefaultHasProduct ? `View ${heroCat.data.items[0]?.name} on Amazon` : 'Visit the storefront'}</span>
                   <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden="true" focusable="false">
                     <path d="M2.5 11.5L11.5 2.5M11.5 2.5H5.5M11.5 2.5V8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 </a>
-                <span class="preview-disclosure font-mono">Curated by Andrew · Field verified equipment</span>
+                <span class="preview-disclosure font-mono">As an Amazon Associate, I earn from qualifying purchases.</span>
               </div>
             </div>
           </div>
@@ -297,9 +305,9 @@ import { AMAZON_STOREFRONT } from '../data/storefront';
                 </div>
               )}
 
-              <a href={AMAZON_STOREFRONT} target="_blank" rel="noopener noreferrer" class="influencer-pill sub-pill" aria-label={`Visit Amazon Storefront for ${cat.data.category}`}>
+              <a href={AMAZON_STOREFRONT} target="_blank" rel="noopener noreferrer" class="influencer-pill sub-pill" aria-label="Visit the storefront">
                 <span class="influencer-dot"></span>
-                <span>Storefront</span>
+                <span>Visit the storefront</span>
                 <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 9.5L9.5 2.5M9.5 2.5H4.5M9.5 2.5V7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </a>
             </div>
@@ -315,7 +323,10 @@ import { AMAZON_STOREFRONT } from '../data/storefront';
               </div>
 
               <div class="sub-items-scroll-list">
-                {cat.data.items.map((item, itemIdx) => (
+                {cat.data.items.map((item, itemIdx) => {
+                  const hasProduct = isProductUrl(item.affiliateUrl);
+                  const pillLabel = hasProduct ? `View ${item.name} on Amazon` : 'Visit the storefront';
+                  return (
                   <div
                     class={`collage-item-row ${itemIdx === 0 ? 'is-active' : ''}`}
                     tabindex="0"
@@ -329,6 +340,7 @@ import { AMAZON_STOREFRONT } from '../data/storefront';
                     data-item-spec={item.spec}
                     data-item-tag={item.tag || 'Production Spec'}
                     data-item-url={item.affiliateUrl || AMAZON_STOREFRONT}
+                    data-has-product-url={hasProduct ? 'true' : 'false'}
                     data-item-image={item.image || ''}
                     data-item-image-alt={item.imageAlt || item.name}
                   >
@@ -348,15 +360,16 @@ import { AMAZON_STOREFRONT } from '../data/storefront';
                         target="_blank"
                         rel="noopener noreferrer"
                         class="btn-amazon-link"
-                        aria-label={`View ${item.name} on Amazon Storefront`}
-                        title={`Check ${item.name} on Amazon Influencer Storefront`}
+                        aria-label={pillLabel}
+                        title={pillLabel}
                         onclick="arguments[0].stopPropagation();"
                       >
-                        <span>Storefront <span aria-hidden="true">↗</span></span>
+                        <span>{hasProduct ? `View ${item.name}` : 'Visit the storefront'} <span aria-hidden="true">↗</span></span>
                       </a>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -482,7 +495,7 @@ import { AMAZON_STOREFRONT } from '../data/storefront';
                       class="btn-primary-influencer"
                       id={`cta-${anchorId}`}
                     >
-                      <span class="amz-btn-text">View on Amazon Storefront</span>
+                      <span class="amz-btn-text">{isProductUrl(defaultItem?.affiliateUrl) ? `View ${defaultItem?.name} on Amazon` : 'Visit the storefront'}</span>
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" focusable="false">
                         <path d="M2.5 11.5L11.5 2.5M11.5 2.5H5.5M11.5 2.5V8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                       </svg>
@@ -1340,7 +1353,13 @@ import { AMAZON_STOREFRONT } from '../data/storefront';
         if (previewBrand) previewBrand.textContent = brand.toUpperCase() + ' // WORKHORSE';
         if (previewTitle) previewTitle.textContent = name;
         if (previewDesc) previewDesc.textContent = spec;
-        if (previewBtn) previewBtn.href = url;
+        if (previewBtn) {
+          previewBtn.href = url;
+          const btnText = previewBtn.querySelector('.amz-btn-text');
+          if (btnText) {
+            btnText.textContent = row.dataset.hasProductUrl === 'true' ? `View ${name} on Amazon` : 'Visit the storefront';
+          }
+        }
 
         const imgEl = document.getElementById('preview-camera-img') as HTMLImageElement | null;
         if (image && imgEl) {
@@ -1432,7 +1451,13 @@ import { AMAZON_STOREFRONT } from '../data/storefront';
         if (activeBrand) activeBrand.textContent = brand.toUpperCase() + ' // KIT';
         if (activeTitle) activeTitle.textContent = name;
         if (activeDesc) activeDesc.textContent = spec;
-        if (activeCta) activeCta.href = url;
+        if (activeCta) {
+          activeCta.href = url;
+          const btnText = activeCta.querySelector('.amz-btn-text');
+          if (btnText) {
+            btnText.textContent = row.dataset.hasProductUrl === 'true' ? `View ${name} on Amazon` : 'Visit the storefront';
+          }
+        }
 
         const subImg = document.getElementById(`img-${slug}`) as HTMLImageElement | null;
         const subSchematic = document.getElementById(`schematic-${slug}`);

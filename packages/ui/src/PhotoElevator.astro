@@ -25,7 +25,8 @@ interface DisplayPhoto {
   venue?: string;
   event?: string;
   permalink?: string;
-  /** An Instagram reel: its frame shows here, the film plays on Instagram. */
+  duration?: string;
+  /** An Instagram reel: its frame shows here, the film plays inline or on Instagram. */
   video: boolean;
 }
 
@@ -78,10 +79,11 @@ const SETS = [0, 1];
   <div class="photo-grid-container">
     <div class="photo-stage-wrap">
       <div id="camera-stage" class="camera-stage">
-        <div class="photo-wall" role="region" aria-label="Photography portfolio, vertical image reels">
+        <div class="photo-wall" role="region" aria-label="Photography portfolio, vertical image reels" data-photo-total={displayPhotos.length}>
     {columns.map((col, ci) => (
       <div
         class="photo-column"
+        data-column={ci}
         data-direction={directions[ci]}
         style={`--reel-duration: ${durations[ci]}s`}
       >
@@ -126,7 +128,8 @@ const SETS = [0, 1];
                           <path d="M8 5v14l11-7z" />
                         </svg>
                       </div>
-                      <span class="photo-play-label">Play Reel</span>
+                      <span class="photo-play-label">Play Video</span>
+                      {p.duration && <span class="photo-play-duration">{p.duration}</span>}
                     </div>
                   )}
                 </button>
@@ -142,6 +145,19 @@ const SETS = [0, 1];
     </div><!-- /.photo-stage-wrap -->
   </div><!-- /.photo-grid-container -->
   )}
+  {/* Persistent elevator HUD: progress counter (Item X of Y) + Close control */}
+  <div class="photo-hud" data-photo-hud hidden aria-label="Photo elevator controls">
+    <span class="photo-progress" data-photo-progress role="status" aria-live="polite" aria-atomic="true">
+      Item 1 of {displayPhotos.length}
+    </span>
+    <button type="button" class="photo-close" data-photo-close aria-label="Close photo view">
+      <span aria-hidden="true">Close</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  </div>
   {/* A reel in the elevator is its frame; the film plays via the inline
       cinematic overlay or directly on Instagram. Zoomed onto a reel,
       both actions are offered in the bottom dock. Photos get none. */}
@@ -628,7 +644,76 @@ const SETS = [0, 1];
     }
   }
 
-  /* Play badge overlay on active zoomed video item */
+  /* Persistent Elevator HUD (Progress indicator + Close button) */
+  .photo-hud {
+    position: fixed;
+    top: calc(1.1rem + env(safe-area-inset-top, 0px));
+    left: clamp(1.25rem, 3.5vw, 4rem);
+    right: clamp(1.25rem, 3.5vw, 4rem);
+    z-index: 120;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-6px);
+    transition:
+      opacity 0.24s cubic-bezier(0.22, 1, 0.36, 1) 0s,
+      transform 0.24s cubic-bezier(0.22, 1, 0.36, 1) 0s;
+  }
+  .photo-hud[hidden] {
+    display: none;
+  }
+  .photo-hud.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1) 0.09s,
+      transform 0.3s cubic-bezier(0.22, 1, 0.36, 1) 0.09s;
+  }
+  .photo-progress {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap-min, 44px);
+    padding: 0 1rem;
+    background: rgba(10, 10, 10, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: var(--ink, #f0f0f0);
+    font: 600 0.72rem / 1 var(--font-mono, monospace);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    pointer-events: auto;
+  }
+  .photo-close {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: var(--tap-min, 44px);
+    padding: 0 1.1rem;
+    background: rgba(10, 10, 10, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    color: var(--ink, #f0f0f0);
+    font: 600 0.72rem / 1 var(--font-mono, monospace);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    pointer-events: auto;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .photo-close:hover,
+  .photo-close:focus-visible {
+    background-color: var(--ink, #ffffff);
+    color: #080808;
+    border-color: var(--ink, #ffffff);
+  }
+
+  /* Play badge overlay on video items: ALWAYS visible at rest so reels are
+     distinguishable from photos at a glance in the grid. */
   .photo-tag-video-icon {
     display: inline-block;
     vertical-align: middle;
@@ -640,26 +725,27 @@ const SETS = [0, 1];
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%) scale(0.85);
+    transform: translate(-50%, -50%) scale(1);
     display: inline-flex;
     align-items: center;
-    gap: 0.55rem;
-    padding: 0.65rem 1.25rem;
-    background: rgba(10, 10, 10, 0.88);
-    border: 1px solid rgba(255, 255, 255, 0.32);
+    gap: 0.5rem;
+    padding: 0.55rem 1.05rem;
+    background: rgba(10, 10, 10, 0.86);
+    border: 1px solid rgba(255, 255, 255, 0.36);
     border-radius: 0;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     color: #ffffff;
     font-family: var(--font-display, sans-serif);
-    font-size: 0.74rem;
+    font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    opacity: 0;
-    pointer-events: none;
+    white-space: nowrap;
+    opacity: 1;
+    pointer-events: auto;
     cursor: pointer;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65);
     transition:
       opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1),
       transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
@@ -668,28 +754,32 @@ const SETS = [0, 1];
       color 0.2s ease;
     z-index: 6;
   }
+  .photo-play-duration {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    opacity: 0.8;
+    padding-left: 0.35rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.25);
+  }
   .photo-play-icon-wrap {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
   }
   .photo-play-icon-wrap svg {
     width: 100%;
     height: 100%;
     fill: currentColor;
   }
-  .photo-item.is-active .photo-play-badge {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translate(-50%, -50%) scale(1);
-  }
+  .photo-item:hover .photo-play-badge,
   .photo-item.is-active .photo-play-badge:hover {
     background-color: var(--ink, #ffffff);
     color: #080808;
     border-color: var(--ink, #ffffff);
-    box-shadow: 0 0 30px rgba(255, 255, 255, 0.45);
+    box-shadow: 0 0 28px rgba(255, 255, 255, 0.45);
     transform: translate(-50%, -50%) scale(1.05);
   }
 
@@ -1004,6 +1094,16 @@ const SETS = [0, 1];
 
   .camera-stage.is-zoomed .photo-item {
     cursor: pointer;
+    transition: opacity 0.35s ease, border-color 0.3s ease, box-shadow 0.35s ease;
+  }
+  .camera-stage.is-zoomed:not(.is-closing) .photo-item:not(.is-active) {
+    opacity: 0.42;
+  }
+  .camera-stage.is-zoomed:not(.is-closing) .photo-item.is-active {
+    opacity: 1;
+    border-color: rgba(255, 255, 255, 0.72);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85);
+    z-index: 2;
   }
 
   .camera-stage.is-zoomed .photo-item img {
@@ -1087,7 +1187,8 @@ const SETS = [0, 1];
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const IDLE_RESUME_MS = 2500;
     const DRAG_THRESHOLD_PX = 8;
-    const WHEEL_NUDGE = 0.35;
+    const WHEEL_NUDGE = 1.2;
+    const totalItems = Math.max(1, parseInt(wall.dataset.photoTotal || '1', 10));
 
     let zoomPaused = false;
     let isZoomed = false;
@@ -1099,6 +1200,9 @@ const SETS = [0, 1];
     let openVpW = 0;
     let openVpH = 0;
     let prevScrollRestoration: ScrollRestoration = 'auto';
+    let hudTimer = 0;
+    let lastWheelStepAt = 0;
+    let wheelDeltaAccum = 0;
 
     interface Reel {
       column: HTMLElement;
@@ -1388,11 +1492,67 @@ const SETS = [0, 1];
       const originX = wr.left;
       const originY = wr.top;
       s = next;
-      X = vw / 2 - originX - s * (ux + uw / 2);
+      let nextX = vw / 2 - originX - s * (ux + uw / 2);
+      if (vw >= 768) {
+        const stageW = stage.offsetWidth || wr.width || 1;
+        const scaledWallW = s * stageW;
+        const sideMargin = Math.min(96, Math.round(vw * 0.045));
+        const maxWallLeft = Math.max(sideMargin, Math.round((vw - scaledWallW) / 2));
+        const minWallRight = Math.min(vw - sideMargin, Math.round((vw + scaledWallW) / 2));
+        if (originX + nextX > maxWallLeft) {
+          nextX = maxWallLeft - originX;
+        }
+        if (originX + nextX + scaledWallW < minWallRight) {
+          nextX = minWallRight - scaledWallW - originX;
+        }
+        if (originX + nextX + s * ux < 24) {
+          nextX = 24 - originX - s * ux;
+        }
+        if (originX + nextX + s * (ux + uw) > vw - 24) {
+          nextX = vw - 24 - originX - s * (ux + uw);
+        }
+      }
+      X = nextX;
       Y = top + availH / 2 - originY - s * (uy + uh / 2);
       apply(ms);
       updateStageClip(true, ms);
     }
+
+    // Persistent HUD: Item X of Y progress indicator + Close button
+    const hud = document.querySelector<HTMLElement>('[data-photo-hud]');
+    const progressEl = document.querySelector<HTMLElement>('[data-photo-progress]');
+    const closeBtnEl = document.querySelector<HTMLButtonElement>('[data-photo-close]');
+
+    function setHud(target: HTMLElement | null) {
+      if (!hud) return;
+      window.clearTimeout(hudTimer);
+      if (target) {
+        const idx = parseInt(target.dataset.photoIndex || '0', 10);
+        if (progressEl) {
+          progressEl.textContent = `Item ${idx + 1} of ${totalItems}`;
+        }
+        hud.hidden = false;
+        void hud.offsetHeight;
+        requestAnimationFrame(() => {
+          hud.classList.add('is-visible');
+        });
+      } else {
+        hud.classList.remove('is-visible');
+        if (reduced()) {
+          hud.hidden = true;
+        } else {
+          hudTimer = window.setTimeout(() => {
+            if (!hud.classList.contains('is-visible')) hud.hidden = true;
+          }, 290);
+        }
+      }
+    }
+
+    closeBtnEl?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      resetZoom();
+    });
 
     // Instagram Reel overlay player controls
     const reelOverlay = document.getElementById('photo-reel-player');
@@ -1556,6 +1716,7 @@ const SETS = [0, 1];
         best.classList.add('is-active');
         setFrozen(best);
         setWatch(best);
+        setHud(best);
       }
       return best;
     }
@@ -1572,6 +1733,7 @@ const SETS = [0, 1];
 
       const vw = document.documentElement.clientWidth;
       const vh = window.innerHeight;
+      const sizeChanged = Math.abs(vw - openVpW) > 2 || Math.abs(vh - openVpH) > 2;
       const orientationOrWidthChanged = Math.abs(vw - openVpW) > 24 || Math.abs(vh - openVpH) > 120;
 
       if (orientationOrWidthChanged) {
@@ -1587,8 +1749,10 @@ const SETS = [0, 1];
         instantScrollTo(savedScrollY);
       }
 
-      activeTarget = ensureVisibleTarget(activeTarget);
-      focusOn(activeTarget, 0);
+      if (sizeChanged) {
+        activeTarget = ensureVisibleTarget(activeTarget);
+        focusOn(activeTarget, 0);
+      }
     }
 
     let resizeRaf = 0;
@@ -1617,19 +1781,26 @@ const SETS = [0, 1];
       e.preventDefault();
       e.stopPropagation();
 
+      const videoUrl = item.dataset.videoUrl;
+
       if (isZoomed) {
         if (item === activeTarget) {
-          const badge = (e.target as HTMLElement).closest('[data-action="play-reel"]');
-          if (badge && item.dataset.videoUrl) {
-            openReelPlayer(item.dataset.videoUrl);
+          if (videoUrl) {
+            openReelPlayer(videoUrl);
             return;
           }
           resetZoom();
         } else {
           panToElement(item);
+          if (videoUrl) {
+            openReelPlayer(videoUrl);
+          }
         }
       } else {
         zoomToElement(item);
+        if (videoUrl) {
+          openReelPlayer(videoUrl);
+        }
       }
     });
 
@@ -1678,6 +1849,7 @@ const SETS = [0, 1];
       stageWrap.classList.add('is-zoomed');
       photoSection?.classList.add('is-zoomed', 'is-camera');
       setWatch(target);
+      setHud(target);
       focusOn(target, reduced() ? 0 : 600);
     }
 
@@ -1695,7 +1867,46 @@ const SETS = [0, 1];
       activeTarget = newTarget;
       newTarget.classList.add('is-active');
       setWatch(newTarget);
-      focusOn(newTarget, reduced() ? 0 : 650);
+      setHud(newTarget);
+      focusOn(newTarget, reduced() ? 0 : 520);
+    }
+
+    function stepItem(dir: 1 | -1) {
+      if (!isZoomed || isClosing || !activeTarget) return;
+      const visibleItems = Array.from(wall.querySelectorAll<HTMLElement>('.photo-item')).filter(
+        (el) => {
+          const col = el.closest<HTMLElement>('.photo-column');
+          return col ? isColumnDisplayed(col) : false;
+        }
+      );
+      if (!visibleItems.length) return;
+      const indices = Array.from(
+        new Set(
+          visibleItems
+            .map((el) => parseInt(el.dataset.photoIndex || '-1', 10))
+            .filter((n) => n >= 0)
+        )
+      ).sort((a, b) => a - b);
+      if (indices.length <= 1) return;
+      const curIdx = parseInt(activeTarget.dataset.photoIndex || '0', 10);
+      const pos = Math.max(0, indices.indexOf(curIdx));
+      const nextIdx = indices[(pos + dir + indices.length) % indices.length];
+      const candidates = visibleItems.filter(
+        (el) => parseInt(el.dataset.photoIndex || '-1', 10) === nextIdx
+      );
+      if (!candidates.length) return;
+      const centerY = window.innerHeight / 2;
+      let best = candidates[0];
+      let bestDist = Infinity;
+      candidates.forEach((cand) => {
+        const r = cand.getBoundingClientRect();
+        const d = Math.abs(r.top + r.height / 2 - centerY);
+        if (d < bestDist) {
+          bestDist = d;
+          best = cand;
+        }
+      });
+      panToElement(best);
     }
 
     /* Back out from the same photo: the reel stays frozen while clip-path
@@ -1710,11 +1921,17 @@ const SETS = [0, 1];
 
       if (!fromHistory && history.state?.photoZoom) {
         expectPop = true;
+        document.documentElement.dataset.viewPop = '1';
+        window.setTimeout(() => delete document.documentElement.dataset.viewPop, 80);
         history.back();
       }
 
       if (Math.abs(window.scrollY - savedScrollY) > 2) {
         instantScrollTo(savedScrollY);
+      }
+
+      if (stage.style.transition === 'none') {
+        void stage.offsetHeight;
       }
 
       s = 1;
@@ -1726,6 +1943,7 @@ const SETS = [0, 1];
       apply(ms);
       updateStageClip(false, ms);
       setWatch(null);
+      setHud(null);
       if (activeTarget) {
         activeTarget.classList.remove('is-active');
         activeTarget = null;
@@ -1757,12 +1975,29 @@ const SETS = [0, 1];
       else closeTimer = window.setTimeout(finish, ms + 20);
     }
 
-    /* Prevent iOS Safari and desktop wheel from panning the document behind the zoomed stage. */
-    const preventBgScroll = (e: Event) => {
+    /* Prevent iOS Safari and desktop wheel from panning the document behind the zoomed stage,
+       and advance item-by-item on wheel when zoomed so stepping never costs pages of scroll. */
+    const preventBgTouch = (e: Event) => {
       if (isZoomed || isClosing) e.preventDefault();
     };
-    window.addEventListener('touchmove', preventBgScroll, { passive: false });
-    window.addEventListener('wheel', preventBgScroll, { passive: false });
+    const handleZoomWheel = (e: WheelEvent) => {
+      if (!isZoomed && !isClosing) return;
+      e.preventDefault();
+      if (!isZoomed || isClosing || isReelOpen) return;
+      const dy = e.deltaY || 0;
+      if (Math.abs(dy) < 2) return;
+      const now = performance.now();
+      if (now - lastWheelStepAt < 220) return;
+      wheelDeltaAccum += dy;
+      if (Math.abs(wheelDeltaAccum) >= 16) {
+        const dir: 1 | -1 = wheelDeltaAccum > 0 ? 1 : -1;
+        wheelDeltaAccum = 0;
+        lastWheelStepAt = now;
+        stepItem(dir);
+      }
+    };
+    window.addEventListener('touchmove', preventBgTouch, { passive: false });
+    window.addEventListener('wheel', handleZoomWheel, { passive: false });
 
     // Clicking stage background or backdrop when zoomed resets
     stage.addEventListener('click', (e) => {
@@ -1791,7 +2026,7 @@ const SETS = [0, 1];
       resetZoom();
     });
 
-    // ESC key resets
+    // ESC key resets; Arrow keys step between items when zoomed
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         if (isReelOpen) {
@@ -1802,6 +2037,16 @@ const SETS = [0, 1];
         if (isZoomed) {
           e.preventDefault();
           resetZoom();
+        }
+        return;
+      }
+      if (isZoomed && !isClosing && !isReelOpen) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+          e.preventDefault();
+          stepItem(1);
+        } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          stepItem(-1);
         }
       }
     });
@@ -1814,7 +2059,7 @@ const SETS = [0, 1];
         const wasExpected = expectPop;
         expectPop = false;
         document.documentElement.dataset.viewPop = '1';
-        window.setTimeout(() => delete document.documentElement.dataset.viewPop, 0);
+        window.setTimeout(() => delete document.documentElement.dataset.viewPop, 80);
         if (isZoomed) {
           resetZoom(true);
         } else if (wasExpected) {

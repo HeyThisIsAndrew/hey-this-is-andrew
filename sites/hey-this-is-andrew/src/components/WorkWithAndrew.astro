@@ -6,18 +6,34 @@
  */
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
 import ExpandSection from '@andrew/ui/ExpandSection.astro';
-import { SERVICES, SERVICES_LEDE } from '../data/services';
+import {
+  SERVICES,
+  SERVICES_LEDE,
+  SERVICES_CLIENT_BLOCK,
+  PROJECT_INQUIRY_HREF,
+} from '../data/services';
 
 interface Props {
   index?: string;
 }
-const { index = '05' } = Astro.props;
+const { index = '04' } = Astro.props;
 
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 
 const previewItems = SERVICES.slice(0, 3);
 const restItems = SERVICES.slice(3);
+
+const clientSpecs = [
+  { label: 'Starting rate', value: SERVICES_CLIENT_BLOCK.startingRate },
+  { label: 'Turnaround', value: SERVICES_CLIENT_BLOCK.turnaround },
+  { label: 'Deliverables & usage', value: SERVICES_CLIENT_BLOCK.deliverablesAndUsage },
+].filter((row): row is { label: string; value: string } => Boolean(row.value && row.value.trim()));
+
+const clientResults = (SERVICES_CLIENT_BLOCK.results ?? []).filter(
+  (r) => Boolean(r && r.client?.trim() && r.outcome?.trim())
+);
+const hasClientBlock = clientSpecs.length > 0 || clientResults.length > 0;
 ---
 <section id="services" aria-labelledby="services-heading" class="section-hairline work-section">
   <div class="container">
@@ -38,7 +54,7 @@ const restItems = SERVICES.slice(3);
       ))}
     </ul>
     
-    {restItems.length > 0 ? (
+    {restItems.length > 0 && (
       <ExpandSection id="services-expander" expandLabel="Show all services" collapseLabel="Show less">
         <ul class="work-list work-list-extra">
           {restItems.map((s) => (
@@ -48,19 +64,42 @@ const restItems = SERVICES.slice(3);
             </li>
           ))}
         </ul>
-        <div class="reveal">
-          <p class="press-link">
-            Press, media, or project inquiry? <a href={`${base}/about/#press`}>Visit the press kit &rarr;</a>
-          </p>
-        </div>
       </ExpandSection>
-    ) : (
-      <div class="reveal">
-        <p class="press-link">
-          Press, media, or project inquiry? <a href={`${base}/about/#press`}>Visit the press kit &rarr;</a>
-        </p>
+    )}
+
+    {hasClientBlock && (
+      <div class="client-block reveal" data-client-block>
+        {clientSpecs.length > 0 && (
+          <dl class="client-specs">
+            {clientSpecs.map((spec) => (
+              <div class="client-spec-item">
+                <dt class="client-spec-label font-mono">{spec.label}</dt>
+                <dd class="client-spec-value">{spec.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+        {clientResults.length > 0 && (
+          <ul class="client-results">
+            {clientResults.map((res) => (
+              <li class="client-result-item">
+                <strong class="client-result-name">{res.client}</strong>
+                <span class="client-result-outcome">{res.outcome}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     )}
+
+    <div class="work-cta-row reveal">
+      <a class="btn btn-primary" href={PROJECT_INQUIRY_HREF}>
+        Start a project <span aria-hidden="true">&rarr;</span>
+      </a>
+      <p class="press-link">
+        Press or media inquiry? <a href={`${base}/about/#press`}>Visit the press kit &rarr;</a>
+      </p>
+    </div>
   </div>
 </section>
 
@@ -100,8 +139,60 @@ const restItems = SERVICES.slice(3);
     font-size: 0.92rem;
     line-height: 1.6;
   }
+  .client-block {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    display: grid;
+    gap: 1.5rem;
+  }
+  .client-specs {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.25rem;
+  }
+  .client-spec-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.35rem;
+  }
+  .client-spec-value {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--ink);
+  }
+  .client-results {
+    list-style: none;
+    margin: 0;
+    padding: 1.25rem 0 0;
+    border-top: 1px solid var(--line);
+    display: grid;
+    gap: 0.75rem;
+  }
+  .client-result-item {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+  .client-result-outcome {
+    color: var(--muted);
+  }
+  .work-cta-row {
+    margin-top: clamp(1.75rem, 3vw, 2.5rem);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.25rem 2rem;
+  }
   .press-link {
-    margin: 1.5rem 0 0;
+    margin: 0;
     font-family: var(--font-mono);
     font-size: 0.75rem;
     letter-spacing: 0.14em;
