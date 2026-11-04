@@ -111,7 +111,24 @@ const SETS = [0, 1];
                     loading="lazy"
                     decoding="async"
                   />
-                  <span class="photo-tag">{p.location || categoryLabels[p.category] || 'Cocktails'}</span>
+                  <span class="photo-tag">
+                    {p.video && (
+                      <svg class="photo-tag-video-icon" width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    )}
+                    {p.location || categoryLabels[p.category] || 'Cocktails'}
+                  </span>
+                  {p.video && (
+                    <div class="photo-play-badge" data-action="play-reel" aria-hidden="true">
+                      <div class="photo-play-icon-wrap">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </div>
+                      <span class="photo-play-label">Play Reel</span>
+                    </div>
+                  )}
                 </button>
               );
             })}
@@ -125,15 +142,102 @@ const SETS = [0, 1];
     </div><!-- /.photo-stage-wrap -->
   </div><!-- /.photo-grid-container -->
   )}
-  {/* A reel in the elevator is its frame; the film is on Instagram (its
-      files are signed links that expire, so it cannot play here reliably).
-      Zoomed onto a reel, this is its play path. Photos get none. */}
-  <a class="btn btn-primary photo-watch" href="#" target="_blank" rel="noopener" hidden data-photo-watch>
-    Watch video on Instagram
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-      <path d="M2 12L12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
-    </svg>
-  </a>
+  {/* A reel in the elevator is its frame; the film plays via the inline
+      cinematic overlay or directly on Instagram. Zoomed onto a reel,
+      both actions are offered in the bottom dock. Photos get none. */}
+  <div class="photo-actions" data-photo-actions hidden>
+    <button type="button" class="btn btn-primary photo-play-btn" data-photo-play aria-label="Play video reel">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M8 5v14l11-7z" />
+      </svg>
+      <span>Play Video</span>
+    </button>
+    <a class="btn btn-secondary photo-watch" href="#" target="_blank" rel="noopener" data-photo-watch>
+      <span>Watch video on Instagram</span>
+      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <path d="M2 12L12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
+      </svg>
+    </a>
+  </div>
+
+  <!-- Cinematic Instagram Reel Player Overlay (adapted from Be Unconventional HQ) -->
+  <div
+    id="photo-reel-player"
+    class="pro-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Instagram Reel Player"
+    hidden
+    inert
+  >
+    <div class="pro-backdrop" data-pro-close></div>
+    <div class="pro-container">
+      <div class="pro-panel">
+        <button class="pro-close" type="button" aria-label="Close video player" data-pro-close>&times;</button>
+        <div class="pro-stage">
+          <div class="pro-header">
+            <div class="pro-header-left">
+              <div class="pro-header-logo" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                </svg>
+              </div>
+              <div class="pro-header-meta">
+                <a
+                  class="pro-header-handle"
+                  href="https://www.instagram.com/capturecreatecaffeinate/"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  @capturecreatecaffeinate
+                </a>
+                <span class="pro-header-sub">Instagram Reel</span>
+              </div>
+            </div>
+            <a
+              class="pro-header-btn"
+              href="https://www.instagram.com/capturecreatecaffeinate/"
+              target="_blank"
+              rel="noopener"
+            >
+              <span>View Profile</span>
+            </a>
+          </div>
+
+          <div class="pro-loading" role="status" aria-live="polite">
+            <div class="pro-spinner" aria-hidden="true"></div>
+            <span class="pro-loading-text">Loading Reel...</span>
+          </div>
+
+          <div class="pro-error" role="alert" style="display: none;">
+            <p class="pro-error-title">Unable to play video in page</p>
+            <p class="pro-error-desc">Browser or privacy settings may restrict embedded playback.</p>
+            <a class="btn btn-primary pro-error-btn" href="#" target="_blank" rel="noopener">
+              <span>Open on Instagram</span>
+            </a>
+          </div>
+
+          <iframe
+            class="pro-frame"
+            title="Instagram Reel Player"
+            allowtransparency="true"
+            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            allowfullscreen
+            scrolling="no"
+          ></iframe>
+        </div>
+
+        <div class="pro-footer">
+          <a class="pro-footer-link" href="#" target="_blank" rel="noopener">
+            <span>Watch Original on Instagram</span>
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M2 12L12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <p class="photo-note">
     All photographs by Andrew. The cocktails and dishes pictured are the bar's.
@@ -446,33 +550,414 @@ const SETS = [0, 1];
     z-index: 50;
   }
 
-  .photo-watch {
+  /* Bottom actions dock for video reels */
+  .photo-actions {
     position: fixed;
     left: 50%;
     bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
     z-index: 60;
-    background: #080808;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
     white-space: nowrap;
     opacity: 0;
-    transform: translate3d(-50%, 12px, 0);
+    transform: translate3d(-50%, 14px, 0);
     pointer-events: none;
     transition:
       opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-      border-color 0.2s ease,
-      background-color 0.2s ease;
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .photo-watch[hidden] {
+  .photo-actions[hidden] {
     display: none;
   }
-  .photo-watch.is-visible {
+  .photo-actions.is-visible {
     opacity: 1;
     transform: translate3d(-50%, 0, 0);
     pointer-events: auto;
   }
-  .photo-watch.is-visible:hover,
-  .photo-watch.is-visible:focus-visible {
-    transform: translate3d(-50%, -2px, 0);
+
+  /* Play Video CTA */
+  .photo-play-btn {
+    background-color: var(--ink, #ffffff) !important;
+    color: #080808 !important;
+    border: 1px solid var(--ink, #ffffff) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+  }
+  .photo-play-btn:hover,
+  .photo-play-btn:focus-visible {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border-color: #ffffff !important;
+    box-shadow: 0 0 24px rgba(255, 255, 255, 0.45);
+    transform: translateY(-2px);
+  }
+
+  /* Watch on Instagram CTA - fixed hover inversion (never black-on-black!) */
+  .photo-watch {
+    background-color: rgba(10, 10, 10, 0.9) !important;
+    color: var(--ink, #f0f0f0) !important;
+    border: 1px solid rgba(255, 255, 255, 0.28) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    white-space: nowrap;
+    transition:
+      opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.2s ease,
+      background-color 0.2s ease,
+      color 0.2s ease;
+  }
+  .photo-watch:hover,
+  .photo-watch:focus-visible {
+    background-color: var(--ink, #ffffff) !important;
+    color: #080808 !important;
+    border-color: var(--ink, #ffffff) !important;
+    box-shadow: 0 0 24px rgba(255, 255, 255, 0.35);
+    transform: translateY(-2px);
+  }
+
+  @media (max-width: 480px) {
+    .photo-actions {
+      gap: 0.5rem;
+    }
+    .photo-actions .btn {
+      font-size: 0.68rem;
+      padding: 0.5rem 0.85rem;
+      min-height: 40px;
+    }
+  }
+
+  /* Play badge overlay on active zoomed video item */
+  .photo-tag-video-icon {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 0.25rem;
+    opacity: 0.9;
+  }
+
+  .photo-play-badge {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.85);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.65rem 1.25rem;
+    background: rgba(10, 10, 10, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    border-radius: 0;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: #ffffff;
+    font-family: var(--font-display, sans-serif);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    opacity: 0;
+    pointer-events: none;
+    cursor: pointer;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    transition:
+      opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 0.2s ease,
+      box-shadow 0.2s ease,
+      color 0.2s ease;
+    z-index: 6;
+  }
+  .photo-play-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+  }
+  .photo-play-icon-wrap svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+  }
+  .photo-item.is-active .photo-play-badge {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  .photo-item.is-active .photo-play-badge:hover {
+    background-color: var(--ink, #ffffff);
+    color: #080808;
+    border-color: var(--ink, #ffffff);
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.45);
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+
+  /* ── Reel Overlay Player (Adapted from Be Unconventional HQ) ── */
+  .pro-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+    box-sizing: border-box;
+  }
+  .pro-overlay.is-active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  .pro-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.94);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    z-index: -1;
+  }
+  .pro-container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 440px;
+    margin: auto;
+    padding: 3.5rem 1rem 2rem 1rem;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    min-height: min-content;
+  }
+  .pro-panel {
+    position: relative;
+    width: 100%;
+    max-width: 380px;
+    max-height: calc(100dvh - 80px);
+    display: flex;
+    flex-direction: column;
+    background: #0f0f0f;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 0;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.95);
+  }
+  .pro-close {
+    position: absolute;
+    top: -44px;
+    right: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent !important;
+    border: none !important;
+    color: #ffffff;
+    font-size: 2.2rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease, transform 0.25s ease;
+    outline: none !important;
+    z-index: 1010;
+  }
+  .pro-close:hover,
+  .pro-close:focus-visible {
+    color: #ffffff;
+    transform: rotate(90deg) scale(1.1);
+  }
+  .pro-stage {
+    position: relative;
+    width: 100%;
+    flex: 1 1 auto;
+    height: 520px;
+    max-height: calc(100dvh - 160px);
+    background: #000000;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pro-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 54px;
+    box-sizing: border-box;
+    padding: 0 14px;
+    background: #111111;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 10;
+  }
+  .pro-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .pro-header-logo {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    flex-shrink: 0;
+  }
+  .pro-header-logo svg {
+    width: 15px;
+    height: 15px;
+  }
+  .pro-header-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .pro-header-handle {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #ffffff;
+    text-decoration: none;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pro-header-handle:hover {
+    text-decoration: underline;
+  }
+  .pro-header-sub {
+    font-size: 0.68rem;
+    color: #888888;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .pro-header-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: #ffffff;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .pro-header-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: #ffffff;
+  }
+  .pro-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    background: #000000;
+    z-index: 5;
+  }
+  .pro-spinner {
+    width: 28px;
+    height: 28px;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: pro-spin 0.8s linear infinite;
+  }
+  @keyframes pro-spin {
+    to { transform: rotate(360deg); }
+  }
+  .pro-loading-text {
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #888888;
+  }
+  .pro-error {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+    background: #000000;
+    z-index: 6;
+  }
+  .pro-error-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0 0 0.5rem;
+  }
+  .pro-error-desc {
+    font-size: 0.8rem;
+    color: #888888;
+    margin: 0 0 1.25rem;
+    max-width: 260px;
+    line-height: 1.4;
+  }
+  .pro-frame {
+    width: 100%;
+    height: 520px;
+    max-height: calc(100dvh - 160px);
+    border: 0;
+    background: #000000;
+    display: block;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .pro-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.85rem 1rem;
+    background: #0a0a0a;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .pro-footer-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #ffffff;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+  .pro-footer-link:hover {
+    color: var(--ink, #ffffff);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   .photo-zoom-backdrop {
@@ -577,7 +1062,9 @@ const SETS = [0, 1];
   @media (prefers-reduced-motion: reduce) {
     .camera-stage,
     .photo-stage-wrap,
+    .photo-actions,
     .photo-watch,
+    .photo-play-badge,
     .photo-intro,
     .photo-note {
       transition-duration: 0.01ms !important;
@@ -907,30 +1394,131 @@ const SETS = [0, 1];
       updateStageClip(true, ms);
     }
 
+    // Instagram Reel overlay player controls
+    const reelOverlay = document.getElementById('photo-reel-player');
+    const reelFrame = reelOverlay?.querySelector<HTMLIFrameElement>('.pro-frame');
+    const reelLoader = reelOverlay?.querySelector<HTMLElement>('.pro-loading');
+    const reelError = reelOverlay?.querySelector<HTMLElement>('.pro-error');
+    const reelFooterLink = reelOverlay?.querySelector<HTMLAnchorElement>('.pro-footer-link');
+    const reelErrorBtn = reelOverlay?.querySelector<HTMLAnchorElement>('.pro-error-btn');
+    let reelTimeout = 0;
+    let isReelOpen = false;
+
+    function getInstagramId(url: string): string | null {
+      const m = url.match(/\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
+      return m ? m[1] : null;
+    }
+
+    function openReelPlayer(url: string) {
+      if (!reelOverlay || !reelFrame) return;
+      const id = getInstagramId(url);
+      if (!id) {
+        window.open(url, '_blank', 'noopener');
+        return;
+      }
+      isReelOpen = true;
+      const embedSrc = `https://www.instagram.com/p/${encodeURIComponent(id)}/embed/`;
+
+      if (reelFooterLink) reelFooterLink.href = url;
+      if (reelErrorBtn) reelErrorBtn.href = url;
+      if (reelLoader) reelLoader.style.display = 'flex';
+      if (reelError) reelError.style.display = 'none';
+      reelFrame.style.opacity = '0';
+      reelFrame.style.display = 'block';
+      reelFrame.src = embedSrc;
+
+      reelOverlay.removeAttribute('hidden');
+      reelOverlay.removeAttribute('inert');
+      void reelOverlay.offsetHeight;
+      reelOverlay.classList.add('is-active');
+      document.body.classList.add('pro-overlay-open');
+
+      window.clearTimeout(reelTimeout);
+      reelTimeout = window.setTimeout(() => {
+        if (reelLoader && reelLoader.style.display !== 'none' && (!reelFrame.style.opacity || reelFrame.style.opacity === '0')) {
+          if (reelLoader) reelLoader.style.display = 'none';
+          if (reelFrame) reelFrame.style.display = 'none';
+          if (reelError) reelError.style.display = 'flex';
+        }
+      }, 7000);
+
+      const closeBtn = reelOverlay.querySelector<HTMLButtonElement>('.pro-close');
+      setTimeout(() => closeBtn?.focus(), 60);
+    }
+
+    function closeReelPlayer() {
+      if (!reelOverlay || !isReelOpen) return;
+      isReelOpen = false;
+      window.clearTimeout(reelTimeout);
+      if (reelFrame) {
+        reelFrame.src = 'about:blank';
+        reelFrame.style.opacity = '0';
+      }
+      reelOverlay.classList.remove('is-active');
+      reelOverlay.setAttribute('hidden', '');
+      reelOverlay.setAttribute('inert', '');
+      document.body.classList.remove('pro-overlay-open');
+
+      const playBtn = document.querySelector<HTMLButtonElement>('[data-photo-play]');
+      if (playBtn && !playBtn.hidden) playBtn.focus();
+    }
+
+    if (reelFrame) {
+      reelFrame.addEventListener('load', () => {
+        setTimeout(() => {
+          if (reelLoader) reelLoader.style.display = 'none';
+          reelFrame.style.opacity = '1';
+        }, 120);
+      });
+      reelFrame.addEventListener('error', () => {
+        if (reelLoader) reelLoader.style.display = 'none';
+        if (reelFrame) reelFrame.style.display = 'none';
+        if (reelError) reelError.style.display = 'flex';
+      });
+    }
+
+    reelOverlay?.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('[data-pro-close]')) {
+        e.preventDefault();
+        closeReelPlayer();
+      }
+    });
+
     // The play path of a zoomed reel; nothing for a photo.
+    const actions = document.querySelector<HTMLElement>('[data-photo-actions]');
     const watch = document.querySelector<HTMLAnchorElement>('[data-photo-watch]');
+    const playBtn = document.querySelector<HTMLButtonElement>('[data-photo-play]');
+    let currentVideoUrl: string | null = null;
+
     function setWatch(target: HTMLElement | null) {
-      if (!watch) return;
+      if (!actions) return;
       window.clearTimeout(watchTimer);
       const url = target?.dataset.videoUrl;
+      currentVideoUrl = url || null;
       if (url) {
-        watch.href = url;
-        watch.hidden = false;
-        void watch.offsetHeight;
+        if (watch) watch.href = url;
+        actions.hidden = false;
+        void actions.offsetHeight;
         requestAnimationFrame(() => {
-          watch.classList.add('is-visible');
+          actions.classList.add('is-visible');
         });
       } else {
-        watch.classList.remove('is-visible');
+        actions.classList.remove('is-visible');
         if (reduced()) {
-          watch.hidden = true;
+          actions.hidden = true;
         } else {
           watchTimer = window.setTimeout(() => {
-            if (!watch.classList.contains('is-visible')) watch.hidden = true;
+            if (!actions.classList.contains('is-visible')) actions.hidden = true;
           }, 290);
         }
       }
     }
+
+    playBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (currentVideoUrl) openReelPlayer(currentVideoUrl);
+    });
 
     function setFrozen(target: HTMLElement | null) {
       const column = target?.closest<HTMLElement>('.photo-column') ?? null;
@@ -1030,8 +1618,16 @@ const SETS = [0, 1];
       e.stopPropagation();
 
       if (isZoomed) {
-        if (item === activeTarget) resetZoom();
-        else panToElement(item);
+        if (item === activeTarget) {
+          const badge = (e.target as HTMLElement).closest('[data-action="play-reel"]');
+          if (badge && item.dataset.videoUrl) {
+            openReelPlayer(item.dataset.videoUrl);
+            return;
+          }
+          resetZoom();
+        } else {
+          panToElement(item);
+        }
       } else {
         zoomToElement(item);
       }
@@ -1068,6 +1664,7 @@ const SETS = [0, 1];
       document.body.style.overflow = 'hidden';
       const gutter = Math.max(0, document.documentElement.clientWidth - clientWBefore);
       if (gutter > 0) document.body.style.paddingRight = `${gutter}px`;
+      document.documentElement.classList.remove('photo-zoom-closing');
       document.documentElement.classList.add('photo-zoom-open');
 
       if (!history.state?.photoZoom) {
@@ -1106,8 +1703,10 @@ const SETS = [0, 1];
        camera transform, so nothing pops or re-crops when the return lands. */
     function resetZoom(fromHistory = false) {
       if (!isZoomed || isClosing) return;
+      if (isReelOpen) closeReelPlayer();
       isZoomed = false;
       isClosing = true;
+      document.documentElement.classList.add('photo-zoom-closing');
 
       if (!fromHistory && history.state?.photoZoom) {
         expectPop = true;
@@ -1144,7 +1743,7 @@ const SETS = [0, 1];
         photoSection?.classList.remove('is-camera');
         document.body.style.overflow = '';
         document.body.style.paddingRight = '';
-        document.documentElement.classList.remove('photo-zoom-open');
+        document.documentElement.classList.remove('photo-zoom-open', 'photo-zoom-closing');
         if ('scrollRestoration' in history) {
           history.scrollRestoration = prevScrollRestoration;
         }
@@ -1194,9 +1793,16 @@ const SETS = [0, 1];
 
     // ESC key resets
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && isZoomed) {
-        e.preventDefault();
-        resetZoom();
+      if (e.key === 'Escape') {
+        if (isReelOpen) {
+          e.preventDefault();
+          closeReelPlayer();
+          return;
+        }
+        if (isZoomed) {
+          e.preventDefault();
+          resetZoom();
+        }
       }
     });
 
