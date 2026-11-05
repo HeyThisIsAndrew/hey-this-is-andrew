@@ -46,6 +46,10 @@ export interface InstagramPhoto {
   event?: string;
   timestamp: string;
   orientation: 'vertical' | 'horizontal' | 'square';
+  /** A reel's self-hosted file (public URL), when the sync downloaded one. */
+  videoSrc?: string;
+  /** The sync found the post gone from the account: show it as a photo. */
+  removed?: boolean;
 }
 
 // In-memory cache for process lifetime
@@ -202,6 +206,18 @@ function localImageFor(localImage: string): ImageMetadata | null {
   return hit ? hit[1].default : null;
 }
 
+/**
+ * A reel's file, written to public/reels/ by scripts/sync-instagram.mjs at
+ * deploy time (never committed). Returned only when the file is really there.
+ */
+function localVideoFor(localVideo: unknown): string | undefined {
+  if (typeof localVideo !== 'string' || !localVideo) return undefined;
+  const rel = localVideo.replace(/^\/+/, '');
+  if (!fs.existsSync(path.resolve(process.cwd(), 'public', rel))) return undefined;
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+  return `${base}/${rel}`;
+}
+
 export async function getInstagramPhotos(limit = 32): Promise<InstagramPhoto[]> {
   const now = Date.now();
   if (memoryPhotosCache && now - memoryPhotosCache.timestamp < CACHE_TTL_MS) {
@@ -241,6 +257,8 @@ export async function getInstagramPhotos(limit = 32): Promise<InstagramPhoto[]> 
       event: p.event || meta.event,
       timestamp: p.timestamp,
       orientation: p.orientation || 'vertical',
+      videoSrc: localVideoFor(p.localVideo),
+      removed: p.removedFromInstagram === true,
     });
   }
   if (skipped) {

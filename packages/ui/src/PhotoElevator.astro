@@ -26,8 +26,10 @@ interface DisplayPhoto {
   event?: string;
   permalink?: string;
   duration?: string;
-  /** An Instagram reel: its frame shows here, the film plays inline or on Instagram. */
+  /** An Instagram reel: its frame shows here; it plays in the zoomed view. */
   video: boolean;
+  /** The reel as a self-hosted file (public URL), when the sync has one. */
+  videoSrc?: string;
 }
 
 
@@ -100,9 +102,10 @@ const SETS = [0, 1];
                   data-camera-zoom
                   data-photo-index={pi}
                   data-video-url={p.video ? p.permalink : undefined}
+                  data-video-src={p.video && p.videoSrc ? p.videoSrc : undefined}
                   tabindex={set === 1 ? -1 : undefined}
                   style={`aspect-ratio: ${p.image.width} / ${p.image.height}`}
-                  aria-label={p.video ? `View video: ${p.caption}` : `View photo: ${p.caption}`}
+                  aria-label={p.video ? `Open video: ${p.caption}` : `View photo: ${p.caption}`}
                 >
                   <Image
                     src={p.image}
@@ -128,7 +131,7 @@ const SETS = [0, 1];
                           <path d="M8 5v14l11-7z" />
                         </svg>
                       </div>
-                      <span class="photo-play-label">Play Video</span>
+                      <span class="photo-play-label">Video</span>
                       {p.duration && <span class="photo-play-duration">{p.duration}</span>}
                     </div>
                   )}
@@ -158,9 +161,8 @@ const SETS = [0, 1];
       </svg>
     </button>
   </div>
-  {/* A reel in the elevator is its frame; the film plays via the inline
-      cinematic overlay or directly on Instagram. Zoomed onto a reel,
-      both actions are offered in the bottom dock. Photos get none. */}
+  {/* Zoomed onto a reel, the dock offers Play (in place) and the way out
+      to Instagram. Photos get none. */}
   <div class="photo-actions" data-photo-actions hidden>
     <button type="button" class="btn btn-primary photo-play-btn" data-photo-play aria-label="Play video reel">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -176,83 +178,20 @@ const SETS = [0, 1];
     </a>
   </div>
 
-  <!-- Cinematic Instagram Reel Player Overlay (adapted from Be Unconventional HQ) -->
-  <div
-    id="photo-reel-player"
-    class="pro-overlay"
-    role="dialog"
-    aria-modal="true"
-    aria-label="Instagram Reel Player"
-    hidden
-    inert
-  >
-    <div class="pro-backdrop" data-pro-close></div>
-    <div class="pro-container">
-      <div class="pro-panel">
-        <button class="pro-close" type="button" aria-label="Close video player" data-pro-close>&times;</button>
-        <div class="pro-stage">
-          <div class="pro-header">
-            <div class="pro-header-left">
-              <div class="pro-header-logo" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                </svg>
-              </div>
-              <div class="pro-header-meta">
-                <a
-                  class="pro-header-handle"
-                  href="https://www.instagram.com/capturecreatecaffeinate/"
-                  target="_blank"
-                  rel="noopener"
-                >
-                  @capturecreatecaffeinate
-                </a>
-                <span class="pro-header-sub">Instagram Reel</span>
-              </div>
-            </div>
-            <a
-              class="pro-header-btn"
-              href="https://www.instagram.com/capturecreatecaffeinate/"
-              target="_blank"
-              rel="noopener"
-            >
-              <span>View Profile</span>
-            </a>
-          </div>
-
-          <div class="pro-loading" role="status" aria-live="polite">
-            <div class="pro-spinner" aria-hidden="true"></div>
-            <span class="pro-loading-text">Loading Reel...</span>
-          </div>
-
-          <div class="pro-error" role="alert" style="display: none;">
-            <p class="pro-error-title">Unable to play video in page</p>
-            <p class="pro-error-desc">Browser or privacy settings may restrict embedded playback.</p>
-            <a class="btn btn-primary pro-error-btn" href="#" target="_blank" rel="noopener">
-              <span>Open on Instagram</span>
-            </a>
-          </div>
-
-          <iframe
-            class="pro-frame"
-            title="Instagram Reel Player"
-            allowtransparency="true"
-            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-            allowfullscreen
-            scrolling="no"
-          ></iframe>
-        </div>
-
-        <div class="pro-footer">
-          <a class="pro-footer-link" href="#" target="_blank" rel="noopener">
-            <span>Watch Original on Instagram</span>
-            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path d="M2 12L12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
-            </svg>
-          </a>
-        </div>
-      </div>
-    </div>
+  {/* The in-place player. A video tile zooms into the elevator view like
+      a photo; only there, from the dock's Play button or a second tap on
+      the zoomed tile, does it play, laid exactly over the zoomed tile.
+      Self-hosted file first (data-video-src, downloaded by the deploy's
+      Instagram sync); the Instagram embed only when there is no file. The
+      dock's "Watch on Instagram" link is always there as the way out. */}
+  <div class="photo-player" data-photo-player hidden>
+    <button type="button" class="photo-player-close" data-photo-player-close aria-label="Stop video">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+    <div class="photo-player-media" data-photo-player-media></div>
   </div>
 
   <p class="photo-note">
@@ -783,273 +722,54 @@ const SETS = [0, 1];
     transform: translate(-50%, -50%) scale(1.05);
   }
 
-  /* ── Reel Overlay Player (Adapted from Be Unconventional HQ) ── */
-  .pro-overlay {
+  /* ── In-place player: laid over the zoomed tile (moved to <body> by the
+     script so no transformed ancestor can trap it) ── */
+  :global(.photo-player) {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
+    z-index: 58;
+    background: #000;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.85);
     opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity 0.25s ease, visibility 0.25s ease;
-    box-sizing: border-box;
+    transition: opacity 0.25s ease;
   }
-  .pro-overlay.is-active {
+  :global(.photo-player[hidden]) {
+    display: none;
+  }
+  :global(.photo-player.is-visible) {
     opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
   }
-  .pro-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.94);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    z-index: -1;
-  }
-  .pro-container {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    max-width: 440px;
-    margin: auto;
-    padding: 3.5rem 1rem 2rem 1rem;
-    box-sizing: border-box;
-    display: flex;
-    justify-content: center;
-    min-height: min-content;
-  }
-  .pro-panel {
-    position: relative;
-    width: 100%;
-    max-width: 380px;
-    max-height: calc(100dvh - 80px);
-    display: flex;
-    flex-direction: column;
-    background: #0f0f0f;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 0;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.95);
-  }
-  .pro-close {
-    position: absolute;
-    top: -46px;
-    right: 0;
-    -webkit-appearance: none;
-    appearance: none;
-    background: transparent !important;
-    border: none !important;
-    color: #ffffff;
-    font-size: 2.2rem;
-    line-height: 1;
-    cursor: pointer;
-    padding: 0;
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.2s ease, transform 0.25s ease;
-    outline: none !important;
-    z-index: 1010;
-  }
-  .pro-close:hover,
-  .pro-close:focus-visible {
-    color: #ffffff;
-    transform: rotate(90deg) scale(1.1);
-  }
-  .pro-stage {
-    position: relative;
-    width: 100%;
-    flex: 1 1 auto;
-    height: 520px;
-    max-height: calc(100dvh - 160px);
-    background: #000000;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .pro-header {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 54px;
-    box-sizing: border-box;
-    padding: 0 14px;
-    background: #111111;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    z-index: 10;
-  }
-  .pro-header-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-  }
-  .pro-header-logo {
-    width: 28px;
-    height: 28px;
-    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #ffffff;
-    flex-shrink: 0;
-  }
-  .pro-header-logo svg {
-    width: 15px;
-    height: 15px;
-  }
-  .pro-header-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    min-width: 0;
-  }
-  .pro-header-handle {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #ffffff;
-    text-decoration: none;
-    line-height: 1.1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .pro-header-handle:hover {
-    text-decoration: underline;
-  }
-  .pro-header-sub {
-    font-size: 0.68rem;
-    color: #888888;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .pro-header-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 5px 12px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    color: #ffffff;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-decoration: none;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    white-space: nowrap;
-    transition: background 0.2s ease, border-color 0.2s ease;
-  }
-  .pro-header-btn:hover {
-    background: rgba(255, 255, 255, 0.16);
-    border-color: #ffffff;
-  }
-  .pro-loading {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    background: #000000;
-    z-index: 5;
-  }
-  .pro-spinner {
-    width: 28px;
-    height: 28px;
-    border: 2px solid rgba(255, 255, 255, 0.15);
-    border-top-color: #ffffff;
-    border-radius: 50%;
-    animation: pro-spin 0.8s linear infinite;
-  }
-  @keyframes pro-spin {
-    to { transform: rotate(360deg); }
-  }
-  .pro-loading-text {
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #888888;
-  }
-  .pro-error {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
-    text-align: center;
-    background: #000000;
-    z-index: 6;
-  }
-  .pro-error-title {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #ffffff;
-    margin: 0 0 0.5rem;
-  }
-  .pro-error-desc {
-    font-size: 0.8rem;
-    color: #888888;
-    margin: 0 0 1.25rem;
-    max-width: 260px;
-    line-height: 1.4;
-  }
-  .pro-frame {
-    width: 100%;
-    height: 520px;
-    max-height: calc(100dvh - 160px);
-    border: 0;
-    background: #000000;
+  :global(.photo-player-media),
+  :global(.photo-player-media video),
+  :global(.photo-player-media iframe) {
     display: block;
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #000;
   }
-  .pro-footer {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.85rem 1rem;
-    background: #0a0a0a;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  :global(.photo-player-media video) {
+    object-fit: contain;
   }
-  .pro-footer-link {
+  :global(.photo-player-close) {
+    position: absolute;
+    top: -14px;
+    right: -14px;
+    z-index: 2;
+    width: 36px;
+    height: 36px;
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #ffffff;
-    text-decoration: none;
-    transition: color 0.2s ease;
+    justify-content: center;
+    border-radius: 50%;
+    background: #fff;
+    color: #000;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   }
-  .pro-footer-link:hover {
-    color: var(--ink, #ffffff);
-    text-decoration: underline;
-    text-underline-offset: 3px;
+  :global(.photo-player-close:focus-visible) {
+    outline: 2px solid #fff;
+    outline-offset: 3px;
   }
 
   .photo-zoom-backdrop {
@@ -1556,94 +1276,118 @@ const SETS = [0, 1];
       resetZoom();
     });
 
-    // Instagram Reel overlay player controls
-    const reelOverlay = document.getElementById('photo-reel-player');
-    const reelFrame = reelOverlay?.querySelector<HTMLIFrameElement>('.pro-frame');
-    const reelLoader = reelOverlay?.querySelector<HTMLElement>('.pro-loading');
-    const reelError = reelOverlay?.querySelector<HTMLElement>('.pro-error');
-    const reelFooterLink = reelOverlay?.querySelector<HTMLAnchorElement>('.pro-footer-link');
-    const reelErrorBtn = reelOverlay?.querySelector<HTMLAnchorElement>('.pro-error-btn');
-    let reelTimeout = 0;
+    // In-place player (see the markup note). It lives on <body> so no
+    // transformed or clipped ancestor can trap or cut it.
+    const player = document.querySelector<HTMLElement>('[data-photo-player]');
+    const playerMedia = player?.querySelector<HTMLElement>('[data-photo-player-media]') ?? null;
+    if (player && player.parentElement !== document.body) document.body.appendChild(player);
     let isReelOpen = false;
+    let playingTarget: HTMLElement | null = null;
+    let placeTimer = 0;
 
     function getInstagramId(url: string): string | null {
       const m = url.match(/\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
       return m ? m[1] : null;
     }
 
-    function openReelPlayer(url: string) {
-      if (!reelOverlay || !reelFrame) return;
-      const id = getInstagramId(url);
-      if (!id) {
-        window.open(url, '_blank', 'noopener');
-        return;
+    /* Exactly over the zoomed tile. The Instagram embed carries its own
+       header and caption and will not render under 326px wide, so it gets
+       the room it needs, centred on the tile, inside the viewport. */
+    function placePlayer() {
+      if (!player || !playingTarget || player.hidden) return;
+      const r = playingTarget.getBoundingClientRect();
+      const vw = document.documentElement.clientWidth;
+      const vh = window.innerHeight;
+      const top = navBottom();
+      const dock = 84;
+      let w = r.width;
+      let h = r.height;
+      if (player.dataset.kind === 'embed') {
+        w = Math.max(w, 328);
+        h = Math.max(h, w * (16 / 9) + 210);
       }
-      isReelOpen = true;
-      const embedSrc = `https://www.instagram.com/p/${encodeURIComponent(id)}/embed/`;
-
-      if (reelFooterLink) reelFooterLink.href = url;
-      if (reelErrorBtn) reelErrorBtn.href = url;
-      if (reelLoader) reelLoader.style.display = 'flex';
-      if (reelError) reelError.style.display = 'none';
-      reelFrame.style.opacity = '0';
-      reelFrame.style.display = 'block';
-      reelFrame.src = embedSrc;
-
-      reelOverlay.removeAttribute('hidden');
-      reelOverlay.removeAttribute('inert');
-      void reelOverlay.offsetHeight;
-      reelOverlay.classList.add('is-active');
-      document.body.classList.add('pro-overlay-open');
-
-      window.clearTimeout(reelTimeout);
-      reelTimeout = window.setTimeout(() => {
-        if (reelLoader && reelLoader.style.display !== 'none' && (!reelFrame.style.opacity || reelFrame.style.opacity === '0')) {
-          if (reelLoader) reelLoader.style.display = 'none';
-          if (reelFrame) reelFrame.style.display = 'none';
-          if (reelError) reelError.style.display = 'flex';
-        }
-      }, 7000);
-
-      const closeBtn = reelOverlay.querySelector<HTMLButtonElement>('.pro-close');
-      setTimeout(() => closeBtn?.focus(), 60);
+      const maxH = Math.max(200, vh - top - dock - 12);
+      if (h > maxH) {
+        if (player.dataset.kind === 'file') w *= maxH / h;
+        h = maxH;
+      }
+      w = Math.min(w, vw - 24);
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const left = Math.min(Math.max(12, cx - w / 2), vw - 12 - w);
+      const topPx = Math.min(Math.max(top + 6, cy - h / 2), vh - dock - h);
+      player.style.left = `${Math.round(left)}px`;
+      player.style.top = `${Math.round(topPx)}px`;
+      player.style.width = `${Math.round(w)}px`;
+      player.style.height = `${Math.round(h)}px`;
     }
 
-    function closeReelPlayer() {
-      if (!reelOverlay || !isReelOpen) return;
+    function stopPlayer(restoreFocus = false) {
+      if (!player || !isReelOpen) return;
       isReelOpen = false;
-      window.clearTimeout(reelTimeout);
-      if (reelFrame) {
-        reelFrame.src = 'about:blank';
-        reelFrame.style.opacity = '0';
+      playingTarget = null;
+      window.clearTimeout(placeTimer);
+      const v = playerMedia?.querySelector('video');
+      if (v) {
+        v.pause();
+        v.removeAttribute('src');
+        v.load();
       }
-      reelOverlay.classList.remove('is-active');
-      reelOverlay.setAttribute('hidden', '');
-      reelOverlay.setAttribute('inert', '');
-      document.body.classList.remove('pro-overlay-open');
-
-      const playBtn = document.querySelector<HTMLButtonElement>('[data-photo-play]');
-      if (playBtn && !playBtn.hidden) playBtn.focus();
+      const f = playerMedia?.querySelector('iframe');
+      if (f) f.src = 'about:blank';
+      if (playerMedia) playerMedia.textContent = '';
+      player.classList.remove('is-visible');
+      player.hidden = true;
+      delete player.dataset.kind;
+      if (restoreFocus) document.querySelector<HTMLButtonElement>('[data-photo-play]')?.focus({ preventScroll: true });
     }
 
-    if (reelFrame) {
-      reelFrame.addEventListener('load', () => {
-        setTimeout(() => {
-          if (reelLoader) reelLoader.style.display = 'none';
-          reelFrame.style.opacity = '1';
-        }, 120);
-      });
-      reelFrame.addEventListener('error', () => {
-        if (reelLoader) reelLoader.style.display = 'none';
-        if (reelFrame) reelFrame.style.display = 'none';
-        if (reelError) reelError.style.display = 'flex';
-      });
+    function playInPlace(target: HTMLElement) {
+      if (!player || !playerMedia || !isZoomed) return;
+      const src = target.dataset.videoSrc;
+      const url = target.dataset.videoUrl;
+      if (!src && !url) return;
+      stopPlayer();
+      if (src) {
+        player.dataset.kind = 'file';
+        const v = document.createElement('video');
+        v.src = src;
+        v.controls = true;
+        v.playsInline = true;
+        v.setAttribute('playsinline', '');
+        v.preload = 'auto';
+        const poster = target.querySelector('img')?.currentSrc;
+        if (poster) v.poster = poster;
+        playerMedia.appendChild(v);
+        // Started inside the reader's own click, so it may play with sound.
+        // If a browser still refuses, the controls are there: one more tap.
+        v.play()?.catch(() => {});
+      } else {
+        const id = url ? getInstagramId(url) : null;
+        if (!id) return;
+        player.dataset.kind = 'embed';
+        const f = document.createElement('iframe');
+        f.title = 'Instagram video';
+        f.allow = 'autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen';
+        f.setAttribute('allowfullscreen', '');
+        f.src = `https://www.instagram.com/reel/${encodeURIComponent(id)}/embed/`;
+        playerMedia.appendChild(f);
+      }
+      playingTarget = target;
+      isReelOpen = true;
+      player.hidden = false;
+      placePlayer();
+      requestAnimationFrame(() => player.classList.add('is-visible'));
+      // Re-place once the camera has finished moving onto the tile.
+      window.clearTimeout(placeTimer);
+      placeTimer = window.setTimeout(placePlayer, 650);
+      player.querySelector<HTMLButtonElement>('[data-photo-player-close]')?.focus({ preventScroll: true });
     }
 
-    reelOverlay?.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).closest('[data-pro-close]')) {
-        e.preventDefault();
-        closeReelPlayer();
-      }
+    player?.querySelector('[data-photo-player-close]')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      stopPlayer(true);
     });
 
     // The play path of a zoomed reel; nothing for a photo.
@@ -1679,7 +1423,7 @@ const SETS = [0, 1];
     playBtn?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (currentVideoUrl) openReelPlayer(currentVideoUrl);
+      if (currentVideoUrl && activeTarget) playInPlace(activeTarget);
     });
 
     function setFrozen(target: HTMLElement | null) {
@@ -1766,6 +1510,8 @@ const SETS = [0, 1];
       window.clearTimeout(settleTimer2);
       resizeRaf = requestAnimationFrame(() => {
         handleViewportChange();
+        window.clearTimeout(placeTimer);
+        placeTimer = window.setTimeout(placePlayer, 320);
         settleTimer1 = window.setTimeout(handleViewportChange, 120);
         settleTimer2 = window.setTimeout(handleViewportChange, 280);
       });
@@ -1783,15 +1529,16 @@ const SETS = [0, 1];
       e.preventDefault();
       e.stopPropagation();
 
-      const videoUrl = item.dataset.videoUrl;
-
-      if (videoUrl) {
-        openReelPlayer(videoUrl);
-        return;
-      }
+      // A video zooms in exactly like a photo; it never plays from the
+      // wall. Zoomed onto it, a second tap plays it in place.
+      const isVideo = Boolean(item.dataset.videoUrl || item.dataset.videoSrc);
 
       if (isZoomed) {
         if (item === activeTarget) {
+          if (isVideo) {
+            if (!isReelOpen) playInPlace(item);
+            return;
+          }
           resetZoom();
         } else {
           panToElement(item);
@@ -1859,6 +1606,7 @@ const SETS = [0, 1];
         resetZoom();
         return;
       }
+      stopPlayer();
       setFrozen(newTarget);
       activeTarget?.classList.remove('is-active');
       activeTarget = newTarget;
@@ -1911,7 +1659,7 @@ const SETS = [0, 1];
        camera transform, so nothing pops or re-crops when the return lands. */
     function resetZoom(fromHistory = false) {
       if (!isZoomed || isClosing) return;
-      if (isReelOpen) closeReelPlayer();
+      stopPlayer();
       isZoomed = false;
       isClosing = true;
       document.documentElement.classList.add('photo-zoom-closing');
@@ -1975,6 +1723,8 @@ const SETS = [0, 1];
     /* Prevent iOS Safari and desktop wheel from panning the document behind the zoomed stage,
        and advance item-by-item on wheel when zoomed so stepping never costs pages of scroll. */
     const preventBgTouch = (e: Event) => {
+      // The player's own controls (scrubbing, volume) need their touches.
+      if (player && e.target instanceof Node && player.contains(e.target)) return;
       if (isZoomed || isClosing) e.preventDefault();
     };
     const handleZoomWheel = (e: WheelEvent) => {
@@ -2028,7 +1778,7 @@ const SETS = [0, 1];
       if (e.key === 'Escape') {
         if (isReelOpen) {
           e.preventDefault();
-          closeReelPlayer();
+          stopPlayer(true);
           return;
         }
         if (isZoomed) {

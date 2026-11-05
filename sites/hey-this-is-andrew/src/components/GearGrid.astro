@@ -232,7 +232,7 @@ const stateOf = (i: number, n: number) =>
                           <img
                             class="card-img"
                             src={it.src}
-                            alt={it.name}
+                            alt=""
                             loading={secIdx === 0 && i < 3 ? 'eager' : 'lazy'}
                             decoding="async"
                             draggable="false"
@@ -349,7 +349,7 @@ const stateOf = (i: number, n: number) =>
                     <article class="all-grid-card" data-search={it.search}>
                       <div class="all-card-img-wrap">
                         {it.src ? (
-                          <img src={it.src} alt={it.name} class="all-card-img" loading="lazy" decoding="async" />
+                          <img src={it.src} alt="" class="all-card-img" loading="lazy" decoding="async" />
                         ) : (
                           <span class="all-card-type" role="img" aria-label={it.name}>{it.short}</span>
                         )}
@@ -499,9 +499,11 @@ const stateOf = (i: number, n: number) =>
     position: relative;
     background: #080808;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    /* The site's global `section` padding would open a dead band above
+       every header. The page's scroll-padding-top already clears the
+       stuck nav, so no scroll margin here either. */
+    padding: 0;
     transition: border-color 0.3s ease;
-    /* The stuck nav must never cover the header or the hero under it. */
-    scroll-margin-top: calc(var(--gear-nav-h, 88px) + 12px);
   }
   .gear-accordion-section.is-expanded {
     border-color: rgba(255, 255, 255, 0.24);
@@ -663,7 +665,7 @@ const stateOf = (i: number, n: number) =>
     position: absolute;
     inset: 0;
     background-image:
-      radial-gradient(ellipse 45% 55% at 38% 50%, rgba(var(--glow), 0.55), rgba(var(--glow), 0) 70%),
+      radial-gradient(ellipse 48% 58% at 38% 50%, rgba(var(--glow), 0.62), rgba(var(--glow), 0) 72%),
       var(--glow-img, none);
     background-size: cover, 60% auto;
     background-position: center, 38% 50%;
@@ -673,7 +675,10 @@ const stateOf = (i: number, n: number) =>
     transition: opacity 0.9s ease;
   }
   .deck-glow-layer.active {
-    opacity: 0.75;
+    opacity: 0.9;
+  }
+  .gear-monolith :is(button, a) {
+    -webkit-tap-highlight-color: transparent;
   }
 
   .deck-stage {
@@ -1239,7 +1244,7 @@ const stateOf = (i: number, n: number) =>
       display: none;
     }
     .gear-deck {
-      --card-w: 82%;
+      --card-w: 86%;
       --stage-h: clamp(560px, 76svh, 680px);
       padding: 1.25rem 0.75rem 1rem;
     }
@@ -1293,9 +1298,17 @@ const stateOf = (i: number, n: number) =>
 
   /* Phones on their side: picture beside the words, deck fits the screen. */
   @media (max-height: 500px) and (orientation: landscape) {
+    .gear-accordion-header {
+      padding-top: 0.7rem;
+      padding-bottom: 0.7rem;
+    }
+    .box-subtitle {
+      display: none;
+    }
     .gear-deck {
       --card-w: 82%;
-      --stage-h: max(260px, calc(100svh - var(--gear-nav-h, 64px) - 24px));
+      --stage-h: max(260px, calc(100svh - var(--gear-nav-h, 64px) - 20px));
+      padding-top: 0.75rem;
     }
     .deck-card {
       grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
@@ -1344,9 +1357,6 @@ const stateOf = (i: number, n: number) =>
 
 <script>
   (() => {
-    const STOREFRONT_FALLBACK = '';
-    void STOREFRONT_FALLBACK;
-
     function setNavHeight() {
       const nav = document.querySelector<HTMLElement>('.site-nav');
       const h = nav ? Math.round(nav.getBoundingClientRect().height) : 0;
@@ -1375,13 +1385,23 @@ const stateOf = (i: number, n: number) =>
         sections.forEach((s) => setOpen(s, open && s === section));
         if (open) {
           decks.get(section)?.refresh();
-          // The header must stay in view under the stuck nav: collapsing a
-          // tall section above it would otherwise leave it off screen.
-          const top = section.getBoundingClientRect().top;
-          const navH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gear-nav-h')) || 88;
-          if (top < navH || top > window.innerHeight * 0.6) {
-            section.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-          }
+          // Keep what was opened in view under the stuck nav: collapsing a
+          // tall section above it would otherwise leave it off screen. On a
+          // short screen (a phone on its side) the header and the hero cannot
+          // both fit, so the HERO is what gets brought into view.
+          requestAnimationFrame(() => {
+            const navH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gear-nav-h')) || 88;
+            const behavior: ScrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+            if (window.innerHeight < 560) {
+              const stage = section.querySelector<HTMLElement>('.deck-stage');
+              if (!stage) return;
+              const delta = stage.getBoundingClientRect().top - (navH + 8);
+              if (Math.abs(delta) > 4) window.scrollBy({ top: delta, behavior });
+              return;
+            }
+            const top = section.getBoundingClientRect().top;
+            if (top < navH || top > window.innerHeight * 0.6) section.scrollIntoView({ block: 'start', behavior });
+          });
         }
       }
 
@@ -1582,8 +1602,11 @@ const stateOf = (i: number, n: number) =>
         });
         stage.addEventListener('pointerup', endDrag);
         stage.addEventListener('pointercancel', endDrag);
-        stage.addEventListener('lostpointercapture', () => {
-          if (tracking) endDrag();
+        // Touch starts with implicit capture on the element under the finger;
+        // taking capture for the stage fires lostpointercapture on THAT
+        // element, which bubbles here. Only the stage losing it ends a drag.
+        stage.addEventListener('lostpointercapture', (e) => {
+          if (e.target === stage && tracking) endDrag();
         });
 
         // A click on a peeking card brings it forward (never after a drag).

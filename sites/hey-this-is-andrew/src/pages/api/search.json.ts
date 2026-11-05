@@ -33,7 +33,7 @@ export async function GET() {
     })),
     // The full kit is its own page.
     ...gear.flatMap((category) =>
-      category.data.items.map((item, i) => ({
+      category.data.items.filter((item) => item.stores.length > 0).map((item, i) => ({
         id: `gear-${category.id}-${i}`,
         title: item.name,
         kicker: item.brand || category.data.category,

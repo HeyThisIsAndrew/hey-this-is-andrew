@@ -26,12 +26,16 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import sharp from 'sharp';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const FEED = path.join(root, 'src/data/instagram-feed.json');
 const OUT_DIR = path.join(root, 'src/assets/instagram');
 const TODO = path.join(root, 'src/data/instagram-media-todo.md');
+// Reels are saved here at deploy time (gitignored) so the homepage elevator
+// plays its own file instead of depending on Instagram's embed.
+const REEL_DIR = path.join(root, 'public/reels');
 const LIMIT = 35;
 
 const token = (process.env.CCC_INSTAGRAM_ACCESS_TOKEN || '').trim();
@@ -67,6 +71,9 @@ function fromApi(items) {
     rows.push({
       id,
       url,
+      // The reel's own MP4. Instagram omits media_url for a video with
+      // copyrighted audio, which is then embed-only.
+      videoUrl: item.media_type === 'VIDEO' && !item.children?.data?.length ? item.media_url : undefined,
       caption: first,
       fullCaption: caption,
       permalink: item.permalink,
@@ -81,7 +88,7 @@ function fromApi(items) {
 async function readApi() {
   if (!token) {
     console.log('[sync:instagram] No CCC_INSTAGRAM_ACCESS_TOKEN: using cached URLs only.');
-    return [];
+    return null;
   }
   const fields = 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,children{id,media_url,media_type}';
   const url = `https://graph.instagram.com/${encodeURIComponent(userId)}/media?fields=${fields}&limit=${LIMIT}&access_token=${encodeURIComponent(token)}`;
@@ -89,12 +96,42 @@ async function readApi() {
     const res = await fetchWithTimeout(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
-    const rows = fromApi(Array.isArray(json.data) ? json.data : []);
+    const data = Array.isArray(json.data) ? json.data : [];
+    const rows = fromApi(data);
+    // What the API page covers: every id it returned, back to its oldest
+    // post. A cached post older than that is simply off the page, not gone.
+    rows.apiIds = new Set(data.map((d) => d.id));
+    rows.oldest = data.reduce((m, d) => (d.timestamp && (!m || d.timestamp < m) ? d.timestamp : m), '');
     console.log(`[sync:instagram] API returned ${rows.length} photos.`);
     return rows;
   } catch (err) {
     console.warn(`[sync:instagram] API fetch failed (${err.message}); keeping the cached feed.`);
-    return [];
+    return null;
+  }
+}
+
+/** Save a reel's MP4 (re-encoded small when ffmpeg is present). */
+async function downloadReel(row) {
+  const rel = `reels/${row.id}.mp4`;
+  const file = path.join(REEL_DIR, `${row.id}.mp4`);
+  if (fs.existsSync(file)) return rel;
+  if (!row.videoUrl) return null;
+  try {
+    const res = await fetchWithTimeout(row.videoUrl, 60000);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const raw = path.join(REEL_DIR, `${row.id}.src.mp4`);
+    fs.writeFileSync(raw, Buffer.from(await res.arrayBuffer()));
+    const ff = spawnSync('ffmpeg', [
+      '-y', '-loglevel', 'error', '-i', raw,
+      '-vf', "scale='min(720,iw)':-2", '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26',
+      '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', file,
+    ]);
+    if (ff.status === 0 && fs.existsSync(file)) fs.rmSync(raw);
+    else fs.renameSync(raw, file);
+    return rel;
+  } catch (err) {
+    console.warn(`[sync:instagram] Could not download reel ${row.id} (${err.message}).`);
+    return null;
   }
 }
 
@@ -131,7 +168,10 @@ async function main() {
   // Merge: API rows win for fields they carry (fresh URLs); cached rows keep
   // any hand-set fields (location, venue, event) and are never dropped.
   const byId = new Map(cached.map((r) => [r.id, r]));
-  for (const row of await readApi()) {
+  const apiRows = await readApi();
+  const apiIds = apiRows ? new Set([...apiRows.apiIds, ...apiRows.map((r) => r.id)]) : null;
+  const apiOldest = apiRows?.oldest || '';
+  for (const row of apiRows || []) {
     byId.set(row.id, { ...(byId.get(row.id) || {}), ...row });
   }
   const rows = [...byId.values()].sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
@@ -141,6 +181,30 @@ async function main() {
     const got = await download(row);
     if (got) Object.assign(row, got);
     else missing.push(row);
+  }
+
+  // Reels: save the file, and say plainly what state each one is in, so a
+  // broken embed can be traced to a removed post, an embed-only reel
+  // (copyrighted audio: no media_url) or a failed download.
+  fs.mkdirSync(REEL_DIR, { recursive: true });
+  const reelProblems = [];
+  for (const row of rows.filter((r) => r.mediaType === 'VIDEO')) {
+    if (apiIds) {
+      if (apiIds.has(row.id)) delete row.removedFromInstagram;
+      else if (apiOldest && String(row.timestamp) >= apiOldest) row.removedFromInstagram = true;
+    }
+    const localVideo = row.removedFromInstagram ? null : await downloadReel(row);
+    if (localVideo) row.localVideo = localVideo;
+    const state = row.removedFromInstagram
+      ? 'NOT on the account any more (removed or private)'
+      : localVideo
+        ? `self-hosted (${localVideo})`
+        : apiIds && !row.videoUrl
+          ? 'on the account, but the API gives no file (copyrighted audio): embed only'
+          : 'not downloaded (no token, or the download failed): embed only';
+    console.log(`[sync:instagram] reel ${row.permalink}: ${state}`);
+    if (!localVideo) reelProblems.push({ row, state });
+    delete row.videoUrl; // signed, expiring: never kept
   }
 
   fs.writeFileSync(FEED, JSON.stringify(rows, null, 2) + '\n');
@@ -161,6 +225,16 @@ async function main() {
       '| --- | --- | --- |',
       ...missing.map((r) => `| ${r.id} | ${r.permalink || ''} | ${String(r.caption || '').replace(/\|/g, '/').slice(0, 90)} |`),
       '',
+      ...(reelProblems.length
+        ? [
+            '## Reels without a self-hosted file',
+            '',
+            '| post | state |',
+            '| --- | --- |',
+            ...reelProblems.map(({ row, state }) => `| ${row.permalink} | ${state} |`),
+            '',
+          ]
+        : []),
     ];
     fs.writeFileSync(TODO, lines.join('\n'));
     console.warn(`[sync:instagram] ${missing.length} photo(s) not downloaded: listed in src/data/instagram-media-todo.md`);

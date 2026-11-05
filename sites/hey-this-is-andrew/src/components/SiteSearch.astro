@@ -30,54 +30,26 @@ const projectsCollection = await getCollection('projects');
 
 const searchItems: SearchItem[] = [];
 
-// Index Gear from content collections
+// Index Gear from content collections (src/data/gear.json is the whole
+// kit, the Cafe Bar included). Owned items with no store link are hidden on
+// /gear, so they are not indexed either.
+const GEAR_ANCHOR: Record<string, string> = { cafe: 'brew' };
 gearCollection.forEach((cat) => {
-  const catSlug = cat.data.category.toLowerCase().includes('body') || cat.data.category.toLowerCase().includes('camera')
-    ? 'bodies'
-    : cat.data.category.toLowerCase().includes('lens')
-    ? 'lenses'
-    : cat.data.category.toLowerCase().includes('light')
-    ? 'lighting'
-    : cat.data.category.toLowerCase().includes('audio')
-    ? 'audio'
-    : 'tools';
-
-  cat.data.items.forEach((item) => {
-    searchItems.push({
-      id: `gear-${item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
-      title: item.name,
-      category: 'gear',
-      badge: cat.data.category,
-      spec: item.spec,
-      note: item.tag,
-      href: `${gearUrl}#gear-${catSlug}`,
-      keywords: `${item.name} ${item.brand ?? ''} ${cat.data.category} ${item.spec} ${item.tag ?? ''} camera gear kit equipment amazon`,
+  const anchor = GEAR_ANCHOR[cat.id] || `gear-${cat.id}`;
+  cat.data.items
+    .filter((item) => item.stores.length > 0)
+    .forEach((item) => {
+      searchItems.push({
+        id: `gear-${item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+        title: item.name,
+        category: 'gear',
+        badge: cat.data.category,
+        spec: item.spec,
+        note: item.tag,
+        href: `${gearUrl}#${anchor}`,
+        keywords: `${item.name} ${item.shortName ?? ''} ${item.brand ?? ''} ${cat.data.category} ${item.spec} ${item.tag ?? ''} gear kit equipment`,
+      });
     });
-  });
-});
-
-// Index Cafe & Beverage Equipment
-const cafeGear = [
-  { name: 'Ascaso Steel Duo', badge: 'Espresso Machine', spec: 'Dual Thermoblock, PID temperature control, volumetric dosing', href: `${cafeUrl}#brew`, keywords: 'ascaso espresso machine thermoblock coffee maker brew bar' },
-  { name: 'Eureka Mignon Specialita', badge: 'Espresso Grinder', spec: '55mm hardened steel flat burrs, micrometric grind adjustment', href: `${cafeUrl}#brew`, keywords: 'eureka mignon specialita espresso grinder flat burrs' },
-  { name: 'Fellow Ode Gen 2', badge: 'Filter Grinder', spec: '64mm flat burrs, anti-static technology, single-dose workflow', href: `${cafeUrl}#brew`, keywords: 'fellow ode gen 2 batch brew filter grinder pour over' },
-  { name: 'Acaia Lunar Scale', badge: 'Precision Scale', spec: 'Water-resistant, 0.1g resolution, auto-tare espresso timer', href: `${cafeUrl}#brew`, keywords: 'acaia lunar scale espresso barista 0.1g timer' },
-  { name: 'Acaia Pearl Scale', badge: 'Brew Scale', spec: 'Real-time flow-rate indicator, batch brew & pour-over precision', href: `${cafeUrl}#brew`, keywords: 'acaia pearl scale pour over drip kettle' },
-  { name: 'Fellow Stagg EKG', badge: 'Electric Kettle', spec: 'Variable temperature control, gooseneck spout for pour-over', href: `${cafeUrl}#brew`, keywords: 'fellow stagg ekg kettle gooseneck water heater' },
-  { name: 'James Coffee Co. "Owl"', badge: 'Specialty Beans', spec: 'Signature espresso blend, dark chocolate & caramelized sugar notes', href: `${cafeUrl}#beans`, keywords: 'james coffee co owl roast beans espresso blend' },
-  { name: 'James Coffee Co. "Night Owl"', badge: 'Decaf Beans', spec: 'Swiss Water Process specialty decaf, caramel & toasted almond', href: `${cafeUrl}#beans`, keywords: 'james coffee co night owl decaf beans swiss water' },
-];
-
-cafeGear.forEach((g) => {
-  searchItems.push({
-    id: `cafe-${g.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
-    title: g.name,
-    category: 'gear',
-    badge: g.badge,
-    spec: g.spec,
-    href: g.href,
-    keywords: `${g.name} ${g.badge} ${g.spec} ${g.keywords} coffee studio cafe`,
-  });
 });
 
 // Index Build Milestones from build.astro

@@ -57,28 +57,33 @@ test.describe('Audit Fixes Verification', () => {
     expect(servicesY).toBeLessThan(goalsY);
   });
 
-  test('Elevator video tile click opens inline reel player dialog', async ({ page }) => {
+  test('Elevator video tile zooms first, then plays in place', async ({ page }) => {
     await page.goto('./');
 
-    const videoItem = page.locator('.photo-item[data-video-url]').first();
+    const videoItem = page.locator('.photo-set:not([aria-hidden]) .photo-item[data-video-url]').first();
     if ((await videoItem.count()) === 0) return; // No Instagram photos downloaded in local dev
-    await expect(videoItem).toBeVisible();
+    await expect(videoItem.locator('.photo-play-badge')).toContainText('Video');
 
-    // Verify visible Play Video badge at rest
-    const playBadge = videoItem.locator('.photo-play-badge');
-    await expect(playBadge).toBeVisible();
-    await expect(playBadge).toContainText('Play Video');
+    // A video tile zooms into the elevator view like a photo: nothing plays
+    // and no separate dialog opens.
+    await videoItem.evaluate((el) => (el as HTMLElement).click());
+    await expect(page.locator('.photo-section')).toHaveClass(/is-zoomed/);
+    const player = page.locator('[data-photo-player]');
+    await expect(player).toBeHidden();
+    await expect(page.locator('#photo-reel-player')).toHaveCount(0);
 
-    // Click video tile opens dialog
-    await videoItem.click();
-    const reelPlayer = page.locator('#photo-reel-player');
-    await expect(reelPlayer).toBeVisible();
-    await expect(reelPlayer).toHaveClass(/is-active/);
+    // Play in the dock plays it in place: the self-hosted file when the
+    // sync saved one, otherwise the reel embed.
+    await page.locator('[data-photo-play]').click();
+    await expect(player).toBeVisible();
+    await expect(player.locator('video, iframe[src*="instagram.com/reel/"]')).toHaveCount(1);
 
-    // Close dialog
-    const closeBtn = reelPlayer.locator('.pro-close');
-    await closeBtn.click();
-    await expect(reelPlayer).toBeHidden();
+    // Escape stops it and keeps the zoom; Escape again closes the zoom.
+    await page.keyboard.press('Escape');
+    await expect(player).toBeHidden();
+    await expect(page.locator('.photo-section')).toHaveClass(/is-zoomed/);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.photo-section')).not.toHaveClass(/is-zoomed/);
   });
 
   test('Elevator photo tile click opens carousel with HUD counter and Close button', async ({ page }) => {

@@ -10,11 +10,18 @@ import { getCollection } from 'astro:content';
 import { PROJECT_INQUIRY_HREF } from '../data/services';
 
 const gear = (await getCollection('gear')).sort((a, b) => a.data.order - b.data.order);
+
+// Andrew's Amazon collection pages: one per shelf of the kit.
+const COLLECTIONS = [
+  { label: 'Camera Gear', url: 'https://a.co/d/00WeFxoS' },
+  { label: 'Cafe Bar', url: 'https://a.co/d/0fSswpx1' },
+  { label: 'Command Station Desk', url: 'https://a.co/d/070Rc6h9' },
+];
 ---
 
 <BaseLayout
   title="Gear · HEY_THISISANDREW"
-  description="The kit behind the work: camera bodies, lenses, lighting, audio, tools, and the coffee bar. Updated as it evolves."
+  description="The kit behind the work: cameras, lenses, lighting, support, audio, the cafe bar, and gaming. Updated as it evolves."
 >
   <div class="container gear-page">
     <header class="gear-header">
@@ -29,6 +36,16 @@ const gear = (await getCollection('gear')).sort((a, b) => a.data.order - b.data.
     <h2 class="vh">Camera and studio kit</h2>
     <GearGrid categories={gear} />
 
+    <nav class="gear-collections" aria-label="Amazon collections">
+      <span class="gear-collections-label font-mono">Shop the lists</span>
+      {COLLECTIONS.map((c) => (
+        <a class="gear-collection-link font-mono" href={c.url} target="_blank" rel="noopener sponsored">
+          {c.label}
+          <span aria-hidden="true">&#8599;</span>
+        </a>
+      ))}
+    </nav>
+
     <div class="gear-shop">
       <StorefrontCTA />
     </div>
@@ -38,7 +55,7 @@ const gear = (await getCollection('gear')).sort((a, b) => a.data.order - b.data.
       <div class="disclosure-card font-mono">
         <span class="disclosure-badge">AFFILIATE NOTICE</span>
         <p class="disclosure-text">
-          As an Amazon Associate, I earn from qualifying purchases. When you purchase through links on this page, I may earn an affiliate commission at no extra cost to you. Product selections reflect the gear actually owned, tested, and utilized in commercial beverage production and content creation.
+          As an Amazon Associate, I earn from qualifying purchases. When you purchase through links on this page, I may earn an affiliate commission at no extra cost to you. The Viltrox store link is an affiliate link as well. Product selections reflect the gear actually owned, tested, and utilized in commercial beverage production and content creation.
         </p>
       </div>
     </aside>
@@ -100,8 +117,40 @@ const gear = (await getCollection('gear')).sort((a, b) => a.data.order - b.data.
     text-transform: uppercase;
     color: var(--muted);
   }
+  .gear-collections {
+    margin-top: clamp(2rem, 4vw, 3rem);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+  }
+  .gear-collections-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 0.25rem;
+  }
+  .gear-collection-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 40px;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .gear-collection-link:hover {
+    background: #fff;
+    color: #000;
+  }
   .gear-shop {
-    margin-top: clamp(2.5rem, 5vw, 4rem);
+    margin-top: clamp(2rem, 4vw, 3rem);
   }
   .gear-shop :global(.storefront) {
     margin-top: 0;

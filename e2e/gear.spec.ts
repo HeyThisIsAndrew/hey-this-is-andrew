@@ -1,265 +1,179 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 
-test.describe('Gear page verification', () => {
-  test('Gear page displays verified items, real images, and affiliate links', async ({ page }) => {
-    // Navigate to gear page
+/*
+ * /gear: the HQ /featured deck. Every header shows at once; one section is
+ * open at a time; the open one is a deck (front card, two peeking, thumbs).
+ * Data: sites/hey-this-is-andrew/src/data/gear.json.
+ */
+
+const activeTitle = (sec: Locator) => sec.locator('.deck-card.active .card-title');
+const cta = (sec: Locator) => sec.locator('.deck-card.active [data-store-cta]');
+
+async function openSection(page: Page, id: string) {
+  const sec = page.locator(`#${id}`);
+  if (!((await sec.getAttribute('class')) || '').includes('is-expanded')) {
+    await sec.locator('.gear-accordion-header').click();
+  }
+  await expect(sec).toHaveClass(/is-expanded/);
+  return sec;
+}
+
+test.describe('Gear page', () => {
+  test('kit, store links, labels and disclosures', async ({ page }) => {
     await page.goto('/hey-this-is-andrew/gear/');
     await expect(page).toHaveTitle(/Gear · HEY_THISISANDREW/);
 
-    // 1. Verify Hero Box (Camera Bodies - 1st group, expanded by default)
-    const heroBox = page.locator('#gear-bodies');
-    await expect(heroBox).toBeVisible();
-    await expect(heroBox).toHaveClass(/is-expanded/);
+    // Seven sections, in Andrew's list order; Cameras open on load.
+    const ids = ['gear-bodies', 'gear-lenses', 'gear-lighting', 'gear-tools', 'gear-audio', 'brew', 'gear-gaming'];
+    const sections = page.locator('.gear-accordion-section');
+    await expect(sections).toHaveCount(ids.length);
+    for (let i = 0; i < ids.length; i++) await expect(sections.nth(i)).toHaveId(ids[i]);
+    await expect(page.locator('.gear-accordion-section.is-expanded')).toHaveCount(1);
+    await expect(page.locator('#gear-bodies')).toHaveClass(/is-expanded/);
 
-    // Verify 5 active camera items in thumbnail rail
-    const cameraRows = heroBox.locator('.camera-item-row');
-    await expect(cameraRows).toHaveCount(5);
+    // Exact kit counts (owned items with no store link are hidden).
+    const counts: Record<string, number> = {
+      'gear-bodies': 5, 'gear-lenses': 9, 'gear-lighting': 2, 'gear-tools': 9, 'gear-audio': 6, brew: 13, 'gear-gaming': 1,
+    };
+    for (const [id, n] of Object.entries(counts)) {
+      await expect(page.locator(`#${id} .deck-card`)).toHaveCount(n);
+    }
+    for (const hidden of ['Amaran PT1c', 'Light Dome Mini II', 'Weebill 3']) {
+      await expect(page.locator('.deck-card', { hasText: hidden })).toHaveCount(0);
+    }
 
-    // Check first camera (Sony a7IV) is selected by default
-    const previewImg = page.locator('#preview-camera-img');
-    await expect(previewImg).toBeVisible();
-    await expect(previewImg).toHaveAttribute('src', /\/hey-this-is-andrew\/gear\/sony-a7iv\.jpg$/);
+    // Short CTA labels everywhere, never the product name or a URL.
+    const labels = await page.locator('[data-store-cta-label]').allTextContents();
+    for (const l of labels) expect(l.trim()).toMatch(/^View on [A-Za-z. ]+$/);
 
-    // Verify preview image actually loaded (naturalWidth > 0)
-    const imgLoaded = await previewImg.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0);
-    expect(imgLoaded).toBe(true);
+    // Cameras: first item and its link.
+    const bodies = page.locator('#gear-bodies');
+    await expect(activeTitle(bodies)).toHaveText('Sony a7IV');
+    await expect(cta(bodies)).toHaveAttribute('href', 'https://link.amazon/B0aDbXAM1');
+    await expect(bodies.locator('.deck-card.active .card-img')).toHaveAttribute('src', /\/gear\/sony-a7iv\.jpg$/);
 
-    // Check preview button has correct affiliate URL
-    const previewBtn = page.locator('#preview-camera-btn');
-    await expect(previewBtn).toHaveAttribute('href', 'https://link.amazon/B0aDbXAM1');
-    await expect(previewBtn).toContainText('View Sony a7IV on Amazon');
+    // Viltrox: Amazon first, Viltrox direct in the picker, no wrong image.
+    const lenses = await openSection(page, 'gear-lenses');
+    await expect(bodies).toHaveClass(/is-collapsed/);
+    await lenses.locator('.deck-thumb-tile[aria-label="Viltrox AF 85mm f/2.0 EVO"]').click();
+    await expect(activeTitle(lenses)).toHaveText('Viltrox AF 85mm f/2.0 EVO');
+    await expect(cta(lenses)).toHaveAttribute('href', 'https://link.amazon/B03iIx6Ml');
+    await expect(cta(lenses)).toContainText('View on Amazon');
+    await lenses.locator('.deck-card.active .store-option', { hasText: 'Viltrox' }).click();
+    await expect(cta(lenses)).toHaveAttribute('href', 'https://viltrox.com/products/af-85mm-f2-0-fe?ref=thisisviltrox');
+    await expect(cta(lenses)).toContainText('View on Viltrox');
+    await expect(page.locator('img[src*="viltrox-85-evo"]')).toHaveCount(0);
 
-    // Click second camera (Sony a7CR)
-    await cameraRows.nth(1).click();
-    await expect(previewImg).toHaveAttribute('src', /\/hey-this-is-andrew\/gear\/sony-a7cr\.jpg$/);
-    await expect(previewBtn).toHaveAttribute('href', 'https://link.amazon/B02X4KrnH');
-    await expect(previewBtn).toContainText('View Sony a7CR on Amazon');
+    // A single-store item has no picker.
+    await lenses.locator('.deck-thumb-tile').first().click();
+    await expect(lenses.locator('.deck-card.active .store-picker')).toHaveCount(0);
 
-    // Click iPhone 17 Pro Max
-    await cameraRows.nth(2).click();
-    await expect(previewImg).toHaveAttribute('src', /\/hey-this-is-andrew\/gear\/iphone-17-pro-max\.jpg$/);
-    await expect(previewBtn).toHaveAttribute('href', 'https://link.amazon/B0hZ10de1');
+    // Disclosures: header line, per-hero line, AFFILIATE NOTICE, CTA kept.
+    await expect(page.locator('[data-affiliate-disclosure]')).toContainText('As an Amazon Associate');
+    await expect(lenses.locator('.deck-card.active .card-disclosure')).toContainText('As an Amazon Associate');
+    await expect(page.locator('[data-bottom-disclosure]')).toContainText('AFFILIATE NOTICE');
+    await expect(page.locator('.gear-project-cta a')).toContainText('Start a project');
 
-    // 2. Verify Accordion Groups: Lenses, Lighting, Support
-    // Expand Lenses group
-    const lensesBox = page.locator('#gear-lenses');
-    await expect(lensesBox).toBeVisible();
-    await lensesBox.locator('.gear-accordion-header').click();
-    await expect(lensesBox).toHaveClass(/is-expanded/);
-    await expect(heroBox).toHaveClass(/is-collapsed/); // Only one group open at a time
-
-    const lensRows = lensesBox.locator('.collage-item-row');
-    await expect(lensRows).toHaveCount(8);
-
-    const lensImg = page.locator('#img-gear-lenses');
-    await expect(lensImg).toBeVisible();
-    await expect(lensImg).toHaveAttribute('src', /\/hey-this-is-andrew\/gear\/sony-24-70-gm\.jpg$/);
-
-    // Click Viltrox 85mm
-    await lensRows.nth(7).click();
-    await expect(lensImg).toHaveAttribute('src', /\/hey-this-is-andrew\/gear\/viltrox-85-evo\.jpg$/);
-    const lensCta = page.locator('#cta-gear-lenses');
-    await expect(lensCta).toHaveAttribute('href', 'https://link.amazon/B03iIx6Ml');
-
-    // Test "All View" Toggle on Lenses (sections with > 6 items)
-    const allToggleBtn = lensesBox.locator('[data-all-toggle="lenses"]');
-    await expect(allToggleBtn).toBeVisible();
-    await allToggleBtn.click();
-    const allGrid = lensesBox.locator('#all-grid-lenses');
-    await expect(allGrid).toBeVisible();
-    await expect(allGrid.locator('.all-grid-card')).toHaveCount(8);
-
-    // Return to carousel view
-    const backBtn = lensesBox.locator('[data-back-carousel="lenses"]').first();
-    await backBtn.click();
-    await expect(allGrid).toBeHidden();
-    await expect(lensesBox.locator('[data-deck-container="lenses"]')).toBeVisible();
-
-    // Expand Lighting Box
-    const lightingBox = page.locator('#gear-lighting');
-    await expect(lightingBox).toBeVisible();
-    await lightingBox.locator('.gear-accordion-header').click();
-    await expect(lightingBox).toHaveClass(/is-expanded/);
-    await expect(lensesBox).toHaveClass(/is-collapsed/);
-
-    const lightingRows = lightingBox.locator('.collage-item-row');
-    await expect(lightingRows).toHaveCount(2);
-
-    const lightingImg = page.locator('#img-gear-lighting');
-    await expect(lightingImg).toBeVisible();
-    await expect(lightingImg).toHaveAttribute('src', /\/hey-this-is-andrew\/gear\/amaran-200d\.jpg$/);
-
-    // Expand Tools & Support Box
-    const toolsBox = page.locator('#gear-tools');
-    await expect(toolsBox).toBeVisible();
-    await toolsBox.locator('.gear-accordion-header').click();
-    await expect(toolsBox).toHaveClass(/is-expanded/);
-    await expect(lightingBox).toHaveClass(/is-collapsed/);
-
-    const toolRows = toolsBox.locator('.collage-item-row');
-    await expect(toolRows).toHaveCount(3);
-
-    const toolsImg = page.locator('#img-gear-tools');
-    await expect(toolsImg).toBeVisible();
-    await expect(toolsImg).toHaveAttribute('src', /\/hey-this-is-andrew\/gear\/peak-design-carbon-tripod\.jpg$/);
-
-    // 3. Verify Audio is NOT rendered (Andrew does not own any of those items)
-    const audioBox = page.locator('#gear-audio');
-    await expect(audioBox).toHaveCount(0);
-    const audioChip = page.locator('.gear-chip[data-cat="audio"]');
-    await expect(audioChip).toHaveCount(0);
-
-    // 4. Verify Cafe Section items
-    const cafeSection = page.locator('#brew');
-    await expect(cafeSection).toBeVisible();
-
-    // Verify hero CTA initial item (Ascaso)
-    const cafeHeroCta = cafeSection.locator('#cafe-hero-cta');
-    await expect(cafeHeroCta).toHaveAttribute('href', 'https://link.amazon/B0cCrykft');
-
-    // Verify active cafe links in the full grid catalog
-    const cafeGrid = cafeSection.locator('#cafe-all-grid');
-    const ascasoLink = cafeGrid.locator('a[aria-label="View Ascaso Steel Duo PID on Amazon"]');
-    await expect(ascasoLink).toHaveAttribute('href', 'https://link.amazon/B0cCrykft');
-
-    const staggLink = cafeGrid.locator('a[aria-label="View Fellow Stagg EKG on Amazon"]');
-    await expect(staggLink).toHaveAttribute('href', 'https://link.amazon/B0fbGKgld');
-
-    const carafeLink = cafeGrid.locator('a[aria-label="View Fellow Mighty Small Carafe on Amazon"]');
-    await expect(carafeLink).toHaveAttribute('href', 'https://link.amazon/B01DJcTby');
-
-    const scaleLink = cafeGrid.locator('a[aria-label="View Fellow Scale on Amazon"]');
-    await expect(scaleLink).toHaveAttribute('href', 'https://link.amazon/B06NamWQ9');
-
-    const nitroLink = cafeGrid.locator('a[aria-label="View Nitro Press on Amazon"]');
-    await expect(nitroLink).toHaveAttribute('href', 'https://link.amazon/B04f3JDzo');
-
-    const roasterLink = cafeGrid.locator('a[aria-label="Visit James Coffee Co. website"]');
-    await expect(roasterLink).toHaveAttribute('href', 'https://jamescoffeeco.com');
-
-    // Verify removed cafe items are NOT present
-    const harioLink = cafeSection.locator('text=Hario Switch');
-    await expect(harioLink).toHaveCount(0);
-    const odeLink = cafeSection.locator('text=Fellow Ode');
-    await expect(odeLink).toHaveCount(0);
-
-    // 5. Test Category Chips Filtering
-    const lensesChip = page.locator('.gear-chip[data-cat="lenses"]');
-    await lensesChip.click();
-    await expect(heroBox).toBeHidden();
-    await expect(lensesBox).toBeVisible();
-    await expect(lightingBox).toBeHidden();
-    await expect(toolsBox).toBeHidden();
-
-    const allChip = page.locator('.gear-chip[data-cat="all"]');
-    await allChip.click();
-    await expect(heroBox).toBeVisible();
-    await expect(lensesBox).toBeVisible();
-    await expect(lightingBox).toBeVisible();
-    await expect(toolsBox).toBeVisible();
-
-    // 6. Test Instant Search Filter
-    const searchInput = page.locator('#gear-search-input');
-    await searchInput.fill('Amaran');
-    await expect(heroBox).toBeHidden();
-    await expect(lensesBox).toBeHidden();
-    await expect(lightingBox).toBeVisible();
-    await expect(toolsBox).toBeHidden();
-
-    // Clear search
-    const clearBtn = page.locator('#gear-search-clear');
-    await clearBtn.click();
-    await expect(heroBox).toBeVisible();
-    await expect(lensesBox).toBeVisible();
+    // Collections.
+    await expect(page.locator('.gear-collection-link')).toHaveCount(3);
+    await expect(page.locator('#brew .influencer-pill')).toHaveAttribute('href', 'https://a.co/d/0fSswpx1');
+    await expect(page.locator('#gear-lenses .influencer-pill')).toHaveAttribute('href', 'https://a.co/d/00WeFxoS');
   });
 
-  const auditViewports = [
+  test('search syncs the deck and spans the Cafe Bar', async ({ page }) => {
+    await page.goto('/hey-this-is-andrew/gear/');
+    const input = page.locator('#gear-search-input');
+
+    await input.fill('90mm');
+    const lenses = page.locator('#gear-lenses');
+    await expect(lenses).toBeVisible();
+    await expect(lenses).toHaveClass(/is-expanded/);
+    await expect(page.locator('.gear-accordion-section:visible')).toHaveCount(1);
+    await expect(lenses.locator('[data-deck-counter]')).toHaveText('01 / 01');
+    await expect(activeTitle(lenses)).toContainText('90mm');
+    await expect(lenses.locator('.deck-card.next-1:not(.is-filtered-out)')).toHaveCount(0);
+
+    await input.fill('Ascaso');
+    const cafe = page.locator('#brew');
+    await expect(cafe).toBeVisible();
+    await expect(cafe).toHaveClass(/is-expanded/);
+    await expect(page.locator('.gear-accordion-section:visible')).toHaveCount(1);
+    await expect(cafe.locator('[data-deck-counter]')).toHaveText('01 / 01');
+    await expect(activeTitle(cafe)).toContainText('Ascaso');
+
+    await page.locator('#gear-search-clear').click();
+    await expect(page.locator('.gear-accordion-section:visible')).toHaveCount(7);
+  });
+
+  const viewports = [
     { name: 'desktop-1920', width: 1920, height: 1080 },
     { name: 'desktop-1440', width: 1440, height: 900 },
     { name: 'mobile-390-portrait', width: 390, height: 844 },
     { name: 'mobile-844-landscape', width: 844, height: 390 },
   ];
 
-  for (const vp of auditViewports) {
-    test(`Gear cinematic layout and accordion collapse verified at ${vp.name}`, async ({ page }) => {
+  for (const vp of viewports) {
+    test(`headers toggle, deck rotates, hero unclipped at ${vp.name}`, async ({ page }) => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
       await page.goto('/hey-this-is-andrew/gear/');
-
-      // 1. Verify all 5 accordion section headers are present in order
       const sections = page.locator('.gear-accordion-section');
-      await expect(sections).toHaveCount(5);
-      const sectionIds = ['gear-bodies', 'gear-lenses', 'gear-lighting', 'gear-tools', 'brew'];
-      for (let i = 0; i < sectionIds.length; i++) {
-        await expect(sections.nth(i)).toHaveId(sectionIds[i]);
+      const n = await sections.count();
+
+      // Every header opens alone and closes on a second click.
+      for (let i = 0; i < n; i++) {
+        const sec = sections.nth(i);
+        const hdr = sec.locator('.gear-accordion-header');
+        if (((await sec.getAttribute('class')) || '').includes('is-expanded')) {
+          await hdr.click();
+          await expect(sec).toHaveClass(/is-collapsed/);
+        }
+        await hdr.click();
+        await expect(sec).toHaveClass(/is-expanded/);
+        await expect(page.locator('.gear-accordion-section.is-expanded')).toHaveCount(1);
+        await hdr.click();
+        await expect(sec).toHaveClass(/is-collapsed/);
       }
 
-      // 2. Default state: Exactly 1 open (Cameras / gear-bodies)
-      const bodiesSec = page.locator('#gear-bodies');
-      await expect(bodiesSec).toHaveClass(/is-expanded/);
-      for (let i = 1; i < 5; i++) {
-        await expect(sections.nth(i)).toHaveClass(/is-collapsed/);
-      }
+      // Deck rotation: next, prev, thumbnail, peeking card.
+      const lenses = await openSection(page, 'gear-lenses');
+      await expect(activeTitle(lenses)).toHaveText('Sony FE 24-70mm f/2.8 GM');
+      await lenses.locator('[data-deck-next]').click();
+      await expect(activeTitle(lenses)).toHaveText('Sony FE 16-35mm f/2.8 GM II');
+      await lenses.locator('[data-deck-prev]').click();
+      await expect(activeTitle(lenses)).toHaveText('Sony FE 24-70mm f/2.8 GM');
+      await lenses.locator('.deck-thumb-tile').nth(4).click();
+      await expect(activeTitle(lenses)).toHaveText('Sony FE 90mm f/2.8 Macro G OSS');
+      // A reader clicks the sliver of the next card peeking out on the right.
+      const peek = lenses.locator('.deck-card.next-1');
+      await peek.scrollIntoViewIfNeeded();
+      // The cards glide for 0.5s after a rotation: read the box once it
+      // has stopped moving.
+      let box = (await peek.boundingBox())!;
+      await expect
+        .poll(async () => {
+          const next = (await peek.boundingBox())!;
+          const still = Math.abs(next.x - box.x) < 0.5 && Math.abs(next.width - box.width) < 0.5;
+          box = next;
+          return still;
+        }, { intervals: [120, 120, 120, 120, 120, 120] })
+        .toBe(true);
+      await page.mouse.click(box.x + box.width - 18, box.y + box.height / 2);
+      await expect(activeTitle(lenses)).toHaveText('Sony FE 55mm f/1.8 ZA Sonnar');
 
-      // 3. Section Collapse Bug Fix: Clicking an open section collapses it (0 sections open)
-      await bodiesSec.locator('.gear-accordion-header').click();
-      await expect(bodiesSec).toHaveClass(/is-collapsed/);
-      for (let i = 0; i < 5; i++) {
-        await expect(sections.nth(i)).toHaveClass(/is-collapsed/);
-      }
-
-      // 4. Clicking a collapsed section opens it and collapses all others
-      const lensesSec = page.locator('#gear-lenses');
-      await lensesSec.locator('.gear-accordion-header').click();
-      await expect(lensesSec).toHaveClass(/is-expanded/);
-      await expect(bodiesSec).toHaveClass(/is-collapsed/);
-
-      // 5. Verify Hero Deck in Lenses
-      const lensHeroTitle = lensesSec.locator('#title-gear-lenses');
-      await expect(lensHeroTitle).toContainText('Sony FE 24-70mm f/2.8 GM');
-
-      // Test deck prev/next buttons inside deck stage
-      const nextBtn = lensesSec.locator('[data-deck-next="lenses"]');
-      await nextBtn.click();
-      await expect(lensHeroTitle).toContainText('Sony FE 16-35mm f/2.8 GM II');
-
-      const prevBtn = lensesSec.locator('[data-deck-prev="lenses"]');
-      await prevBtn.click();
-      await expect(lensHeroTitle).toContainText('Sony FE 24-70mm f/2.8 GM');
-
-      // Test peeking slats on desktop viewports
-      if (vp.width >= 1000) {
-        const slatNext1 = lensesSec.locator('.deck-slat.next-1');
-        await expect(slatNext1).toBeVisible();
-        await slatNext1.click();
-        await expect(lensHeroTitle).toContainText('Sony FE 16-35mm f/2.8 GM II');
-      }
-
-      // 6. Test All toggle in Lenses
-      const allToggle = lensesSec.locator('[data-all-toggle="lenses"]');
-      await expect(allToggle).toBeVisible();
-      await allToggle.click();
-      const allGrid = lensesSec.locator('#all-grid-lenses');
-      await expect(allGrid).toBeVisible();
-      await expect(allGrid.locator('.all-grid-card')).toHaveCount(8);
-
-      const backBtn = lensesSec.locator('[data-back-carousel="lenses"]').first();
-      await backBtn.click();
-      await expect(allGrid).toBeHidden();
-
-      // 7. Test Cafe Bar Section
-      const cafeSec = page.locator('#brew');
-      await cafeSec.locator('.gear-accordion-header').click();
-      await expect(cafeSec).toHaveClass(/is-expanded/);
-      await expect(lensesSec).toHaveClass(/is-collapsed/);
-
-      const cafeHeroTitle = cafeSec.locator('#cafe-hero-name');
-      await expect(cafeHeroTitle).toContainText('Ascaso Steel Duo PID');
-
-      // 8. Verify No Horizontal Overflow
-      const hasHorizontalOverflow = await page.evaluate(() => {
-        return document.documentElement.scrollWidth > window.innerWidth;
+      // The hero image has its own row: below the nav, nothing over it.
+      await lenses.locator('.deck-card.active .card-visual').scrollIntoViewIfNeeded();
+      const geo = await lenses.evaluate((sec) => {
+        const img = sec.querySelector('.deck-card.active .card-img')!.getBoundingClientRect();
+        const vis = sec.querySelector('.deck-card.active .card-visual')!.getBoundingClientRect();
+        const nav = document.querySelector('.site-nav')!.getBoundingClientRect().bottom;
+        return { inRow: img.top >= vis.top - 0.5 && img.bottom <= vis.bottom + 0.5, belowNav: img.top >= nav - 0.5 };
       });
-      expect(hasHorizontalOverflow).toBe(false);
+      expect(geo.inRow).toBe(true);
+      expect(geo.belowNav).toBe(true);
+
+      // No horizontal page scroll.
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
     });
   }
 });

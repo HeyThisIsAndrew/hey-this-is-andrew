@@ -19,7 +19,10 @@ const rawDisplayPhotos = instagramPhotos.map((p) => ({
   event: p.event,
   permalink: p.permalink,
   duration: (p as any).duration,
-  video: p.mediaType === 'VIDEO' && Boolean(p.permalink),
+  // A reel the sync found removed from Instagram stays on the wall as a
+  // photo (it is still the work) unless its file was saved: no dead embed.
+  video: p.mediaType === 'VIDEO' && Boolean(p.permalink) && (!p.removed || Boolean(p.videoSrc)),
+  videoSrc: p.videoSrc,
 }));
 
 const seenIds = new Set<string>();
