@@ -172,4 +172,94 @@ test.describe('Gear page verification', () => {
     await expect(heroBox).toBeVisible();
     await expect(lensesBox).toBeVisible();
   });
+
+  const auditViewports = [
+    { name: 'desktop-1920', width: 1920, height: 1080 },
+    { name: 'desktop-1440', width: 1440, height: 900 },
+    { name: 'mobile-390-portrait', width: 390, height: 844 },
+    { name: 'mobile-844-landscape', width: 844, height: 390 },
+  ];
+
+  for (const vp of auditViewports) {
+    test(`Gear cinematic layout and accordion collapse verified at ${vp.name}`, async ({ page }) => {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.goto('/hey-this-is-andrew/gear/');
+
+      // 1. Verify all 5 accordion section headers are present in order
+      const sections = page.locator('.gear-accordion-section');
+      await expect(sections).toHaveCount(5);
+      const sectionIds = ['gear-bodies', 'gear-lenses', 'gear-lighting', 'gear-tools', 'brew'];
+      for (let i = 0; i < sectionIds.length; i++) {
+        await expect(sections.nth(i)).toHaveId(sectionIds[i]);
+      }
+
+      // 2. Default state: Exactly 1 open (Cameras / gear-bodies)
+      const bodiesSec = page.locator('#gear-bodies');
+      await expect(bodiesSec).toHaveClass(/is-expanded/);
+      for (let i = 1; i < 5; i++) {
+        await expect(sections.nth(i)).toHaveClass(/is-collapsed/);
+      }
+
+      // 3. Section Collapse Bug Fix: Clicking an open section collapses it (0 sections open)
+      await bodiesSec.locator('.gear-accordion-header').click();
+      await expect(bodiesSec).toHaveClass(/is-collapsed/);
+      for (let i = 0; i < 5; i++) {
+        await expect(sections.nth(i)).toHaveClass(/is-collapsed/);
+      }
+
+      // 4. Clicking a collapsed section opens it and collapses all others
+      const lensesSec = page.locator('#gear-lenses');
+      await lensesSec.locator('.gear-accordion-header').click();
+      await expect(lensesSec).toHaveClass(/is-expanded/);
+      await expect(bodiesSec).toHaveClass(/is-collapsed/);
+
+      // 5. Verify Hero Deck in Lenses
+      const lensHeroTitle = lensesSec.locator('#title-gear-lenses');
+      await expect(lensHeroTitle).toContainText('Sony FE 24-70mm f/2.8 GM');
+
+      // Test deck prev/next buttons inside deck stage
+      const nextBtn = lensesSec.locator('[data-deck-next="lenses"]');
+      await nextBtn.click();
+      await expect(lensHeroTitle).toContainText('Sony FE 16-35mm f/2.8 GM II');
+
+      const prevBtn = lensesSec.locator('[data-deck-prev="lenses"]');
+      await prevBtn.click();
+      await expect(lensHeroTitle).toContainText('Sony FE 24-70mm f/2.8 GM');
+
+      // Test peeking slats on desktop viewports
+      if (vp.width >= 1000) {
+        const slatNext1 = lensesSec.locator('.deck-slat.next-1');
+        await expect(slatNext1).toBeVisible();
+        await slatNext1.click();
+        await expect(lensHeroTitle).toContainText('Sony FE 16-35mm f/2.8 GM II');
+      }
+
+      // 6. Test All toggle in Lenses
+      const allToggle = lensesSec.locator('[data-all-toggle="lenses"]');
+      await expect(allToggle).toBeVisible();
+      await allToggle.click();
+      const allGrid = lensesSec.locator('#all-grid-lenses');
+      await expect(allGrid).toBeVisible();
+      await expect(allGrid.locator('.all-grid-card')).toHaveCount(8);
+
+      const backBtn = lensesSec.locator('[data-back-carousel="lenses"]').first();
+      await backBtn.click();
+      await expect(allGrid).toBeHidden();
+
+      // 7. Test Cafe Bar Section
+      const cafeSec = page.locator('#brew');
+      await cafeSec.locator('.gear-accordion-header').click();
+      await expect(cafeSec).toHaveClass(/is-expanded/);
+      await expect(lensesSec).toHaveClass(/is-collapsed/);
+
+      const cafeHeroTitle = cafeSec.locator('#cafe-hero-name');
+      await expect(cafeHeroTitle).toContainText('Ascaso Steel Duo PID');
+
+      // 8. Verify No Horizontal Overflow
+      const hasHorizontalOverflow = await page.evaluate(() => {
+        return document.documentElement.scrollWidth > window.innerWidth;
+      });
+      expect(hasHorizontalOverflow).toBe(false);
+    });
+  }
 });

@@ -7,7 +7,42 @@ interface Props {
 
 const { categories } = Astro.props;
 
-// Order map: Camera Bodies hero first, then Lenses, Lighting, Audio, Tools & Support
+import { AMAZON_STOREFRONT } from '../data/storefront';
+
+const rawBase = import.meta.env.BASE_URL;
+const base = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
+const resolveAsset = (img?: string) => {
+  if (!img) return '';
+  if (img.startsWith('http://') || img.startsWith('https://')) return img;
+  const clean = img.startsWith('/') ? img : `/${img}`;
+  return `${base}${clean}`;
+};
+
+const isProductUrl = (url?: string) => Boolean(url && url.trim() && url !== AMAZON_STOREFRONT);
+
+export interface GearItem {
+  name: string;
+  brand?: string;
+  tag?: string;
+  spec: string;
+  desc?: string;
+  affiliateUrl?: string;
+  image?: string;
+  imageAlt?: string;
+  ariaLabel?: string;
+}
+
+export interface GearSectionData {
+  id: string;
+  slug: string;
+  category: string;
+  kicker: string;
+  subtitle: string;
+  items: GearItem[];
+  hasAllView: boolean;
+}
+
+// 1. Existing verified collection items
 const orderMap: Record<string, number> = {
   'Camera Bodies': 1,
   'Lens': 2,
@@ -25,41 +60,141 @@ const sortedCats = [...categories].sort((a, b) => {
 // Audio is intentionally excluded if Andrew owns 0 items
 const activeCats = sortedCats.filter(c => c.data.items && c.data.items.length > 0 && c.data.category !== 'Audio');
 
-import { AMAZON_STOREFRONT } from '../data/storefront';
+// 2. Cafe Bar section definition (exact 6 verified items with real imagery)
+const cafeItems: GearItem[] = [
+  {
+    name: 'Ascaso Steel Duo PID',
+    brand: 'Ascaso',
+    tag: 'Espresso',
+    spec: 'Dual thermoblock espresso machine with volumetric controls and independent steam circuit',
+    desc: 'Commercial dual thermoblock system with independent steam circuit, PID temperature control, and volumetric programming. Used for high-volume beverage shoots and morning dial-in.',
+    affiliateUrl: 'https://link.amazon/B0cCrykft',
+    image: '/gear/ascaso-steel-duo.jpg',
+    imageAlt: '',
+    ariaLabel: 'View Ascaso Steel Duo PID on Amazon',
+  },
+  {
+    name: 'Fellow Stagg EKG',
+    brand: 'Fellow',
+    tag: 'Pour-Over',
+    spec: 'Electric pour-over kettle with variable temperature and precision flow control',
+    desc: 'Precision gooseneck pour-over kettle with variable temperature control and real-time brew-time tracking. Central to pour-over extraction cinematography.',
+    affiliateUrl: 'https://link.amazon/B0fbGKgld',
+    image: '/gear/fellow-stagg-ekg.jpg',
+    imageAlt: '',
+    ariaLabel: 'View Fellow Stagg EKG on Amazon',
+  },
+  {
+    name: 'Fellow Mighty Small Carafe',
+    brand: 'Fellow',
+    tag: 'Glassware',
+    spec: 'Hand-blown 500ml borosilicate server for precise coffee pouring',
+    desc: 'Hand-blown 500ml borosilicate glass carafe with clear volume markers and ergonomic spout design. Sits on set for clean pour-over captures.',
+    affiliateUrl: 'https://link.amazon/B01DJcTby',
+    image: '/gear/fellow-carafe.jpg',
+    imageAlt: '',
+    ariaLabel: 'View Fellow Mighty Small Carafe on Amazon',
+  },
+  {
+    name: 'Fellow Tally Pro Precision Scale',
+    brand: 'Fellow',
+    tag: 'Measurement',
+    spec: 'Ultra-fast 0.1g coffee brewing scale with interactive Brew Assist mode',
+    desc: 'Precision brewing scale with 0.1g accuracy, rapid response rate, and interactive Brew Assist ratio calculations for espresso extraction and pour-over testing.',
+    affiliateUrl: 'https://link.amazon/B06NamWQ9',
+    image: '/gear/fellow-scale.jpg',
+    imageAlt: '',
+    ariaLabel: 'View Fellow Scale on Amazon',
+  },
+  {
+    name: 'NitroPress Dispenser',
+    brand: 'NitroPress',
+    tag: 'Cold Brew',
+    spec: 'High-pressure nitro beverage dispenser with pure nitrogen infuser',
+    desc: 'High-pressure nitro infuser delivering micro-foam texture for cold brew coffee, tea, and signature cocktail production without dairy or syrup additives.',
+    affiliateUrl: 'https://link.amazon/B04f3JDzo',
+    image: '/gear/nitropress.jpg',
+    imageAlt: '',
+    ariaLabel: 'View Nitro Press on Amazon',
+  },
+  {
+    name: 'James Coffee Co.',
+    brand: 'James Coffee Co.',
+    tag: 'Roastery',
+    spec: 'Single-origin espresso and filter roasts sourced and roasted in San Diego, CA',
+    desc: 'Local San Diego specialty roastery providing single-origin espresso and filter roasts tested across commercial and studio extractions.',
+    affiliateUrl: 'https://jamescoffeeco.com',
+    image: '/gear/james-coffee.jpg',
+    imageAlt: '',
+    ariaLabel: 'Visit James Coffee Co. website',
+  },
+];
 
-const rawBase = import.meta.env.BASE_URL;
-const base = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
-const resolveAsset = (img?: string) => {
-  if (!img) return '';
-  if (img.startsWith('http://') || img.startsWith('https://')) return img;
-  const clean = img.startsWith('/') ? img : `/${img}`;
-  return `${base}${clean}`;
+// Unified 5 sections
+const allSections: GearSectionData[] = [
+  ...activeCats.map((cat, idx) => {
+    const isBodies = cat.data.category === 'Camera Bodies';
+    const isLenses = cat.data.category === 'Lens';
+    const isLighting = cat.data.category === 'Lighting';
+    const isTools = cat.data.category === 'Tools & Support';
+
+    const slug = isBodies ? 'bodies' : isLenses ? 'lenses' : isLighting ? 'lighting' : 'tools';
+    const kicker = isBodies ? '01 / HERO SYSTEM' : isLenses ? '02 / OPTICAL SYSTEM' : isLighting ? '03 / ILLUMINATION' : '04 / STABILIZATION & RIG';
+    const categoryTitle = isBodies ? 'Cameras' : isLenses ? 'Lenses' : isLighting ? 'Lighting' : 'Tools and Support';
+
+    return {
+      id: `gear-${slug}`,
+      slug,
+      category: categoryTitle,
+      kicker,
+      subtitle: cat.data.subtitle,
+      items: cat.data.items as GearItem[],
+      hasAllView: cat.data.items.length > 6,
+    };
+  }),
+  {
+    id: 'brew',
+    slug: 'brew',
+    category: 'Cafe Bar',
+    kicker: '05 / BEVERAGE & CRAFT',
+    subtitle: 'Precision brewing and beverage production kit',
+    items: cafeItems,
+    hasAllView: true,
+  },
+];
+
+// Color RGB tones sampled from product imagery for subtle cinematic ambient glow
+const ITEM_RGB_MAP: Record<string, string> = {
+  'sony-a7iv.jpg': '65, 65, 70',
+  'sony-a7cr.jpg': '65, 68, 75',
+  'iphone-17-pro-max.jpg': '70, 85, 130',
+  'iphone-15-pro-max.jpg': '125, 121, 115',
+  'iphone-12-pro-max.jpg': '85, 84, 81',
+  'sony-24-70-gm.jpg': '60, 59, 63',
+  'sony-16-35-gm2.jpg': '50, 49, 51',
+  'sony-70-200-gm2.jpg': '150, 150, 155',
+  'sony-90-macro.jpg': '56, 55, 56',
+  'sony-55-sonnar.jpg': '57, 56, 59',
+  'sony-50-g.jpg': '54, 54, 56',
+  'sony-24-g.jpg': '54, 53, 55',
+  'viltrox-85-evo.jpg': '110, 110, 120',
+  'amaran-200d.jpg': '130, 135, 145',
+  'sony-hvl-f60rm2.jpg': '98, 98, 99',
+  'peak-design-carbon-tripod.jpg': '100, 105, 115',
+  'kupo-c-stands.jpg': '85, 85, 85',
+  'sony-np-fz100-battery.jpg': '79, 82, 82',
+  'ascaso-steel-duo.jpg': '135, 125, 115',
+  'fellow-stagg-ekg.jpg': '97, 96, 95',
+  'fellow-carafe.jpg': '92, 91, 89',
+  'fellow-scale.jpg': '53, 53, 54',
+  'nitropress.jpg': '170, 140, 135',
+  'james-coffee.jpg': '140, 115, 75',
 };
 
-const isProductUrl = (url?: string) => Boolean(url && url.trim() && url !== AMAZON_STOREFRONT);
-
-const getSystemKicker = (catName: string, idx: number) => {
-  if (catName === 'Camera Bodies') return `01 / HERO SYSTEM`;
-  if (catName === 'Lens') return `02 / OPTICAL SYSTEM`;
-  if (catName === 'Lighting') return `03 / ILLUMINATION`;
-  if (catName === 'Tools & Support') return `04 / STABILIZATION & RIG`;
-  return `0${idx + 1} / PRODUCTION GEAR`;
-};
-
-const getCategorySlug = (catName: string) => {
-  if (catName === 'Camera Bodies') return 'bodies';
-  if (catName === 'Lens') return 'lenses';
-  if (catName === 'Lighting') return 'lighting';
-  if (catName === 'Tools & Support') return 'tools';
-  return catName.toLowerCase().replace(/\s+/g, '-');
-};
-
-const getCategoryLabel = (catName: string) => {
-  if (catName === 'Camera Bodies') return 'Cameras';
-  if (catName === 'Lens') return 'Lenses';
-  if (catName === 'Lighting') return 'Lighting';
-  if (catName === 'Tools & Support') return 'Support';
-  return catName;
+const getItemRgb = (img?: string) => {
+  if (!img) return '100, 100, 100';
+  const fname = img.split('/').pop() || '';
+  return ITEM_RGB_MAP[fname] || '100, 100, 100';
 };
 ---
 
@@ -74,19 +209,19 @@ const getCategoryLabel = (catName: string) => {
       <input
         type="search"
         id="gear-search-input"
-        class="gear-search-input"
-        placeholder="Filter equipment (e.g. Sony, 24-70mm, Amaran, tripod)..."
+        class="gear-search-input font-mono"
+        placeholder="Filter equipment (e.g. Sony, 90mm, Amaran, Ascaso, tripod)..."
         aria-label="Search gear"
       />
       <button type="button" id="gear-search-clear" class="gear-search-clear" aria-label="Clear search" hidden>×</button>
     </div>
     <div class="gear-category-chips" role="tablist" aria-label="Gear categories">
       <button type="button" class="gear-chip active" data-cat="all" role="tab" aria-selected="true">All</button>
-      {activeCats.map(cat => {
-        const catKey = getCategorySlug(cat.data.category);
-        const label = getCategoryLabel(cat.data.category);
+      {allSections.map(sec => {
+        const catKey = sec.slug === 'bodies' ? 'cameras' : sec.slug === 'tools' ? 'support' : sec.slug === 'brew' ? 'cafe' : sec.slug;
+        const chipLabel = sec.slug === 'bodies' ? 'Cameras' : sec.slug === 'tools' ? 'Support' : sec.slug === 'brew' ? 'Cafe' : sec.category;
         return (
-          <button type="button" class="gear-chip" data-cat={catKey} role="tab" aria-selected="false">{label}</button>
+          <button type="button" class="gear-chip" data-cat={catKey} role="tab" aria-selected="false">{chipLabel}</button>
         );
       })}
     </div>
@@ -94,40 +229,41 @@ const getCategoryLabel = (catName: string) => {
 
   <div id="gear-empty-state" class="gear-empty-state" hidden>
     <p class="gear-empty-text">No equipment matches your search filter.</p>
-    <button type="button" id="gear-reset-btn" class="gear-reset-btn">Reset Filter</button>
+    <button type="button" id="gear-reset-btn" class="gear-reset-btn font-mono">Reset Filter</button>
   </div>
 
-  <!-- ACCORDION DIRECTORY (ONE GROUP OPEN AT A TIME) -->
-  <div class="gear-accordion-deck-container" id="gear-accordion-container">
-    {activeCats.map((cat, catIdx) => {
-      const catKey = getCategorySlug(cat.data.category);
-      const anchorId = `gear-${catKey}`;
-      const isDefaultExpanded = catIdx === 0;
-      const isLenses = cat.data.category === 'Lens';
-      const isLighting = cat.data.category === 'Lighting';
-      const isTools = cat.data.category === 'Tools & Support';
-      const isBodies = cat.data.category === 'Camera Bodies';
-      const items = cat.data.items;
-      const defaultItem = items[0];
-      const hasProduct = isProductUrl(defaultItem?.affiliateUrl);
-      const hasAllView = items.length > 6; // Threshold: sections with > 6 items get an All View
+  <!-- COMPACT ACCORDION STACK: ALL 5 SECTION HEADERS VISIBLE AT ONCE (EXACTLY ONE OPEN AT A TIME) -->
+  <div class="gear-accordion-container" id="gear-accordion-container">
+    {allSections.map((sec, secIdx) => {
+      const isDefaultExpanded = secIdx === 0;
+      const isBodies = sec.slug === 'bodies';
+      const isLenses = sec.slug === 'lenses';
+      const isLighting = sec.slug === 'lighting';
+      const isTools = sec.slug === 'tools';
+      const isBrew = sec.slug === 'brew';
 
-      // Unique IDs for element backward-compatibility with e2e tests
-      const imgId = isBodies ? 'preview-camera-img' : `img-${anchorId}`;
-      const ctaId = isBodies ? 'preview-camera-btn' : `cta-${anchorId}`;
-      const brandId = isBodies ? 'preview-camera-brand' : `brand-${anchorId}`;
-      const titleId = isBodies ? 'preview-camera-title' : `title-${anchorId}`;
-      const descId = isBodies ? 'preview-camera-desc' : `desc-${anchorId}`;
-      const tagId = isBodies ? 'preview-camera-tag' : `tag-${anchorId}`;
+      const items = sec.items;
+      const defaultItem = items[0];
+      const defaultRgb = getItemRgb(defaultItem?.image);
+      const hasProduct = isProductUrl(defaultItem?.affiliateUrl);
+
+      // Element IDs for strict backward-compatibility with e2e tests
+      const imgId = isBodies ? 'preview-camera-img' : isBrew ? 'preview-cafe-img' : `img-${sec.id}`;
+      const ctaId = isBodies ? 'preview-camera-btn' : isBrew ? 'cafe-hero-cta' : `cta-${sec.id}`;
+      const brandId = isBodies ? 'preview-camera-brand' : `brand-${sec.id}`;
+      const titleId = isBodies ? 'preview-camera-title' : isBrew ? 'cafe-hero-name' : `title-${sec.id}`;
+      const descId = isBodies ? 'preview-camera-desc' : isBrew ? 'cafe-hero-desc' : `desc-${sec.id}`;
+      const tagId = isBodies ? 'preview-camera-tag' : `tag-${sec.id}`;
 
       return (
         <section
           class={`gear-accordion-section ${isDefaultExpanded ? 'is-expanded' : 'is-collapsed'}`}
-          id={anchorId}
-          data-category-slug={anchorId}
-          data-category={catKey}
+          id={sec.id}
+          data-category-slug={sec.id}
+          data-category={sec.slug}
           data-pn-entry
-          data-pn-label={getCategoryLabel(cat.data.category)}
+          data-pn-label={sec.category}
+          style={`--item-accent-rgb: ${defaultRgb};`}
         >
           {isLenses && (
             <>
@@ -142,35 +278,35 @@ const getCategoryLabel = (catName: string) => {
             </>
           )}
 
-          <!-- ACCORDION HEADER (CLICK EXPANDS THIS GROUP & COLLAPSES OTHERS) -->
-          <div class="gear-accordion-header-bar">
+          <!-- COMPACT ACCORDION HEADER (CLICK TOGGLES THIS GROUP & COLLAPSES OTHERS) -->
+          <div class="gear-accordion-header-bar" data-header-bar={sec.slug}>
             <h2 class="gear-accordion-heading">
               <button
                 type="button"
                 class="gear-accordion-header"
                 aria-expanded={isDefaultExpanded ? 'true' : 'false'}
-                aria-controls={`gear-body-${catKey}`}
+                aria-controls={`gear-body-${sec.slug}`}
               >
                 <span class="gear-header-left">
-                  <span class="box-idx font-mono">{getSystemKicker(cat.data.category, catIdx)}</span>
+                  <span class="box-idx font-mono">{sec.kicker}</span>
                   <span class="gear-header-title-row">
-                    <span class="box-title">{cat.data.category}</span>
+                    <span class="box-title">{sec.category}</span>
                     <span class="gear-item-count-badge font-mono">{items.length} PIECES VERIFIED</span>
                   </span>
-                  <span class="box-subtitle">{cat.data.subtitle}</span>
+                  <span class="box-subtitle font-mono">{sec.subtitle}</span>
                 </span>
               </button>
             </h2>
 
             <div class="gear-header-right">
-              {hasAllView && (
+              {sec.hasAllView && (
                 <button
                   type="button"
                   class="btn-all-toggle font-mono"
-                  data-all-toggle={catKey}
+                  data-all-toggle={sec.slug}
                   aria-expanded="false"
-                  aria-controls={`all-grid-${catKey}`}
-                  title="Toggle multi-column grid of all items"
+                  aria-controls={isBrew ? 'cafe-all-grid' : `all-grid-${sec.slug}`}
+                  title={`Toggle multi-column grid of all ${sec.category} items`}
                 >
                   <span class="all-toggle-label">Show All ({items.length})</span>
                   <span class="all-toggle-icon" aria-hidden="true">⊞</span>
@@ -181,110 +317,113 @@ const getCategoryLabel = (catName: string) => {
                 href={AMAZON_STOREFRONT}
                 target="_blank"
                 rel="noopener noreferrer"
-                class="influencer-pill"
+                class="influencer-pill font-mono"
                 aria-label="Visit the storefront"
               >
                 <span class="influencer-dot"></span>
-                <span class="influencer-text">Visit the storefront</span>
+                <span class="influencer-text">Storefront</span>
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                   <path d="M2.5 9.5L9.5 2.5M9.5 2.5H4.5M9.5 2.5V7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </a>
 
+              <!-- UNAMBIGUOUS ACCORDION TOGGLE INDICATOR (ROTATING CHEVRON) -->
               <button
                 type="button"
                 class="accordion-chevron-btn"
-                aria-label={`Toggle ${cat.data.category} section`}
+                aria-label={`Toggle ${sec.category} section`}
                 aria-expanded={isDefaultExpanded ? 'true' : 'false'}
-                data-accordion-toggle={catKey}
+                data-accordion-toggle={sec.slug}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg class="header-chevron-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
               </button>
             </div>
           </div>
 
-          <!-- ACCORDION BODY -->
-          <div class="gear-accordion-body" id={`gear-body-${catKey}`}>
-            <!-- CAROUSEL / DECK STAGE VIEW (HERO SPEC CARD + PEEKING SLATS + CONTROLS) -->
-            <div class="gear-deck-view" data-deck-container={catKey}>
-              <!-- MAIN STAGE: HERO CARD + RIGHT PEEKING SLATS -->
-              <div class="gear-deck-stage" data-deck-stage={catKey}>
-                <!-- HERO SPECIFICATION CARD -->
-                <div class="gear-hero-spec-card" data-hero-spec={catKey}>
-                  <div class="hero-ambient-glow" aria-hidden="true"></div>
-                  <div class="spec-card-badge-row">
-                    <span class="spec-card-verified-tag font-mono">
-                      {isBodies ? 'STUDIO VERIFIED' : 'FIELD VERIFIED'}
-                    </span>
-                    <span class="spec-card-item-tag font-mono" id={tagId}>
-                      {defaultItem?.tag || 'Production Spec'}
-                    </span>
-                    <span class="spec-card-counter font-mono" data-card-counter={catKey}>
+          <!-- ACCORDION BODY (OPENS CINEMATIC POSTER DECK) -->
+          <div class="gear-accordion-body" id={`gear-body-${sec.slug}`}>
+            <!-- CAROUSEL / DECK STAGE VIEW (LARGE FLOATING HERO + RIGHT PEEKING SLATS + CONTROLS) -->
+            <div class="gear-deck-view" data-deck-container={sec.slug}>
+              
+              <!-- STAGE CONTAINER (CONTAINS AMBIENT BACKLIGHT GLOW, HERO POSTER, SLATS, AND DECK ARROWS) -->
+              <div class="gear-deck-stage" data-deck-stage={sec.slug}>
+                
+                <!-- DYNAMIC AMBIENT BACKLIGHT GLOW (HQ FEATURED PATTERN) -->
+                <div class="ambient-glow-container" aria-hidden="true">
+                  {items.map((item, itemIdx) => (
+                    <div
+                      class={`ambient-glow-layer ${itemIdx === 0 ? 'active' : ''}`}
+                      data-glow-index={itemIdx}
+                      style={item.image ? `background-image: url(${resolveAsset(item.image)});` : ''}
+                    ></div>
+                  ))}
+                </div>
+
+                <!-- FLOATING, IMAGE-LED HERO SPEC CARD (NO BOXY CHROME, FULL BLEED PRODUCT ART) -->
+                <div class="hero-poster-card" data-hero-poster={sec.slug}>
+                  <div class="hero-poster-topbar">
+                    <div class="hero-top-tags">
+                      <span class="hero-badge-verified font-mono">
+                        {isBodies ? 'STUDIO VERIFIED' : isBrew ? 'CAFE VERIFIED' : 'FIELD VERIFIED'}
+                      </span>
+                      <span class="hero-badge-item font-mono" id={tagId}>
+                        {defaultItem?.tag || 'Production Spec'}
+                      </span>
+                    </div>
+                    <span class="hero-item-counter font-mono" data-card-counter={sec.slug}>
                       01 / 0{items.length}
                     </span>
                   </div>
 
-                  <!-- PRODUCT VISUAL STAGE & SPEC SPLIT -->
-                  <div class="spec-card-split-content">
-                    <div class="spec-card-visual-col">
-                      <div class="product-visual-stage">
-                        <img
-                          id={imgId}
-                          class="product-visual-img"
-                          src={resolveAsset(defaultItem?.image)}
-                          alt=""
-                          hidden={!defaultItem?.image}
-                        />
-                        <div class="schematic-wrap" id={`schematic-${anchorId}`} hidden={Boolean(defaultItem?.image)}>
-                          <svg class="camera-schematic" viewBox="0 0 260 180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-                            <rect x="20" y="45" width="220" height="120" rx="3" fill="#141414" stroke="#333" stroke-width="2"/>
-                            <circle cx="130" cy="105" r="48" fill="#0d0d0d" stroke="#555" stroke-width="2"/>
-                            <text x="130" y="16" fill="#888" font-family="'JetBrains Mono', monospace" font-size="9" text-anchor="middle" font-weight="bold">FIELD HARDWARE // KIT</text>
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
+                  <!-- LARGE, TALL, FLOATING PRODUCT VISUAL BLEEDING INTO THE DARK VIGNETTED STAGE -->
+                  <div class="hero-poster-visual-wrap">
+                    <img
+                      id={imgId}
+                      class="hero-poster-img"
+                      src={resolveAsset(defaultItem?.image)}
+                      alt=""
+                    />
+                    <div class="hero-poster-vignette" aria-hidden="true"></div>
+                    <div class="hero-poster-scrim" aria-hidden="true"></div>
+                  </div>
 
-                    <!-- SPECIFICATION DETAILS & AMAZON CTA -->
-                    <div class="spec-card-info-col">
-                      <div class="spec-card-naming">
-                        <span class="spec-card-brand-label font-mono" id={brandId}>
-                          {(defaultItem?.brand || 'CURATED PRODUCTION').toUpperCase()} // KIT
+                  <!-- BOTTOM OVERLAY CONTENT STRIP (QUIET BRAND, BOLD TITLE, CLEAR CTA) -->
+                  <div class="hero-overlay-plate">
+                    <span class="hero-brand-kicker font-mono" id={brandId}>
+                      {(defaultItem?.brand || 'CURATED PRODUCTION').toUpperCase()} // KIT
+                    </span>
+                    <h3 class="hero-product-title" id={titleId}>
+                      {defaultItem?.name}
+                    </h3>
+                    <p class="hero-product-spec" id={descId}>
+                      {defaultItem?.desc || defaultItem?.spec}
+                    </p>
+                    <div class="hero-action-row">
+                      <a
+                        href={defaultItem?.affiliateUrl || AMAZON_STOREFRONT}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="btn-primary-influencer font-mono"
+                        id={ctaId}
+                        aria-label={defaultItem?.ariaLabel || `View ${defaultItem?.name} on Amazon`}
+                      >
+                        <span class="amz-btn-text">
+                          {hasProduct ? `View ${defaultItem?.name} on Amazon` : 'Visit the storefront'}
                         </span>
-                        <h3 class="spec-card-item-title" id={titleId}>
-                          {defaultItem?.name}
-                        </h3>
-                        <p class="spec-card-item-desc" id={descId}>
-                          {defaultItem?.spec}
-                        </p>
-                      </div>
-
-                      <div class="spec-card-action-block">
-                        <a
-                          href={defaultItem?.affiliateUrl || AMAZON_STOREFRONT}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          class="btn-primary-influencer"
-                          id={ctaId}
-                        >
-                          <span class="amz-btn-text">
-                            {hasProduct ? `View ${defaultItem?.name} on Amazon` : 'Visit the storefront'}
-                          </span>
-                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" focusable="false">
-                            <path d="M2.5 11.5L11.5 2.5M11.5 2.5H5.5M11.5 2.5V8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          </svg>
-                        </a>
-                        <span class="preview-disclosure font-mono">
-                          As an Amazon Associate, I earn from qualifying purchases.
-                        </span>
-                      </div>
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" focusable="false">
+                          <path d="M2.5 11.5L11.5 2.5M11.5 2.5H5.5M11.5 2.5V8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </a>
+                      <span class="hero-disclosure-note font-mono">
+                        As an Amazon Associate, I earn from qualifying purchases.
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <!-- RIGHT PEEKING VERTICAL SLATS (HQ FEATURED PATTERN) -->
+                <!-- RIGHT PEEKING VERTICAL SLATS (HQ FEATURED CARD STACK) -->
                 <div class="deck-slats-stack" aria-hidden="true">
                   {items.map((item, itemIdx) => {
                     const isNext1 = itemIdx === 1;
@@ -294,7 +433,7 @@ const getCategoryLabel = (catName: string) => {
                       <div
                         class={initialClass}
                         data-slat-index={itemIdx}
-                        data-cat-slug={catKey}
+                        data-cat-slug={sec.slug}
                         title={`Click to view ${item.name}`}
                       >
                         <div class="peeking-spine">
@@ -308,41 +447,44 @@ const getCategoryLabel = (catName: string) => {
                   })}
                 </div>
 
-                <!-- CONTROLS: PREV / NEXT ARROWS (EXPLICIT GEAR ENHANCEMENTS) -->
-                <div class="deck-arrows-wrap">
+                <!-- UNAMBIGUOUS ITEM NAVIGATION ARROWS (INSIDE THE HERO DECK STAGE) -->
+                <div class="deck-stage-nav-controls" aria-label="Deck item navigation">
                   <button
                     type="button"
-                    class="deck-nav-arrow deck-nav-prev"
-                    data-deck-prev={catKey}
-                    aria-label={`Previous ${cat.data.category} item`}
+                    class="btn-deck-item-nav btn-deck-prev"
+                    data-deck-prev={sec.slug}
+                    aria-label={`Previous ${sec.category} item`}
+                    title="Previous item"
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                       <polyline points="15 18 9 12 15 6"></polyline>
                     </svg>
                   </button>
                   <button
                     type="button"
-                    class="deck-nav-arrow deck-nav-next"
-                    data-deck-next={catKey}
-                    aria-label={`Next ${cat.data.category} item`}
+                    class="btn-deck-item-nav btn-deck-next"
+                    data-deck-next={sec.slug}
+                    aria-label={`Next ${sec.category} item`}
+                    title="Next item"
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                       <polyline points="9 18 15 12 9 6"></polyline>
                     </svg>
                   </button>
                 </div>
               </div>
 
-              <!-- THUMBNAIL STRIP BELOW (HQ FEATURED MANIFEST THUMBNAILS) -->
+              <!-- THUMBNAIL TRACK BELOW (HQ FEATURED THUMBNAIL STRIP) -->
               <div
                 class="deck-thumb-track"
                 role="tablist"
-                aria-label={`${cat.data.category} rotation`}
-                data-thumb-track={catKey}
+                aria-label={`${sec.category} rotation`}
+                data-thumb-track={sec.slug}
               >
                 {items.map((item, itemIdx) => {
                   const itemHasProduct = isProductUrl(item.affiliateUrl);
                   const rowClass = isBodies ? 'camera-item-row' : 'collage-item-row';
+                  const itemRgb = getItemRgb(item.image);
                   return (
                     <button
                       type="button"
@@ -351,17 +493,18 @@ const getCategoryLabel = (catName: string) => {
                       tabindex="0"
                       aria-selected={itemIdx === 0 ? 'true' : 'false'}
                       aria-label={`Select ${item.name}`}
-                      data-subcat={anchorId}
+                      data-subcat={sec.id}
                       data-item-index={itemIdx}
                       data-item-name={item.name}
                       data-item-brand={item.brand || (item.name.includes('Sony') ? 'Sony' : 'Curated Kit')}
-                      data-item-spec={item.spec}
+                      data-item-spec={item.desc || item.spec}
                       data-item-tag={item.tag || (itemIdx === 0 ? 'Primary Workhorse' : 'Production Spec')}
                       data-item-url={item.affiliateUrl || AMAZON_STOREFRONT}
                       data-has-product-url={itemHasProduct ? 'true' : 'false'}
                       data-item-image={resolveAsset(item.image)}
-                      data-item-image-alt={item.imageAlt || item.name}
-                      data-cat-slug={catKey}
+                      data-item-rgb={itemRgb}
+                      data-item-aria={item.ariaLabel || `View ${item.name} on Amazon`}
+                      data-cat-slug={sec.slug}
                     >
                       <div class="thumb-tile-img-box">
                         {item.image ? (
@@ -381,27 +524,27 @@ const getCategoryLabel = (catName: string) => {
               </div>
             </div>
 
-            <!-- "ALL" MULTI-COLUMN TILE GRID VIEW (FOR SECTIONS WITH > 6 ITEMS, E.G. LENSES) -->
-            {hasAllView && (
-              <div class="gear-all-grid-view" id={`all-grid-${catKey}`} hidden data-all-view={catKey}>
+            <!-- "ALL" MULTI-COLUMN TILE GRID VIEW (FOR LENSES AND CAFE BAR) -->
+            {sec.hasAllView && (
+              <div class="gear-all-grid-view" id={isBrew ? 'cafe-all-grid-container' : `all-grid-${sec.slug}`} hidden data-all-view={sec.slug}>
                 <div class="all-grid-topbar">
                   <div class="all-grid-title-wrap">
                     <span class="all-grid-tag font-mono">COMPLETE MANIFEST OVERVIEW</span>
-                    <h4 class="all-grid-title">{cat.data.category} Inventory ({items.length} units)</h4>
+                    <h4 class="all-grid-title">{sec.category} Inventory ({items.length} units)</h4>
                   </div>
-                  <button type="button" class="btn-back-carousel font-mono" data-back-carousel={catKey}>
+                  <button type="button" class="btn-back-carousel font-mono" data-back-carousel={sec.slug}>
                     ← Return to Carousel
                   </button>
                 </div>
 
-                <div class="all-grid-cards">
-                  {items.map((item, itemIdx) => {
+                <div class="all-grid-cards" id={isBrew ? 'cafe-all-grid' : undefined}>
+                  {items.map((item) => {
                     const itemHasProduct = isProductUrl(item.affiliateUrl);
                     return (
                       <article class="all-grid-card">
                         <div class="all-card-top">
                           <span class="all-card-tag font-mono">{item.tag || 'Pro Kit'}</span>
-                          <span class="all-card-brand font-mono">{item.brand || 'Sony'}</span>
+                          <span class="all-card-brand font-mono">{item.brand || 'Verified'}</span>
                         </div>
                         <div class="all-card-img-wrap">
                           <img src={resolveAsset(item.image)} alt="" class="all-card-img" loading="lazy" />
@@ -413,7 +556,8 @@ const getCategoryLabel = (catName: string) => {
                             href={item.affiliateUrl || AMAZON_STOREFRONT}
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="all-card-cta btn-amazon-link"
+                            class="all-card-cta btn-amazon-link font-mono"
+                            aria-label={item.ariaLabel || `View ${item.name} on Amazon`}
                           >
                             <span>{itemHasProduct ? `View on Amazon` : 'Storefront'} <span aria-hidden="true">↗</span></span>
                           </a>
@@ -423,8 +567,20 @@ const getCategoryLabel = (catName: string) => {
                   })}
                 </div>
 
+                {isBrew && (
+                  <div class="cafe-project-reel-note">
+                    <div class="reel-note-header font-mono">
+                      <span class="reel-badge">PROJECT NOTE</span>
+                      <span>Native 9:16 Vertical Beverage Cinematography</span>
+                    </div>
+                    <p class="reel-desc">
+                      Ascaso espresso extraction and pour-over cinematography captured on the Sony a7 IV paired with the Sony 90mm f/2.8 Macro lens.
+                    </p>
+                  </div>
+                )}
+
                 <div class="all-grid-footer">
-                  <button type="button" class="btn-back-carousel font-mono" data-back-carousel={catKey}>
+                  <button type="button" class="btn-back-carousel font-mono" data-back-carousel={sec.slug}>
                     ← Return to Carousel
                   </button>
                 </div>
@@ -448,14 +604,15 @@ const getCategoryLabel = (catName: string) => {
     justify-content: space-between;
     gap: 1.25rem;
     padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
     border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.12));
   }
   .gear-search-wrap {
     position: relative;
     display: flex;
     align-items: center;
-    flex: 1 1 300px;
-    max-width: 480px;
+    flex: 1 1 320px;
+    max-width: 520px;
   }
   .gear-search-icon {
     position: absolute;
@@ -466,17 +623,16 @@ const getCategoryLabel = (catName: string) => {
   .gear-search-input {
     width: 100%;
     padding: 0.75rem 2.25rem 0.75rem 2.75rem;
-    background: var(--surface, #111111);
-    border: 1px solid var(--line, rgba(255, 255, 255, 0.15));
-    color: var(--ink, #ffffff);
-    font-family: var(--font-body);
-    font-size: 0.88rem;
+    background: #111111;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    font-size: 0.85rem;
     outline: none;
-    transition: var(--transition-smooth, all 0.2s ease);
+    transition: all 0.2s ease;
   }
   .gear-search-input:focus {
-    border-color: var(--border-active, rgba(255, 255, 255, 0.5));
-    background: var(--surface-2, #1a1a1a);
+    border-color: rgba(255, 255, 255, 0.5);
+    background: #181818;
   }
   .gear-search-clear {
     position: absolute;
@@ -490,119 +646,100 @@ const getCategoryLabel = (catName: string) => {
     line-height: 1;
   }
   .gear-search-clear:hover {
-    color: var(--ink, #ffffff);
+    color: #ffffff;
   }
   .gear-category-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    row-gap: 0.5rem;
   }
   .gear-chip {
-    position: relative;
-    min-height: var(--btn-h-sm, 36px);
-    padding: 0.4rem 0.9rem;
-    background: transparent;
-    border: 1px solid var(--line, rgba(255, 255, 255, 0.15));
-    border-radius: var(--btn-radius, 0);
-    color: var(--muted, #888888);
+    padding: 0.45rem 0.9rem;
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: var(--muted, #888888);
     cursor: pointer;
     transition: all 0.2s ease;
   }
   .gear-chip:hover {
-    border-color: var(--border-active, rgba(255, 255, 255, 0.4));
-    color: var(--ink, #ffffff);
-    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.3);
   }
   .gear-chip.active {
-    background: var(--ink, #ffffff);
-    color: var(--bg, #0a0a0a);
-    border-color: var(--ink, #ffffff);
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
     font-weight: 700;
   }
+
   .gear-empty-state {
-    padding: 3.5rem 1.5rem;
+    padding: 3rem 1.5rem;
     text-align: center;
-    border: 1px dashed var(--line, rgba(255, 255, 255, 0.2));
-    background: var(--surface, #111111);
+    background: #111111;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
     margin-bottom: 2rem;
   }
-  .gear-empty-state[hidden],
-  .gear-accordion-section[hidden] {
-    display: none !important;
-  }
   .gear-empty-text {
-    font-family: var(--font-mono);
+    font-size: 0.95rem;
     color: var(--muted, #888888);
-    font-size: 0.9rem;
-    margin-bottom: 1.25rem;
-    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
   }
   .gear-reset-btn {
-    padding: 0.6rem 1.25rem;
-    background: transparent;
-    border: 1px solid var(--border-active, rgba(255, 255, 255, 0.4));
-    color: var(--ink, #ffffff);
-    font-family: var(--font-mono);
+    padding: 0.5rem 1.25rem;
+    background: #ffffff;
+    color: #000000;
+    border: none;
     font-size: 0.75rem;
-    text-transform: uppercase;
+    font-weight: 700;
     letter-spacing: 0.1em;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: all 0.2s ease;
-  }
-  .gear-reset-btn:hover {
-    background: var(--surface-2, #1a1a1a);
-    color: var(--color-white, #ffffff);
   }
 
   /* --------------------------------------------------------------------------
-     ACCORDION STRUCTURE (ONE GROUP OPEN AT A TIME)
+     ACCORDION STACK (COMPACT HEADERS, EXACTLY ONE OPEN AT A TIME)
      -------------------------------------------------------------------------- */
-  .gear-monolith {
-    width: 100%;
-    margin-top: 1.5rem;
+  .gear-accordion-container {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-  }
-  .gear-accordion-deck-container {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
+    gap: 0.75rem;
     width: 100%;
   }
+
   .gear-accordion-section {
-    background: #090909;
-    border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
-    display: flex;
-    flex-direction: column;
-    position: relative;
+    background: #080808;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    overflow: hidden;
     transition: border-color 0.3s ease;
   }
   .gear-accordion-section.is-expanded {
     border-color: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
   }
+
   .gear-accordion-header-bar {
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1.5rem;
-    padding: 1.25rem 1.75rem;
-    background: #0d0d0d;
-    border-bottom: 1px solid transparent;
-    transition: background-color 0.25s ease, border-color 0.25s ease;
-  }
-  .gear-accordion-section.is-expanded .gear-accordion-header-bar {
-    border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.12));
-    background: #0e0e0e;
+    padding-right: 1.75rem;
+    background: #0f0f0f;
+    transition: background 0.2s ease;
+    cursor: pointer;
   }
   .gear-accordion-section.is-collapsed .gear-accordion-header-bar:hover {
-    background: #141414;
+    background: #151515;
   }
+  .gear-accordion-section.is-expanded .gear-accordion-header-bar {
+    background: #121212;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
   .gear-accordion-heading {
     margin: 0;
     font: inherit;
@@ -620,27 +757,13 @@ const getCategoryLabel = (catName: string) => {
     width: 100%;
     display: flex;
     align-items: center;
+    padding: 1.25rem 1rem 1.25rem 1.75rem;
     cursor: pointer;
-    padding: 0;
+    gap: 1.25rem;
   }
   .gear-accordion-header:focus-visible {
     outline: 2px solid #ffffff;
-    outline-offset: 4px;
-  }
-  .accordion-chevron-btn {
-    background: none;
-    border: none;
-    color: var(--muted, #888888);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    padding: 0.35rem;
-    transition: transform 0.3s ease, color 0.2s ease;
-  }
-  .gear-accordion-section.is-expanded .accordion-chevron-btn {
-    transform: rotate(180deg);
-    color: var(--ink, #ffffff);
+    outline-offset: -2px;
   }
 
   .gear-header-left {
@@ -667,7 +790,7 @@ const getCategoryLabel = (catName: string) => {
     font-size: clamp(1.35rem, 2.2vw, 1.85rem);
     font-weight: 800;
     letter-spacing: -0.01em;
-    color: var(--ink, #ffffff);
+    color: #ffffff;
     margin: 0;
     line-height: 1.1;
   }
@@ -680,7 +803,6 @@ const getCategoryLabel = (catName: string) => {
     padding: 0.2rem 0.5rem;
   }
   .box-subtitle {
-    font-family: var(--font-mono);
     font-size: 0.78rem;
     color: var(--muted, #888888);
     letter-spacing: 0.02em;
@@ -693,16 +815,14 @@ const getCategoryLabel = (catName: string) => {
     flex-shrink: 0;
   }
 
-  /* STOREFRONT PILL (PRESERVED LIVE BEHAVIOR) */
   .influencer-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
     padding: 0.45rem 0.85rem;
     background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: var(--ink, #ffffff);
-    font-family: var(--font-mono);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #ffffff;
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -712,30 +832,28 @@ const getCategoryLabel = (catName: string) => {
     min-height: 36px;
   }
   .influencer-pill:hover {
-    background: #f0f0f0;
-    color: #080808;
-    border-color: #f0f0f0;
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
   }
   .influencer-dot {
     width: 6px;
     height: 6px;
-    background: var(--ink, #ffffff);
+    background: #ffffff;
     border-radius: 50%;
   }
   .influencer-pill:hover .influencer-dot {
-    background: #080808;
+    background: #000000;
   }
 
-  /* "ALL" VIEW TOGGLE BUTTON (FOR SECTIONS > 6 ITEMS) */
   .btn-all-toggle {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
     padding: 0.45rem 0.85rem;
     background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    color: var(--ink, #ffffff);
-    font-family: var(--font-mono);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    color: #ffffff;
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -748,22 +866,44 @@ const getCategoryLabel = (catName: string) => {
     color: #000000;
     border-color: #ffffff;
   }
-  .all-toggle-icon {
-    font-size: 0.9rem;
-    line-height: 1;
-  }
 
-  /* ACCORDION CHEVRON */
-  .accordion-chevron {
-    display: flex;
+  /* ROTATING HEADER CHEVRON AFFORDANCE */
+  .accordion-chevron-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
     color: var(--muted, #888888);
-    transition: transform 0.3s ease, color 0.2s ease;
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    padding: 0;
+    flex-shrink: 0;
   }
-  .gear-accordion-section.is-expanded .accordion-chevron {
+  .accordion-chevron-btn:hover {
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .accordion-chevron-btn:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
+  .header-chevron-icon {
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .gear-accordion-section.is-expanded .header-chevron-icon {
     transform: rotate(180deg);
-    color: var(--ink, #ffffff);
+  }
+  .gear-accordion-section.is-expanded .accordion-chevron-btn {
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.45);
+    background: rgba(255, 255, 255, 0.12);
   }
 
   /* ACCORDION BODY DISPLAY */
@@ -778,240 +918,228 @@ const getCategoryLabel = (catName: string) => {
   }
 
   /* --------------------------------------------------------------------------
-     ZONE 1: HERO SPECIFICATION CARD + RIGHT PEEKING SLATS
+     ZONE 1: HERO POSTER CARD + SLATS + AMBIENT GLOW (HQ FEATURED PATTERN)
      -------------------------------------------------------------------------- */
   .gear-deck-view {
     display: flex;
     flex-direction: column;
     width: 100%;
-    padding: 1.5rem 1.75rem;
-    gap: 1.5rem;
-    background: #0a0a0a;
+    padding: 1.75rem 2rem;
+    gap: 1.75rem;
+    background: #060606;
   }
+
   .gear-deck-stage {
     position: relative;
     width: 100%;
     display: flex;
     align-items: stretch;
-    min-height: 380px;
-    gap: 1rem;
+    min-height: 480px;
+    gap: 1.25rem;
+    overflow: hidden;
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
   }
 
-  /* HERO SPECIFICATION CARD */
-  .gear-hero-spec-card {
-    flex: 1;
-    min-width: 0;
-    background: #111111;
-    border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
-    padding: 1.5rem 1.75rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
-    position: relative;
-    z-index: 2;
+  /* DYNAMIC AMBIENT BACKLIGHT GLOW */
+  .ambient-glow-container {
+    position: absolute;
+    inset: -15% -15% 0 -15%;
+    z-index: 0;
+    pointer-events: none;
     overflow: hidden;
   }
-  .hero-ambient-glow {
+  .ambient-glow-layer {
     position: absolute;
-    top: 15%;
-    left: 15%;
-    width: 65%;
-    height: 65%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(20, 20, 30, 0.3) 50%, transparent 75%);
-    filter: blur(50px);
-    pointer-events: none;
-    z-index: 0;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(100px) saturate(1.4);
+    -webkit-filter: blur(100px) saturate(1.4);
+    mask-image: radial-gradient(circle at center, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 70%);
+    -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 70%);
+    opacity: 0;
+    transition: opacity 0.8s ease;
   }
-  .spec-card-badge-row {
+  .ambient-glow-layer.active {
+    opacity: 0.38;
+  }
+
+  /* LARGE FLOATING HERO SPEC CARD */
+  .hero-poster-card {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    background: #0d0d0d;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 480px;
+    z-index: 2;
+    overflow: hidden;
+    transition: opacity 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .hero-poster-card.is-rotating {
+    opacity: 0.2;
+    transform: scale(0.975);
+  }
+
+  .hero-poster-topbar {
+    position: relative;
+    z-index: 4;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    position: relative;
-    z-index: 1;
+    padding: 1.25rem 1.75rem;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
   }
-  .spec-card-verified-tag {
+  .hero-top-tags {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .hero-badge-verified {
     font-size: 0.68rem;
-    letter-spacing: 0.14em;
-    color: var(--key-ink, #ffffff);
+    letter-spacing: 0.16em;
     font-weight: 700;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 0.2rem 0.55rem;
   }
-  .spec-card-item-tag {
+  .hero-badge-item {
     font-size: 0.68rem;
     letter-spacing: 0.1em;
     color: var(--muted, #888888);
     text-transform: uppercase;
   }
-  .spec-card-counter {
-    font-size: 0.68rem;
-    color: var(--muted, #888888);
-    letter-spacing: 0.08em;
+  .hero-item-counter {
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    font-weight: 700;
+    color: rgba(var(--item-accent-rgb, 255, 255, 255), 0.95);
   }
 
-  /* SPEC SPLIT CONTENT: VISUAL ON LEFT, DETAILS & CTA ON RIGHT */
-  .spec-card-split-content {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
-    gap: 2rem;
-    align-items: center;
-    flex: 1;
-    position: relative;
+  /* PRODUCT VISUAL STAGE */
+  .hero-poster-visual-wrap {
+    position: absolute;
+    inset: 0;
     z-index: 1;
-    transition: opacity 0.22s ease-out, transform 0.22s ease-out;
-  }
-  .gear-hero-spec-card.is-animating .spec-card-split-content {
-    opacity: 0.25;
-    transform: scale(0.985);
-  }
-  @media (max-width: 860px) {
-    .spec-card-split-content {
-      grid-template-columns: 1fr;
-      gap: 1.25rem;
-    }
-  }
-
-  .spec-card-visual-col {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100%;
-    min-height: 220px;
+    padding: 2.5rem 3rem 8.5rem;
   }
-  .product-visual-stage {
-    width: 100%;
-    height: 100%;
-    background: #080808;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.25rem;
-  }
-  .product-visual-img {
+  .hero-poster-img {
     max-width: 100%;
-    max-height: 240px;
+    max-height: 100%;
     width: auto;
     height: auto;
     object-fit: contain;
-    display: block;
-    margin: 0 auto;
-    filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.85));
-    transition: opacity 0.3s ease;
+    filter: drop-shadow(0 16px 36px rgba(0, 0, 0, 0.9));
+    transition: transform 0.4s ease;
   }
-  .product-visual-img[hidden] {
-    display: none;
+  .hero-poster-vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at center, transparent 35%, rgba(13, 13, 13, 0.85) 100%);
   }
-  .schematic-wrap {
-    width: 100%;
-    max-width: 320px;
-    display: flex;
-    justify-content: center;
-  }
-  .schematic-wrap[hidden] {
-    display: none;
-  }
-  .camera-schematic {
-    width: 100%;
-    height: auto;
-    filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.8));
+  .hero-poster-scrim {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(to top, rgba(13, 13, 13, 0.96) 0%, rgba(13, 13, 13, 0.75) 30%, rgba(13, 13, 13, 0.1) 65%, transparent 100%);
   }
 
-  /* DETAILS COLUMN (FULL WIDTH DESCRIPTION - ELIMINATING WORD-BY-WORD WRAP) */
-  .spec-card-info-col {
+  /* BOTTOM OVERLAY PLATE */
+  .hero-overlay-plate {
+    position: relative;
+    z-index: 4;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    gap: 1.25rem;
-    height: 100%;
+    padding: 1.5rem 2rem 1.5rem;
+    gap: 0.35rem;
   }
-  .spec-card-naming {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  .spec-card-brand-label {
-    font-size: 0.65rem;
+  .hero-brand-kicker {
+    font-size: 0.68rem;
     letter-spacing: 0.16em;
     color: var(--key-ink, #c0c0c0);
   }
-  .spec-card-item-title {
+  .hero-product-title {
     font-family: var(--font-display);
-    font-size: clamp(1.4rem, 2vw, 1.85rem);
-    font-weight: 700;
-    color: var(--ink, #ffffff);
+    font-size: clamp(1.5rem, 2.6vw, 2.3rem);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: #ffffff;
     margin: 0;
-    line-height: 1.15;
+    line-height: 1.1;
   }
-  .spec-card-item-desc {
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    color: var(--muted, #a0a0a0);
+  .hero-product-spec {
+    font-size: 0.92rem;
     line-height: 1.6;
-    margin: 0;
-    max-width: 100%; /* Full-width unconstrained description */
+    color: rgba(255, 255, 255, 0.82);
+    margin: 0.25rem 0 0.85rem;
+    max-width: 65ch;
+  }
+  .hero-action-row {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  .spec-card-action-block {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-  }
   .btn-primary-influencer {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.6rem;
-    min-height: var(--btn-h-md, 44px);
-    background: transparent;
-    color: var(--ink, #ffffff);
-    padding: 0.6rem 1.25rem;
-    font-family: var(--font-mono);
-    font-size: 0.82rem;
+    min-height: 42px;
+    background: #ffffff;
+    color: #000000;
+    padding: 0.55rem 1.4rem;
+    font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     text-decoration: none;
-    border: 1px solid #f0f0f0;
     transition: all 0.2s ease;
+    cursor: pointer;
   }
-  .btn-primary-influencer:hover,
-  .btn-primary-influencer:focus-visible {
-    background: #ffffff;
-    border-color: #ffffff;
-    color: #080808;
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
+  .btn-primary-influencer:hover {
+    background: #e0e0e0;
+    transform: translateY(-1px);
   }
-  .preview-disclosure {
+  .hero-disclosure-note {
     font-size: 0.68rem;
     color: var(--muted, #888888);
-    text-align: center;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
   }
 
-  /* --------------------------------------------------------------------------
-     PEEKING SLATS STACK (HQ FEATURED PATTERN)
-     -------------------------------------------------------------------------- */
+  /* PEEKING VERTICAL SLATS (HQ FEATURED PATTERN) */
   .deck-slats-stack {
     display: flex;
     gap: 0.5rem;
     align-items: stretch;
     flex-shrink: 0;
+    z-index: 3;
   }
   @media (max-width: 900px) {
     .deck-slats-stack {
-      display: none; /* Mobile/tablet hides peeking slats to prioritize hero card */
+      display: none;
     }
   }
 
   .deck-slat {
     position: relative;
-    width: 52px;
-    background: #131313;
+    width: 54px;
+    background: #111111;
     border: 1px solid rgba(255, 255, 255, 0.1);
     overflow: hidden;
     cursor: pointer;
@@ -1025,7 +1153,7 @@ const getCategoryLabel = (catName: string) => {
     z-index: 2;
   }
   .deck-slat.next-2 {
-    opacity: 0.55;
+    opacity: 0.5;
     z-index: 1;
   }
   .deck-slat.hidden {
@@ -1033,10 +1161,11 @@ const getCategoryLabel = (catName: string) => {
   }
   .deck-slat:hover {
     opacity: 1;
-    width: 68px;
-    border-color: rgba(255, 255, 255, 0.35);
-    background: #1c1c1c;
+    width: 74px;
+    border-color: rgba(255, 255, 255, 0.4);
+    background: #191919;
   }
+
   .peeking-spine {
     position: absolute;
     inset: 0;
@@ -1067,52 +1196,54 @@ const getCategoryLabel = (catName: string) => {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    opacity: 0.15;
+    opacity: 0.2;
     filter: blur(1px) grayscale(100%);
     transition: opacity 0.3s ease;
   }
   .deck-slat:hover .slat-peek-img {
-    opacity: 0.35;
+    opacity: 0.4;
   }
 
-  /* --------------------------------------------------------------------------
-     PREV / NEXT NAVIGATION CONTROLS (EXPLICIT GEAR ENHANCEMENTS)
-     -------------------------------------------------------------------------- */
-  .deck-arrows-wrap {
+  /* DECK STAGE ITEM NAVIGATION ARROWS */
+  .deck-stage-nav-controls {
     position: absolute;
-    right: 1.5rem;
-    top: 1.5rem;
+    inset: 0;
+    pointer-events: none;
     display: flex;
-    gap: 0.35rem;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0.75rem;
     z-index: 10;
   }
-  .deck-nav-arrow {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    min-height: 36px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+  .btn-deck-item-nav {
+    pointer-events: auto;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
     background: rgba(15, 15, 15, 0.85);
-    color: var(--ink, #ffffff);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    backdrop-filter: blur(8px);
     transition: all 0.2s ease;
-    backdrop-filter: blur(4px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   }
-  .deck-nav-arrow:hover {
+  .btn-deck-item-nav:hover {
     background: #ffffff;
     color: #000000;
     border-color: #ffffff;
+    transform: scale(1.08);
   }
-  .deck-nav-arrow:focus-visible {
+  .btn-deck-item-nav:focus-visible {
     outline: 2px solid #ffffff;
     outline-offset: 2px;
   }
 
   /* --------------------------------------------------------------------------
-     ZONE 2: THUMBNAIL STRIP BELOW (HQ FEATURED THUMBNAIL TRACK)
+     ZONE 2: THUMBNAIL TRACK (CENTERED QUICK-NAV RAIL)
      -------------------------------------------------------------------------- */
   .deck-thumb-track {
     width: 100%;
@@ -1122,140 +1253,137 @@ const getCategoryLabel = (catName: string) => {
     padding: 0.5rem 0.25rem 0.75rem;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    justify-content: flex-start;
+  }
+  @media (min-width: 900px) {
+    .deck-thumb-track {
+      justify-content: center;
+      justify-content: safe center;
+    }
   }
   .deck-thumb-track::-webkit-scrollbar {
     display: none;
   }
+
   .deck-thumb-tile {
-    position: relative;
-    flex: 0 0 auto;
-    width: 175px;
+    flex: 0 0 160px;
     background: #111111;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     padding: 0.6rem;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.45rem;
     cursor: pointer;
     text-align: left;
-    color: inherit;
-    font: inherit;
+    position: relative;
     opacity: 0.55;
-    transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: all 0.2s ease;
   }
   .deck-thumb-tile:hover {
     opacity: 0.9;
-    background: #181818;
-    border-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.35);
     transform: translateY(-2px);
   }
   .deck-thumb-tile.is-active {
     opacity: 1;
-    background: #1a1a1a;
-    border-color: #ffffff;
-    box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
-    transform: translateY(-2px);
+    background: #191919;
+    border-color: rgba(var(--item-accent-rgb, 255, 255, 255), 0.95);
+    box-shadow: 0 0 16px rgba(var(--item-accent-rgb, 255, 255, 255), 0.35);
   }
   .deck-thumb-tile:focus-visible {
     outline: 2px solid #ffffff;
     outline-offset: 2px;
-    opacity: 1;
   }
+
   .thumb-tile-img-box {
     width: 100%;
-    height: 75px;
+    height: 72px;
     background: #080808;
-    border: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
   }
   .thumb-tile-img {
-    max-width: 90%;
-    max-height: 90%;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: contain;
   }
   .thumb-tile-fallback {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--muted, #888888);
-    font-weight: 700;
   }
   .thumb-tile-meta {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.15rem;
+    overflow: hidden;
   }
   .thumb-tile-name {
-    font-family: var(--font-display);
-    font-size: 0.82rem;
-    font-weight: 700;
-    color: var(--ink, #ffffff);
-    line-height: 1.2;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #ffffff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   .thumb-tile-tag {
-    font-size: 0.65rem;
-    color: var(--key-ink, #c0c0c0);
-    letter-spacing: 0.08em;
+    font-size: 0.62rem;
+    color: var(--muted, #888888);
     text-transform: uppercase;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   /* --------------------------------------------------------------------------
-     "ALL" MULTI-COLUMN TILE GRID VIEW (FOR LENSES & SECTIONS > 6 ITEMS)
+     ZONE 3: ALL MULTI-COLUMN TILE GRID VIEW
      -------------------------------------------------------------------------- */
   .gear-all-grid-view {
-    padding: 1.5rem 1.75rem;
+    width: 100%;
+    padding: 2rem 2.25rem;
+    background: #070707;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-    background: #0a0a0a;
+    gap: 2rem;
   }
-  .gear-all-grid-view[hidden],
+  .gear-all-grid-view[hidden] {
+    display: none !important;
+  }
   .gear-deck-view[hidden] {
     display: none !important;
   }
-  .all-grid-topbar, .all-grid-footer {
+  .all-grid-topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     flex-wrap: wrap;
     gap: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
-  .all-grid-footer {
-    border-bottom: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding-top: 1rem;
-    justify-content: flex-end;
+  .all-grid-title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
   }
   .all-grid-tag {
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
     color: var(--key-ink, #c0c0c0);
-    text-transform: uppercase;
   }
   .all-grid-title {
     font-family: var(--font-display);
-    font-size: 1.25rem;
+    font-size: 1.5rem;
     font-weight: 700;
-    color: var(--ink, #ffffff);
-    margin: 0.2rem 0 0;
+    color: #ffffff;
+    margin: 0;
   }
   .btn-back-carousel {
-    padding: 0.5rem 1rem;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: var(--ink, #ffffff);
-    font-size: 0.75rem;
-    text-transform: uppercase;
+    padding: 0.5rem 1.15rem;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    color: #ffffff;
+    font-size: 0.72rem;
     letter-spacing: 0.1em;
+    text-transform: uppercase;
     cursor: pointer;
     transition: all 0.2s ease;
   }
@@ -1267,169 +1395,204 @@ const getCategoryLabel = (catName: string) => {
 
   .all-grid-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1.25rem;
-    width: 100%;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.5rem;
   }
   .all-grid-card {
-    background: #111111;
+    background: #101010;
     border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 1.25rem;
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
     gap: 1rem;
     transition: border-color 0.2s ease, transform 0.2s ease;
   }
   .all-grid-card:hover {
-    border-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.35);
     transform: translateY(-2px);
   }
   .all-card-top {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    font-size: 0.65rem;
-  }
-  .all-card-tag {
-    color: var(--key-ink, #ffffff);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-  .all-card-brand {
+    font-size: 0.68rem;
     color: var(--muted, #888888);
   }
   .all-card-img-wrap {
     width: 100%;
     height: 140px;
     background: #080808;
-    border: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0.75rem;
   }
   .all-card-img {
-    max-width: 85%;
-    max-height: 85%;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: contain;
   }
-  .all-card-body {
-    display: flex;
-    flex-direction: column;
-    gap: 0.65rem;
-    flex: 1;
-    justify-content: space-between;
-  }
   .all-card-name {
-    font-family: var(--font-display);
-    font-size: 1.05rem;
+    font-size: 1rem;
     font-weight: 700;
-    color: var(--ink, #ffffff);
-    margin: 0;
+    color: #ffffff;
+    margin: 0 0 0.35rem;
   }
   .all-card-spec {
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    color: var(--muted, #a0a0a0);
+    font-size: 0.8rem;
+    color: var(--muted, #888888);
     line-height: 1.5;
-    margin: 0;
+    margin: 0 0 1rem;
   }
   .all-card-cta {
-    align-self: flex-start;
-    margin-top: 0.5rem;
-  }
-  .btn-amazon-link {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.35rem;
-    min-height: var(--btn-h-sm, 36px);
-    padding: 0.4rem 0.85rem;
-    background: #1a1a1a;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: var(--ink, #ffffff);
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    text-transform: uppercase;
+    padding: 0.45rem 0.85rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    font-size: 0.7rem;
     letter-spacing: 0.08em;
+    text-transform: uppercase;
     text-decoration: none;
     transition: all 0.2s ease;
   }
-  .btn-amazon-link:hover {
+  .all-card-cta:hover {
     background: #ffffff;
     color: #000000;
     border-color: #ffffff;
   }
 
-  /* Responsive Adjustments */
-  @media (max-width: 640px) {
+  .cafe-project-reel-note {
+    background: #121212;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .reel-note-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.72rem;
+    color: var(--muted, #888888);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .reel-badge {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    padding: 0.15rem 0.5rem;
+    font-weight: 700;
+  }
+  .reel-desc {
+    font-size: 0.88rem;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .all-grid-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* --------------------------------------------------------------------------
+     RESPONSIVE BREAKPOINTS
+     -------------------------------------------------------------------------- */
+  @media (max-width: 768px) {
+    .gear-accordion-header-bar {
+      padding-right: 0.85rem;
+      gap: 0.5rem;
+    }
     .gear-accordion-header {
-      padding: 1rem 1rem;
-      gap: 1rem;
+      padding: 1rem 0.5rem 1rem 1rem;
+      gap: 0.75rem;
+    }
+    .gear-header-right {
+      gap: 0.5rem;
+    }
+    .gear-item-count-badge {
+      display: none;
     }
     .gear-deck-view {
-      padding: 1rem 0.85rem;
+      padding: 1.25rem 0.75rem;
+      gap: 1.25rem;
     }
-    .gear-hero-spec-card {
-      padding: 1.25rem 1rem;
+    .hero-poster-card {
+      min-height: 440px;
     }
-    .product-visual-stage {
-      padding: 0.75rem;
-      min-height: 170px;
+    .hero-poster-visual-wrap {
+      padding: 2rem 1.25rem 8.5rem;
     }
-    .product-visual-img {
-      max-height: 180px;
+    .hero-overlay-plate {
+      padding: 1.25rem 1.25rem 1.25rem;
     }
-    .deck-arrows-wrap {
-      right: 0.85rem;
-      top: 0.85rem;
+    .hero-product-title {
+      font-size: 1.35rem;
+    }
+    .hero-product-spec {
+      font-size: 0.82rem;
     }
     .influencer-pill {
       font-size: 0.65rem;
       padding: 0.35rem 0.65rem;
+    }
+    .btn-all-toggle {
+      font-size: 0.65rem;
+      padding: 0.35rem 0.65rem;
+    }
+    .btn-deck-item-nav {
+      width: 36px;
+      height: 36px;
     }
   }
 </style>
 
 <script>
   (() => {
-    function initGearAccordionsAndDecks() {
+    function initGearMonolith() {
       const container = document.getElementById('gear-accordion-container');
       if (!container || container.dataset.gearWired === '1') return;
       container.dataset.gearWired = '1';
 
       const sections = Array.from(container.querySelectorAll<HTMLElement>('.gear-accordion-section'));
 
-      // 1. ACCORDION GROUP EXPANSION (ONE GROUP OPEN AT A TIME)
-      sections.forEach(section => {
-        const toggleEls = [
-          section.querySelector<HTMLElement>('.gear-accordion-header'),
-          section.querySelector<HTMLElement>('.accordion-chevron-btn'),
-        ].filter(Boolean);
-
-        const expandThisSection = () => {
-          sections.forEach(s => {
-            const isMatch = s === section;
-            s.classList.toggle('is-expanded', isMatch);
-            s.classList.toggle('is-collapsed', !isMatch);
-            s.querySelector('.gear-accordion-header')?.setAttribute('aria-expanded', String(isMatch));
-            s.querySelector('.accordion-chevron-btn')?.setAttribute('aria-expanded', String(isMatch));
-          });
-        };
-
-        toggleEls.forEach(el => {
-          el?.addEventListener('click', () => {
-            if (section.classList.contains('is-expanded')) return;
-            expandThisSection();
-          });
-        });
-      });
-
-      // 2. PER-SECTION DECK CAROUSEL LOGIC (HERO SPEC CARD + SLATS + THUMBS + ARROWS + SWIPE)
+      // 1. SECTION CONTROLLER INTERFACE
       interface SectionController {
         renderActiveCard: (index: number, smoothScroll?: boolean) => void;
         getActiveIndex: () => number;
       }
       const sectionControllers = new Map<string, SectionController>();
 
+      // 2. TOGGLE SECTION ACCORDION (EXPAND OR COLLAPSE)
+      function toggleSection(section: HTMLElement) {
+        const isCurrentlyExpanded = section.classList.contains('is-expanded');
+        if (isCurrentlyExpanded) {
+          // If already open, clicking its header COLLAPSES IT
+          section.classList.remove('is-expanded');
+          section.classList.add('is-collapsed');
+          section.querySelector('.gear-accordion-header')?.setAttribute('aria-expanded', 'false');
+          section.querySelector('.accordion-chevron-btn')?.setAttribute('aria-expanded', 'false');
+        } else {
+          // If closed, open this section and collapse all other sections
+          sections.forEach(s => {
+            const isTarget = s === section;
+            s.classList.toggle('is-expanded', isTarget);
+            s.classList.toggle('is-collapsed', !isTarget);
+            s.querySelector('.gear-accordion-header')?.setAttribute('aria-expanded', String(isTarget));
+            s.querySelector('.accordion-chevron-btn')?.setAttribute('aria-expanded', String(isTarget));
+          });
+        }
+      }
+
+      // 3. WIRE EACH SECTION
       sections.forEach(section => {
         const catKey = section.dataset.category || '';
         const tiles = Array.from(section.querySelectorAll<HTMLElement>('.deck-thumb-tile'));
@@ -1441,19 +1604,31 @@ const getCategoryLabel = (catName: string) => {
         const backCarouselBtns = Array.from(section.querySelectorAll<HTMLButtonElement>(`[data-back-carousel="${catKey}"]`));
         const deckView = section.querySelector<HTMLElement>(`[data-deck-container="${catKey}"]`);
         const allView = section.querySelector<HTMLElement>(`[data-all-view="${catKey}"]`);
-        const heroSpecCard = section.querySelector<HTMLElement>(`[data-hero-spec="${catKey}"]`);
+        const heroPosterCard = section.querySelector<HTMLElement>(`[data-hero-poster="${catKey}"]`);
+        const glowLayers = Array.from(section.querySelectorAll<HTMLElement>('.ambient-glow-layer'));
 
         const isBodies = catKey === 'bodies';
-        const imgEl = section.querySelector<HTMLImageElement>(`#${isBodies ? 'preview-camera-img' : `img-gear-${catKey}`}`);
-        const ctaEl = section.querySelector<HTMLAnchorElement>(`#${isBodies ? 'preview-camera-btn' : `cta-gear-${catKey}`}`);
+        const isBrew = catKey === 'brew';
+
+        const imgEl = section.querySelector<HTMLImageElement>(`#${isBodies ? 'preview-camera-img' : isBrew ? 'preview-cafe-img' : `img-gear-${catKey}`}`);
+        const ctaEl = section.querySelector<HTMLAnchorElement>(`#${isBodies ? 'preview-camera-btn' : isBrew ? 'cafe-hero-cta' : `cta-gear-${catKey}`}`);
         const brandEl = section.querySelector<HTMLElement>(`#${isBodies ? 'preview-camera-brand' : `brand-gear-${catKey}`}`);
-        const titleEl = section.querySelector<HTMLElement>(`#${isBodies ? 'preview-camera-title' : `title-gear-${catKey}`}`);
-        const descEl = section.querySelector<HTMLElement>(`#${isBodies ? 'preview-camera-desc' : `desc-gear-${catKey}`}`);
+        const titleEl = section.querySelector<HTMLElement>(`#${isBodies ? 'preview-camera-title' : isBrew ? 'cafe-hero-name' : `title-gear-${catKey}`}`);
+        const descEl = section.querySelector<HTMLElement>(`#${isBodies ? 'preview-camera-desc' : isBrew ? 'cafe-hero-desc' : `desc-gear-${catKey}`}`);
         const tagEl = section.querySelector<HTMLElement>(`#${isBodies ? 'preview-camera-tag' : `tag-gear-${catKey}`}`);
-        const schematicEl = section.querySelector<HTMLElement>(`#schematic-gear-${catKey}`);
 
         let activeIndex = 0;
         const totalItems = tiles.length;
+
+        // Header click listener (unambiguous accordion toggle on whole bar)
+        const headerBar = section.querySelector<HTMLElement>('.gear-accordion-header-bar');
+        headerBar?.addEventListener('click', (e) => {
+          // If clicked on an inner action (like Show All button or Storefront link), don't collapse accordion
+          if ((e.target as HTMLElement).closest('.influencer-pill, .btn-all-toggle')) {
+            return;
+          }
+          toggleSection(section);
+        });
 
         function getNextVisibleIndex(direction: 1 | -1): number {
           const visibleTiles = tiles.filter(t => t.style.display !== 'none');
@@ -1473,11 +1648,12 @@ const getCategoryLabel = (catName: string) => {
           const currentTile = tiles[activeIndex];
           if (!currentTile) return;
 
-          if (heroSpecCard) {
-            heroSpecCard.classList.add('is-animating');
+          // Motion: trigger short crossfade and scale
+          if (heroPosterCard) {
+            heroPosterCard.classList.add('is-rotating');
             setTimeout(() => {
-              heroSpecCard.classList.remove('is-animating');
-            }, 220);
+              heroPosterCard.classList.remove('is-rotating');
+            }, 180);
           }
 
           // Update tiles
@@ -1493,10 +1669,10 @@ const getCategoryLabel = (catName: string) => {
           }
 
           // Update Counter based on visible matching items
+          const visibleTiles = tiles.filter(t => t.style.display !== 'none');
+          const visibleCount = visibleTiles.length;
+          const pad = (n: number) => n < 10 ? `0${n}` : `${n}`;
           if (counterEl) {
-            const visibleTiles = tiles.filter(t => t.style.display !== 'none');
-            const visibleCount = visibleTiles.length;
-            const pad = (n: number) => n < 10 ? `0${n}` : `${n}`;
             if (visibleCount < totalItems && visibleCount > 0) {
               const currentVisIdx = visibleTiles.indexOf(currentTile);
               const pos = currentVisIdx >= 0 ? currentVisIdx + 1 : 1;
@@ -1508,14 +1684,19 @@ const getCategoryLabel = (catName: string) => {
 
           // Read data attributes
           const name = currentTile.dataset.itemName || '';
-          const brand = currentTile.dataset.itemBrand || 'Sony';
+          const brand = currentTile.dataset.itemBrand || 'Curated Kit';
           const spec = currentTile.dataset.itemSpec || '';
           const tag = currentTile.dataset.itemTag || 'Production Spec';
           const url = currentTile.dataset.itemUrl || 'https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh';
           const hasProductUrl = currentTile.dataset.hasProductUrl === 'true';
           const image = currentTile.dataset.itemImage || '';
+          const rgb = currentTile.dataset.itemRgb || '100, 100, 100';
+          const ariaLabel = currentTile.dataset.itemAria || `View ${name} on Amazon`;
 
-          // Update Hero Spec Card
+          // Update Section Accent Color
+          section.style.setProperty('--item-accent-rgb', rgb);
+
+          // Update Hero Content
           if (titleEl) titleEl.textContent = name;
           if (brandEl) brandEl.textContent = `${brand.toUpperCase()} // KIT`;
           if (descEl) descEl.textContent = spec;
@@ -1523,6 +1704,7 @@ const getCategoryLabel = (catName: string) => {
 
           if (ctaEl) {
             ctaEl.href = url;
+            ctaEl.setAttribute('aria-label', ariaLabel);
             const btnText = ctaEl.querySelector('.amz-btn-text');
             if (btnText) {
               btnText.textContent = hasProductUrl ? `View ${name} on Amazon` : 'Visit the storefront';
@@ -1530,21 +1712,18 @@ const getCategoryLabel = (catName: string) => {
           }
 
           // Image update
-          if (imgEl) {
-            if (image) {
-              imgEl.src = image;
-              imgEl.alt = '';
-              imgEl.hidden = false;
-              if (schematicEl) schematicEl.hidden = true;
-            } else {
-              imgEl.hidden = true;
-              if (schematicEl) schematicEl.hidden = false;
-            }
+          if (imgEl && image) {
+            imgEl.src = image;
+            imgEl.alt = '';
           }
 
-          // Update Peeking Slats (slat 1 = next visible item, slat 2 = 2nd next visible item)
-          const visibleTiles = tiles.filter(t => t.style.display !== 'none');
-          if (visibleTiles.length <= 1) {
+          // Update Ambient Glow Backlight
+          glowLayers.forEach((glow, gIdx) => {
+            glow.classList.toggle('active', gIdx === activeIndex);
+          });
+
+          // Update Peeking Slats (slat 1 = next visible, slat 2 = 2nd next visible)
+          if (visibleCount <= 1) {
             slats.forEach(slat => {
               slat.className = 'deck-slat hidden';
             });
@@ -1598,32 +1777,55 @@ const getCategoryLabel = (catName: string) => {
           });
         });
 
-        // Prev & Next Buttons
-        prevBtn?.addEventListener('click', () => renderActiveCard(getNextVisibleIndex(-1)));
-        nextBtn?.addEventListener('click', () => renderActiveCard(getNextVisibleIndex(1)));
+        // Prev & Next Buttons (item navigation inside deck stage)
+        prevBtn?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          renderActiveCard(getNextVisibleIndex(-1));
+        });
+        nextBtn?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          renderActiveCard(getNextVisibleIndex(1));
+        });
 
-        // Touch Swipe & Pointer Drag Gestures (mouse, trackpad, and touch)
+        // Pointer Drag & Touch Swipe (Mouse, Trackpad, and Real Touch Devices)
         const deckStage = section.querySelector<HTMLElement>(`[data-deck-stage="${catKey}"]`);
         if (deckStage) {
           let startX = 0;
-          let isDown = false;
+          let startY = 0;
+          let isDragging = false;
+          let hasHorizontalMoved = false;
+
           deckStage.addEventListener('pointerdown', (e: PointerEvent) => {
+            if ((e.target as HTMLElement).closest('button, a, input')) return;
             startX = e.clientX;
-            isDown = true;
+            startY = e.clientY;
+            isDragging = true;
+            hasHorizontalMoved = false;
           });
 
-          deckStage.addEventListener('pointerup', (e: PointerEvent) => {
-            if (!isDown) return;
-            isDown = false;
-            const diff = startX - e.clientX;
-            if (Math.abs(diff) > 40) {
-              if (diff > 0) renderActiveCard(getNextVisibleIndex(1));
+          window.addEventListener('pointermove', (e: PointerEvent) => {
+            if (!isDragging) return;
+            const diffX = startX - e.clientX;
+            const diffY = startY - e.clientY;
+            if (Math.abs(diffX) > 10 && Math.abs(diffX) > Math.abs(diffY)) {
+              hasHorizontalMoved = true;
+            }
+          });
+
+          window.addEventListener('pointerup', (e: PointerEvent) => {
+            if (!isDragging) return;
+            isDragging = false;
+            const diffX = startX - e.clientX;
+            const diffY = startY - e.clientY;
+            if (hasHorizontalMoved && Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY)) {
+              if (diffX > 0) renderActiveCard(getNextVisibleIndex(1));
               else renderActiveCard(getNextVisibleIndex(-1));
             }
           });
 
-          deckStage.addEventListener('pointercancel', () => {
-            isDown = false;
+          window.addEventListener('pointercancel', () => {
+            isDragging = false;
+            hasHorizontalMoved = false;
           });
         }
 
@@ -1666,7 +1868,7 @@ const getCategoryLabel = (catName: string) => {
         });
       });
 
-      // 3. SEARCH & CATEGORY CHIPS FILTERING
+      // 4. SEARCH & CATEGORY CHIPS FILTERING ACROSS ALL 5 SECTIONS
       const searchInput = document.getElementById('gear-search-input') as HTMLInputElement | null;
       const clearBtn = document.getElementById('gear-search-clear') as HTMLButtonElement | null;
       const chips = Array.from(document.querySelectorAll<HTMLButtonElement>('.gear-chip'));
@@ -1683,7 +1885,9 @@ const getCategoryLabel = (catName: string) => {
           const catKey = section.dataset.category || '';
           const matchesCategory = activeCategory === 'all' || 
             catKey === activeCategory || 
-            (activeCategory === 'support' && catKey === 'tools');
+            (activeCategory === 'cameras' && catKey === 'bodies') ||
+            (activeCategory === 'support' && catKey === 'tools') ||
+            (activeCategory === 'cafe' && catKey === 'brew');
 
           if (!matchesCategory) {
             section.hidden = true;
@@ -1691,9 +1895,10 @@ const getCategoryLabel = (catName: string) => {
           }
 
           const tiles = Array.from(section.querySelectorAll<HTMLElement>('.deck-thumb-tile'));
+          const gridCards = Array.from(section.querySelectorAll<HTMLElement>('.all-grid-card'));
           let visibleTiles = 0;
 
-          tiles.forEach(tile => {
+          tiles.forEach((tile, tIdx) => {
             const text = (tile.textContent || '').toLowerCase();
             const matchesSearch = !searchQuery || text.includes(searchQuery);
             if (matchesSearch) {
@@ -1701,6 +1906,9 @@ const getCategoryLabel = (catName: string) => {
               visibleTiles++;
             } else {
               tile.style.display = 'none';
+            }
+            if (gridCards[tIdx]) {
+              gridCards[tIdx].style.display = matchesSearch ? '' : 'none';
             }
           });
 
@@ -1780,7 +1988,7 @@ const getCategoryLabel = (catName: string) => {
       });
     }
 
-    initGearAccordionsAndDecks();
-    document.addEventListener('astro:page-load', initGearAccordionsAndDecks);
+    initGearMonolith();
+    document.addEventListener('astro:page-load', initGearMonolith);
   })();
 </script>
