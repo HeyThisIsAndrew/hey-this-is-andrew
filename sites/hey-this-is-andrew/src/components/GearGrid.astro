@@ -426,9 +426,9 @@ const stateOf = (i: number, n: number) =>
   }
   .gear-search-clear {
     position: absolute;
-    right: 0.5rem;
-    width: 32px;
-    height: 32px;
+    right: 0;
+    width: 44px;
+    height: 44px;
     background: none;
     border: none;
     color: var(--muted, #888);
@@ -444,7 +444,7 @@ const stateOf = (i: number, n: number) =>
     gap: 0.4rem;
   }
   .gear-chip {
-    min-height: 36px;
+    min-height: 44px;
     padding: 0.4rem 0.85rem;
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.16);
@@ -475,7 +475,7 @@ const stateOf = (i: number, n: number) =>
     margin: 0 0 1rem;
   }
   .gear-reset-btn {
-    min-height: 40px;
+    min-height: 44px;
     padding: 0.5rem 1rem;
     background: #fff;
     color: #000;
@@ -500,9 +500,14 @@ const stateOf = (i: number, n: number) =>
     background: #080808;
     border: 1px solid rgba(255, 255, 255, 0.1);
     /* The site's global `section` padding would open a dead band above
-       every header. The page's scroll-padding-top already clears the
-       stuck nav, so no scroll margin here either. */
+       every header. */
     padding: 0;
+    /* Nothing inside (the glow, a card parked off to the right) may push
+       the page sideways. No iframe lives in here, so clipping is safe. */
+    overflow-x: clip;
+    /* Anchor jumps (/gear/#brew) stop clear of the fixed header. Opening a
+       section scrolls with explicit math in the script, not this. */
+    scroll-margin-top: calc(var(--gear-nav-h, 88px) + 1.5rem);
     transition: border-color 0.3s ease;
   }
   .gear-accordion-section.is-expanded {
@@ -610,7 +615,7 @@ const stateOf = (i: number, n: number) =>
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    min-height: 36px;
+    min-height: 44px;
     padding: 0.4rem 0.75rem;
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.18);
@@ -657,7 +662,7 @@ const stateOf = (i: number, n: number) =>
   }
   .deck-glow {
     position: absolute;
-    inset: -10% -6% 20% -6%;
+    inset: -10% 0 20% 0;
     z-index: 0;
     pointer-events: none;
   }
@@ -685,6 +690,8 @@ const stateOf = (i: number, n: number) =>
     position: relative;
     z-index: 1;
     width: 100%;
+    box-sizing: border-box;
+    scroll-margin-top: calc(var(--gear-nav-h, 88px) + 1.5rem);
     height: var(--stage-h);
     touch-action: pan-y;
     user-select: none;
@@ -714,8 +721,21 @@ const stateOf = (i: number, n: number) =>
     transition:
       transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
       opacity 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
-      translate 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+      translate 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+      visibility 0s linear 0.5s;
     cursor: pointer;
+  }
+  /* In view: visible at once. Parked (hidden, prev): hidden once the fade
+     out has finished, so a card waiting off to the right never paints. */
+  .deck-card.active,
+  .deck-card.next-1,
+  .deck-card.next-2 {
+    visibility: visible;
+    transition-delay: 0s, 0s, 0s, 0s;
+  }
+  .deck-card.hidden,
+  .deck-card.prev {
+    visibility: hidden;
   }
   .deck-card.active {
     z-index: 10;
@@ -1119,7 +1139,7 @@ const stateOf = (i: number, n: number) =>
     color: #fff;
   }
   .btn-back-carousel {
-    min-height: 40px;
+    min-height: 44px;
     padding: 0.5rem 1rem;
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.24);
@@ -1205,7 +1225,7 @@ const stateOf = (i: number, n: number) =>
   .all-card-cta {
     display: inline-flex;
     align-items: center;
-    min-height: 40px;
+    min-height: 44px;
     padding: 0.4rem 0.75rem;
     border: 1px solid rgba(255, 255, 255, 0.2);
     color: #fff;
@@ -1343,6 +1363,12 @@ const stateOf = (i: number, n: number) =>
     .card-disclosure {
       display: none;
     }
+    /* Spines read from the top: the site's back-to-top button sits over
+       the bottom right corner of a short screen. */
+    .card-spine {
+      align-items: flex-start;
+      padding-top: 0.9rem;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -1385,22 +1411,26 @@ const stateOf = (i: number, n: number) =>
         sections.forEach((s) => setOpen(s, open && s === section));
         if (open) {
           decks.get(section)?.refresh();
-          // Keep what was opened in view under the stuck nav: collapsing a
-          // tall section above it would otherwise leave it off screen. On a
-          // short screen (a phone on its side) the header and the hero cannot
-          // both fit, so the HERO is what gets brought into view.
+          // Keep what was opened in view, and never under the fixed header:
+          // explicit math from the header's measured bottom, not
+          // scrollIntoView (which trusts a fixed scroll-padding). On a short
+          // screen (a phone on its side) the header and the hero cannot both
+          // fit, so the HERO (.deck-stage) is what gets brought into view.
           requestAnimationFrame(() => {
-            const navH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gear-nav-h')) || 88;
+            const header = document.querySelector<HTMLElement>('.site-nav');
+            const headerBottom = header ? Math.max(0, header.getBoundingClientRect().bottom) : 88;
             const behavior: ScrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
-            if (window.innerHeight < 560) {
-              const stage = section.querySelector<HTMLElement>('.deck-stage');
-              if (!stage) return;
-              const delta = stage.getBoundingClientRect().top - (navH + 8);
-              if (Math.abs(delta) > 4) window.scrollBy({ top: delta, behavior });
-              return;
-            }
-            const top = section.getBoundingClientRect().top;
-            if (top < navH || top > window.innerHeight * 0.6) section.scrollIntoView({ block: 'start', behavior });
+            const short = window.innerHeight < 560;
+            const target = short ? section.querySelector<HTMLElement>('.deck-stage') : section;
+            if (!target) return;
+            const want = headerBottom + (short ? 8 : 16);
+            const top = target.getBoundingClientRect().top;
+            // Tall screens: move when the header is under the nav, or when the
+            // hero runs off the bottom (a phone opening a lower section).
+            const stage = section.querySelector<HTMLElement>('.deck-stage');
+            const heroCut = !!stage && stage.getBoundingClientRect().bottom > window.innerHeight;
+            const needs = short ? Math.abs(top - want) > 4 : top < want || heroCut;
+            if (needs) window.scrollTo({ top: Math.max(0, window.scrollY + top - want), behavior });
           });
         }
       }

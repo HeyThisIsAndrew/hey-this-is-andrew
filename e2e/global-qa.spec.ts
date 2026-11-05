@@ -23,7 +23,7 @@ test.describe('Global QA', () => {
       const box = await interactives.nth(i).boundingBox();
       if (!box) continue;
       if (box.width > 0 && box.height > 0) {
-        const isExempt = await interactives.nth(i).evaluate(el => el.classList.contains('skip-link') || el.classList.contains('filter-tab') || el.classList.contains('gear-chip') || el.hasAttribute('data-pn-link'));
+        const isExempt = await interactives.nth(i).evaluate(el => el.classList.contains('skip-link') || el.classList.contains('filter-tab') || el.hasAttribute('data-pn-link'));
         if (!isExempt) {
           expect(box.width).toBeGreaterThanOrEqual(43.5);
           expect(box.height).toBeGreaterThanOrEqual(43.5);

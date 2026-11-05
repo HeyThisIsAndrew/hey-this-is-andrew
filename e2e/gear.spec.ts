@@ -105,6 +105,29 @@ test.describe('Gear page', () => {
     await expect(page.locator('.gear-accordion-section:visible')).toHaveCount(7);
   });
 
+  test('phone: every gear control is at least 44x44', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/hey-this-is-andrew/gear/');
+    await openSection(page, 'gear-lenses');
+    await page.locator('#gear-lenses .deck-thumb-tile[aria-label="Viltrox AF 85mm f/2.0 EVO"]').click();
+    const sel = [
+      '.gear-chip', '.btn-all-toggle', '.influencer-pill', '.gear-accordion-header',
+      '.deck-step', '.deck-thumb-tile', '.gear-accordion-section.is-expanded .deck-card.active .store-cta',
+      '.gear-accordion-section.is-expanded .deck-card.active .store-option', '.gear-collection-link',
+    ].join(', ');
+    // The card that just came forward scales up for 0.5s: measure once settled.
+    await expect
+      .poll(() =>
+        page.locator(sel).evaluateAll((els) =>
+          els
+            .map((el) => ({ el, r: el.getBoundingClientRect() }))
+            .filter(({ r }) => r.width > 0 && r.height > 0 && (r.width < 43.5 || r.height < 43.5))
+            .map(({ el, r }) => `${el.className} ${Math.round(r.width)}x${Math.round(r.height)}`)
+        )
+      )
+      .toEqual([]);
+  });
+
   const viewports = [
     { name: 'desktop-1920', width: 1920, height: 1080 },
     { name: 'desktop-1440', width: 1440, height: 900 },
