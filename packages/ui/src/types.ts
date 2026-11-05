@@ -36,6 +36,10 @@ export interface AccordionPanel {
   /** HQ behaviour: the CTA fills whenever its open panel is hovered, not
       only when the CTA itself is. */
   ctaFillOnPanelHover?: boolean;
+  /** More buttons beside the CTA, the same button at the small size: the
+      CTA shrinks to match and the row stacks on phones. `download` saves
+      the file instead of opening it; `external` opens a new tab. */
+  links?: { label: string; href: string; external?: boolean; download?: boolean }[];
   /** Quiet secondary action under the CTA (e.g. a mailto). */
   inquiry?: { email: string; subject: string; label: string };
   /** Coming-soon treatment: no CTA link, the teaser tag instead. */

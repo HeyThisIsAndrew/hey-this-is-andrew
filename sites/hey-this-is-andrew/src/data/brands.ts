@@ -32,6 +32,9 @@ interface BrandRow {
   accent?: string;
   ctaFillOnPanelHover?: boolean;
   inquiry?: { email: string; subject: string; label: string };
+  /** More buttons beside the CTA. An href starting with "/" is a path on
+   *  this site (the base is added here); anything else is a full URL. */
+  links?: { label: string; href: string; external?: boolean; download?: boolean }[];
   comingSoon?: boolean;
   teaserTag?: string;
 }
@@ -49,6 +52,10 @@ const TEASER_ART: Record<string, string> = {
     '</svg>',
 };
 
+/* Paths on this site carry the GitHub Pages base (/hey-this-is-andrew/). */
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+const sitePath = (href?: string) => (href && href.startsWith('/') ? `${BASE}${href}` : href);
+
 export const childBrands: ChildBrand[] = (rows as BrandRow[]).map((b) => ({
   id: b.id,
   name: b.name,
@@ -56,7 +63,7 @@ export const childBrands: ChildBrand[] = (rows as BrandRow[]).map((b) => ({
   headline: b.headline,
   deck: b.deck,
   cta: b.cta ?? '',
-  url: b.url ?? '',
+  url: sitePath(b.url) ?? '',
   logoSrc: image(b.logo, `brands.json ${b.id}.logo`),
   wordmark: b.wordmark,
   mediaSrc: image(b.media, `brands.json ${b.id}.media`) ?? null,
@@ -64,6 +71,7 @@ export const childBrands: ChildBrand[] = (rows as BrandRow[]).map((b) => ({
   accent: b.accent || undefined,
   ctaFillOnPanelHover: b.ctaFillOnPanelHover || undefined,
   inquiry: b.inquiry,
+  links: b.links?.map((l) => ({ ...l, href: sitePath(l.href) ?? l.href })),
   comingSoon: b.comingSoon || undefined,
   teaserTag: b.teaserTag,
 }));

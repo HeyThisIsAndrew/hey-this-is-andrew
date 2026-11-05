@@ -75,6 +75,9 @@ const labels: AccordionLabels = {
   ...labelProp,
 };
 const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
+/* A link on this site (a path) stays in the tab; another site opens a new one. */
+const linkAttrs = (href?: string) =>
+  href && /^https?:\/\//.test(href) ? { target: '_blank', rel: 'noopener' } : {};
 ---
 <div class="bacc" data-bacc data-avoid-fab data-interval={interval} data-fullscreen={fullscreen ? '' : undefined} data-view={view} style={`--acc-n: ${panels.length}; --acc-rows: ${Math.max(1, panels.length - 1)}`}>
     <div class="bacc-viewport" data-bacc-viewport>
@@ -93,6 +96,7 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
             const contentId = `bacc-content-${brand.id}`;
             const triggerId = `bacc-trigger-${brand.id}`;
             const hasCta = Boolean(brand.url && brand.cta) && !brand.comingSoon;
+            const extraLinks = brand.links ?? [];
             const art = brand.mediaSrc ?? null;
             return (
               <article
@@ -200,13 +204,43 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
                     </div>
                   )}
 
-                  {hasCta && (
-                    <a class="bacc-cta" href={brand.url} target="_blank" rel="noopener">
+                  {hasCta && !extraLinks.length && (
+                    <a class="bacc-cta" href={brand.url} {...linkAttrs(brand.url)}>
                       {brand.cta}
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                         <path d="M2 12L12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
                       </svg>
                     </a>
+                  )}
+                  {hasCta && extraLinks.length > 0 && (
+                    /* One row of small buttons: the CTA first, then the
+                       brand's other doors. Stacks on phones. */
+                    <div class="bacc-actions">
+                      <a class="bacc-cta bacc-cta--sm" href={brand.url} {...linkAttrs(brand.url)}>
+                        {brand.cta}
+                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                          <path d="M2 12L12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
+                        </svg>
+                      </a>
+                      {extraLinks.map((l) => (
+                        <a
+                          class="bacc-cta bacc-cta--sm bacc-cta--extra"
+                          href={l.href}
+                          download={l.download ? '' : undefined}
+                          target={l.external ? '_blank' : undefined}
+                          rel={l.external ? 'noopener' : undefined}
+                        >
+                          {l.label}
+                          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                            {l.download ? (
+                              <path d="M7 1v9M3 6l4 4 4-4M1 13h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
+                            ) : (
+                              <path d="M2 12L12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
+                            )}
+                          </svg>
+                        </a>
+                      ))}
+                    </div>
                   )}
                   {brand.inquiry && (
                     <a class="bacc-inquiry" href={`mailto:${brand.inquiry.email}?subject=${encodeURIComponent(brand.inquiry.subject)}`}>
@@ -693,6 +727,30 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
     outline: 2px solid var(--focus-ring);
     outline-offset: 3px;
   }
+  /* A row of CTAs (a brand with more than one door): the same button at
+     the standard's small size, side by side. */
+  .bacc-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: calc(10 * var(--ui-u));
+    margin-top: calc(17.92 * var(--u));
+  }
+  .bacc-actions .bacc-cta {
+    margin-top: 0;
+  }
+  .bacc-cta--sm {
+    gap: 0.5rem;
+    min-height: var(--btn-h-sm);
+    padding: calc(6 * var(--ui-u)) var(--btn-px-sm);
+    font-size: var(--btn-fs-sm);
+  }
+  /* The tap area stays the standard's minimum while the button is small. */
+  .bacc-cta--sm::before {
+    content: '';
+    position: absolute;
+    inset: min(0px, calc((var(--btn-h-sm) - var(--tap-min)) / 2)) 0;
+  }
   .bacc-inquiry {
     display: inline-flex;
     align-items: center;
@@ -933,7 +991,8 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
      brand view (a tap on the panel) carries it. */
   @media (max-width: 767px) and (orientation: portrait) {
     .bacc-cta,
-    .bacc-inquiry {
+    .bacc-inquiry,
+    .bacc-actions {
       display: none;
     }
   }
@@ -1384,6 +1443,18 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
     }
     .bacc-viewport.is-fill .bacc-caption .bacc-inquiry {
       display: flex;
+    }
+    /* Phones: the button row stacks, each button full tap height. */
+    .bacc-viewport.is-fill .bacc-caption .bacc-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.6rem;
+      margin-top: 1.1rem;
+    }
+    .bacc-viewport.is-fill .bacc-caption .bacc-actions .bacc-cta {
+      margin-top: 0;
+      min-height: var(--tap-min, 44px);
     }
   }
   /* Landscape phones: wide and short, so the logo goes back to the right of
@@ -1908,7 +1979,9 @@ const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
            the view, whose own CTA goes to the brand's site. A modified click
            (new tab, middle button) and the keyboard (detail 0) still follow
            the link, as before. */
-        const cta = target.closest('.bacc-cta');
+        /* Only the main CTA: the row's other buttons go straight to their
+           page in one tap. */
+        const cta = target.closest('.bacc-cta:not(.bacc-cta--extra)');
         const me = e as MouseEvent;
         if (cta && fullscreen && i === current && me.detail > 0 && !me.metaKey && !me.ctrlKey && !me.shiftKey && me.button === 0) {
           e.preventDefault();

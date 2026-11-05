@@ -156,7 +156,9 @@ for (const page of pages) {
           // The goals summary opens its group's row of the /build accordion
           // (the full checklists live there, by Andrew's call).
           const isBuildRow = link === base + 'build/' || link.startsWith(base + 'build/#');
-          if (!allowed.includes(link) && !isBuildRow && !link.startsWith('mailto:')) {
+          // The Capture Create Caffeinate card opens its page and its deck.
+          const isCcc = link.startsWith(base + 'ccc/');
+          if (!allowed.includes(link) && !isBuildRow && !isCcc && !link.startsWith('mailto:')) {
             fail(page, 'homepage main link to another internal page not allowed: ' + link);
           }
         }
