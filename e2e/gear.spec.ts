@@ -69,7 +69,10 @@ test.describe('Gear page', () => {
     await lenses.locator('.deck-card.active .store-option', { hasText: 'Viltrox' }).click();
     await expect(cta(lenses)).toHaveAttribute('href', 'https://viltrox.com/products/af-85mm-f2-0-fe?ref=thisisviltrox');
     await expect(cta(lenses)).toContainText('View on Viltrox');
+    // The f/2.0 EVO photo (Andrew's, 2026-11), never the old f/1.8 II file.
     await expect(page.locator('img[src*="viltrox-85-evo"]')).toHaveCount(0);
+    await expect(lenses.locator('.deck-card.active .card-img')).toHaveAttribute('src', /\/gear\/viltrox-85-f2-evo\.jpg$/);
+    await expect(lenses.locator('.deck-thumb-tile[aria-label="Viltrox AF 85mm f/2.0 EVO"] img')).toHaveAttribute('src', /\/gear\/viltrox-85-f2-evo\.jpg$/);
 
     // A single-store item has no picker.
     await lenses.locator('.deck-thumb-tile').first().click();
