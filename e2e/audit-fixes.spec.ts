@@ -11,7 +11,7 @@ test.describe('Audit Fixes Verification', () => {
     await expect(cards).toHaveCount(4);
 
     await expect(cards.nth(0)).toContainText('Starting Rate');
-    await expect(cards.nth(0)).toContainText('Custom quotes, scoped to your shoot, deliverables, and usage.');
+    await expect(cards.nth(0)).toContainText('Half-day shoots start at $1,200. Scoped to your shoot, deliverables, and usage.');
 
     await expect(cards.nth(1)).toContainText('Turnaround');
     await expect(cards.nth(1)).toContainText('Proofs in days, not weeks. Finals delivered on your approval.');

@@ -213,6 +213,7 @@ const getCategoryLabel = (catName: string) => {
               <div class="gear-deck-stage" data-deck-stage={catKey}>
                 <!-- HERO SPECIFICATION CARD -->
                 <div class="gear-hero-spec-card" data-hero-spec={catKey}>
+                  <div class="hero-ambient-glow" aria-hidden="true"></div>
                   <div class="spec-card-badge-row">
                     <span class="spec-card-verified-tag font-mono">
                       {isBodies ? 'STUDIO VERIFIED' : 'FIELD VERIFIED'}
@@ -809,6 +810,18 @@ const getCategoryLabel = (catName: string) => {
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
     position: relative;
     z-index: 2;
+    overflow: hidden;
+  }
+  .hero-ambient-glow {
+    position: absolute;
+    top: 15%;
+    left: 15%;
+    width: 65%;
+    height: 65%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(20, 20, 30, 0.3) 50%, transparent 75%);
+    filter: blur(50px);
+    pointer-events: none;
+    z-index: 0;
   }
   .spec-card-badge-row {
     display: flex;
@@ -817,6 +830,8 @@ const getCategoryLabel = (catName: string) => {
     gap: 0.75rem;
     padding-bottom: 0.75rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+    z-index: 1;
   }
   .spec-card-verified-tag {
     font-size: 0.68rem;
@@ -843,6 +858,13 @@ const getCategoryLabel = (catName: string) => {
     gap: 2rem;
     align-items: center;
     flex: 1;
+    position: relative;
+    z-index: 1;
+    transition: opacity 0.22s ease-out, transform 0.22s ease-out;
+  }
+  .gear-hero-spec-card.is-animating .spec-card-split-content {
+    opacity: 0.25;
+    transform: scale(0.985);
   }
   @media (max-width: 860px) {
     .spec-card-split-content {
@@ -1023,18 +1045,21 @@ const getCategoryLabel = (catName: string) => {
     justify-content: center;
     z-index: 3;
     pointer-events: none;
+    padding: 0.75rem 0;
   }
   .spine-text {
     writing-mode: vertical-rl;
     transform: rotate(180deg);
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: 0.85rem;
-    letter-spacing: 0.1em;
+    font-size: 0.74rem;
+    letter-spacing: 0.12em;
     color: #ffffff;
     white-space: nowrap;
     text-transform: uppercase;
-    opacity: 0.8;
+    opacity: 0.85;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .slat-peek-img {
     position: absolute;
@@ -1399,6 +1424,12 @@ const getCategoryLabel = (catName: string) => {
       });
 
       // 2. PER-SECTION DECK CAROUSEL LOGIC (HERO SPEC CARD + SLATS + THUMBS + ARROWS + SWIPE)
+      interface SectionController {
+        renderActiveCard: (index: number, smoothScroll?: boolean) => void;
+        getActiveIndex: () => number;
+      }
+      const sectionControllers = new Map<string, SectionController>();
+
       sections.forEach(section => {
         const catKey = section.dataset.category || '';
         const tiles = Array.from(section.querySelectorAll<HTMLElement>('.deck-thumb-tile'));
@@ -1410,6 +1441,7 @@ const getCategoryLabel = (catName: string) => {
         const backCarouselBtns = Array.from(section.querySelectorAll<HTMLButtonElement>(`[data-back-carousel="${catKey}"]`));
         const deckView = section.querySelector<HTMLElement>(`[data-deck-container="${catKey}"]`);
         const allView = section.querySelector<HTMLElement>(`[data-all-view="${catKey}"]`);
+        const heroSpecCard = section.querySelector<HTMLElement>(`[data-hero-spec="${catKey}"]`);
 
         const isBodies = catKey === 'bodies';
         const imgEl = section.querySelector<HTMLImageElement>(`#${isBodies ? 'preview-camera-img' : `img-gear-${catKey}`}`);
@@ -1423,10 +1455,30 @@ const getCategoryLabel = (catName: string) => {
         let activeIndex = 0;
         const totalItems = tiles.length;
 
+        function getNextVisibleIndex(direction: 1 | -1): number {
+          const visibleTiles = tiles.filter(t => t.style.display !== 'none');
+          if (visibleTiles.length === 0) return activeIndex;
+          const currentVisIdx = visibleTiles.indexOf(tiles[activeIndex]);
+          let nextVisIdx: number;
+          if (currentVisIdx === -1) {
+            nextVisIdx = 0;
+          } else {
+            nextVisIdx = (currentVisIdx + direction + visibleTiles.length) % visibleTiles.length;
+          }
+          return tiles.indexOf(visibleTiles[nextVisIdx]);
+        }
+
         function renderActiveCard(index: number, smoothScroll = true) {
           activeIndex = (index + totalItems) % totalItems;
           const currentTile = tiles[activeIndex];
           if (!currentTile) return;
+
+          if (heroSpecCard) {
+            heroSpecCard.classList.add('is-animating');
+            setTimeout(() => {
+              heroSpecCard.classList.remove('is-animating');
+            }, 220);
+          }
 
           // Update tiles
           tiles.forEach((t, i) => {
@@ -1440,9 +1492,18 @@ const getCategoryLabel = (catName: string) => {
             currentTile.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
           }
 
-          // Update Counter
+          // Update Counter based on visible matching items
           if (counterEl) {
-            counterEl.textContent = `0${activeIndex + 1} / 0${totalItems}`;
+            const visibleTiles = tiles.filter(t => t.style.display !== 'none');
+            const visibleCount = visibleTiles.length;
+            const pad = (n: number) => n < 10 ? `0${n}` : `${n}`;
+            if (visibleCount < totalItems && visibleCount > 0) {
+              const currentVisIdx = visibleTiles.indexOf(currentTile);
+              const pos = currentVisIdx >= 0 ? currentVisIdx + 1 : 1;
+              counterEl.textContent = `${pad(pos)} / ${pad(visibleCount)}`;
+            } else {
+              counterEl.textContent = `${pad(activeIndex + 1)} / ${pad(totalItems)}`;
+            }
           }
 
           // Read data attributes
@@ -1481,21 +1542,38 @@ const getCategoryLabel = (catName: string) => {
             }
           }
 
-          // Update Peeking Slats (slat 1 = next item, slat 2 = 2nd next item)
-          const next1Idx = (activeIndex + 1) % totalItems;
-          const next2Idx = (activeIndex + 2) % totalItems;
+          // Update Peeking Slats (slat 1 = next visible item, slat 2 = 2nd next visible item)
+          const visibleTiles = tiles.filter(t => t.style.display !== 'none');
+          if (visibleTiles.length <= 1) {
+            slats.forEach(slat => {
+              slat.className = 'deck-slat hidden';
+            });
+          } else {
+            const currentVisIdx = visibleTiles.indexOf(currentTile);
+            const next1Tile = visibleTiles[(currentVisIdx + 1) % visibleTiles.length];
+            const next2Tile = visibleTiles.length > 2 ? visibleTiles[(currentVisIdx + 2) % visibleTiles.length] : null;
 
-          slats.forEach((slat, idx) => {
-            slat.className = 'deck-slat';
-            if (idx === next1Idx) {
-              slat.classList.add('next-1');
-            } else if (idx === next2Idx) {
-              slat.classList.add('next-2');
-            } else {
-              slat.classList.add('hidden');
-            }
-          });
+            const next1Idx = next1Tile ? tiles.indexOf(next1Tile) : -1;
+            const next2Idx = next2Tile ? tiles.indexOf(next2Tile) : -1;
+
+            slats.forEach((slat, idx) => {
+              slat.className = 'deck-slat';
+              if (idx === next1Idx) {
+                slat.classList.add('next-1');
+              } else if (idx === next2Idx) {
+                slat.classList.add('next-2');
+              } else {
+                slat.classList.add('hidden');
+              }
+            });
+          }
         }
+
+        // Register controller for this section
+        sectionControllers.set(catKey, {
+          renderActiveCard,
+          getActiveIndex: () => activeIndex,
+        });
 
         // Thumbnail Tile Click & Keydown
         tiles.forEach((tile, idx) => {
@@ -1505,10 +1583,10 @@ const getCategoryLabel = (catName: string) => {
           tile.addEventListener('keydown', (e: KeyboardEvent) => {
             if (e.key === 'ArrowRight') {
               e.preventDefault();
-              renderActiveCard(activeIndex + 1);
+              renderActiveCard(getNextVisibleIndex(1));
             } else if (e.key === 'ArrowLeft') {
               e.preventDefault();
-              renderActiveCard(activeIndex - 1);
+              renderActiveCard(getNextVisibleIndex(-1));
             }
           });
         });
@@ -1521,24 +1599,32 @@ const getCategoryLabel = (catName: string) => {
         });
 
         // Prev & Next Buttons
-        prevBtn?.addEventListener('click', () => renderActiveCard(activeIndex - 1));
-        nextBtn?.addEventListener('click', () => renderActiveCard(activeIndex + 1));
+        prevBtn?.addEventListener('click', () => renderActiveCard(getNextVisibleIndex(-1)));
+        nextBtn?.addEventListener('click', () => renderActiveCard(getNextVisibleIndex(1)));
 
-        // Touch Swipe Gestures
+        // Touch Swipe & Pointer Drag Gestures (mouse, trackpad, and touch)
         const deckStage = section.querySelector<HTMLElement>(`[data-deck-stage="${catKey}"]`);
         if (deckStage) {
-          let touchStartX = 0;
-          deckStage.addEventListener('touchstart', (e: TouchEvent) => {
-            touchStartX = e.changedTouches[0].screenX;
-          }, { passive: true });
+          let startX = 0;
+          let isDown = false;
+          deckStage.addEventListener('pointerdown', (e: PointerEvent) => {
+            startX = e.clientX;
+            isDown = true;
+          });
 
-          deckStage.addEventListener('touchend', (e: TouchEvent) => {
-            const diff = touchStartX - e.changedTouches[0].screenX;
+          deckStage.addEventListener('pointerup', (e: PointerEvent) => {
+            if (!isDown) return;
+            isDown = false;
+            const diff = startX - e.clientX;
             if (Math.abs(diff) > 40) {
-              if (diff > 0) renderActiveCard(activeIndex + 1);
-              else renderActiveCard(activeIndex - 1);
+              if (diff > 0) renderActiveCard(getNextVisibleIndex(1));
+              else renderActiveCard(getNextVisibleIndex(-1));
             }
-          }, { passive: true });
+          });
+
+          deckStage.addEventListener('pointercancel', () => {
+            isDown = false;
+          });
         }
 
         // "All" View Toggle
@@ -1621,6 +1707,21 @@ const getCategoryLabel = (catName: string) => {
           if (visibleTiles > 0) {
             section.hidden = false;
             totalVisible += visibleTiles;
+
+            // Sync hero card & slats to matching visible items
+            const ctrl = sectionControllers.get(catKey);
+            if (ctrl) {
+              const currentActiveIdx = ctrl.getActiveIndex();
+              const currentTile = tiles[currentActiveIdx];
+              if (!currentTile || currentTile.style.display === 'none') {
+                const firstVisibleIdx = tiles.findIndex(t => t.style.display !== 'none');
+                if (firstVisibleIdx !== -1) {
+                  ctrl.renderActiveCard(firstVisibleIdx, false);
+                }
+              } else {
+                ctrl.renderActiveCard(currentActiveIdx, false);
+              }
+            }
           } else {
             section.hidden = true;
           }
@@ -1637,6 +1738,7 @@ const getCategoryLabel = (catName: string) => {
             s.classList.toggle('is-expanded', isMatch);
             s.classList.toggle('is-collapsed', !isMatch);
             s.querySelector('.gear-accordion-header')?.setAttribute('aria-expanded', String(isMatch));
+            s.querySelector('.accordion-chevron-btn')?.setAttribute('aria-expanded', String(isMatch));
           });
         }
       }
