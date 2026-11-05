@@ -33,8 +33,10 @@ const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const FEED = path.join(root, 'src/data/instagram-feed.json');
 const OUT_DIR = path.join(root, 'src/assets/instagram');
 const TODO = path.join(root, 'src/data/instagram-media-todo.md');
-// Reels are saved here at deploy time (gitignored) so the homepage elevator
-// plays its own file instead of depending on Instagram's embed.
+// Reels are saved here so the homepage elevator plays its own file instead
+// of depending on Instagram's embed. The deploy downloads what the API
+// offers (not committed); a reel with licensed audio gets no file from the
+// API, so Andrew can commit its MP4 here by hand as <id>.mp4.
 const REEL_DIR = path.join(root, 'public/reels');
 const LIMIT = 35;
 

@@ -210,9 +210,17 @@ function localImageFor(localImage: string): ImageMetadata | null {
  * A reel's file, written to public/reels/ by scripts/sync-instagram.mjs at
  * deploy time (never committed). Returned only when the file is really there.
  */
-function localVideoFor(localVideo: unknown): string | undefined {
-  if (typeof localVideo !== 'string' || !localVideo) return undefined;
-  const rel = localVideo.replace(/^\/+/, '');
+function localVideoFor(localVideo: unknown, id = ''): string | undefined {
+  // A file Andrew drops in by hand (public/reels/<id>.mp4) counts too: the
+  // API never hands over a reel with licensed audio, so for those reels a
+  // committed file is the only way to self-host.
+  const rel =
+    typeof localVideo === 'string' && localVideo
+      ? localVideo.replace(/^\/+/, '')
+      : id
+        ? `reels/${id}.mp4`
+        : '';
+  if (!rel) return undefined;
   if (!fs.existsSync(path.resolve(process.cwd(), 'public', rel))) return undefined;
   const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
   return `${base}/${rel}`;
@@ -257,7 +265,7 @@ export async function getInstagramPhotos(limit = 32): Promise<InstagramPhoto[]> 
       event: p.event || meta.event,
       timestamp: p.timestamp,
       orientation: p.orientation || 'vertical',
-      videoSrc: localVideoFor(p.localVideo),
+      videoSrc: localVideoFor(p.localVideo, p.id),
       removed: p.removedFromInstagram === true,
     });
   }

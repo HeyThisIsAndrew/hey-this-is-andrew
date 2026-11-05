@@ -146,13 +146,14 @@ test.describe('Gear page', () => {
       // A reader clicks the sliver of the next card peeking out on the right.
       const peek = lenses.locator('.deck-card.next-1');
       await peek.scrollIntoViewIfNeeded();
-      // The cards glide for 0.5s after a rotation: read the box once it
-      // has stopped moving.
+      // The cards glide for 0.5s after a rotation and the page may still be
+      // scrolling: read the box once it has stopped moving both ways.
       let box = (await peek.boundingBox())!;
       await expect
         .poll(async () => {
           const next = (await peek.boundingBox())!;
-          const still = Math.abs(next.x - box.x) < 0.5 && Math.abs(next.width - box.width) < 0.5;
+          const still =
+            Math.abs(next.x - box.x) < 0.5 && Math.abs(next.y - box.y) < 0.5 && Math.abs(next.width - box.width) < 0.5;
           box = next;
           return still;
         }, { intervals: [120, 120, 120, 120, 120, 120] })
