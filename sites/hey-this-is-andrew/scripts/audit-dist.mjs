@@ -185,8 +185,10 @@ for (const page of pages) {
       const altMatch = img.match(/\balt="([^"]*)"/);
       if (altMatch) {
         const alt = altMatch[1];
-        if (alt !== "" && alt !== "HEY_THISISANDREW") {
-          fail(page, `img alt must be empty or HEY_THISISANDREW, got: "${alt}"`);
+        // Real alt text is wanted (Andrew, 2026-11): describe the shot plainly.
+        // Empty is fine for decoration. Never "image of" / "photo of".
+        if (/^(an? )?(image|photo|picture) of\b/i.test(alt)) {
+          fail(page, `img alt should describe the shot, not say "image of": "${alt}"`);
         }
       } else {
         // boolean alt attribute without equals, perfectly fine and means empty string

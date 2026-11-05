@@ -29,19 +29,23 @@ interface Props {
   description?: string;
   /** Keep the page out of search engines (hero concept previews). */
   noindex?: boolean;
+  /** Link preview image: a path under public/ (e.g. "/ccc/og.jpg"),
+   *  1200x630. Omitted: the site's og-image.png. */
+  image?: string;
 }
 
 const {
   title,
   description = siteData.description,
   noindex = false,
+  image,
 } = Astro.props;
 
 import siteData from '../data/site.json';
 
 // Link preview image and canonical URLs: production GitHub Pages path
 const siteUrl = siteData.url;
-const ogImage = `${siteUrl}/og-image.png`;
+const ogImage = image ? `${siteUrl}${image}` : `${siteUrl}/og-image.png`;
 const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
 // Canonical: the production origin plus this page's path (which already
 // carries the base path on the production build).
