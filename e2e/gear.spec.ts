@@ -174,22 +174,29 @@ test.describe('Gear page', () => {
       await lenses.locator('.deck-thumb-tile').nth(4).click();
       await expect(activeTitle(lenses)).toHaveText('Sony FE 90mm f/2.8 Macro G OSS');
       // A reader clicks the sliver of the next card peeking out on the right.
+      // Measure the card's ON-SCREEN box (it is scaled, so a locator click
+      // with `position` aims at its untransformed box and hits the front
+      // card) and click there. The cards glide for 0.5s and the page may
+      // still be settling, so the whole step re-measures and retries.
       const peek = lenses.locator('.deck-card.next-1');
-      await peek.scrollIntoViewIfNeeded();
-      // The cards glide for 0.5s after a rotation and the page may still be
-      // scrolling: read the box once it has stopped moving both ways.
-      let box = (await peek.boundingBox())!;
-      await expect
-        .poll(async () => {
+      await expect(async () => {
+        const now = (await activeTitle(lenses).textContent()) || '';
+        if (now.includes('55mm')) return;
+        // Never click past it: a click that lands on the wrong card fails.
+        expect(now).toContain('90mm');
+        await peek.scrollIntoViewIfNeeded();
+        // Wait until the card's box holds still between two reads.
+        let box = (await peek.boundingBox())!;
+        for (let k = 0; k < 10; k++) {
+          await page.waitForTimeout(120);
           const next = (await peek.boundingBox())!;
-          const still =
-            Math.abs(next.x - box.x) < 0.5 && Math.abs(next.y - box.y) < 0.5 && Math.abs(next.width - box.width) < 0.5;
+          const still = Math.abs(next.x - box.x) < 0.5 && Math.abs(next.y - box.y) < 0.5 && Math.abs(next.width - box.width) < 0.5;
           box = next;
-          return still;
-        }, { intervals: [120, 120, 120, 120, 120, 120] })
-        .toBe(true);
-      await page.mouse.click(box.x + box.width - 18, box.y + box.height / 2);
-      await expect(activeTitle(lenses)).toHaveText('Sony FE 55mm f/1.8 ZA Sonnar');
+          if (still) break;
+        }
+        await page.mouse.click(box.x + box.width - 18, box.y + box.height / 2);
+        await expect(activeTitle(lenses)).toHaveText('Sony FE 55mm f/1.8 ZA Sonnar', { timeout: 1500 });
+      }).toPass({ timeout: 10000 });
 
       // The hero image has its own row: below the nav, nothing over it.
       await lenses.locator('.deck-card.active .card-visual').scrollIntoViewIfNeeded();
