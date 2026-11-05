@@ -42,6 +42,13 @@ test.describe('Gear page', () => {
       await expect(page.locator('.deck-card', { hasText: hidden })).toHaveCount(0);
     }
 
+    // Catalog picks carry a Recommended badge; the 24 owned items do not.
+    await expect(page.locator('.deck-card .reco-badge')).toHaveCount(21);
+    await expect(page.locator('.deck-card:has(.reco-badge)')).toHaveCount(21);
+    await expect(page.locator('.deck-card:not(:has(.reco-badge))')).toHaveCount(24);
+    await expect(page.locator('.deck-card', { hasText: 'Sony a7IV' }).locator('.reco-badge')).toHaveCount(0);
+    await expect(page.locator('.deck-card', { hasText: 'PlayStation Portal' }).locator('.reco-badge')).toHaveText('Recommended');
+
     // Short CTA labels everywhere, never the product name or a URL.
     const labels = await page.locator('[data-store-cta-label]').allTextContents();
     for (const l of labels) expect(l.trim()).toMatch(/^View on [A-Za-z. ]+$/);

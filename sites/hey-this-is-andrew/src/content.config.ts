@@ -82,6 +82,11 @@ const gear = defineCollection({
             })
           )
           .default([]),
+        /**
+         * A catalog pick rather than part of the owned kit: the card, its
+         * thumbnail and its grid card carry a "Recommended" badge.
+         */
+        recommended: z.boolean().optional(),
         /** Andrew's own video of the item, linked beside the store CTA. */
         video: z.object({ label: z.string(), url: z.string().url() }).optional(),
       })
