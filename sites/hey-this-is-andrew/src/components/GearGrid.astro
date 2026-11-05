@@ -37,7 +37,7 @@ export interface GearSectionData {
   slug: string;
   category: string;
   kicker: string;
-  subtitle: string;
+  subtitle?: string;
   items: GearItem[];
   hasAllView: boolean;
 }
@@ -132,11 +132,10 @@ const cafeItems: GearItem[] = [
 
 // Unified 5 sections
 const allSections: GearSectionData[] = [
-  ...activeCats.map((cat, idx) => {
+  ...activeCats.map((cat) => {
     const isBodies = cat.data.category === 'Camera Bodies';
     const isLenses = cat.data.category === 'Lens';
     const isLighting = cat.data.category === 'Lighting';
-    const isTools = cat.data.category === 'Tools & Support';
 
     const slug = isBodies ? 'bodies' : isLenses ? 'lenses' : isLighting ? 'lighting' : 'tools';
     const kicker = isBodies ? '01 / HERO SYSTEM' : isLenses ? '02 / OPTICAL SYSTEM' : isLighting ? '03 / ILLUMINATION' : '04 / STABILIZATION & RIG';
@@ -147,7 +146,7 @@ const allSections: GearSectionData[] = [
       slug,
       category: categoryTitle,
       kicker,
-      subtitle: cat.data.subtitle,
+      subtitle: cat.data.subtitle || '',
       items: cat.data.items as GearItem[],
       hasAllView: cat.data.items.length > 6,
     };
@@ -239,7 +238,6 @@ const getItemRgb = (img?: string) => {
       const isBodies = sec.slug === 'bodies';
       const isLenses = sec.slug === 'lenses';
       const isLighting = sec.slug === 'lighting';
-      const isTools = sec.slug === 'tools';
       const isBrew = sec.slug === 'brew';
 
       const items = sec.items;
