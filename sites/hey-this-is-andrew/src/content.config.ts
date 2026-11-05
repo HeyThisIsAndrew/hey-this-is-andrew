@@ -52,17 +52,38 @@ const gear = defineCollection({
   schema: z.object({
     category: z.string(),
     order: z.number().default(0),
-    brand: z.string().optional(),
+    kicker: z.string().optional(),
     subtitle: z.string().optional(),
+    /** The section's Amazon collection page (the header's list link). */
+    collectionUrl: z.string().url().optional(),
+    collectionLabel: z.string().optional(),
     items: z.array(
       z.object({
         name: z.string(),
+        /** Short label for spines and thumbnails; defaults to `name`. */
+        shortName: z.string().optional(),
         spec: z.string(),
         brand: z.string().optional(),
-        affiliateUrl: z.string().optional(),
         tag: z.string().optional(),
+        /** A file in public/gear/. Missing or absent: a typographic card. */
         image: z.string().optional(),
-        imageAlt: z.string().optional(),
+        /**
+         * Where to buy it, primary first. Add a store by adding a row; the
+         * picker appears by itself once there are two. An item with NO
+         * stores is owned but not shown (hidden until it is linked).
+         */
+        stores: z
+          .array(
+            z.object({
+              store: z.string(),
+              url: z.string().url(),
+              /** A non-Amazon affiliate program (disclosed on the page). */
+              affiliate: z.boolean().optional(),
+            })
+          )
+          .default([]),
+        /** Andrew's own video of the item, linked beside the store CTA. */
+        video: z.object({ label: z.string(), url: z.string().url() }).optional(),
       })
     ),
   }),

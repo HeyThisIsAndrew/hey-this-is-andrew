@@ -1,5 +1,29 @@
 ---
+/**
+ * /gear: the kit as the BE Unconventional HQ /featured deck, copied, not
+ * reinterpreted.
+ *
+ * Every section header shows at once as a compact stack; exactly one section
+ * is open (or none: clicking the open header closes it). The open section is
+ * a deck: the current item is a large card in front, the next two PEEK out
+ * to its right with their names on a spine, and a thumbnail strip sits
+ * underneath. Rotating moves every card between those positions, so the
+ * change is a short crossfade with a slide and scale, never a swap.
+ *
+ * Behind the deck is the HQ ambient glow: a blurred copy of the current photo
+ * washed in that photo's own accent colour (sampled at build time, see
+ * src/lib/gear-accent.ts). The same accent tints the badge, the counter and
+ * the active thumbnail. All other chrome stays monochrome.
+ *
+ * Data: src/data/gear.json. An item with no store link is owned but not
+ * shown. An item whose image file is missing renders a typographic card
+ * rather than a wrong or broken picture.
+ */
+import fs from 'node:fs';
+import path from 'node:path';
 import type { CollectionEntry } from 'astro:content';
+import { AMAZON_STOREFRONT } from '../data/storefront';
+import { sampleAccent, NEUTRAL_ACCENT } from '../lib/gear-accent';
 
 interface Props {
   categories: CollectionEntry<'gear'>[];
@@ -7,199 +31,76 @@ interface Props {
 
 const { categories } = Astro.props;
 
-import { AMAZON_STOREFRONT } from '../data/storefront';
-
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
-const resolveAsset = (img?: string) => {
+const publicDir = path.resolve(process.cwd(), 'public');
+
+/** The public URL of an image, or '' when the file is not there. */
+const imageUrl = (img?: string) => {
   if (!img) return '';
-  if (img.startsWith('http://') || img.startsWith('https://')) return img;
+  if (/^https?:\/\//.test(img)) return img;
   const clean = img.startsWith('/') ? img : `/${img}`;
-  return `${base}${clean}`;
+  return fs.existsSync(path.join(publicDir, clean)) ? `${base}${clean}` : '';
 };
 
-const isProductUrl = (url?: string) => Boolean(url && url.trim() && url !== AMAZON_STOREFRONT);
+// Section DOM ids predate this file (anchors, the sitemap, site search).
+const DOM_ID: Record<string, string> = { cafe: 'brew' };
+const CHIP: Record<string, string> = { bodies: 'Cameras', tools: 'Support', cafe: 'Cafe' };
 
-export interface GearItem {
-  name: string;
-  brand?: string;
-  tag?: string;
-  spec: string;
-  desc?: string;
-  affiliateUrl?: string;
-  image?: string;
-  imageAlt?: string;
-  ariaLabel?: string;
+interface Store {
+  store: string;
+  url: string;
+  affiliate?: boolean;
 }
 
-export interface GearSectionData {
-  id: string;
-  slug: string;
-  category: string;
-  kicker: string;
-  subtitle?: string;
-  items: GearItem[];
-  hasAllView: boolean;
-}
+const sections = await Promise.all(
+  [...categories]
+    .sort((a, b) => a.data.order - b.data.order)
+    .map(async (cat) => {
+      const items = await Promise.all(
+        cat.data.items
+          .filter((it) => it.stores.length > 0)
+          .map(async (it) => {
+            const src = imageUrl(it.image);
+            const accent = src && it.image ? await sampleAccent(path.join(publicDir, it.image)) : NEUTRAL_ACCENT;
+            const stores = it.stores as Store[];
+            return {
+              ...it,
+              short: it.shortName || it.name,
+              src,
+              accent,
+              stores,
+              search: [it.name, it.shortName, it.brand, it.tag, it.spec, cat.data.category, ...stores.map((s) => s.store)]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase(),
+            };
+          })
+      );
+      return {
+        slug: cat.id,
+        domId: DOM_ID[cat.id] || `gear-${cat.id}`,
+        chip: CHIP[cat.id] || cat.data.category,
+        chipKey: cat.id === 'bodies' ? 'cameras' : cat.id === 'tools' ? 'support' : cat.id,
+        title: cat.data.category,
+        kicker: cat.data.kicker || '',
+        subtitle: cat.data.subtitle || '',
+        collectionUrl: cat.data.collectionUrl || AMAZON_STOREFRONT,
+        collectionLabel: cat.data.collectionUrl ? cat.data.collectionLabel || 'Amazon list' : 'Storefront',
+        items,
+      };
+    })
+).then((all) => all.filter((s) => s.items.length > 0));
 
-// 1. Existing verified collection items
-const orderMap: Record<string, number> = {
-  'Camera Bodies': 1,
-  'Lens': 2,
-  'Lighting': 3,
-  'Audio': 4,
-  'Tools & Support': 5,
-};
-
-const sortedCats = [...categories].sort((a, b) => {
-  const oA = orderMap[a.data.category] || a.data.order || 99;
-  const oB = orderMap[b.data.category] || b.data.order || 99;
-  return oA - oB;
-});
-
-// Audio is intentionally excluded if Andrew owns 0 items
-const activeCats = sortedCats.filter(c => c.data.items && c.data.items.length > 0 && c.data.category !== 'Audio');
-
-// 2. Cafe Bar section definition (exact 6 verified items with real imagery)
-const cafeItems: GearItem[] = [
-  {
-    name: 'Ascaso Steel Duo PID',
-    brand: 'Ascaso',
-    tag: 'Espresso',
-    spec: 'Dual thermoblock espresso machine with volumetric controls and independent steam circuit',
-    desc: 'Commercial dual thermoblock system with independent steam circuit, PID temperature control, and volumetric programming. Used for high-volume beverage shoots and morning dial-in.',
-    affiliateUrl: 'https://link.amazon/B0cCrykft',
-    image: '/gear/ascaso-steel-duo.jpg',
-    imageAlt: '',
-    ariaLabel: 'View Ascaso Steel Duo PID on Amazon',
-  },
-  {
-    name: 'Fellow Stagg EKG',
-    brand: 'Fellow',
-    tag: 'Pour-Over',
-    spec: 'Electric pour-over kettle with variable temperature and precision flow control',
-    desc: 'Precision gooseneck pour-over kettle with variable temperature control and real-time brew-time tracking. Central to pour-over extraction cinematography.',
-    affiliateUrl: 'https://link.amazon/B0fbGKgld',
-    image: '/gear/fellow-stagg-ekg.jpg',
-    imageAlt: '',
-    ariaLabel: 'View Fellow Stagg EKG on Amazon',
-  },
-  {
-    name: 'Fellow Mighty Small Carafe',
-    brand: 'Fellow',
-    tag: 'Glassware',
-    spec: 'Hand-blown 500ml borosilicate server for precise coffee pouring',
-    desc: 'Hand-blown 500ml borosilicate glass carafe with clear volume markers and ergonomic spout design. Sits on set for clean pour-over captures.',
-    affiliateUrl: 'https://link.amazon/B01DJcTby',
-    image: '/gear/fellow-carafe.jpg',
-    imageAlt: '',
-    ariaLabel: 'View Fellow Mighty Small Carafe on Amazon',
-  },
-  {
-    name: 'Fellow Tally Pro Precision Scale',
-    brand: 'Fellow',
-    tag: 'Measurement',
-    spec: 'Ultra-fast 0.1g coffee brewing scale with interactive Brew Assist mode',
-    desc: 'Precision brewing scale with 0.1g accuracy, rapid response rate, and interactive Brew Assist ratio calculations for espresso extraction and pour-over testing.',
-    affiliateUrl: 'https://link.amazon/B06NamWQ9',
-    image: '/gear/fellow-scale.jpg',
-    imageAlt: '',
-    ariaLabel: 'View Fellow Scale on Amazon',
-  },
-  {
-    name: 'NitroPress Dispenser',
-    brand: 'NitroPress',
-    tag: 'Cold Brew',
-    spec: 'High-pressure nitro beverage dispenser with pure nitrogen infuser',
-    desc: 'High-pressure nitro infuser delivering micro-foam texture for cold brew coffee, tea, and signature cocktail production without dairy or syrup additives.',
-    affiliateUrl: 'https://link.amazon/B04f3JDzo',
-    image: '/gear/nitropress.jpg',
-    imageAlt: '',
-    ariaLabel: 'View Nitro Press on Amazon',
-  },
-  {
-    name: 'James Coffee Co.',
-    brand: 'James Coffee Co.',
-    tag: 'Roastery',
-    spec: 'Single-origin espresso and filter roasts sourced and roasted in San Diego, CA',
-    desc: 'Local San Diego specialty roastery providing single-origin espresso and filter roasts tested across commercial and studio extractions.',
-    affiliateUrl: 'https://jamescoffeeco.com',
-    image: '/gear/james-coffee.jpg',
-    imageAlt: '',
-    ariaLabel: 'Visit James Coffee Co. website',
-  },
-];
-
-// Unified 5 sections
-const allSections: GearSectionData[] = [
-  ...activeCats.map((cat) => {
-    const isBodies = cat.data.category === 'Camera Bodies';
-    const isLenses = cat.data.category === 'Lens';
-    const isLighting = cat.data.category === 'Lighting';
-
-    const slug = isBodies ? 'bodies' : isLenses ? 'lenses' : isLighting ? 'lighting' : 'tools';
-    const kicker = isBodies ? '01 / HERO SYSTEM' : isLenses ? '02 / OPTICAL SYSTEM' : isLighting ? '03 / ILLUMINATION' : '04 / STABILIZATION & RIG';
-    const categoryTitle = isBodies ? 'Cameras' : isLenses ? 'Lenses' : isLighting ? 'Lighting' : 'Tools and Support';
-
-    return {
-      id: `gear-${slug}`,
-      slug,
-      category: categoryTitle,
-      kicker,
-      subtitle: cat.data.subtitle || '',
-      items: cat.data.items as GearItem[],
-      hasAllView: cat.data.items.length > 6,
-    };
-  }),
-  {
-    id: 'brew',
-    slug: 'brew',
-    category: 'Cafe Bar',
-    kicker: '05 / BEVERAGE & CRAFT',
-    subtitle: 'Precision brewing and beverage production kit',
-    items: cafeItems,
-    hasAllView: true,
-  },
-];
-
-// Color RGB tones sampled from product imagery for subtle cinematic ambient glow
-const ITEM_RGB_MAP: Record<string, string> = {
-  'sony-a7iv.jpg': '65, 65, 70',
-  'sony-a7cr.jpg': '65, 68, 75',
-  'iphone-17-pro-max.jpg': '70, 85, 130',
-  'iphone-15-pro-max.jpg': '125, 121, 115',
-  'iphone-12-pro-max.jpg': '85, 84, 81',
-  'sony-24-70-gm.jpg': '60, 59, 63',
-  'sony-16-35-gm2.jpg': '50, 49, 51',
-  'sony-70-200-gm2.jpg': '150, 150, 155',
-  'sony-90-macro.jpg': '56, 55, 56',
-  'sony-55-sonnar.jpg': '57, 56, 59',
-  'sony-50-g.jpg': '54, 54, 56',
-  'sony-24-g.jpg': '54, 53, 55',
-  'viltrox-85-evo.jpg': '110, 110, 120',
-  'amaran-200d.jpg': '130, 135, 145',
-  'sony-hvl-f60rm2.jpg': '98, 98, 99',
-  'peak-design-carbon-tripod.jpg': '100, 105, 115',
-  'kupo-c-stands.jpg': '85, 85, 85',
-  'sony-np-fz100-battery.jpg': '79, 82, 82',
-  'ascaso-steel-duo.jpg': '135, 125, 115',
-  'fellow-stagg-ekg.jpg': '97, 96, 95',
-  'fellow-carafe.jpg': '92, 91, 89',
-  'fellow-scale.jpg': '53, 53, 54',
-  'nitropress.jpg': '170, 140, 135',
-  'james-coffee.jpg': '140, 115, 75',
-};
-
-const getItemRgb = (img?: string) => {
-  if (!img) return '100, 100, 100';
-  const fname = img.split('/').pop() || '';
-  return ITEM_RGB_MAP[fname] || '100, 100, 100';
-};
+const pad = (n: number) => String(n).padStart(2, '0');
+const ctaLabel = (s: Store) => `View on ${s.store}`;
+/** Positions in the deck, as the HQ deck names them. */
+const stateOf = (i: number, n: number) =>
+  i === 0 ? 'active' : i === 1 ? 'next-1' : i === 2 ? 'next-2' : i === n - 1 && n > 3 ? 'prev' : 'hidden';
 ---
 
 <div class="gear-monolith" id="gear-monolith">
-  <!-- Gear Instant Search & Category Filter Toolbar -->
-  <div class="gear-filter-toolbar" role="search" aria-label="Filter gear loadout">
+  <div class="gear-filter-toolbar" role="search" aria-label="Filter gear">
     <div class="gear-search-wrap">
       <svg class="gear-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="11" cy="11" r="8"></circle>
@@ -209,378 +110,269 @@ const getItemRgb = (img?: string) => {
         type="search"
         id="gear-search-input"
         class="gear-search-input font-mono"
-        placeholder="Filter equipment (e.g. Sony, 90mm, Amaran, Ascaso, tripod)..."
+        placeholder="Filter gear (Sony, 90mm, Amaran, Ascaso, tripod)"
         aria-label="Search gear"
+        autocomplete="off"
       />
       <button type="button" id="gear-search-clear" class="gear-search-clear" aria-label="Clear search" hidden>×</button>
     </div>
-    <div class="gear-category-chips" role="tablist" aria-label="Gear categories">
-      <button type="button" class="gear-chip active" data-cat="all" role="tab" aria-selected="true">All</button>
-      {allSections.map(sec => {
-        const catKey = sec.slug === 'bodies' ? 'cameras' : sec.slug === 'tools' ? 'support' : sec.slug === 'brew' ? 'cafe' : sec.slug;
-        const chipLabel = sec.slug === 'bodies' ? 'Cameras' : sec.slug === 'tools' ? 'Support' : sec.slug === 'brew' ? 'Cafe' : sec.category;
-        return (
-          <button type="button" class="gear-chip" data-cat={catKey} role="tab" aria-selected="false">{chipLabel}</button>
-        );
-      })}
+    <div class="gear-category-chips" role="group" aria-label="Gear categories">
+      <button type="button" class="gear-chip active" data-cat="all" aria-pressed="true">All</button>
+      {sections.map((sec) => (
+        <button type="button" class="gear-chip" data-cat={sec.chipKey} aria-pressed="false">{sec.chip}</button>
+      ))}
     </div>
   </div>
 
   <div id="gear-empty-state" class="gear-empty-state" hidden>
-    <p class="gear-empty-text">No equipment matches your search filter.</p>
-    <button type="button" id="gear-reset-btn" class="gear-reset-btn font-mono">Reset Filter</button>
+    <p class="gear-empty-text">No gear matches that search.</p>
+    <button type="button" id="gear-reset-btn" class="gear-reset-btn font-mono">Reset filter</button>
   </div>
 
-  <!-- COMPACT ACCORDION STACK: ALL 5 SECTION HEADERS VISIBLE AT ONCE (EXACTLY ONE OPEN AT A TIME) -->
   <div class="gear-accordion-container" id="gear-accordion-container">
-    {allSections.map((sec, secIdx) => {
-      const isDefaultExpanded = secIdx === 0;
-      const isBodies = sec.slug === 'bodies';
-      const isLenses = sec.slug === 'lenses';
-      const isLighting = sec.slug === 'lighting';
-      const isBrew = sec.slug === 'brew';
-
-      const items = sec.items;
-      const defaultItem = items[0];
-      const defaultRgb = getItemRgb(defaultItem?.image);
-      const hasProduct = isProductUrl(defaultItem?.affiliateUrl);
-
-      // Element IDs for strict backward-compatibility with e2e tests
-      const imgId = isBodies ? 'preview-camera-img' : isBrew ? 'preview-cafe-img' : `img-${sec.id}`;
-      const ctaId = isBodies ? 'preview-camera-btn' : isBrew ? 'cafe-hero-cta' : `cta-${sec.id}`;
-      const brandId = isBodies ? 'preview-camera-brand' : `brand-${sec.id}`;
-      const titleId = isBodies ? 'preview-camera-title' : isBrew ? 'cafe-hero-name' : `title-${sec.id}`;
-      const descId = isBodies ? 'preview-camera-desc' : isBrew ? 'cafe-hero-desc' : `desc-${sec.id}`;
-      const tagId = isBodies ? 'preview-camera-tag' : `tag-${sec.id}`;
-
+    {sections.map((sec, secIdx) => {
+      const open = secIdx === 0;
+      const n = sec.items.length;
+      const hasAll = n > 6;
       return (
         <section
-          class={`gear-accordion-section ${isDefaultExpanded ? 'is-expanded' : 'is-collapsed'}`}
-          id={sec.id}
-          data-category-slug={sec.id}
+          class={`gear-accordion-section ${open ? 'is-expanded' : 'is-collapsed'}`}
+          id={sec.domId}
           data-category={sec.slug}
+          data-chip={sec.chipKey}
           data-pn-entry
-          data-pn-label={sec.category}
-          style={`--item-accent-rgb: ${defaultRgb};`}
+          data-pn-label={sec.title}
+          style={`--accent: ${sec.items[0].accent};`}
         >
-          {isLenses && (
-            <>
-              <span id="gear-zooms" class="vh" aria-hidden="true"></span>
-              <span id="gear-primes" class="vh" aria-hidden="true"></span>
-            </>
-          )}
-          {isLighting && (
-            <>
-              <span id="gear-lights" class="vh" aria-hidden="true"></span>
-              <span id="gear-flash" class="vh" aria-hidden="true"></span>
-            </>
-          )}
-
-          <!-- COMPACT ACCORDION HEADER (CLICK TOGGLES THIS GROUP & COLLAPSES OTHERS) -->
-          <div class="gear-accordion-header-bar" data-header-bar={sec.slug}>
+          <div class="gear-accordion-header-bar">
             <h2 class="gear-accordion-heading">
               <button
                 type="button"
                 class="gear-accordion-header"
-                aria-expanded={isDefaultExpanded ? 'true' : 'false'}
+                aria-expanded={open ? 'true' : 'false'}
                 aria-controls={`gear-body-${sec.slug}`}
               >
                 <span class="gear-header-left">
                   <span class="box-idx font-mono">{sec.kicker}</span>
                   <span class="gear-header-title-row">
-                    <span class="box-title">{sec.category}</span>
-                    <span class="gear-item-count-badge font-mono">{items.length} PIECES VERIFIED</span>
+                    <span class="box-title">{sec.title}</span>
+                    <span class="gear-item-count-badge font-mono">{n} {n === 1 ? 'piece' : 'pieces'}</span>
                   </span>
                   <span class="box-subtitle font-mono">{sec.subtitle}</span>
                 </span>
+                <span class="header-chevron" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </span>
               </button>
             </h2>
-
             <div class="gear-header-right">
-              {sec.hasAllView && (
+              {hasAll && (
                 <button
                   type="button"
                   class="btn-all-toggle font-mono"
                   data-all-toggle={sec.slug}
                   aria-expanded="false"
-                  aria-controls={isBrew ? 'cafe-all-grid' : `all-grid-${sec.slug}`}
-                  title={`Toggle multi-column grid of all ${sec.category} items`}
+                  aria-controls={`all-grid-${sec.slug}`}
                 >
-                  <span class="all-toggle-label">Show All ({items.length})</span>
-                  <span class="all-toggle-icon" aria-hidden="true">⊞</span>
+                  <span class="all-toggle-label">Show all ({n})</span>
                 </button>
               )}
-
-              <a
-                href={AMAZON_STOREFRONT}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="influencer-pill font-mono"
-                aria-label="Visit the storefront"
-              >
-                <span class="influencer-dot"></span>
-                <span class="influencer-text">Storefront</span>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                  <path d="M2.5 9.5L9.5 2.5M9.5 2.5H4.5M9.5 2.5V7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <a href={sec.collectionUrl} target="_blank" rel="noopener sponsored" class="influencer-pill font-mono">
+                <span class="influencer-text">{sec.collectionLabel}</span>
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                  <path d="M2.5 9.5L9.5 2.5M9.5 2.5H4.5M9.5 2.5V7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </a>
-
-              <!-- UNAMBIGUOUS ACCORDION TOGGLE INDICATOR (ROTATING CHEVRON) -->
-              <button
-                type="button"
-                class="accordion-chevron-btn"
-                aria-label={`Toggle ${sec.category} section`}
-                aria-expanded={isDefaultExpanded ? 'true' : 'false'}
-                data-accordion-toggle={sec.slug}
-              >
-                <svg class="header-chevron-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </button>
             </div>
           </div>
 
-          <!-- ACCORDION BODY (OPENS CINEMATIC POSTER DECK) -->
           <div class="gear-accordion-body" id={`gear-body-${sec.slug}`}>
-            <!-- CAROUSEL / DECK STAGE VIEW (LARGE FLOATING HERO + RIGHT PEEKING SLATS + CONTROLS) -->
-            <div class="gear-deck-view" data-deck-container={sec.slug}>
-              
-              <!-- STAGE CONTAINER (CONTAINS AMBIENT BACKLIGHT GLOW, HERO POSTER, SLATS, AND DECK ARROWS) -->
-              <div class="gear-deck-stage" data-deck-stage={sec.slug}>
-                
-                <!-- DYNAMIC AMBIENT BACKLIGHT GLOW (HQ FEATURED PATTERN) -->
-                <div class="ambient-glow-container" aria-hidden="true">
-                  {items.map((item, itemIdx) => (
-                    <div
-                      class={`ambient-glow-layer ${itemIdx === 0 ? 'active' : ''}`}
-                      data-glow-index={itemIdx}
-                      style={item.image ? `background-image: url(${resolveAsset(item.image)});` : ''}
-                    ></div>
-                  ))}
-                </div>
-
-                <!-- FLOATING, IMAGE-LED HERO SPEC CARD (NO BOXY CHROME, FULL BLEED PRODUCT ART) -->
-                <div class="hero-poster-card" data-hero-poster={sec.slug}>
-                  <div class="hero-poster-topbar">
-                    <div class="hero-top-tags">
-                      <span class="hero-badge-verified font-mono">
-                        {isBodies ? 'STUDIO VERIFIED' : isBrew ? 'CAFE VERIFIED' : 'FIELD VERIFIED'}
-                      </span>
-                      <span class="hero-badge-item font-mono" id={tagId}>
-                        {defaultItem?.tag || 'Production Spec'}
-                      </span>
-                    </div>
-                    <span class="hero-item-counter font-mono" data-card-counter={sec.slug}>
-                      01 / 0{items.length}
-                    </span>
-                  </div>
-
-                  <!-- LARGE, TALL, FLOATING PRODUCT VISUAL BLEEDING INTO THE DARK VIGNETTED STAGE -->
-                  <div class="hero-poster-visual-wrap">
-                    <img
-                      id={imgId}
-                      class="hero-poster-img"
-                      src={resolveAsset(defaultItem?.image)}
-                      alt=""
-                    />
-                    <div class="hero-poster-vignette" aria-hidden="true"></div>
-                    <div class="hero-poster-scrim" aria-hidden="true"></div>
-                  </div>
-
-                  <!-- BOTTOM OVERLAY CONTENT STRIP (QUIET BRAND, BOLD TITLE, CLEAR CTA) -->
-                  <div class="hero-overlay-plate">
-                    <span class="hero-brand-kicker font-mono" id={brandId}>
-                      {(defaultItem?.brand || 'CURATED PRODUCTION').toUpperCase()} // KIT
-                    </span>
-                    <h3 class="hero-product-title" id={titleId}>
-                      {defaultItem?.name}
-                    </h3>
-                    <p class="hero-product-spec" id={descId}>
-                      {defaultItem?.desc || defaultItem?.spec}
-                    </p>
-                    <div class="hero-action-row">
-                      <a
-                        href={defaultItem?.affiliateUrl || AMAZON_STOREFRONT}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="btn-primary-influencer font-mono"
-                        id={ctaId}
-                        aria-label={defaultItem?.ariaLabel || `View ${defaultItem?.name} on Amazon`}
-                      >
-                        <span class="amz-btn-text">
-                          {hasProduct ? `View ${defaultItem?.name} on Amazon` : 'Visit the storefront'}
-                        </span>
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" focusable="false">
-                          <path d="M2.5 11.5L11.5 2.5M11.5 2.5H5.5M11.5 2.5V8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                      </a>
-                      <span class="hero-disclosure-note font-mono">
-                        As an Amazon Associate, I earn from qualifying purchases.
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- RIGHT PEEKING VERTICAL SLATS (HQ FEATURED CARD STACK) -->
-                <div class="deck-slats-stack" aria-hidden="true">
-                  {items.map((item, itemIdx) => {
-                    const isNext1 = itemIdx === 1;
-                    const isNext2 = itemIdx === 2;
-                    const initialClass = isNext1 ? 'deck-slat next-1' : isNext2 ? 'deck-slat next-2' : 'deck-slat hidden';
-                    return (
-                      <div
-                        class={initialClass}
-                        data-slat-index={itemIdx}
-                        data-cat-slug={sec.slug}
-                        title={`Click to view ${item.name}`}
-                      >
-                        <div class="peeking-spine">
-                          <span class="spine-text">{item.name}</span>
-                        </div>
-                        {item.image && (
-                          <img src={resolveAsset(item.image)} alt="" class="slat-peek-img" loading="lazy" />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <!-- UNAMBIGUOUS ITEM NAVIGATION ARROWS (INSIDE THE HERO DECK STAGE) -->
-                <div class="deck-stage-nav-controls" aria-label="Deck item navigation">
-                  <button
-                    type="button"
-                    class="btn-deck-item-nav btn-deck-prev"
-                    data-deck-prev={sec.slug}
-                    aria-label={`Previous ${sec.category} item`}
-                    title="Previous item"
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="15 18 9 12 15 6"></polyline>
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    class="btn-deck-item-nav btn-deck-next"
-                    data-deck-next={sec.slug}
-                    aria-label={`Next ${sec.category} item`}
-                    title="Next item"
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="9 18 15 12 9 6"></polyline>
-                    </svg>
-                  </button>
-                </div>
+            <div class="gear-deck" data-deck={sec.slug}>
+              <div class="deck-glow" aria-hidden="true">
+                {sec.items.map((it, i) => (
+                  <div
+                    class={`deck-glow-layer ${i === 0 ? 'active' : ''}`}
+                    data-glow-index={i}
+                    style={`--glow: ${it.accent};${it.src ? ` --glow-img: url('${it.src}');` : ''}`}
+                  ></div>
+                ))}
               </div>
 
-              <!-- THUMBNAIL TRACK BELOW (HQ FEATURED THUMBNAIL STRIP) -->
               <div
-                class="deck-thumb-track"
-                role="tablist"
-                aria-label={`${sec.category} rotation`}
-                data-thumb-track={sec.slug}
+                class="deck-stage"
+                data-deck-stage={sec.slug}
+                role="group"
+                aria-roledescription="carousel"
+                aria-label={`${sec.title}: ${n} items`}
               >
-                {items.map((item, itemIdx) => {
-                  const itemHasProduct = isProductUrl(item.affiliateUrl);
-                  const rowClass = isBodies ? 'camera-item-row' : 'collage-item-row';
-                  const itemRgb = getItemRgb(item.image);
+                {sec.items.map((it, i) => {
+                  const primary = it.stores[0];
+                  const extraAffiliates = it.stores.filter((s) => s.affiliate).map((s) => s.store);
                   return (
-                    <button
-                      type="button"
-                      class={`deck-thumb-tile ${rowClass} ${itemIdx === 0 ? 'is-active' : ''}`}
-                      role="tab"
-                      tabindex="0"
-                      aria-selected={itemIdx === 0 ? 'true' : 'false'}
-                      aria-label={`Select ${item.name}`}
-                      data-subcat={sec.id}
-                      data-item-index={itemIdx}
-                      data-item-name={item.name}
-                      data-item-brand={item.brand || (item.name.includes('Sony') ? 'Sony' : 'Curated Kit')}
-                      data-item-spec={item.desc || item.spec}
-                      data-item-tag={item.tag || (itemIdx === 0 ? 'Primary Workhorse' : 'Production Spec')}
-                      data-item-url={item.affiliateUrl || AMAZON_STOREFRONT}
-                      data-has-product-url={itemHasProduct ? 'true' : 'false'}
-                      data-item-image={resolveAsset(item.image)}
-                      data-item-rgb={itemRgb}
-                      data-item-aria={item.ariaLabel || `View ${item.name} on Amazon`}
-                      data-cat-slug={sec.slug}
+                    <article
+                      class={`deck-card ${stateOf(i, n)}`}
+                      data-index={i}
+                      data-accent={it.accent}
+                      data-search={it.search}
+                      aria-hidden={i === 0 ? 'false' : 'true'}
+                      aria-label={it.name}
                     >
-                      <div class="thumb-tile-img-box">
-                        {item.image ? (
-                          <img src={resolveAsset(item.image)} alt="" class="thumb-tile-img" loading="lazy" />
+                      <div class="card-top">
+                        <span class="card-tags">
+                          <span class="card-badge font-mono">{it.tag || 'In the kit'}</span>
+                          <span class="card-brand font-mono">{it.brand}</span>
+                        </span>
+                        <span class="card-counter font-mono" data-card-counter>{pad(i + 1)} / {pad(n)}</span>
+                      </div>
+
+                      <div class="card-visual">
+                        {it.src ? (
+                          <img
+                            class="card-img"
+                            src={it.src}
+                            alt={it.name}
+                            loading={secIdx === 0 && i < 3 ? 'eager' : 'lazy'}
+                            decoding="async"
+                            draggable="false"
+                          />
                         ) : (
-                          <div class="thumb-tile-fallback font-mono">{item.name.slice(0, 3)}</div>
+                          <div class="card-type" role="img" aria-label={it.name}>
+                            <span class="card-type-brand font-mono">{it.brand}</span>
+                            <span class="card-type-name">{it.short}</span>
+                          </div>
                         )}
                       </div>
-                      <div class="thumb-tile-meta">
-                        <span class="thumb-tile-name">{item.name}</span>
-                        <span class="thumb-tile-tag font-mono">{item.tag || 'Verified'}</span>
+
+                      <div class="card-plate">
+                        <h3 class="card-title">{it.name}</h3>
+                        <p class="card-spec">{it.spec}</p>
+                        <div class="card-actions">
+                          <a
+                            class="store-cta font-mono"
+                            href={primary.url}
+                            target="_blank"
+                            rel="noopener sponsored"
+                            data-store-cta
+                            tabindex={i === 0 ? undefined : '-1'}
+                          >
+                            <span data-store-cta-label>{ctaLabel(primary)}</span>
+                            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                              <path d="M2.5 11.5L11.5 2.5M11.5 2.5H5.5M11.5 2.5V8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                          </a>
+                          {it.stores.length > 1 && (
+                            <div class="store-picker" role="radiogroup" aria-label={`Store for ${it.short}`}>
+                              {it.stores.map((s, si) => (
+                                <button
+                                  type="button"
+                                  class="store-option font-mono"
+                                  role="radio"
+                                  aria-checked={si === 0 ? 'true' : 'false'}
+                                  data-store-url={s.url}
+                                  data-store-label={ctaLabel(s)}
+                                  tabindex={i === 0 && si === 0 ? undefined : '-1'}
+                                >
+                                  {s.store}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {it.video && (
+                            <a
+                              class="video-link font-mono"
+                              href={it.video.url}
+                              target="_blank"
+                              rel="noopener sponsored"
+                              tabindex={i === 0 ? undefined : '-1'}
+                            >
+                              {it.video.label}
+                            </a>
+                          )}
+                        </div>
+                        <p class="card-disclosure font-mono">
+                          As an Amazon Associate, I earn from qualifying purchases.
+                          {extraAffiliates.length > 0 && ` The ${extraAffiliates.join(' and ')} link is an affiliate link too.`}
+                        </p>
                       </div>
-                      <span class="thumb-tile-glow" aria-hidden="true"></span>
-                    </button>
+
+                      <span class="card-spine" aria-hidden="true"><span class="spine-text">{it.short}</span></span>
+                    </article>
                   );
                 })}
               </div>
+
+              <div class="deck-controls" role="group" aria-label={`${sec.title} item navigation`}>
+                <button type="button" class="deck-step" data-deck-prev aria-label={`Previous ${sec.title} item`}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                  <span class="font-mono">Prev item</span>
+                </button>
+                <span class="deck-counter font-mono" data-deck-counter aria-live="polite">{pad(1)} / {pad(n)}</span>
+                <button type="button" class="deck-step" data-deck-next aria-label={`Next ${sec.title} item`}>
+                  <span class="font-mono">Next item</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+              </div>
+
+              <div class="deck-thumb-track" role="tablist" aria-label={`${sec.title} items`}>
+                {sec.items.map((it, i) => (
+                  <button
+                    type="button"
+                    class={`deck-thumb-tile ${i === 0 ? 'is-active' : ''}`}
+                    role="tab"
+                    aria-selected={i === 0 ? 'true' : 'false'}
+                    aria-label={it.name}
+                    data-index={i}
+                  >
+                    <span class="thumb-tile-img-box">
+                      {it.src ? (
+                        <img src={it.src} alt="" class="thumb-tile-img" loading="lazy" decoding="async" draggable="false" />
+                      ) : (
+                        <span class="thumb-tile-fallback font-mono">{it.brand}</span>
+                      )}
+                    </span>
+                    <span class="thumb-tile-name">{it.short}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <!-- "ALL" MULTI-COLUMN TILE GRID VIEW (FOR LENSES AND CAFE BAR) -->
-            {sec.hasAllView && (
-              <div class="gear-all-grid-view" id={isBrew ? 'cafe-all-grid-container' : `all-grid-${sec.slug}`} hidden data-all-view={sec.slug}>
+            {hasAll && (
+              <div class="gear-all-grid-view" id={`all-grid-${sec.slug}`} hidden data-all-view={sec.slug}>
                 <div class="all-grid-topbar">
-                  <div class="all-grid-title-wrap">
-                    <span class="all-grid-tag font-mono">COMPLETE MANIFEST OVERVIEW</span>
-                    <h4 class="all-grid-title">{sec.category} Inventory ({items.length} units)</h4>
-                  </div>
-                  <button type="button" class="btn-back-carousel font-mono" data-back-carousel={sec.slug}>
-                    ← Return to Carousel
-                  </button>
+                  <h3 class="all-grid-title">{sec.title}: all {n}</h3>
+                  <button type="button" class="btn-back-carousel font-mono" data-back-carousel={sec.slug}>Back to the deck</button>
                 </div>
-
-                <div class="all-grid-cards" id={isBrew ? 'cafe-all-grid' : undefined}>
-                  {items.map((item) => {
-                    const itemHasProduct = isProductUrl(item.affiliateUrl);
-                    return (
-                      <article class="all-grid-card">
-                        <div class="all-card-top">
-                          <span class="all-card-tag font-mono">{item.tag || 'Pro Kit'}</span>
-                          <span class="all-card-brand font-mono">{item.brand || 'Verified'}</span>
+                <div class="all-grid-cards">
+                  {sec.items.map((it) => (
+                    <article class="all-grid-card" data-search={it.search}>
+                      <div class="all-card-img-wrap">
+                        {it.src ? (
+                          <img src={it.src} alt={it.name} class="all-card-img" loading="lazy" decoding="async" />
+                        ) : (
+                          <span class="all-card-type" role="img" aria-label={it.name}>{it.short}</span>
+                        )}
+                      </div>
+                      <div class="all-card-body">
+                        <span class="all-card-tag font-mono">{it.tag || it.brand}</span>
+                        <h4 class="all-card-name">{it.name}</h4>
+                        <p class="all-card-spec">{it.spec}</p>
+                        <div class="all-card-links">
+                          {it.stores.map((s, si) => (
+                            <a
+                              href={s.url}
+                              target="_blank"
+                              rel="noopener sponsored"
+                              class={`all-card-cta font-mono ${si === 0 ? 'is-primary' : ''}`}
+                            >
+                              {ctaLabel(s)}
+                            </a>
+                          ))}
                         </div>
-                        <div class="all-card-img-wrap">
-                          <img src={resolveAsset(item.image)} alt="" class="all-card-img" loading="lazy" />
-                        </div>
-                        <div class="all-card-body">
-                          <h5 class="all-card-name">{item.name}</h5>
-                          <p class="all-card-spec">{item.spec}</p>
-                          <a
-                            href={item.affiliateUrl || AMAZON_STOREFRONT}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="all-card-cta btn-amazon-link font-mono"
-                            aria-label={item.ariaLabel || `View ${item.name} on Amazon`}
-                          >
-                            <span>{itemHasProduct ? `View on Amazon` : 'Storefront'} <span aria-hidden="true">↗</span></span>
-                          </a>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-
-                {isBrew && (
-                  <div class="cafe-project-reel-note">
-                    <div class="reel-note-header font-mono">
-                      <span class="reel-badge">PROJECT NOTE</span>
-                      <span>Native 9:16 Vertical Beverage Cinematography</span>
-                    </div>
-                    <p class="reel-desc">
-                      Ascaso espresso extraction and pour-over cinematography captured on the Sony a7 IV paired with the Sony 90mm f/2.8 Macro lens.
-                    </p>
-                  </div>
-                )}
-
-                <div class="all-grid-footer">
-                  <button type="button" class="btn-back-carousel font-mono" data-back-carousel={sec.slug}>
-                    ← Return to Carousel
-                  </button>
+                      </div>
+                    </article>
+                  ))}
                 </div>
               </div>
             )}
@@ -592,152 +384,140 @@ const getItemRgb = (img?: string) => {
 </div>
 
 <style>
-  /* --------------------------------------------------------------------------
-     FILTER & SEARCH TOOLBAR
-     -------------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------
+     Toolbar
+     ------------------------------------------------------------------ */
   .gear-filter-toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 1.25rem;
+    gap: 1rem 1.25rem;
     padding-bottom: 1.5rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.12));
   }
   .gear-search-wrap {
     position: relative;
     display: flex;
     align-items: center;
-    flex: 1 1 320px;
-    max-width: 520px;
+    flex: 1 1 280px;
+    max-width: 480px;
   }
   .gear-search-icon {
     position: absolute;
     left: 1rem;
-    color: var(--muted, #888888);
+    color: var(--muted, #888);
     pointer-events: none;
   }
   .gear-search-input {
     width: 100%;
-    padding: 0.75rem 2.25rem 0.75rem 2.75rem;
-    background: #111111;
+    min-height: 44px;
+    padding: 0.7rem 2.75rem;
+    background: #0d0d0d;
     border: 1px solid rgba(255, 255, 255, 0.16);
-    color: #ffffff;
-    font-size: 0.85rem;
-    outline: none;
-    transition: all 0.2s ease;
+    color: #fff;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
   }
   .gear-search-input:focus {
-    border-color: rgba(255, 255, 255, 0.5);
-    background: #181818;
+    outline: none;
+    border-color: #fff;
   }
   .gear-search-clear {
     position: absolute;
-    right: 0.75rem;
+    right: 0.5rem;
+    width: 32px;
+    height: 32px;
     background: none;
     border: none;
-    color: var(--muted, #888888);
+    color: var(--muted, #888);
     font-size: 1.25rem;
     cursor: pointer;
-    padding: 0.25rem 0.5rem;
-    line-height: 1;
   }
   .gear-search-clear:hover {
-    color: #ffffff;
+    color: #fff;
   }
   .gear-category-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.4rem;
   }
   .gear-chip {
-    padding: 0.45rem 0.9rem;
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    background: rgba(255, 255, 255, 0.04);
+    min-height: 36px;
+    padding: 0.4rem 0.85rem;
+    background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.16);
-    color: var(--muted, #888888);
+    color: var(--muted, #888);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
   }
   .gear-chip:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.4);
   }
   .gear-chip.active {
-    background: #ffffff;
-    color: #000000;
-    border-color: #ffffff;
-    font-weight: 700;
+    background: #fff;
+    border-color: #fff;
+    color: #000;
   }
-
   .gear-empty-state {
-    padding: 3rem 1.5rem;
+    padding: 3rem 1rem;
     text-align: center;
-    background: #111111;
-    border: 1px dashed rgba(255, 255, 255, 0.2);
-    margin-bottom: 2rem;
+    border: 1px dashed rgba(255, 255, 255, 0.16);
   }
   .gear-empty-text {
-    font-size: 0.95rem;
-    color: var(--muted, #888888);
-    margin-bottom: 1rem;
+    color: var(--muted, #888);
+    margin: 0 0 1rem;
   }
   .gear-reset-btn {
-    padding: 0.5rem 1.25rem;
-    background: #ffffff;
-    color: #000000;
+    min-height: 40px;
+    padding: 0.5rem 1rem;
+    background: #fff;
+    color: #000;
     border: none;
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: 0.72rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     cursor: pointer;
   }
 
-  /* --------------------------------------------------------------------------
-     ACCORDION STACK (COMPACT HEADERS, EXACTLY ONE OPEN AT A TIME)
-     -------------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------
+     Section stack: every header visible, one open at a time
+     ------------------------------------------------------------------ */
   .gear-accordion-container {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    width: 100%;
+    gap: 0.6rem;
   }
-
   .gear-accordion-section {
+    --accent: 176, 184, 196;
+    position: relative;
     background: #080808;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     transition: border-color 0.3s ease;
+    /* The stuck nav must never cover the header or the hero under it. */
+    scroll-margin-top: calc(var(--gear-nav-h, 88px) + 12px);
   }
   .gear-accordion-section.is-expanded {
-    border-color: rgba(255, 255, 255, 0.28);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+    border-color: rgba(255, 255, 255, 0.24);
   }
-
   .gear-accordion-header-bar {
-    width: 100%;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding-right: 1.75rem;
-    background: #0f0f0f;
-    transition: background 0.2s ease;
+    gap: 0.75rem;
+    padding-right: 1.25rem;
+    background: #0e0e0e;
     cursor: pointer;
+    transition: background 0.2s ease;
   }
-  .gear-accordion-section.is-collapsed .gear-accordion-header-bar:hover {
-    background: #151515;
+  .gear-accordion-header-bar:hover {
+    background: #141414;
   }
-  .gear-accordion-section.is-expanded .gear-accordion-header-bar {
-    background: #121212;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
   .gear-accordion-heading {
     margin: 0;
     font: inherit;
@@ -746,560 +526,543 @@ const getItemRgb = (img?: string) => {
   }
   .gear-accordion-header {
     appearance: none;
-    -webkit-appearance: none;
-    border: none;
-    background: none;
-    color: inherit;
-    font: inherit;
-    text-align: left;
     width: 100%;
     display: flex;
     align-items: center;
-    padding: 1.25rem 1rem 1.25rem 1.75rem;
+    gap: 1rem;
+    padding: 1.1rem 0.5rem 1.1rem 1.5rem;
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
     cursor: pointer;
-    gap: 1.25rem;
   }
   .gear-accordion-header:focus-visible {
-    outline: 2px solid #ffffff;
+    outline: 2px solid #fff;
     outline-offset: -2px;
   }
-
   .gear-header-left {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.3rem;
     flex: 1;
     min-width: 0;
   }
   .box-idx {
-    font-size: 0.68rem;
+    font-size: 0.66rem;
     letter-spacing: 0.18em;
-    color: var(--key-ink, #c0c0c0);
     text-transform: uppercase;
+    color: var(--muted, #888);
   }
   .gear-header-title-row {
     display: flex;
     align-items: baseline;
-    gap: 0.85rem;
     flex-wrap: wrap;
+    gap: 0.75rem;
   }
   .box-title {
     font-family: var(--font-display);
-    font-size: clamp(1.35rem, 2.2vw, 1.85rem);
+    font-size: clamp(1.3rem, 2.2vw, 1.8rem);
     font-weight: 800;
-    letter-spacing: -0.01em;
-    color: #ffffff;
-    margin: 0;
     line-height: 1.1;
+    color: #fff;
   }
   .gear-item-count-badge {
-    font-size: 0.65rem;
-    color: var(--muted, #888888);
-    letter-spacing: 0.12em;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 0.2rem 0.5rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted, #888);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 0.15rem 0.45rem;
   }
   .box-subtitle {
-    font-size: 0.78rem;
-    color: var(--muted, #888888);
-    letter-spacing: 0.02em;
+    font-size: 0.74rem;
+    color: var(--muted, #888);
   }
-
-  .gear-header-right {
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
+  .header-chevron {
     flex-shrink: 0;
-  }
-
-  .influencer-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.45rem 0.85rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    color: #ffffff;
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    text-decoration: none;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-    min-height: 36px;
-  }
-  .influencer-pill:hover {
-    background: #ffffff;
-    color: #000000;
-    border-color: #ffffff;
-  }
-  .influencer-dot {
-    width: 6px;
-    height: 6px;
-    background: #ffffff;
-    border-radius: 50%;
-  }
-  .influencer-pill:hover .influencer-dot {
-    background: #000000;
-  }
-
-  .btn-all-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.45rem 0.85rem;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.24);
-    color: #ffffff;
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    min-height: 36px;
-  }
-  .btn-all-toggle:hover {
-    background: #ffffff;
-    color: #000000;
-    border-color: #ffffff;
-  }
-
-  /* ROTATING HEADER CHEVRON AFFORDANCE */
-  .accordion-chevron-btn {
-    appearance: none;
-    -webkit-appearance: none;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.04);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    color: var(--muted, #888888);
-    cursor: pointer;
-    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
-    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: var(--muted, #888);
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.2s ease, border-color 0.2s ease;
+  }
+  .gear-accordion-section.is-expanded .header-chevron {
+    transform: rotate(180deg);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+  .gear-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     flex-shrink: 0;
   }
-  .accordion-chevron-btn:hover {
-    color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.35);
-    background: rgba(255, 255, 255, 0.08);
+  .influencer-pill,
+  .btn-all-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 36px;
+    padding: 0.4rem 0.75rem;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #fff;
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
-  .accordion-chevron-btn:focus-visible {
-    outline: 2px solid #ffffff;
-    outline-offset: 2px;
+  .influencer-pill:hover,
+  .btn-all-toggle:hover {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
   }
-  .header-chevron-icon {
-    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-  }
-  .gear-accordion-section.is-expanded .header-chevron-icon {
-    transform: rotate(180deg);
-  }
-  .gear-accordion-section.is-expanded .accordion-chevron-btn {
-    color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.45);
-    background: rgba(255, 255, 255, 0.12);
-  }
-
-  /* ACCORDION BODY DISPLAY */
   .gear-accordion-body {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
+    position: relative;
     overflow: hidden;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
   .gear-accordion-section.is-collapsed .gear-accordion-body {
     display: none;
   }
 
-  /* --------------------------------------------------------------------------
-     ZONE 1: HERO POSTER CARD + SLATS + AMBIENT GLOW (HQ FEATURED PATTERN)
-     -------------------------------------------------------------------------- */
-  .gear-deck-view {
+  /* ------------------------------------------------------------------
+     The deck (HQ /featured): glow, card stack, item controls, thumbnails
+     ------------------------------------------------------------------ */
+  .gear-deck {
+    --card-w: 78%;
+    --stage-h: clamp(460px, calc(100svh - var(--gear-nav-h, 88px) - 250px), 680px);
+    position: relative;
     display: flex;
     flex-direction: column;
-    width: 100%;
-    padding: 1.75rem 2rem;
-    gap: 1.75rem;
-    background: #060606;
+    gap: 1rem;
+    padding: 1.75rem clamp(1rem, 2.5vw, 2rem) 1.25rem;
+    background: #050505;
+    isolation: isolate;
+  }
+  .gear-deck[hidden] {
+    display: none;
+  }
+  .deck-glow {
+    position: absolute;
+    inset: -10% -6% 20% -6%;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .deck-glow-layer {
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse 45% 55% at 38% 50%, rgba(var(--glow), 0.55), rgba(var(--glow), 0) 70%),
+      var(--glow-img, none);
+    background-size: cover, 60% auto;
+    background-position: center, 38% 50%;
+    background-repeat: no-repeat;
+    filter: blur(70px) saturate(1.5);
+    opacity: 0;
+    transition: opacity 0.9s ease;
+  }
+  .deck-glow-layer.active {
+    opacity: 0.75;
   }
 
-  .gear-deck-stage {
+  .deck-stage {
     position: relative;
+    z-index: 1;
     width: 100%;
-    display: flex;
-    align-items: stretch;
-    min-height: 480px;
-    gap: 1.25rem;
-    overflow: hidden;
+    height: var(--stage-h);
     touch-action: pan-y;
     user-select: none;
     -webkit-user-select: none;
+    overflow-x: clip;
+    overflow-y: visible;
+    /* Cards stacked behind dissolve into the right edge (HQ feather). */
+    -webkit-mask-image: linear-gradient(to left, transparent 0%, #000 5%);
+    mask-image: linear-gradient(to left, transparent 0%, #000 5%);
+  }
+  .deck-stage.is-dragging .deck-card {
+    transition: none;
   }
 
-  /* DYNAMIC AMBIENT BACKLIGHT GLOW */
-  .ambient-glow-container {
+  .deck-card {
     position: absolute;
-    inset: -15% -15% 0 -15%;
-    z-index: 0;
-    pointer-events: none;
-    overflow: hidden;
-  }
-  .ambient-glow-layer {
-    position: absolute;
-    inset: 0;
-    background-size: cover;
-    background-position: center;
-    filter: blur(100px) saturate(1.4);
-    -webkit-filter: blur(100px) saturate(1.4);
-    mask-image: radial-gradient(circle at center, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 70%);
-    -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 70%);
-    opacity: 0;
-    transition: opacity 0.8s ease;
-  }
-  .ambient-glow-layer.active {
-    opacity: 0.38;
-  }
-
-  /* LARGE FLOATING HERO SPEC CARD */
-  .hero-poster-card {
-    position: relative;
-    flex: 1;
-    min-width: 0;
+    top: 0;
+    left: 0;
+    width: var(--card-w);
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     background: #0d0d0d;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 480px;
-    z-index: 2;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.85);
     overflow: hidden;
-    transition: opacity 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform-origin: center center;
+    transition:
+      transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+      opacity 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+      translate 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+    cursor: pointer;
   }
-  .hero-poster-card.is-rotating {
-    opacity: 0.2;
-    transform: scale(0.975);
+  .deck-card.active {
+    z-index: 10;
+    transform: translateX(0) scale(1);
+    opacity: 1;
+    cursor: default;
+  }
+  .deck-card.next-1 {
+    z-index: 9;
+    transform: translateX(16%) scale(0.92);
+    opacity: 0.8;
+  }
+  .deck-card.next-2 {
+    z-index: 8;
+    transform: translateX(28%) scale(0.84);
+    opacity: 0.5;
+  }
+  .deck-card.prev {
+    z-index: 7;
+    transform: translateX(-7%) scale(0.95);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .deck-card.hidden {
+    z-index: 1;
+    transform: translateX(40%) scale(0.76);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .deck-card.is-filtered-out {
+    display: none;
+  }
+  /* The cards behind lift on hover: "click me to bring this forward". */
+  .deck-card.next-1:hover {
+    opacity: 1;
+    transform: translateX(16%) translateY(-8px) scale(0.92);
+  }
+  .deck-card.next-2:hover {
+    opacity: 0.85;
+    transform: translateX(28%) translateY(-8px) scale(0.84);
   }
 
-  .hero-poster-topbar {
-    position: relative;
-    z-index: 4;
+  .card-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    padding: 1.25rem 1.75rem;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+    padding: 1rem 1.5rem 0.25rem;
+    min-width: 0;
   }
-  .hero-top-tags {
+  .card-tags {
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    flex-wrap: wrap;
+    min-width: 0;
   }
-  .hero-badge-verified {
-    font-size: 0.68rem;
-    letter-spacing: 0.16em;
-    font-weight: 700;
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 0.2rem 0.55rem;
-  }
-  .hero-badge-item {
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
-    color: var(--muted, #888888);
-    text-transform: uppercase;
-  }
-  .hero-item-counter {
-    font-size: 0.72rem;
+  .card-badge {
+    font-size: 0.64rem;
     letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgb(var(--accent));
+    border: 1px solid rgba(var(--accent), 0.55);
+    background: rgba(var(--accent), 0.08);
+    padding: 0.2rem 0.5rem;
+    white-space: nowrap;
+    transition: color 0.5s ease, border-color 0.5s ease, background 0.5s ease;
+  }
+  .card-brand {
+    font-size: 0.64rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted, #888);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-counter {
+    font-size: 0.72rem;
     font-weight: 700;
-    color: rgba(var(--item-accent-rgb, 255, 255, 255), 0.95);
+    letter-spacing: 0.14em;
+    color: rgb(var(--accent));
+    transition: color 0.5s ease;
+    white-space: nowrap;
   }
 
-  /* PRODUCT VISUAL STAGE */
-  .hero-poster-visual-wrap {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
+  /* The picture gets its own row: nothing overlays it, so it is never
+     clipped by the top bar, the plate, or the page's sticky header. */
+  .card-visual {
+    position: relative;
+    min-height: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2.5rem 3rem 8.5rem;
+    padding: 0.5rem 1.5rem;
   }
-  .hero-poster-img {
+  .card-img {
+    display: block;
     max-width: 100%;
     max-height: 100%;
     width: auto;
     height: auto;
     object-fit: contain;
-    filter: drop-shadow(0 16px 36px rgba(0, 0, 0, 0.9));
-    transition: transform 0.4s ease;
-  }
-  .hero-poster-vignette {
-    position: absolute;
-    inset: 0;
+    -webkit-user-drag: none;
     pointer-events: none;
-    background: radial-gradient(circle at center, transparent 35%, rgba(13, 13, 13, 0.85) 100%);
   }
-  .hero-poster-scrim {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: linear-gradient(to top, rgba(13, 13, 13, 0.96) 0%, rgba(13, 13, 13, 0.75) 30%, rgba(13, 13, 13, 0.1) 65%, transparent 100%);
-  }
-
-  /* BOTTOM OVERLAY PLATE */
-  .hero-overlay-plate {
-    position: relative;
-    z-index: 4;
+  .card-type {
     display: flex;
     flex-direction: column;
-    padding: 1.5rem 2rem 1.5rem;
-    gap: 0.35rem;
-  }
-  .hero-brand-kicker {
-    font-size: 0.68rem;
-    letter-spacing: 0.16em;
-    color: var(--key-ink, #c0c0c0);
-  }
-  .hero-product-title {
-    font-family: var(--font-display);
-    font-size: clamp(1.5rem, 2.6vw, 2.3rem);
-    font-weight: 800;
-    letter-spacing: -0.01em;
-    color: #ffffff;
-    margin: 0;
-    line-height: 1.1;
-  }
-  .hero-product-spec {
-    font-size: 0.92rem;
-    line-height: 1.6;
-    color: rgba(255, 255, 255, 0.82);
-    margin: 0.25rem 0 0.85rem;
-    max-width: 65ch;
-  }
-  .hero-action-row {
-    display: flex;
     align-items: center;
-    gap: 1.25rem;
-    flex-wrap: wrap;
-    padding-top: 0.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    justify-content: center;
+    gap: 0.75rem;
+    width: min(100%, 520px);
+    height: min(100%, 300px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: radial-gradient(ellipse at center, rgba(var(--accent), 0.08), transparent 70%), #0a0a0a;
+    text-align: center;
+    padding: 1.5rem;
+  }
+  .card-type-brand {
+    font-size: 0.68rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted, #888);
+  }
+  .card-type-name {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(1.5rem, 3.4vw, 2.75rem);
+    line-height: 1.05;
+    text-transform: uppercase;
+    color: #fff;
+    overflow-wrap: anywhere;
   }
 
-  .btn-primary-influencer {
+  .card-plate {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.75rem 1.5rem 1.25rem;
+    background: linear-gradient(to top, #0d0d0d 60%, rgba(13, 13, 13, 0));
+    transition: opacity 0.35s ease, visibility 0.35s ease;
+  }
+  .deck-card:not(.active) .card-plate,
+  .deck-card:not(.active) .card-top {
+    opacity: 0;
+    visibility: hidden;
+  }
+  .card-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(1.35rem, 2.4vw, 2.1rem);
+    line-height: 1.1;
+    color: #fff;
+  }
+  .card-spec {
+    margin: 0.15rem 0 0.6rem;
+    max-width: 68ch;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.8);
+  }
+  .card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .store-cta {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 0.6rem;
-    min-height: 42px;
-    background: #ffffff;
-    color: #000000;
-    padding: 0.55rem 1.4rem;
-    font-size: 0.75rem;
+    gap: 0.55rem;
+    min-height: 44px;
+    padding: 0.55rem 1.2rem;
+    background: #fff;
+    color: #000;
+    font-size: 0.74rem;
     font-weight: 700;
-    text-transform: uppercase;
     letter-spacing: 0.1em;
+    text-transform: uppercase;
     text-decoration: none;
-    transition: all 0.2s ease;
-    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease, transform 0.2s ease;
   }
-  .btn-primary-influencer:hover {
-    background: #e0e0e0;
+  .store-cta:hover {
+    background: #dcdcdc;
     transform: translateY(-1px);
   }
-  .hero-disclosure-note {
-    font-size: 0.68rem;
-    color: var(--muted, #888888);
-    letter-spacing: 0.04em;
+  .store-picker {
+    display: inline-flex;
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
-
-  /* PEEKING VERTICAL SLATS (HQ FEATURED PATTERN) */
-  .deck-slats-stack {
-    display: flex;
-    gap: 0.5rem;
-    align-items: stretch;
-    flex-shrink: 0;
-    z-index: 3;
-  }
-  @media (max-width: 900px) {
-    .deck-slats-stack {
-      display: none;
-    }
-  }
-
-  .deck-slat {
-    position: relative;
-    width: 54px;
-    background: #111111;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    overflow: hidden;
+  .store-option {
+    min-height: 44px;
+    padding: 0.45rem 0.85rem;
+    background: transparent;
+    border: none;
+    color: var(--muted, #888);
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-    display: flex;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .store-option + .store-option {
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  .store-option:hover {
+    color: #fff;
+  }
+  .store-option[aria-checked='true'] {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+  }
+  .video-link {
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
+    min-height: 44px;
+    padding: 0 0.25rem;
+    color: #fff;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: underline;
+    text-underline-offset: 4px;
   }
-  .deck-slat.next-1 {
-    opacity: 0.85;
-    z-index: 2;
-  }
-  .deck-slat.next-2 {
-    opacity: 0.5;
-    z-index: 1;
-  }
-  .deck-slat.hidden {
-    display: none;
-  }
-  .deck-slat:hover {
-    opacity: 1;
-    width: 74px;
-    border-color: rgba(255, 255, 255, 0.4);
-    background: #191919;
+  .card-disclosure {
+    margin: 0.4rem 0 0;
+    font-size: 0.64rem;
+    letter-spacing: 0.04em;
+    color: var(--muted, #888);
   }
 
-  .peeking-spine {
+  /* Spines: the name of each card peeking out behind the front one. */
+  .card-spine {
     position: absolute;
-    inset: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 56px;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 3;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.88) 100%);
     pointer-events: none;
-    padding: 0.75rem 0;
+    transition: opacity 0.4s ease;
+  }
+  .deck-card.active .card-spine {
+    opacity: 0;
   }
   .spine-text {
     writing-mode: vertical-rl;
     transform: rotate(180deg);
     font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 0.74rem;
+    font-weight: 800;
+    font-size: 0.82rem;
     letter-spacing: 0.12em;
-    color: #ffffff;
-    white-space: nowrap;
     text-transform: uppercase;
-    opacity: 0.85;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .slat-peek-img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    opacity: 0.2;
-    filter: blur(1px) grayscale(100%);
-    transition: opacity 0.3s ease;
-  }
-  .deck-slat:hover .slat-peek-img {
-    opacity: 0.4;
+    white-space: nowrap;
+    color: #fff;
   }
 
-  /* DECK STAGE ITEM NAVIGATION ARROWS */
-  .deck-stage-nav-controls {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 0.75rem;
-    z-index: 10;
-  }
-  .btn-deck-item-nav {
-    pointer-events: auto;
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    background: rgba(15, 15, 15, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    color: #ffffff;
+  .deck-controls {
+    position: relative;
+    z-index: 2;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 1rem;
+  }
+  .deck-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 44px;
+    padding: 0.5rem 0.9rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #fff;
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
     cursor: pointer;
-    backdrop-filter: blur(8px);
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+    transition: background 0.2s ease, color 0.2s ease;
   }
-  .btn-deck-item-nav:hover {
-    background: #ffffff;
-    color: #000000;
-    border-color: #ffffff;
-    transform: scale(1.08);
+  .deck-step:hover {
+    background: #fff;
+    color: #000;
   }
-  .btn-deck-item-nav:focus-visible {
-    outline: 2px solid #ffffff;
+  .deck-step:focus-visible,
+  .store-option:focus-visible,
+  .deck-thumb-tile:focus-visible,
+  .store-cta:focus-visible {
+    outline: 2px solid #fff;
     outline-offset: 2px;
   }
-
-  /* --------------------------------------------------------------------------
-     ZONE 2: THUMBNAIL TRACK (CENTERED QUICK-NAV RAIL)
-     -------------------------------------------------------------------------- */
-  .deck-thumb-track {
-    width: 100%;
-    display: flex;
-    gap: 0.75rem;
-    overflow-x: auto;
-    padding: 0.5rem 0.25rem 0.75rem;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    justify-content: flex-start;
+  .deck-counter {
+    min-width: 5.5em;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    color: rgb(var(--accent));
+    transition: color 0.5s ease;
   }
-  @media (min-width: 900px) {
-    .deck-thumb-track {
-      justify-content: center;
-      justify-content: safe center;
-    }
+
+  .deck-thumb-track {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: 0.6rem;
+    overflow-x: auto;
+    padding: 0.5rem 0.25rem 0.5rem;
+    scrollbar-width: none;
+    justify-content: safe center;
   }
   .deck-thumb-track::-webkit-scrollbar {
     display: none;
   }
-
   .deck-thumb-tile {
-    flex: 0 0 160px;
-    background: #111111;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    padding: 0.6rem;
+    flex: 0 0 132px;
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
-    cursor: pointer;
+    gap: 0.4rem;
+    padding: 0.5rem;
+    background: #0f0f0f;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font: inherit;
     text-align: left;
-    position: relative;
+    cursor: pointer;
     opacity: 0.55;
-    transition: all 0.2s ease;
+    transition: opacity 0.25s ease, transform 0.25s ease, border-color 0.4s ease, box-shadow 0.4s ease;
   }
   .deck-thumb-tile:hover {
     opacity: 0.9;
-    border-color: rgba(255, 255, 255, 0.35);
-    transform: translateY(-2px);
+    transform: translateY(-3px);
   }
   .deck-thumb-tile.is-active {
     opacity: 1;
-    background: #191919;
-    border-color: rgba(var(--item-accent-rgb, 255, 255, 255), 0.95);
-    box-shadow: 0 0 16px rgba(var(--item-accent-rgb, 255, 255, 255), 0.35);
+    border-color: rgb(var(--accent));
+    box-shadow: 0 0 18px rgba(var(--accent), 0.35);
   }
-  .deck-thumb-tile:focus-visible {
-    outline: 2px solid #ffffff;
-    outline-offset: 2px;
+  .deck-thumb-tile.is-filtered-out {
+    display: none;
   }
-
   .thumb-tile-img-box {
-    width: 100%;
-    height: 72px;
-    background: #080808;
+    height: 64px;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: #080808;
     overflow: hidden;
   }
   .thumb-tile-img {
@@ -1308,685 +1071,637 @@ const getItemRgb = (img?: string) => {
     object-fit: contain;
   }
   .thumb-tile-fallback {
-    font-size: 0.75rem;
-    color: var(--muted, #888888);
-  }
-  .thumb-tile-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-    overflow: hidden;
+    font-size: 0.6rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted, #888);
+    text-align: center;
   }
   .thumb-tile-name {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
-    color: #ffffff;
-    white-space: nowrap;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .thumb-tile-tag {
-    font-size: 0.62rem;
-    color: var(--muted, #888888);
-    text-transform: uppercase;
   }
 
-  /* --------------------------------------------------------------------------
-     ZONE 3: ALL MULTI-COLUMN TILE GRID VIEW
-     -------------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------
+     Show all: the whole section as a grid
+     ------------------------------------------------------------------ */
   .gear-all-grid-view {
-    width: 100%;
-    padding: 2rem 2.25rem;
+    padding: 1.75rem clamp(1rem, 2.5vw, 2rem);
     background: #070707;
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
   }
   .gear-all-grid-view[hidden] {
-    display: none !important;
-  }
-  .gear-deck-view[hidden] {
-    display: none !important;
+    display: none;
   }
   .all-grid-topbar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    padding-bottom: 1.25rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    flex-wrap: wrap;
     gap: 1rem;
-  }
-  .all-grid-title-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-  .all-grid-tag {
-    font-size: 0.68rem;
-    letter-spacing: 0.18em;
-    color: var(--key-ink, #c0c0c0);
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
   .all-grid-title {
-    font-family: var(--font-display);
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #ffffff;
     margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    color: #fff;
   }
   .btn-back-carousel {
-    padding: 0.5rem 1.15rem;
-    background: rgba(255, 255, 255, 0.08);
+    min-height: 40px;
+    padding: 0.5rem 1rem;
+    background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.24);
-    color: #ffffff;
-    font-size: 0.72rem;
+    color: #fff;
+    font-size: 0.68rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     cursor: pointer;
-    transition: all 0.2s ease;
   }
   .btn-back-carousel:hover {
-    background: #ffffff;
-    color: #000000;
-    border-color: #ffffff;
+    background: #fff;
+    color: #000;
   }
-
   .all-grid-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 1rem;
   }
   .all-grid-card {
-    background: #101010;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 1.25rem;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    gap: 1rem;
-    transition: border-color 0.2s ease, transform 0.2s ease;
+    background: #101010;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.2s ease, border-color 0.2s ease;
   }
   .all-grid-card:hover {
-    border-color: rgba(255, 255, 255, 0.35);
-    transform: translateY(-2px);
+    transform: translateY(-3px);
+    border-color: rgba(255, 255, 255, 0.3);
   }
-  .all-card-top {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.68rem;
-    color: var(--muted, #888888);
+  .all-grid-card.is-filtered-out {
+    display: none;
   }
   .all-card-img-wrap {
-    width: 100%;
-    height: 140px;
-    background: #080808;
+    height: 150px;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0.75rem;
+    background: #0a0a0a;
   }
   .all-card-img {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
   }
+  .all-card-type {
+    font-family: var(--font-display);
+    font-weight: 800;
+    text-transform: uppercase;
+    text-align: center;
+    color: #fff;
+  }
+  .all-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1rem;
+    flex: 1;
+  }
+  .all-card-tag {
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted, #888);
+  }
   .all-card-name {
+    margin: 0;
     font-size: 1rem;
-    font-weight: 700;
-    color: #ffffff;
-    margin: 0 0 0.35rem;
+    color: #fff;
   }
   .all-card-spec {
+    margin: 0 0 0.75rem;
     font-size: 0.8rem;
-    color: var(--muted, #888888);
     line-height: 1.5;
-    margin: 0 0 1rem;
+    color: var(--muted, #888);
+  }
+  .all-card-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: auto;
   }
   .all-card-cta {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    padding: 0.45rem 0.85rem;
-    background: rgba(255, 255, 255, 0.05);
+    min-height: 40px;
+    padding: 0.4rem 0.75rem;
     border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #ffffff;
-    font-size: 0.7rem;
+    color: #fff;
+    font-size: 0.64rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     text-decoration: none;
-    transition: all 0.2s ease;
+  }
+  .all-card-cta.is-primary {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
   }
   .all-card-cta:hover {
-    background: #ffffff;
-    color: #000000;
-    border-color: #ffffff;
+    background: #dcdcdc;
+    color: #000;
   }
 
-  .cafe-project-reel-note {
-    background: #121212;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    padding: 1.25rem 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-  }
-  .reel-note-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 0.72rem;
-    color: var(--muted, #888888);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-  .reel-badge {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #ffffff;
-    padding: 0.15rem 0.5rem;
-    font-weight: 700;
-  }
-  .reel-desc {
-    font-size: 0.88rem;
-    color: rgba(255, 255, 255, 0.8);
-    line-height: 1.6;
-    margin: 0;
-  }
-
-  .all-grid-footer {
-    display: flex;
-    justify-content: flex-end;
-    padding-top: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  /* --------------------------------------------------------------------------
-     RESPONSIVE BREAKPOINTS
-     -------------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------
+     Responsive
+     ------------------------------------------------------------------ */
   @media (max-width: 768px) {
     .gear-accordion-header-bar {
-      padding-right: 0.85rem;
-      gap: 0.5rem;
+      flex-wrap: wrap;
+      padding: 0 0.75rem 0.75rem 0;
+      gap: 0.25rem 0.5rem;
     }
     .gear-accordion-header {
-      padding: 1rem 0.5rem 1rem 1rem;
-      gap: 0.75rem;
+      padding: 0.95rem 0.25rem 0.5rem 1rem;
     }
     .gear-header-right {
-      gap: 0.5rem;
+      width: 100%;
+      padding-left: 1rem;
     }
     .gear-item-count-badge {
       display: none;
     }
-    .gear-deck-view {
-      padding: 1.25rem 0.75rem;
-      gap: 1.25rem;
+    .gear-deck {
+      --card-w: 82%;
+      --stage-h: clamp(560px, 76svh, 680px);
+      padding: 1.25rem 0.75rem 1rem;
     }
-    .hero-poster-card {
-      min-height: 440px;
+    .deck-card.next-1 {
+      transform: translateX(15%) scale(0.92);
     }
-    .hero-poster-visual-wrap {
-      padding: 2rem 1.25rem 8.5rem;
+    .deck-card.next-1:hover {
+      transform: translateX(15%) translateY(-6px) scale(0.92);
     }
-    .hero-overlay-plate {
-      padding: 1.25rem 1.25rem 1.25rem;
+    .deck-card.next-2 {
+      transform: translateX(22%) scale(0.86);
     }
-    .hero-product-title {
-      font-size: 1.35rem;
+    .deck-card.next-2:hover {
+      transform: translateX(22%) translateY(-6px) scale(0.86);
     }
-    .hero-product-spec {
+    .deck-card.next-2 .spine-text {
+      display: none;
+    }
+    .card-spine {
+      width: 40px;
+    }
+    .spine-text {
+      font-size: 0.66rem;
+    }
+    .card-top {
+      padding: 0.85rem 1rem 0.25rem;
+    }
+    .card-brand {
+      display: none;
+    }
+    .card-visual {
+      padding: 0.5rem 1rem;
+    }
+    .card-plate {
+      padding: 0.5rem 1rem 1rem;
+    }
+    .card-spec {
       font-size: 0.82rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
-    .influencer-pill {
-      font-size: 0.65rem;
-      padding: 0.35rem 0.65rem;
+    .deck-step span {
+      display: none;
     }
-    .btn-all-toggle {
-      font-size: 0.65rem;
-      padding: 0.35rem 0.65rem;
+    .deck-thumb-tile {
+      flex-basis: 112px;
     }
-    .btn-deck-item-nav {
-      width: 36px;
-      height: 36px;
+  }
+
+  /* Phones on their side: picture beside the words, deck fits the screen. */
+  @media (max-height: 500px) and (orientation: landscape) {
+    .gear-deck {
+      --card-w: 82%;
+      --stage-h: max(260px, calc(100svh - var(--gear-nav-h, 64px) - 24px));
+    }
+    .deck-card {
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+    .card-top {
+      grid-column: 1 / -1;
+    }
+    .card-visual {
+      grid-row: 2;
+      grid-column: 1;
+    }
+    .card-plate {
+      grid-row: 2;
+      grid-column: 2;
+      justify-content: center;
+      background: none;
+      padding: 0.25rem 2.75rem 0.75rem 0.5rem;
+      overflow: hidden;
+    }
+    .card-title {
+      font-size: 1.15rem;
+    }
+    .card-spec {
+      font-size: 0.78rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 0.4rem;
+    }
+    .card-disclosure {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .deck-card,
+    .deck-glow-layer,
+    .deck-thumb-tile,
+    .card-plate {
+      transition-duration: 0.01ms !important;
     }
   }
 </style>
 
 <script>
   (() => {
-    function initGearMonolith() {
-      const container = document.getElementById('gear-accordion-container');
-      if (!container || container.dataset.gearWired === '1') return;
-      container.dataset.gearWired = '1';
+    const STOREFRONT_FALLBACK = '';
+    void STOREFRONT_FALLBACK;
 
-      const sections = Array.from(container.querySelectorAll<HTMLElement>('.gear-accordion-section'));
+    function setNavHeight() {
+      const nav = document.querySelector<HTMLElement>('.site-nav');
+      const h = nav ? Math.round(nav.getBoundingClientRect().height) : 0;
+      if (h > 0) document.documentElement.style.setProperty('--gear-nav-h', `${h}px`);
+    }
 
-      // 1. SECTION CONTROLLER INTERFACE
-      interface SectionController {
-        renderActiveCard: (index: number, smoothScroll?: boolean) => void;
-        getActiveIndex: () => number;
-      }
-      const sectionControllers = new Map<string, SectionController>();
+    function init() {
+      const root = document.getElementById('gear-accordion-container');
+      if (!root || root.dataset.gearWired === '1') return;
+      root.dataset.gearWired = '1';
+      setNavHeight();
+      window.addEventListener('resize', setNavHeight, { passive: true });
 
-      // 2. TOGGLE SECTION ACCORDION (EXPAND OR COLLAPSE)
-      function toggleSection(section: HTMLElement) {
-        const isCurrentlyExpanded = section.classList.contains('is-expanded');
-        if (isCurrentlyExpanded) {
-          // If already open, clicking its header COLLAPSES IT
-          section.classList.remove('is-expanded');
-          section.classList.add('is-collapsed');
-          section.querySelector('.gear-accordion-header')?.setAttribute('aria-expanded', 'false');
-          section.querySelector('.accordion-chevron-btn')?.setAttribute('aria-expanded', 'false');
-        } else {
-          // If closed, open this section and collapse all other sections
-          sections.forEach(s => {
-            const isTarget = s === section;
-            s.classList.toggle('is-expanded', isTarget);
-            s.classList.toggle('is-collapsed', !isTarget);
-            s.querySelector('.gear-accordion-header')?.setAttribute('aria-expanded', String(isTarget));
-            s.querySelector('.accordion-chevron-btn')?.setAttribute('aria-expanded', String(isTarget));
-          });
+      const sections = Array.from(root.querySelectorAll<HTMLElement>('.gear-accordion-section'));
+      const decks = new Map<HTMLElement, { refresh: () => void }>();
+
+      const setOpen = (section: HTMLElement, open: boolean) => {
+        section.classList.toggle('is-expanded', open);
+        section.classList.toggle('is-collapsed', !open);
+        section.querySelector('.gear-accordion-header')?.setAttribute('aria-expanded', String(open));
+      };
+
+      /** Open one section and close the rest; or close it if it is open. */
+      function toggleSection(section: HTMLElement, force?: boolean) {
+        const open = force ?? !section.classList.contains('is-expanded');
+        sections.forEach((s) => setOpen(s, open && s === section));
+        if (open) {
+          decks.get(section)?.refresh();
+          // The header must stay in view under the stuck nav: collapsing a
+          // tall section above it would otherwise leave it off screen.
+          const top = section.getBoundingClientRect().top;
+          const navH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gear-nav-h')) || 88;
+          if (top < navH || top > window.innerHeight * 0.6) {
+            section.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+          }
         }
       }
 
-      // 3. WIRE EACH SECTION
-      sections.forEach(section => {
-        const catKey = section.dataset.category || '';
-        const tiles = Array.from(section.querySelectorAll<HTMLElement>('.deck-thumb-tile'));
-        const slats = Array.from(section.querySelectorAll<HTMLElement>('.deck-slat'));
-        const prevBtn = section.querySelector<HTMLButtonElement>(`[data-deck-prev="${catKey}"]`);
-        const nextBtn = section.querySelector<HTMLButtonElement>(`[data-deck-next="${catKey}"]`);
-        const counterEl = section.querySelector<HTMLElement>(`[data-card-counter="${catKey}"]`);
-        const allToggleBtn = section.querySelector<HTMLButtonElement>(`[data-all-toggle="${catKey}"]`);
-        const backCarouselBtns = Array.from(section.querySelectorAll<HTMLButtonElement>(`[data-back-carousel="${catKey}"]`));
-        const deckView = section.querySelector<HTMLElement>(`[data-deck-container="${catKey}"]`);
-        const allView = section.querySelector<HTMLElement>(`[data-all-view="${catKey}"]`);
-        const heroPosterCard = section.querySelector<HTMLElement>(`[data-hero-poster="${catKey}"]`);
-        const glowLayers = Array.from(section.querySelectorAll<HTMLElement>('.ambient-glow-layer'));
-
-        const isBodies = catKey === 'bodies';
-        const isBrew = catKey === 'brew';
-
-        const imgEl = section.querySelector<HTMLImageElement>(`#${isBodies ? 'preview-camera-img' : isBrew ? 'preview-cafe-img' : `img-gear-${catKey}`}`);
-        const ctaEl = section.querySelector<HTMLAnchorElement>(`#${isBodies ? 'preview-camera-btn' : isBrew ? 'cafe-hero-cta' : `cta-gear-${catKey}`}`);
-        const brandEl = section.querySelector<HTMLElement>(`#${isBodies ? 'preview-camera-brand' : `brand-gear-${catKey}`}`);
-        const titleEl = section.querySelector<HTMLElement>(`#${isBodies ? 'preview-camera-title' : isBrew ? 'cafe-hero-name' : `title-gear-${catKey}`}`);
-        const descEl = section.querySelector<HTMLElement>(`#${isBodies ? 'preview-camera-desc' : isBrew ? 'cafe-hero-desc' : `desc-gear-${catKey}`}`);
-        const tagEl = section.querySelector<HTMLElement>(`#${isBodies ? 'preview-camera-tag' : `tag-gear-${catKey}`}`);
-
-        let activeIndex = 0;
-        const totalItems = tiles.length;
-
-        // Header click listener (unambiguous accordion toggle on whole bar)
-        const headerBar = section.querySelector<HTMLElement>('.gear-accordion-header-bar');
-        headerBar?.addEventListener('click', (e) => {
-          // If clicked on an inner action (like Show All button or Storefront link), don't collapse accordion
-          if ((e.target as HTMLElement).closest('.influencer-pill, .btn-all-toggle')) {
-            return;
-          }
+      sections.forEach((section) => {
+        const bar = section.querySelector<HTMLElement>('.gear-accordion-header-bar');
+        bar?.addEventListener('click', (e) => {
+          if ((e.target as HTMLElement).closest('.influencer-pill, .btn-all-toggle')) return;
           toggleSection(section);
         });
 
-        function getNextVisibleIndex(direction: 1 | -1): number {
-          const visibleTiles = tiles.filter(t => t.style.display !== 'none');
-          if (visibleTiles.length === 0) return activeIndex;
-          const currentVisIdx = visibleTiles.indexOf(tiles[activeIndex]);
-          let nextVisIdx: number;
-          if (currentVisIdx === -1) {
-            nextVisIdx = 0;
-          } else {
-            nextVisIdx = (currentVisIdx + direction + visibleTiles.length) % visibleTiles.length;
-          }
-          return tiles.indexOf(visibleTiles[nextVisIdx]);
-        }
+        const stage = section.querySelector<HTMLElement>('.deck-stage');
+        const cards = Array.from(section.querySelectorAll<HTMLElement>('.deck-card'));
+        const thumbs = Array.from(section.querySelectorAll<HTMLElement>('.deck-thumb-tile'));
+        const glows = Array.from(section.querySelectorAll<HTMLElement>('.deck-glow-layer'));
+        const gridCards = Array.from(section.querySelectorAll<HTMLElement>('.all-grid-card'));
+        const counter = section.querySelector<HTMLElement>('[data-deck-counter]');
+        const deck = section.querySelector<HTMLElement>('.gear-deck');
+        const allView = section.querySelector<HTMLElement>('[data-all-view]');
+        const allToggle = section.querySelector<HTMLButtonElement>('.btn-all-toggle');
+        if (!stage || !cards.length) return;
 
-        function renderActiveCard(index: number, smoothScroll = true) {
-          activeIndex = (index + totalItems) % totalItems;
-          const currentTile = tiles[activeIndex];
-          if (!currentTile) return;
+        let active = 0;
+        let visible = cards.map((_, i) => i);
+        const pad = (n: number) => String(n).padStart(2, '0');
 
-          // Motion: trigger short crossfade and scale
-          if (heroPosterCard) {
-            heroPosterCard.classList.add('is-rotating');
-            setTimeout(() => {
-              heroPosterCard.classList.remove('is-rotating');
-            }, 180);
-          }
+        function render(focusThumb = false) {
+          if (!visible.includes(active)) active = visible[0] ?? 0;
+          const pos = visible.indexOf(active);
+          const count = visible.length;
+          const at = (k: number) => visible[(pos + k + count) % count];
+          const n1 = count > 1 ? at(1) : -1;
+          const n2 = count > 2 ? at(2) : -1;
+          const pv = count > 3 ? at(-1) : -1;
 
-          // Update tiles
-          tiles.forEach((t, i) => {
-            const isActive = i === activeIndex;
+          cards.forEach((card, i) => {
+            const shown = visible.includes(i);
+            card.classList.toggle('is-filtered-out', !shown);
+            card.classList.remove('active', 'next-1', 'next-2', 'prev', 'hidden');
+            card.classList.add(i === active ? 'active' : i === n1 ? 'next-1' : i === n2 ? 'next-2' : i === pv ? 'prev' : 'hidden');
+            const isActive = i === active;
+            card.setAttribute('aria-hidden', String(!isActive));
+            card.querySelectorAll<HTMLElement>('a, button').forEach((el) => {
+              if (isActive) {
+                if (el.classList.contains('store-option') && el.getAttribute('aria-checked') !== 'true') el.tabIndex = -1;
+                else el.removeAttribute('tabindex');
+              } else el.tabIndex = -1;
+            });
+            const c = card.querySelector('[data-card-counter]');
+            if (c && isActive) c.textContent = `${pad(pos + 1)} / ${pad(count)}`;
+          });
+
+          thumbs.forEach((t, i) => {
+            const isActive = i === active;
+            t.classList.toggle('is-filtered-out', !visible.includes(i));
             t.classList.toggle('is-active', isActive);
-            t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            t.setAttribute('aria-selected', String(isActive));
+            t.tabIndex = isActive ? 0 : -1;
           });
+          gridCards.forEach((g, i) => g.classList.toggle('is-filtered-out', !visible.includes(i)));
+          glows.forEach((g, i) => g.classList.toggle('active', i === active));
 
-          // Scroll active thumbnail smoothly into view
-          if (smoothScroll) {
-            currentTile.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          const accent = cards[active]?.dataset.accent;
+          if (accent) section.style.setProperty('--accent', accent);
+          if (counter) counter.textContent = `${pad(pos + 1)} / ${pad(count)}`;
+
+          const thumb = thumbs[active];
+          const track = thumb?.parentElement;
+          if (thumb && track && track.scrollWidth > track.clientWidth) {
+            track.scrollTo({ left: thumb.offsetLeft - track.clientWidth / 2 + thumb.offsetWidth / 2, behavior: 'smooth' });
           }
-
-          // Update Counter based on visible matching items
-          const visibleTiles = tiles.filter(t => t.style.display !== 'none');
-          const visibleCount = visibleTiles.length;
-          const pad = (n: number) => n < 10 ? `0${n}` : `${n}`;
-          if (counterEl) {
-            if (visibleCount < totalItems && visibleCount > 0) {
-              const currentVisIdx = visibleTiles.indexOf(currentTile);
-              const pos = currentVisIdx >= 0 ? currentVisIdx + 1 : 1;
-              counterEl.textContent = `${pad(pos)} / ${pad(visibleCount)}`;
-            } else {
-              counterEl.textContent = `${pad(activeIndex + 1)} / ${pad(totalItems)}`;
-            }
-          }
-
-          // Read data attributes
-          const name = currentTile.dataset.itemName || '';
-          const brand = currentTile.dataset.itemBrand || 'Curated Kit';
-          const spec = currentTile.dataset.itemSpec || '';
-          const tag = currentTile.dataset.itemTag || 'Production Spec';
-          const url = currentTile.dataset.itemUrl || 'https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh';
-          const hasProductUrl = currentTile.dataset.hasProductUrl === 'true';
-          const image = currentTile.dataset.itemImage || '';
-          const rgb = currentTile.dataset.itemRgb || '100, 100, 100';
-          const ariaLabel = currentTile.dataset.itemAria || `View ${name} on Amazon`;
-
-          // Update Section Accent Color
-          section.style.setProperty('--item-accent-rgb', rgb);
-
-          // Update Hero Content
-          if (titleEl) titleEl.textContent = name;
-          if (brandEl) brandEl.textContent = `${brand.toUpperCase()} // KIT`;
-          if (descEl) descEl.textContent = spec;
-          if (tagEl) tagEl.textContent = tag;
-
-          if (ctaEl) {
-            ctaEl.href = url;
-            ctaEl.setAttribute('aria-label', ariaLabel);
-            const btnText = ctaEl.querySelector('.amz-btn-text');
-            if (btnText) {
-              btnText.textContent = hasProductUrl ? `View ${name} on Amazon` : 'Visit the storefront';
-            }
-          }
-
-          // Image update
-          if (imgEl && image) {
-            imgEl.src = image;
-            imgEl.alt = '';
-          }
-
-          // Update Ambient Glow Backlight
-          glowLayers.forEach((glow, gIdx) => {
-            glow.classList.toggle('active', gIdx === activeIndex);
-          });
-
-          // Update Peeking Slats (slat 1 = next visible, slat 2 = 2nd next visible)
-          if (visibleCount <= 1) {
-            slats.forEach(slat => {
-              slat.className = 'deck-slat hidden';
-            });
-          } else {
-            const currentVisIdx = visibleTiles.indexOf(currentTile);
-            const next1Tile = visibleTiles[(currentVisIdx + 1) % visibleTiles.length];
-            const next2Tile = visibleTiles.length > 2 ? visibleTiles[(currentVisIdx + 2) % visibleTiles.length] : null;
-
-            const next1Idx = next1Tile ? tiles.indexOf(next1Tile) : -1;
-            const next2Idx = next2Tile ? tiles.indexOf(next2Tile) : -1;
-
-            slats.forEach((slat, idx) => {
-              slat.className = 'deck-slat';
-              if (idx === next1Idx) {
-                slat.classList.add('next-1');
-              } else if (idx === next2Idx) {
-                slat.classList.add('next-2');
-              } else {
-                slat.classList.add('hidden');
-              }
-            });
-          }
+          if (focusThumb) thumb?.focus({ preventScroll: true });
         }
 
-        // Register controller for this section
-        sectionControllers.set(catKey, {
-          renderActiveCard,
-          getActiveIndex: () => activeIndex,
-        });
-
-        // Thumbnail Tile Click & Keydown
-        tiles.forEach((tile, idx) => {
-          tile.addEventListener('click', () => {
-            renderActiveCard(idx);
-          });
-          tile.addEventListener('keydown', (e: KeyboardEvent) => {
-            if (e.key === 'ArrowRight') {
-              e.preventDefault();
-              renderActiveCard(getNextVisibleIndex(1));
-            } else if (e.key === 'ArrowLeft') {
-              e.preventDefault();
-              renderActiveCard(getNextVisibleIndex(-1));
-            }
-          });
-        });
-
-        // Slats Click
-        slats.forEach((slat, idx) => {
-          slat.addEventListener('click', () => {
-            renderActiveCard(idx);
-          });
-        });
-
-        // Prev & Next Buttons (item navigation inside deck stage)
-        prevBtn?.addEventListener('click', (e) => {
-          e.stopPropagation();
-          renderActiveCard(getNextVisibleIndex(-1));
-        });
-        nextBtn?.addEventListener('click', (e) => {
-          e.stopPropagation();
-          renderActiveCard(getNextVisibleIndex(1));
-        });
-
-        // Pointer Drag & Touch Swipe (Mouse, Trackpad, and Real Touch Devices)
-        const deckStage = section.querySelector<HTMLElement>(`[data-deck-stage="${catKey}"]`);
-        if (deckStage) {
-          let startX = 0;
-          let startY = 0;
-          let isDragging = false;
-          let hasHorizontalMoved = false;
-
-          deckStage.addEventListener('pointerdown', (e: PointerEvent) => {
-            if ((e.target as HTMLElement).closest('button, a, input')) return;
-            startX = e.clientX;
-            startY = e.clientY;
-            isDragging = true;
-            hasHorizontalMoved = false;
-          });
-
-          window.addEventListener('pointermove', (e: PointerEvent) => {
-            if (!isDragging) return;
-            const diffX = startX - e.clientX;
-            const diffY = startY - e.clientY;
-            if (Math.abs(diffX) > 10 && Math.abs(diffX) > Math.abs(diffY)) {
-              hasHorizontalMoved = true;
-            }
-          });
-
-          window.addEventListener('pointerup', (e: PointerEvent) => {
-            if (!isDragging) return;
-            isDragging = false;
-            const diffX = startX - e.clientX;
-            const diffY = startY - e.clientY;
-            if (hasHorizontalMoved && Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY)) {
-              if (diffX > 0) renderActiveCard(getNextVisibleIndex(1));
-              else renderActiveCard(getNextVisibleIndex(-1));
-            }
-          });
-
-          window.addEventListener('pointercancel', () => {
-            isDragging = false;
-            hasHorizontalMoved = false;
-          });
-        }
-
-        // "All" View Toggle
-        const toggleAllView = (showAll: boolean) => {
-          if (!allView || !deckView) return;
-          if (showAll) {
-            deckView.hidden = true;
-            allView.hidden = false;
-            if (allToggleBtn) {
-              allToggleBtn.setAttribute('aria-expanded', 'true');
-              const label = allToggleBtn.querySelector('.all-toggle-label');
-              const icon = allToggleBtn.querySelector('.all-toggle-icon');
-              if (label) label.textContent = 'Carousel View';
-              if (icon) icon.textContent = '⊟';
-            }
-          } else {
-            allView.hidden = true;
-            deckView.hidden = false;
-            if (allToggleBtn) {
-              allToggleBtn.setAttribute('aria-expanded', 'false');
-              const label = allToggleBtn.querySelector('.all-toggle-label');
-              const icon = allToggleBtn.querySelector('.all-toggle-icon');
-              if (label) label.textContent = `Show All (${totalItems})`;
-              if (icon) icon.textContent = '⊞';
-            }
-          }
+        const go = (index: number, focusThumb = false) => {
+          if (index === active || !visible.includes(index)) return;
+          active = index;
+          render(focusThumb);
+        };
+        const step = (dir: 1 | -1, focusThumb = false) => {
+          if (visible.length < 2) return;
+          const pos = visible.indexOf(active);
+          go(visible[(pos + dir + visible.length) % visible.length], focusThumb);
         };
 
-        allToggleBtn?.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const isCurrentlyAll = !allView?.hidden;
-          toggleAllView(!isCurrentlyAll);
+        decks.set(section, {
+          refresh: () => render(),
+        });
+        (section as HTMLElement & { _gearFilter?: (q: string) => number })._gearFilter = (q: string) => {
+          visible = cards
+            .map((c, i) => ({ c, i }))
+            .filter(({ c }) => !q || (c.dataset.search || '').includes(q))
+            .map(({ i }) => i);
+          if (visible.length) render();
+          return visible.length;
+        };
+
+        // Thumbnails and peeking cards bring an item forward.
+        thumbs.forEach((t, i) => t.addEventListener('click', () => go(i)));
+
+        // Item navigation (inside the deck, not the section header).
+        section.querySelector('[data-deck-prev]')?.addEventListener('click', () => step(-1));
+        section.querySelector('[data-deck-next]')?.addEventListener('click', () => step(1));
+
+        // Keyboard: arrows anywhere in the deck rotate it.
+        deck?.addEventListener('keydown', (e) => {
+          if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+          const onThumb = (e.target as HTMLElement).closest('.deck-thumb-tile');
+          if ((e.target as HTMLElement).closest('.store-picker')) return; // radios own their arrows
+          e.preventDefault();
+          step(e.key === 'ArrowRight' ? 1 : -1, Boolean(onThumb));
         });
 
-        backCarouselBtns.forEach(btn => {
-          btn.addEventListener('click', () => {
-            toggleAllView(false);
+        // Store picker: choosing a store re-points the one primary CTA.
+        cards.forEach((card) => {
+          const cta = card.querySelector<HTMLAnchorElement>('[data-store-cta]');
+          const label = card.querySelector<HTMLElement>('[data-store-cta-label]');
+          const options = Array.from(card.querySelectorAll<HTMLButtonElement>('.store-option'));
+          const choose = (opt: HTMLButtonElement, focus = false) => {
+            options.forEach((o) => {
+              const on = o === opt;
+              o.setAttribute('aria-checked', String(on));
+              o.tabIndex = on ? 0 : -1;
+            });
+            if (cta && opt.dataset.storeUrl) cta.href = opt.dataset.storeUrl;
+            if (label && opt.dataset.storeLabel) label.textContent = opt.dataset.storeLabel;
+            if (focus) opt.focus();
+          };
+          options.forEach((opt, oi) => {
+            opt.addEventListener('click', (e) => {
+              e.stopPropagation();
+              choose(opt);
+            });
+            opt.addEventListener('keydown', (e) => {
+              if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+              e.preventDefault();
+              const next = options[(oi + (e.key === 'ArrowRight' ? 1 : -1) + options.length) % options.length];
+              choose(next, true);
+            });
           });
         });
-      });
 
-      // 4. SEARCH & CATEGORY CHIPS FILTERING ACROSS ALL 5 SECTIONS
-      const searchInput = document.getElementById('gear-search-input') as HTMLInputElement | null;
-      const clearBtn = document.getElementById('gear-search-clear') as HTMLButtonElement | null;
-      const chips = Array.from(document.querySelectorAll<HTMLButtonElement>('.gear-chip'));
-      const emptyState = document.getElementById('gear-empty-state');
-      const resetBtn = document.getElementById('gear-reset-btn');
+        // Drag and swipe: mouse, pen and touch alike. The front card follows
+        // the pointer (the `translate` property, which composes with the
+        // class transform), and a release past the threshold rotates.
+        let startX = 0;
+        let startY = 0;
+        let dx = 0;
+        let tracking = false;
+        let dragging = false;
+        let suppressClick = false;
+        const SWIPE = 50;
 
-      let activeCategory = 'all';
-      let searchQuery = '';
+        const endDrag = () => {
+          tracking = false;
+          stage.classList.remove('is-dragging');
+          cards[active]?.style.removeProperty('translate');
+          if (dragging) {
+            if (dx <= -SWIPE) step(1);
+            else if (dx >= SWIPE) step(-1);
+            suppressClick = true;
+            window.setTimeout(() => (suppressClick = false), 0);
+          }
+          dragging = false;
+          dx = 0;
+        };
 
-      function applyFilter() {
-        let totalVisible = 0;
+        stage.addEventListener('pointerdown', (e) => {
+          if (e.button !== 0) return;
+          if ((e.target as HTMLElement).closest('a, button, input')) return;
+          tracking = true;
+          dragging = false;
+          startX = e.clientX;
+          startY = e.clientY;
+          dx = 0;
+        });
+        stage.addEventListener('pointermove', (e) => {
+          if (!tracking) return;
+          dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          if (!dragging) {
+            if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+              dragging = true;
+              stage.classList.add('is-dragging');
+              try {
+                stage.setPointerCapture(e.pointerId);
+              } catch {
+                /* not capturable: window listeners still end the drag */
+              }
+            } else if (Math.abs(dy) > 12) {
+              tracking = false; // a vertical scroll, not a swipe
+              return;
+            }
+          }
+          if (dragging) {
+            e.preventDefault();
+            cards[active]?.style.setProperty('translate', `${dx * 0.6}px 0`);
+          }
+        });
+        stage.addEventListener('pointerup', endDrag);
+        stage.addEventListener('pointercancel', endDrag);
+        stage.addEventListener('lostpointercapture', () => {
+          if (tracking) endDrag();
+        });
 
-        sections.forEach(section => {
-          const catKey = section.dataset.category || '';
-          const matchesCategory = activeCategory === 'all' || 
-            catKey === activeCategory || 
-            (activeCategory === 'cameras' && catKey === 'bodies') ||
-            (activeCategory === 'support' && catKey === 'tools') ||
-            (activeCategory === 'cafe' && catKey === 'brew');
-
-          if (!matchesCategory) {
-            section.hidden = true;
+        // A click on a peeking card brings it forward (never after a drag).
+        stage.addEventListener('click', (e) => {
+          if (suppressClick) {
+            e.preventDefault();
+            e.stopPropagation();
             return;
           }
+          const card = (e.target as HTMLElement).closest<HTMLElement>('.deck-card');
+          if (!card || card.classList.contains('active')) return;
+          e.preventDefault();
+          go(Number(card.dataset.index));
+        }, true);
 
-          const tiles = Array.from(section.querySelectorAll<HTMLElement>('.deck-thumb-tile'));
-          const gridCards = Array.from(section.querySelectorAll<HTMLElement>('.all-grid-card'));
-          let visibleTiles = 0;
-
-          tiles.forEach((tile, tIdx) => {
-            const text = (tile.textContent || '').toLowerCase();
-            const matchesSearch = !searchQuery || text.includes(searchQuery);
-            if (matchesSearch) {
-              tile.style.display = '';
-              visibleTiles++;
-            } else {
-              tile.style.display = 'none';
-            }
-            if (gridCards[tIdx]) {
-              gridCards[tIdx].style.display = matchesSearch ? '' : 'none';
-            }
-          });
-
-          if (visibleTiles > 0) {
-            section.hidden = false;
-            totalVisible += visibleTiles;
-
-            // Sync hero card & slats to matching visible items
-            const ctrl = sectionControllers.get(catKey);
-            if (ctrl) {
-              const currentActiveIdx = ctrl.getActiveIndex();
-              const currentTile = tiles[currentActiveIdx];
-              if (!currentTile || currentTile.style.display === 'none') {
-                const firstVisibleIdx = tiles.findIndex(t => t.style.display !== 'none');
-                if (firstVisibleIdx !== -1) {
-                  ctrl.renderActiveCard(firstVisibleIdx, false);
-                }
-              } else {
-                ctrl.renderActiveCard(currentActiveIdx, false);
-              }
-            }
-          } else {
-            section.hidden = true;
+        // Trackpad: a horizontal two-finger swipe moves one card, fired on
+        // the leading edge and locked until the gesture goes quiet (HQ).
+        let wheelAcc = 0;
+        let wheelLocked = false;
+        let quietTimer = 0;
+        stage.addEventListener('wheel', (e) => {
+          if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+          e.preventDefault();
+          window.clearTimeout(quietTimer);
+          quietTimer = window.setTimeout(() => {
+            wheelLocked = false;
+            wheelAcc = 0;
+          }, 140);
+          if (wheelLocked) return;
+          wheelAcc += e.deltaX;
+          if (Math.abs(wheelAcc) >= 40) {
+            step(wheelAcc > 0 ? 1 : -1);
+            wheelLocked = true;
+            wheelAcc = 0;
           }
+        }, { passive: false });
+
+        // Show all <-> deck.
+        const showAll = (on: boolean) => {
+          if (!allView || !deck) return;
+          if (on && !section.classList.contains('is-expanded')) toggleSection(section, true);
+          allView.hidden = !on;
+          deck.hidden = on;
+          allToggle?.setAttribute('aria-expanded', String(on));
+          const lbl = allToggle?.querySelector('.all-toggle-label');
+          if (lbl) lbl.textContent = on ? 'Deck view' : `Show all (${cards.length})`;
+        };
+        allToggle?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          showAll(Boolean(allView?.hidden));
         });
+        section.querySelectorAll('[data-back-carousel]').forEach((b) => b.addEventListener('click', () => showAll(false)));
 
-        if (emptyState) emptyState.hidden = totalVisible > 0;
-        if (clearBtn) clearBtn.hidden = !searchQuery;
+        render();
+      });
 
-        // Auto-expand the first visible section
-        const firstVisible = sections.find(s => !s.hidden);
-        if (firstVisible) {
-          sections.forEach(s => {
-            const isMatch = s === firstVisible;
-            s.classList.toggle('is-expanded', isMatch);
-            s.classList.toggle('is-collapsed', !isMatch);
-            s.querySelector('.gear-accordion-header')?.setAttribute('aria-expanded', String(isMatch));
-            s.querySelector('.accordion-chevron-btn')?.setAttribute('aria-expanded', String(isMatch));
-          });
+      // Search and chips: a section shows only its matches; its hero,
+      // counter, peeking cards and thumbnails all follow the matches.
+      const input = document.getElementById('gear-search-input') as HTMLInputElement | null;
+      const clear = document.getElementById('gear-search-clear') as HTMLButtonElement | null;
+      const empty = document.getElementById('gear-empty-state');
+      const reset = document.getElementById('gear-reset-btn');
+      const chips = Array.from(document.querySelectorAll<HTMLButtonElement>('.gear-chip'));
+      let cat = 'all';
+      let query = '';
+
+      function apply() {
+        let total = 0;
+        let firstShown: HTMLElement | null = null;
+        sections.forEach((s) => {
+          const inCat = cat === 'all' || s.dataset.chip === cat;
+          const filter = (s as HTMLElement & { _gearFilter?: (q: string) => number })._gearFilter;
+          const matches = inCat && filter ? filter(query) : 0;
+          s.hidden = !inCat || matches === 0;
+          total += s.hidden ? 0 : matches;
+          if (!s.hidden && !firstShown) firstShown = s;
+        });
+        if (empty) empty.hidden = total > 0;
+        if (clear) clear.hidden = !query;
+        if (firstShown && (query || cat !== 'all')) {
+          sections.forEach((s) => setOpen(s, s === firstShown));
+          decks.get(firstShown)?.refresh();
         }
       }
 
-      chips.forEach(chip => {
+      chips.forEach((chip) =>
         chip.addEventListener('click', () => {
-          chips.forEach(c => {
-            c.classList.remove('active');
-            c.setAttribute('aria-selected', 'false');
+          chips.forEach((c) => {
+            c.classList.toggle('active', c === chip);
+            c.setAttribute('aria-pressed', String(c === chip));
           });
-          chip.classList.add('active');
-          chip.setAttribute('aria-selected', 'true');
-          activeCategory = chip.dataset.cat || 'all';
-          applyFilter();
-        });
+          cat = chip.dataset.cat || 'all';
+          apply();
+        })
+      );
+      input?.addEventListener('input', () => {
+        query = input.value.trim().toLowerCase();
+        apply();
       });
-
-      searchInput?.addEventListener('input', () => {
-        searchQuery = (searchInput.value || '').trim().toLowerCase();
-        applyFilter();
+      clear?.addEventListener('click', () => {
+        if (input) input.value = '';
+        query = '';
+        apply();
+        input?.focus();
       });
-
-      clearBtn?.addEventListener('click', () => {
-        if (searchInput) searchInput.value = '';
-        searchQuery = '';
-        applyFilter();
-        searchInput?.focus();
-      });
-
-      resetBtn?.addEventListener('click', () => {
-        if (searchInput) searchInput.value = '';
-        searchQuery = '';
-        activeCategory = 'all';
-        chips.forEach(c => {
+      reset?.addEventListener('click', () => {
+        if (input) input.value = '';
+        query = '';
+        cat = 'all';
+        chips.forEach((c) => {
           c.classList.toggle('active', c.dataset.cat === 'all');
-          c.setAttribute('aria-selected', c.dataset.cat === 'all' ? 'true' : 'false');
+          c.setAttribute('aria-pressed', String(c.dataset.cat === 'all'));
         });
-        applyFilter();
+        apply();
       });
     }
 
-    initGearMonolith();
-    document.addEventListener('astro:page-load', initGearMonolith);
+    init();
+    document.addEventListener('astro:page-load', init);
   })();
 </script>
