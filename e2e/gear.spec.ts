@@ -6,11 +6,12 @@ test.describe('Gear page verification', () => {
     await page.goto('/hey-this-is-andrew/gear/');
     await expect(page).toHaveTitle(/Gear · HEY_THISISANDREW/);
 
-    // 1. Verify Hero Box (Camera Bodies)
+    // 1. Verify Hero Box (Camera Bodies - 1st group, expanded by default)
     const heroBox = page.locator('#gear-bodies');
     await expect(heroBox).toBeVisible();
+    await expect(heroBox).toHaveClass(/is-expanded/);
 
-    // Verify 5 active camera items
+    // Verify 5 active camera items in thumbnail rail
     const cameraRows = heroBox.locator('.camera-item-row');
     await expect(cameraRows).toHaveCount(5);
 
@@ -39,9 +40,14 @@ test.describe('Gear page verification', () => {
     await expect(previewImg).toHaveAttribute('src', /\/hey-this-is-andrew\/gear\/iphone-17-pro-max\.jpg$/);
     await expect(previewBtn).toHaveAttribute('href', 'https://link.amazon/B0hZ10de1');
 
-    // 2. Verify Collage Boxes (Lenses, Lighting, Support)
+    // 2. Verify Accordion Groups: Lenses, Lighting, Support
+    // Expand Lenses group
     const lensesBox = page.locator('#gear-lenses');
     await expect(lensesBox).toBeVisible();
+    await lensesBox.locator('.gear-accordion-header').click();
+    await expect(lensesBox).toHaveClass(/is-expanded/);
+    await expect(heroBox).toHaveClass(/is-collapsed/); // Only one group open at a time
+
     const lensRows = lensesBox.locator('.collage-item-row');
     await expect(lensRows).toHaveCount(8);
 
@@ -55,9 +61,27 @@ test.describe('Gear page verification', () => {
     const lensCta = page.locator('#cta-gear-lenses');
     await expect(lensCta).toHaveAttribute('href', 'https://link.amazon/B03iIx6Ml');
 
-    // Verify Lighting Box
+    // Test "All View" Toggle on Lenses (sections with > 6 items)
+    const allToggleBtn = lensesBox.locator('[data-all-toggle="lenses"]');
+    await expect(allToggleBtn).toBeVisible();
+    await allToggleBtn.click();
+    const allGrid = lensesBox.locator('#all-grid-lenses');
+    await expect(allGrid).toBeVisible();
+    await expect(allGrid.locator('.all-grid-card')).toHaveCount(8);
+
+    // Return to carousel view
+    const backBtn = lensesBox.locator('[data-back-carousel="lenses"]').first();
+    await backBtn.click();
+    await expect(allGrid).toBeHidden();
+    await expect(lensesBox.locator('[data-deck-container="lenses"]')).toBeVisible();
+
+    // Expand Lighting Box
     const lightingBox = page.locator('#gear-lighting');
     await expect(lightingBox).toBeVisible();
+    await lightingBox.locator('.gear-accordion-header').click();
+    await expect(lightingBox).toHaveClass(/is-expanded/);
+    await expect(lensesBox).toHaveClass(/is-collapsed/);
+
     const lightingRows = lightingBox.locator('.collage-item-row');
     await expect(lightingRows).toHaveCount(2);
 
@@ -65,9 +89,13 @@ test.describe('Gear page verification', () => {
     await expect(lightingImg).toBeVisible();
     await expect(lightingImg).toHaveAttribute('src', /\/hey-this-is-andrew\/gear\/amaran-200d\.jpg$/);
 
-    // Verify Tools & Support Box
+    // Expand Tools & Support Box
     const toolsBox = page.locator('#gear-tools');
     await expect(toolsBox).toBeVisible();
+    await toolsBox.locator('.gear-accordion-header').click();
+    await expect(toolsBox).toHaveClass(/is-expanded/);
+    await expect(lightingBox).toHaveClass(/is-collapsed/);
+
     const toolRows = toolsBox.locator('.collage-item-row');
     await expect(toolRows).toHaveCount(3);
 
@@ -85,21 +113,29 @@ test.describe('Gear page verification', () => {
     const cafeSection = page.locator('#brew');
     await expect(cafeSection).toBeVisible();
 
-    // Verify active cafe links
-    const ascasoLink = cafeSection.locator('a[aria-label="View Ascaso Steel Duo PID on Amazon"]');
+    // Verify hero CTA initial item (Ascaso)
+    const cafeHeroCta = cafeSection.locator('#cafe-hero-cta');
+    await expect(cafeHeroCta).toHaveAttribute('href', 'https://link.amazon/B0cCrykft');
+
+    // Verify active cafe links in the full grid catalog
+    const cafeGrid = cafeSection.locator('#cafe-all-grid');
+    const ascasoLink = cafeGrid.locator('a[aria-label="View Ascaso Steel Duo PID on Amazon"]');
     await expect(ascasoLink).toHaveAttribute('href', 'https://link.amazon/B0cCrykft');
 
-    const staggLink = cafeSection.locator('a[aria-label="View Fellow Stagg EKG on Amazon"]');
+    const staggLink = cafeGrid.locator('a[aria-label="View Fellow Stagg EKG on Amazon"]');
     await expect(staggLink).toHaveAttribute('href', 'https://link.amazon/B0fbGKgld');
 
-    const carafeLink = cafeSection.locator('a[aria-label="View Fellow Mighty Small Carafe on Amazon"]');
+    const carafeLink = cafeGrid.locator('a[aria-label="View Fellow Mighty Small Carafe on Amazon"]');
     await expect(carafeLink).toHaveAttribute('href', 'https://link.amazon/B01DJcTby');
 
-    const scaleLink = cafeSection.locator('a[aria-label="View Fellow Scale on Amazon"]');
+    const scaleLink = cafeGrid.locator('a[aria-label="View Fellow Scale on Amazon"]');
     await expect(scaleLink).toHaveAttribute('href', 'https://link.amazon/B06NamWQ9');
 
-    const nitroLink = cafeSection.locator('a[aria-label="View Nitro Press on Amazon"]');
+    const nitroLink = cafeGrid.locator('a[aria-label="View Nitro Press on Amazon"]');
     await expect(nitroLink).toHaveAttribute('href', 'https://link.amazon/B04f3JDzo');
+
+    const roasterLink = cafeGrid.locator('a[aria-label="Visit James Coffee Co. website"]');
+    await expect(roasterLink).toHaveAttribute('href', 'https://jamescoffeeco.com');
 
     // Verify removed cafe items are NOT present
     const harioLink = cafeSection.locator('text=Hario Switch');

@@ -22,8 +22,8 @@ const sortedCats = [...categories].sort((a, b) => {
   return oA - oB;
 });
 
-const heroCat = sortedCats.find(c => c.data.category === 'Camera Bodies') || sortedCats[0];
-const subCats = sortedCats.filter(c => c !== heroCat && c.data.items && c.data.items.length > 0);
+// Audio is intentionally excluded if Andrew owns 0 items
+const activeCats = sortedCats.filter(c => c.data.items && c.data.items.length > 0 && c.data.category !== 'Audio');
 
 import { AMAZON_STOREFRONT } from '../data/storefront';
 
@@ -37,7 +37,30 @@ const resolveAsset = (img?: string) => {
 };
 
 const isProductUrl = (url?: string) => Boolean(url && url.trim() && url !== AMAZON_STOREFRONT);
-const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl);
+
+const getSystemKicker = (catName: string, idx: number) => {
+  if (catName === 'Camera Bodies') return `01 / HERO SYSTEM`;
+  if (catName === 'Lens') return `02 / OPTICAL SYSTEM`;
+  if (catName === 'Lighting') return `03 / ILLUMINATION`;
+  if (catName === 'Tools & Support') return `04 / STABILIZATION & RIG`;
+  return `0${idx + 1} / PRODUCTION GEAR`;
+};
+
+const getCategorySlug = (catName: string) => {
+  if (catName === 'Camera Bodies') return 'bodies';
+  if (catName === 'Lens') return 'lenses';
+  if (catName === 'Lighting') return 'lighting';
+  if (catName === 'Tools & Support') return 'tools';
+  return catName.toLowerCase().replace(/\s+/g, '-');
+};
+
+const getCategoryLabel = (catName: string) => {
+  if (catName === 'Camera Bodies') return 'Cameras';
+  if (catName === 'Lens') return 'Lenses';
+  if (catName === 'Lighting') return 'Lighting';
+  if (catName === 'Tools & Support') return 'Support';
+  return catName;
+};
 ---
 
 <div class="gear-monolith" id="gear-monolith">
@@ -52,225 +75,59 @@ const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl)
         type="search"
         id="gear-search-input"
         class="gear-search-input"
-        placeholder="Filter equipment (e.g. Sony, 24-70mm, Amaran, mic)..."
+        placeholder="Filter equipment (e.g. Sony, 24-70mm, Amaran, tripod)..."
         aria-label="Search gear"
       />
       <button type="button" id="gear-search-clear" class="gear-search-clear" aria-label="Clear search" hidden>×</button>
     </div>
     <div class="gear-category-chips" role="tablist" aria-label="Gear categories">
       <button type="button" class="gear-chip active" data-cat="all" role="tab" aria-selected="true">All</button>
-      {heroCat && heroCat.data.items && heroCat.data.items.length > 0 && (
-        <button type="button" class="gear-chip" data-cat="bodies" role="tab" aria-selected="false">Cameras</button>
-      )}
-      {subCats.map(cat => {
-        const isLenses = cat.data.category === 'Lens';
-        const isLighting = cat.data.category === 'Lighting';
-        const isAudio = cat.data.category === 'Audio';
-        const isTools = cat.data.category === 'Tools & Support';
-        const catKey = isLenses ? 'lenses' : isLighting ? 'lighting' : isAudio ? 'audio' : 'tools';
-        const label = isLenses ? 'Lenses' : isLighting ? 'Lighting' : isAudio ? 'Audio' : 'Support';
+      {activeCats.map(cat => {
+        const catKey = getCategorySlug(cat.data.category);
+        const label = getCategoryLabel(cat.data.category);
         return (
           <button type="button" class="gear-chip" data-cat={catKey} role="tab" aria-selected="false">{label}</button>
         );
       })}
     </div>
   </div>
+
   <div id="gear-empty-state" class="gear-empty-state" hidden>
     <p class="gear-empty-text">No equipment matches your search filter.</p>
     <button type="button" id="gear-reset-btn" class="gear-reset-btn">Reset Filter</button>
   </div>
-  <!-- HERO BOX 01: CAMERA BODIES (FULL WIDTH, TWO-PANEL SPLIT: LINKS | PREVIEW WITH AMAZON STOREFRONT) -->
-  {heroCat && (
-    <div
-      class="gear-hero-box"
-      id="gear-bodies"
-      data-category="bodies"
-      data-pn-entry
-      data-pn-label="Cameras"
-    >
-      <div class="gear-box-topbar">
-        <div class="gear-box-meta">
-          <span class="box-idx font-mono">01 / HERO SYSTEM</span>
-          <h3 class="box-title">{heroCat.data.category}</h3>
-          <span class="box-subtitle">High-Resolution Commercial Stills & Next-Gen Mobile Video</span>
-        </div>
 
-        <div class="brand-strip" aria-label="Camera Brands">
-          <div class="brand-badge brand-sony" title="Sony Alpha Ecosystem">
-            <svg class="brand-svg-sony" viewBox="0 0 100 22" fill="currentColor" aria-label="Sony" role="img">
-              <path d="M14.6 4.8c-2.4-.7-5.1-1.1-7.7-1.1-4.2 0-6.9 1.6-6.9 4.6 0 5.4 12.3 3.6 12.3 8.3 0 2.2-2.1 3.4-5.6 3.4-3.4 0-6.7-.8-9.7-2.3l-1.2 3.6c3.2 1.4 7.2 2.1 10.9 2.1 6.5 0 10.4-2.7 10.4-6.8 0-5.8-12.3-3.8-12.3-8.4 0-1.8 1.7-2.7 4.7-2.7 2.6 0 5.2.6 7.4 1.5l1.6-3.8zM33.6 3.9c-6.8 0-12.2 4.4-12.2 10.7 0 6.4 5.3 10.7 12.2 10.7 6.9 0 12.2-4.4 12.2-10.7 0-6.4-5.4-10.7-12.2-10.7zm0 17.5c-4.3 0-7.2-3.1-7.2-6.8 0-3.8 2.9-6.8 7.2-6.8 4.3 0 7.2 3.1 7.2 6.8 0 3.8-2.9 6.8-7.2 6.8zM58.7 3.9h-4.8v21h4.8V12.7l9.7 12.2h5.1V3.9h-4.8v12.2L58.7 3.9zM86.9 13.9L80.1 3.9h-5.4l10.2 14.6v6.4h4.8v-6.4l10.3-14.6h-5.3l-6.8 10z"/>
-            </svg>
-            <span class="alpha-mark" title="Sony Alpha">α</span>
-          </div>
-
-          <div class="brand-badge brand-apple" title="Apple ProRes Log">
-            <svg class="brand-svg-apple" viewBox="0 0 170 170" fill="currentColor" aria-label="Apple" role="img">
-              <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.69-3.08-7.7-7.93-12.02-14.55-6.3-9.68-11.23-20.73-14.79-33.15-3.56-12.43-5.34-24.08-5.34-34.96 0-15.11 3.69-27.42 11.07-36.93 7.38-9.5 16.7-14.35 27.97-14.55 5.48 0 11.45 1.49 17.9 4.48 6.45 2.98 10.5 4.54 12.14 4.67 1.83-.26 6.13-1.95 12.89-5.07 6.77-3.12 12.73-4.52 17.9-4.2 13.58.73 24.38 5.75 32.39 15.07-11.89 7.21-17.72 17.15-17.5 29.83.21 9.94 4.08 18.23 11.61 24.88 4.7 4.13 10.15 7.02 16.34 8.68-2.6 7.54-5.74 15.34-9.42 23.41zM119.22 33.02c0-7.72 2.76-14.97 8.27-21.75 5.52-6.77 12.27-10.87 20.25-12.3 1.05 7.72-1.39 14.86-7.32 21.43-5.93 6.57-12.99 10.77-21.2 12.62z"/>
-            </svg>
-            <span class="apple-text">Apple ProRes</span>
-          </div>
-
-          <a href={AMAZON_STOREFRONT} target="_blank" rel="noopener noreferrer" class="influencer-pill" aria-label="Visit the storefront">
-            <span class="influencer-dot"></span>
-            <span class="influencer-text">Visit the storefront</span>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 9.5L9.5 2.5M9.5 2.5H4.5M9.5 2.5V7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </a>
-        </div>
-      </div>
-
-      <!-- TWO-PANEL HERO SPLIT: LINKS | IMAGE PREVIEW -->
-      <div class="gear-hero-body">
-        <!-- LEFT: LINKS & SPECS -->
-        <div class="gear-hero-links">
-          <div class="hero-col-label">
-            <span class="col-tag font-mono">MANIFEST</span>
-            <span class="col-count font-mono">{heroCat.data.items.length} CAMERAS IN ACTIVE ROTATION</span>
-          </div>
-
-          <div class="camera-items-list">
-            {heroCat.data.items.map((item, idx) => {
-              const hasProduct = isProductUrl(item.affiliateUrl);
-              const pillLabel = hasProduct ? `View ${item.name} on Amazon` : 'Visit the storefront';
-              return (
-              <div
-                class={`camera-item-row ${idx === 0 ? 'is-active' : ''}`}
-                tabindex="0"
-                role="button"
-                aria-pressed={idx === 0 ? 'true' : 'false'}
-                aria-label={`View ${item.name} details`}
-                data-item-index={idx}
-                data-item-name={item.name}
-                data-item-brand={item.brand || (item.name.includes('Sony') ? 'Sony' : 'Apple')}
-                data-item-spec={item.spec}
-                data-item-tag={item.tag || (idx === 0 ? 'Primary Workhorse' : 'Cinema Body')}
-                data-item-url={item.affiliateUrl || AMAZON_STOREFRONT}
-                data-has-product-url={hasProduct ? 'true' : 'false'}
-                data-item-image={resolveAsset(item.image)}
-                data-item-image-alt={item.imageAlt || item.name}
-              >
-                <div class="camera-select-indicator" aria-hidden="true"></div>
-
-                <div class="camera-item-main">
-                  <div class="camera-item-header">
-                    <h4 class="camera-name">{item.name}</h4>
-                    <span class="camera-tag font-mono">{item.tag || (item.name.includes('Sony') ? 'Sony Alpha' : 'Apple ProRes')}</span>
-                  </div>
-                  <p class="camera-spec">{item.spec}</p>
-                </div>
-
-                <div class="camera-item-action">
-                  <a
-                    href={item.affiliateUrl || AMAZON_STOREFRONT}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="btn-amazon-link"
-                    aria-label={pillLabel}
-                    title={pillLabel}
-                    onclick="arguments[0].stopPropagation();"
-                  >
-                    <span>{hasProduct ? `View ${item.name}` : 'Visit the storefront'} <span aria-hidden="true">↗</span></span>
-                  </a>
-                </div>
-              </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <!-- RIGHT: LIVE IMAGE PREVIEW CARD -->
-        <div class="gear-hero-preview-col">
-          <div class="hero-col-label">
-            <span class="col-tag font-mono">SPECIFICATION</span>
-            <span class="col-count font-mono">FIELD VERIFIED</span>
-          </div>
-
-          <div class="amazon-preview-card" id="hero-camera-preview-card">
-            <div class="preview-badge-row">
-              <span class="preview-storefront-badge font-mono">
-                STUDIO VERIFIED
-              </span>
-              <span class="preview-active-tag font-mono" id="preview-camera-tag">Workhorse Body</span>
-            </div>
-
-            <!-- SCHEMATIC OR REAL CAMERA PRODUCT VISUAL BOX -->
-            <div class="preview-product-stage">
-              <div class="product-visual-container" id="preview-visual-container">
-                <img
-                  id="preview-camera-img"
-                  class="product-visual-img"
-                  src={resolveAsset(heroCat.data.items[0]?.image)}
-                  alt=""
-                  hidden={!heroCat.data.items[0]?.image}
-                />
-                <div class="schematic-wrap" id="schematic-view" hidden={Boolean(heroCat.data.items[0]?.image)}>
-                  <svg class="camera-schematic" viewBox="0 0 260 180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-                    <rect x="20" y="45" width="220" height="120" rx="3" fill="#141414" stroke="#333" stroke-width="2"/>
-                    <rect x="70" y="25" width="60" height="22" rx="2" fill="#1e1e1e" stroke="#444" stroke-width="1.5"/>
-                    <circle cx="100" cy="35" r="4" fill="#696969"/>
-                    <circle cx="130" cy="105" r="48" fill="#0d0d0d" stroke="#555" stroke-width="2"/>
-                    <circle cx="130" cy="105" r="38" fill="#181818" stroke="#909090" stroke-width="1.5"/>
-                    <rect x="110" y="88" width="40" height="34" rx="2" fill="#222222" stroke="#a2a2a2" stroke-width="1"/>
-                    <rect x="25" y="45" width="42" height="120" fill="#1a1a1a" stroke="#2a2a2a" stroke-width="1"/>
-                    <line x1="28" y1="65" x2="62" y2="65" stroke="#333" stroke-width="1"/>
-                    <line x1="28" y1="85" x2="62" y2="85" stroke="#333" stroke-width="1"/>
-                    <line x1="28" y1="105" x2="62" y2="105" stroke="#333" stroke-width="1"/>
-                    <rect x="195" y="32" width="24" height="14" rx="2" fill="#222" stroke="#555" stroke-width="1"/>
-                    <rect x="165" y="36" width="20" height="10" rx="2" fill="#222" stroke="#555" stroke-width="1"/>
-                    <text x="130" y="16" fill="#888" font-family="'JetBrains Mono', monospace" font-size="9" text-anchor="middle" font-weight="bold">SONY ALPHA // SYSTEM</text>
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <!-- PREVIEW DETAILS & AMAZON CTA -->
-            <div class="preview-info-strip">
-              <div class="preview-naming">
-                <span class="preview-brand-label font-mono" id="preview-camera-brand">SONY ELECTRONICS</span>
-                <h4 class="preview-item-title" id="preview-camera-title">Sony a7 IV</h4>
-                <p class="preview-item-desc" id="preview-camera-desc">33MP Full-Frame Exmor R CMOS, BIONZ XR, 4K60p 10-bit 4:2:2, 15+ stops DR. Primary body for low-light bar and atmospheric beverage work.</p>
-              </div>
-
-              <div class="preview-action-block">
-                <a
-                  href={heroCat.data.items[0]?.affiliateUrl || AMAZON_STOREFRONT}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="btn-primary-influencer"
-                  id="preview-camera-btn"
-                >
-                  <span class="amz-btn-text">{heroDefaultHasProduct ? `View ${heroCat.data.items[0]?.name} on Amazon` : 'Visit the storefront'}</span>
-                  <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden="true" focusable="false">
-                    <path d="M2.5 11.5L11.5 2.5M11.5 2.5H5.5M11.5 2.5V8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </a>
-                <span class="preview-disclosure font-mono">As an Amazon Associate, I earn from qualifying purchases.</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )}
-
-  <!-- COLLAGE OF BOXES: MASONRY BENTO SIZED PROPORTIONALLY WITH KEY GEAR HAVING LARGER BOXES -->
-  <div class="gear-collage">
-    {subCats.map((cat, catIdx) => {
+  <!-- ACCORDION DIRECTORY (ONE GROUP OPEN AT A TIME) -->
+  <div class="gear-accordion-deck-container" id="gear-accordion-container">
+    {activeCats.map((cat, catIdx) => {
+      const catKey = getCategorySlug(cat.data.category);
+      const anchorId = `gear-${catKey}`;
+      const isDefaultExpanded = catIdx === 0;
       const isLenses = cat.data.category === 'Lens';
       const isLighting = cat.data.category === 'Lighting';
-      const isAudio = cat.data.category === 'Audio';
       const isTools = cat.data.category === 'Tools & Support';
+      const isBodies = cat.data.category === 'Camera Bodies';
+      const items = cat.data.items;
+      const defaultItem = items[0];
+      const hasProduct = isProductUrl(defaultItem?.affiliateUrl);
+      const hasAllView = items.length > 6; // Threshold: sections with > 6 items get an All View
 
-      const anchorId = isLenses ? 'gear-lenses' : isLighting ? 'gear-lighting' : isAudio ? 'gear-audio' : 'gear-tools';
-      const defaultItem = cat.data.items[0];
+      // Unique IDs for element backward-compatibility with e2e tests
+      const imgId = isBodies ? 'preview-camera-img' : `img-${anchorId}`;
+      const ctaId = isBodies ? 'preview-camera-btn' : `cta-${anchorId}`;
+      const brandId = isBodies ? 'preview-camera-brand' : `brand-${anchorId}`;
+      const titleId = isBodies ? 'preview-camera-title' : `title-${anchorId}`;
+      const descId = isBodies ? 'preview-camera-desc' : `desc-${anchorId}`;
+      const tagId = isBodies ? 'preview-camera-tag' : `tag-${anchorId}`;
 
       return (
         <section
-          class={`gear-collage-box ${isLenses ? 'box-lenses' : isLighting ? 'box-lighting' : isAudio ? 'box-audio' : 'box-tools'}`}
+          class={`gear-accordion-section ${isDefaultExpanded ? 'is-expanded' : 'is-collapsed'}`}
           id={anchorId}
           data-category-slug={anchorId}
-          aria-label={cat.data.category}
+          data-category={catKey}
           data-pn-entry
-          data-pn-label={isLenses ? 'Lenses' : isTools ? 'Support' : cat.data.category}
+          data-pn-label={getCategoryLabel(cat.data.category)}
         >
           {isLenses && (
             <>
@@ -285,243 +142,293 @@ const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl)
             </>
           )}
 
-          <!-- TOP BAR WITH LOGOS & METADATA -->
-          <div class="gear-box-topbar sub-topbar">
-            <div class="gear-box-meta">
-              <span class="box-idx font-mono">0{catIdx + 2} / {isLenses ? 'OPTICAL SYSTEM' : isLighting ? 'ILLUMINATION' : isAudio ? 'ACOUSTIC PIPELINE' : 'STABILIZATION & RIG'}</span>
-              <h3 class="box-title">{cat.data.category}</h3>
-              <span class="box-subtitle">{cat.data.subtitle}</span>
-            </div>
+          <!-- ACCORDION HEADER (CLICK EXPANDS THIS GROUP & COLLAPSES OTHERS) -->
+          <div class="gear-accordion-header-bar">
+            <h2 class="gear-accordion-heading">
+              <button
+                type="button"
+                class="gear-accordion-header"
+                aria-expanded={isDefaultExpanded ? 'true' : 'false'}
+                aria-controls={`gear-body-${catKey}`}
+              >
+                <span class="gear-header-left">
+                  <span class="box-idx font-mono">{getSystemKicker(cat.data.category, catIdx)}</span>
+                  <span class="gear-header-title-row">
+                    <span class="box-title">{cat.data.category}</span>
+                    <span class="gear-item-count-badge font-mono">{items.length} PIECES VERIFIED</span>
+                  </span>
+                  <span class="box-subtitle">{cat.data.subtitle}</span>
+                </span>
+              </button>
+            </h2>
 
-            <div class="brand-strip">
-              {isLenses && (
-                <div class="brand-badge brand-sony" title="Sony G Master & Viltrox">
-                  <span class="gm-badge-tag">G MASTER</span>
-                  <span class="brand-divider">/</span>
-                  <span class="viltrox-tag">VILTROX</span>
-                </div>
-              )}
-              {isLighting && (
-                <div class="brand-badge" title="Aputure & Sony Flash">
-                  <span class="aputure-text">Aputure</span>
-                  <span class="brand-divider">/</span>
-                  <span class="alpha-mark">Sony TTL</span>
-                </div>
-              )}
-              {isAudio && (
-                <div class="brand-badge" title="DJI & Røde Audio">
-                  <span class="dji-text">DJI</span>
-                  <span class="brand-divider">/</span>
-                  <span class="rode-text">Røde</span>
-                </div>
-              )}
-              {isTools && (
-                <div class="brand-badge" title="Peak Design, Kupo & Sony">
-                  <span class="smallrig-text">Peak Design</span>
-                  <span class="brand-divider">/</span>
-                  <span class="smallrig-text">Kupo</span>
-                </div>
+            <div class="gear-header-right">
+              {hasAllView && (
+                <button
+                  type="button"
+                  class="btn-all-toggle font-mono"
+                  data-all-toggle={catKey}
+                  aria-expanded="false"
+                  aria-controls={`all-grid-${catKey}`}
+                  title="Toggle multi-column grid of all items"
+                >
+                  <span class="all-toggle-label">Show All ({items.length})</span>
+                  <span class="all-toggle-icon" aria-hidden="true">⊞</span>
+                </button>
               )}
 
-              <a href={AMAZON_STOREFRONT} target="_blank" rel="noopener noreferrer" class="influencer-pill sub-pill" aria-label="Visit the storefront">
+              <a
+                href={AMAZON_STOREFRONT}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="influencer-pill"
+                aria-label="Visit the storefront"
+              >
                 <span class="influencer-dot"></span>
-                <span>Visit the storefront</span>
-                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 9.5L9.5 2.5M9.5 2.5H4.5M9.5 2.5V7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span class="influencer-text">Visit the storefront</span>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                  <path d="M2.5 9.5L9.5 2.5M9.5 2.5H4.5M9.5 2.5V7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
               </a>
+
+              <button
+                type="button"
+                class="accordion-chevron-btn"
+                aria-label={`Toggle ${cat.data.category} section`}
+                aria-expanded={isDefaultExpanded ? 'true' : 'false'}
+                data-accordion-toggle={catKey}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
             </div>
           </div>
 
-          <!-- TWO-PANEL COLLAGE BODY: LINKS | LIVE PREVIEW -->
-          <div class="gear-sub-split-body">
-            <!-- LEFT PANEL: MANIFEST & LINKS -->
-            <div class="gear-sub-links-col">
-              <div class="hero-col-label">
-                <span class="col-tag font-mono">MANIFEST</span>
-                <span class="col-count font-mono">{cat.data.items.length} PIECES VERIFIED</span>
-              </div>
+          <!-- ACCORDION BODY -->
+          <div class="gear-accordion-body" id={`gear-body-${catKey}`}>
+            <!-- CAROUSEL / DECK STAGE VIEW (HERO SPEC CARD + PEEKING SLATS + CONTROLS) -->
+            <div class="gear-deck-view" data-deck-container={catKey}>
+              <!-- MAIN STAGE: HERO CARD + RIGHT PEEKING SLATS -->
+              <div class="gear-deck-stage" data-deck-stage={catKey}>
+                <!-- HERO SPECIFICATION CARD -->
+                <div class="gear-hero-spec-card" data-hero-spec={catKey}>
+                  <div class="spec-card-badge-row">
+                    <span class="spec-card-verified-tag font-mono">
+                      {isBodies ? 'STUDIO VERIFIED' : 'FIELD VERIFIED'}
+                    </span>
+                    <span class="spec-card-item-tag font-mono" id={tagId}>
+                      {defaultItem?.tag || 'Production Spec'}
+                    </span>
+                    <span class="spec-card-counter font-mono" data-card-counter={catKey}>
+                      01 / 0{items.length}
+                    </span>
+                  </div>
 
-              <div class="sub-items-scroll-list">
-                {cat.data.items.map((item, itemIdx) => {
-                  const hasProduct = isProductUrl(item.affiliateUrl);
-                  const pillLabel = hasProduct ? `View ${item.name} on Amazon` : 'Visit the storefront';
-                  return (
-                  <div
-                    class={`collage-item-row ${itemIdx === 0 ? 'is-active' : ''}`}
-                    tabindex="0"
-                    role="button"
-                    aria-pressed={itemIdx === 0 ? 'true' : 'false'}
-                    aria-label={`View ${item.name} details`}
-                    data-subcat={anchorId}
-                    data-item-index={itemIdx}
-                    data-item-name={item.name}
-                    data-item-brand={item.brand || 'Curated Kit'}
-                    data-item-spec={item.spec}
-                    data-item-tag={item.tag || 'Production Spec'}
-                    data-item-url={item.affiliateUrl || AMAZON_STOREFRONT}
-                    data-has-product-url={hasProduct ? 'true' : 'false'}
-                    data-item-image={resolveAsset(item.image)}
-                    data-item-image-alt={item.imageAlt || item.name}
-                  >
-                    <div class="camera-select-indicator" aria-hidden="true"></div>
-
-                    <div class="collage-item-main">
-                      <div class="collage-item-header">
-                        <h4 class="collage-item-name">{item.name}</h4>
-                        <span class="collage-item-tag font-mono">{item.tag || 'Pro Kit'}</span>
+                  <!-- PRODUCT VISUAL STAGE & SPEC SPLIT -->
+                  <div class="spec-card-split-content">
+                    <div class="spec-card-visual-col">
+                      <div class="product-visual-stage">
+                        <img
+                          id={imgId}
+                          class="product-visual-img"
+                          src={resolveAsset(defaultItem?.image)}
+                          alt=""
+                          hidden={!defaultItem?.image}
+                        />
+                        <div class="schematic-wrap" id={`schematic-${anchorId}`} hidden={Boolean(defaultItem?.image)}>
+                          <svg class="camera-schematic" viewBox="0 0 260 180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                            <rect x="20" y="45" width="220" height="120" rx="3" fill="#141414" stroke="#333" stroke-width="2"/>
+                            <circle cx="130" cy="105" r="48" fill="#0d0d0d" stroke="#555" stroke-width="2"/>
+                            <text x="130" y="16" fill="#888" font-family="'JetBrains Mono', monospace" font-size="9" text-anchor="middle" font-weight="bold">FIELD HARDWARE // KIT</text>
+                          </svg>
+                        </div>
                       </div>
-                      <p class="collage-item-spec">{item.spec}</p>
                     </div>
 
-                    <div class="collage-item-action">
-                      <a
-                        href={item.affiliateUrl || AMAZON_STOREFRONT}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="btn-amazon-link"
-                        aria-label={pillLabel}
-                        title={pillLabel}
-                        onclick="arguments[0].stopPropagation();"
-                      >
-                        <span>{hasProduct ? `View ${item.name}` : 'Visit the storefront'} <span aria-hidden="true">↗</span></span>
-                      </a>
+                    <!-- SPECIFICATION DETAILS & AMAZON CTA -->
+                    <div class="spec-card-info-col">
+                      <div class="spec-card-naming">
+                        <span class="spec-card-brand-label font-mono" id={brandId}>
+                          {(defaultItem?.brand || 'CURATED PRODUCTION').toUpperCase()} // KIT
+                        </span>
+                        <h3 class="spec-card-item-title" id={titleId}>
+                          {defaultItem?.name}
+                        </h3>
+                        <p class="spec-card-item-desc" id={descId}>
+                          {defaultItem?.spec}
+                        </p>
+                      </div>
+
+                      <div class="spec-card-action-block">
+                        <a
+                          href={defaultItem?.affiliateUrl || AMAZON_STOREFRONT}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="btn-primary-influencer"
+                          id={ctaId}
+                        >
+                          <span class="amz-btn-text">
+                            {hasProduct ? `View ${defaultItem?.name} on Amazon` : 'Visit the storefront'}
+                          </span>
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" focusable="false">
+                            <path d="M2.5 11.5L11.5 2.5M11.5 2.5H5.5M11.5 2.5V8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                        </a>
+                        <span class="preview-disclosure font-mono">
+                          As an Amazon Associate, I earn from qualifying purchases.
+                        </span>
+                      </div>
                     </div>
                   </div>
+                </div>
+
+                <!-- RIGHT PEEKING VERTICAL SLATS (HQ FEATURED PATTERN) -->
+                <div class="deck-slats-stack" aria-hidden="true">
+                  {items.map((item, itemIdx) => {
+                    const isNext1 = itemIdx === 1;
+                    const isNext2 = itemIdx === 2;
+                    const initialClass = isNext1 ? 'deck-slat next-1' : isNext2 ? 'deck-slat next-2' : 'deck-slat hidden';
+                    return (
+                      <div
+                        class={initialClass}
+                        data-slat-index={itemIdx}
+                        data-cat-slug={catKey}
+                        title={`Click to view ${item.name}`}
+                      >
+                        <div class="peeking-spine">
+                          <span class="spine-text">{item.name}</span>
+                        </div>
+                        {item.image && (
+                          <img src={resolveAsset(item.image)} alt="" class="slat-peek-img" loading="lazy" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <!-- CONTROLS: PREV / NEXT ARROWS (EXPLICIT GEAR ENHANCEMENTS) -->
+                <div class="deck-arrows-wrap">
+                  <button
+                    type="button"
+                    class="deck-nav-arrow deck-nav-prev"
+                    data-deck-prev={catKey}
+                    aria-label={`Previous ${cat.data.category} item`}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    class="deck-nav-arrow deck-nav-next"
+                    data-deck-next={catKey}
+                    aria-label={`Next ${cat.data.category} item`}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- THUMBNAIL STRIP BELOW (HQ FEATURED MANIFEST THUMBNAILS) -->
+              <div
+                class="deck-thumb-track"
+                role="tablist"
+                aria-label={`${cat.data.category} rotation`}
+                data-thumb-track={catKey}
+              >
+                {items.map((item, itemIdx) => {
+                  const itemHasProduct = isProductUrl(item.affiliateUrl);
+                  const rowClass = isBodies ? 'camera-item-row' : 'collage-item-row';
+                  return (
+                    <button
+                      type="button"
+                      class={`deck-thumb-tile ${rowClass} ${itemIdx === 0 ? 'is-active' : ''}`}
+                      role="tab"
+                      tabindex="0"
+                      aria-selected={itemIdx === 0 ? 'true' : 'false'}
+                      aria-label={`Select ${item.name}`}
+                      data-subcat={anchorId}
+                      data-item-index={itemIdx}
+                      data-item-name={item.name}
+                      data-item-brand={item.brand || (item.name.includes('Sony') ? 'Sony' : 'Curated Kit')}
+                      data-item-spec={item.spec}
+                      data-item-tag={item.tag || (itemIdx === 0 ? 'Primary Workhorse' : 'Production Spec')}
+                      data-item-url={item.affiliateUrl || AMAZON_STOREFRONT}
+                      data-has-product-url={itemHasProduct ? 'true' : 'false'}
+                      data-item-image={resolveAsset(item.image)}
+                      data-item-image-alt={item.imageAlt || item.name}
+                      data-cat-slug={catKey}
+                    >
+                      <div class="thumb-tile-img-box">
+                        {item.image ? (
+                          <img src={resolveAsset(item.image)} alt="" class="thumb-tile-img" loading="lazy" />
+                        ) : (
+                          <div class="thumb-tile-fallback font-mono">{item.name.slice(0, 3)}</div>
+                        )}
+                      </div>
+                      <div class="thumb-tile-meta">
+                        <span class="thumb-tile-name">{item.name}</span>
+                        <span class="thumb-tile-tag font-mono">{item.tag || 'Verified'}</span>
+                      </div>
+                      <span class="thumb-tile-glow" aria-hidden="true"></span>
+                    </button>
                   );
                 })}
               </div>
             </div>
 
-            <!-- RIGHT PANEL: INTERACTIVE LIVE PREVIEW CARD -->
-            <div class="gear-sub-preview-col">
-              <div class="hero-col-label">
-                <span class="col-tag font-mono">SPECIFICATION</span>
-                <span class="col-count font-mono">BENCH VERIFIED</span>
-              </div>
-
-              <div class="amazon-preview-card collage-preview-card">
-                <div class="preview-badge-row">
-                  <span class="preview-storefront-badge font-mono">
-                    PRODUCTION SPEC
-                  </span>
-                  <span class="preview-active-tag font-mono" id={`tag-${anchorId}`}>
-                    {defaultItem?.tag || 'Selected Spec'}
-                  </span>
+            <!-- "ALL" MULTI-COLUMN TILE GRID VIEW (FOR SECTIONS WITH > 6 ITEMS, E.G. LENSES) -->
+            {hasAllView && (
+              <div class="gear-all-grid-view" id={`all-grid-${catKey}`} hidden data-all-view={catKey}>
+                <div class="all-grid-topbar">
+                  <div class="all-grid-title-wrap">
+                    <span class="all-grid-tag font-mono">COMPLETE MANIFEST OVERVIEW</span>
+                    <h4 class="all-grid-title">{cat.data.category} Inventory ({items.length} units)</h4>
+                  </div>
+                  <button type="button" class="btn-back-carousel font-mono" data-back-carousel={catKey}>
+                    ← Return to Carousel
+                  </button>
                 </div>
 
-                <!-- DYNAMIC SVG SCHEMATIC OR REAL IMAGE STAGE PER CATEGORY -->
-                <div class="preview-product-stage sub-stage">
-                  <div class="product-visual-container">
-                    <img
-                      id={`img-${anchorId}`}
-                      class="product-visual-img"
-                      src={resolveAsset(defaultItem?.image)}
-                      alt=""
-                      hidden={!defaultItem?.image}
-                    />
-                    {isLenses && (
-                      <div class="schematic-wrap" id={`schematic-${anchorId}`} hidden={Boolean(defaultItem?.image)}>
-                        <svg class="camera-schematic" viewBox="0 0 260 180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-                          <rect x="30" y="50" width="200" height="80" rx="3" fill="#141414" stroke="#333" stroke-width="2"/>
-                          <rect x="25" y="45" width="25" height="90" rx="2" fill="#181818" stroke="#444" stroke-width="1.5"/>
-                          <!-- Lens Elements -->
-                          <ellipse cx="65" cy="90" rx="8" ry="34" fill="#333333" stroke="#808080" stroke-width="1.5"/>
-                          <ellipse cx="95" cy="90" rx="10" ry="32" fill="#222222" stroke="#666666" stroke-width="1.5"/>
-                          <ellipse cx="140" cy="90" rx="12" ry="30" fill="#444444" stroke="#808080" stroke-width="1.5"/>
-                          <ellipse cx="185" cy="90" rx="9" ry="32" fill="#222222" stroke="#808080" stroke-width="1.5"/>
-                          <ellipse cx="215" cy="90" rx="6" ry="34" fill="#111111" stroke="#555555" stroke-width="1.5"/>
-                          <!-- Focus & Zoom Rings -->
-                          <rect x="70" y="50" width="30" height="80" fill="#1a1a1a" stroke="#2a2a2a" stroke-width="1"/>
-                          <rect x="150" y="50" width="40" height="80" fill="#1a1a1a" stroke="#2a2a2a" stroke-width="1"/>
-                          <!-- G Master Badge -->
-                          <rect x="115" y="42" width="22" height="14" rx="2" fill="#666666"/>
-                          <text x="126" y="53" fill="#fff" font-family="'Syne', sans-serif" font-size="9" text-anchor="middle" font-weight="900">G</text>
-                          <text x="130" y="160" fill="#888" font-family="'JetBrains Mono', monospace" font-size="8" text-anchor="middle" font-weight="bold">SONY G MASTER // OPTICAL SYSTEM</text>
-                        </svg>
-                      </div>
-                    )}
-                    {isLighting && (
-                      <div class="schematic-wrap" id={`schematic-${anchorId}`} hidden={Boolean(defaultItem?.image)}>
-                        <svg class="camera-schematic" viewBox="0 0 260 180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-                          <rect x="40" y="55" width="110" height="70" rx="4" fill="#151515" stroke="#333" stroke-width="2"/>
-                          <circle cx="95" cy="90" r="22" fill="#808080" fill-opacity="0.25" stroke="#868686" stroke-width="2"/>
-                          <circle cx="95" cy="90" r="10" fill="#fff" stroke="#9d9d9d" stroke-width="2"/>
-                          <!-- Reflector Cone -->
-                          <polygon points="150,55 210,35 210,145 150,125" fill="#202020" stroke="#444" stroke-width="2"/>
-                          <!-- Light Ray Emittance -->
-                          <line x1="215" y1="45" x2="250" y2="35" stroke="#868686" stroke-width="1.5" stroke-dasharray="3 3"/>
-                          <line x1="215" y1="90" x2="255" y2="90" stroke="#868686" stroke-width="2" stroke-dasharray="4 3"/>
-                          <line x1="215" y1="135" x2="250" y2="145" stroke="#868686" stroke-width="1.5" stroke-dasharray="3 3"/>
-                          <!-- Yoke & Stand Mount -->
-                          <path d="M95 125v35m-15 0h30" stroke="#555" stroke-width="2"/>
-                          <text x="130" y="24" fill="#888" font-family="'JetBrains Mono', monospace" font-size="8" text-anchor="middle" font-weight="bold">AMARAN // 5600K DAYLIGHT LED</text>
-                        </svg>
-                      </div>
-                    )}
-                    {isAudio && (
-                      <div class="schematic-wrap" id={`schematic-${anchorId}`} hidden={Boolean(defaultItem?.image)}>
-                        <svg class="camera-schematic" viewBox="0 0 260 180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-                          <!-- Dual TX & RX Mic Units -->
-                          <rect x="40" y="45" width="55" height="90" rx="8" fill="#141414" stroke="#333" stroke-width="2"/>
-                          <circle cx="67" cy="65" r="12" fill="#222" stroke="#555" stroke-width="1.5"/>
-                          <rect x="52" y="90" width="30" height="14" rx="2" fill="#000" stroke="#333"/>
-                          <text x="67" y="101" fill="#747474" font-family="'JetBrains Mono', monospace" font-size="7" text-anchor="middle">32-BIT</text>
-
-                          <rect x="110" y="45" width="55" height="90" rx="8" fill="#141414" stroke="#333" stroke-width="2"/>
-                          <circle cx="137" cy="65" r="12" fill="#222" stroke="#555" stroke-width="1.5"/>
-                          <rect x="122" y="90" width="30" height="14" rx="2" fill="#000" stroke="#333"/>
-                          <text x="137" y="101" fill="#747474" font-family="'JetBrains Mono', monospace" font-size="7" text-anchor="middle">FLOAT</text>
-
-                          <!-- Waveform visualization -->
-                          <path d="M180 90h8l4-18 6 36 6-42 6 50 6-34 4 18h10" stroke="#adadad" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <text x="130" y="160" fill="#888" font-family="'JetBrains Mono', monospace" font-size="8" text-anchor="middle" font-weight="bold">DJI MIC 2 // 32-BIT FLOAT WIRELESS</text>
-                        </svg>
-                      </div>
-                    )}
-                    {isTools && (
-                      <div class="schematic-wrap" id={`schematic-${anchorId}`} hidden={Boolean(defaultItem?.image)}>
-                        <svg class="camera-schematic" viewBox="0 0 260 180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-                          <!-- Gimbal & Carbon Tripod Schematic -->
-                          <rect x="80" y="30" width="100" height="24" rx="4" fill="#1a1a1a" stroke="#444" stroke-width="1.5"/>
-                          <line x1="130" y1="54" x2="130" y2="78" stroke="#909090" stroke-width="3"/>
-                          <circle cx="130" cy="85" r="12" fill="#141414" stroke="#909090" stroke-width="2"/>
-                          <path d="M130 97v40" stroke="#444" stroke-width="3"/>
-                          <polygon points="120,137 130,97 140,137" fill="#222"/>
-                          <!-- Tripod Legs spreading -->
-                          <line x1="130" y1="137" x2="80" y2="170" stroke="#666" stroke-width="2.5"/>
-                          <line x1="130" y1="137" x2="130" y2="175" stroke="#666" stroke-width="2.5"/>
-                          <line x1="130" y1="137" x2="180" y2="170" stroke="#666" stroke-width="2.5"/>
-                          <text x="130" y="18" fill="#888" font-family="'JetBrains Mono', monospace" font-size="8" text-anchor="middle" font-weight="bold">ZHIYUN & PEAK DESIGN // STABILIZATION</text>
-                        </svg>
-                      </div>
-                    )}
-                  </div>
+                <div class="all-grid-cards">
+                  {items.map((item, itemIdx) => {
+                    const itemHasProduct = isProductUrl(item.affiliateUrl);
+                    return (
+                      <article class="all-grid-card">
+                        <div class="all-card-top">
+                          <span class="all-card-tag font-mono">{item.tag || 'Pro Kit'}</span>
+                          <span class="all-card-brand font-mono">{item.brand || 'Sony'}</span>
+                        </div>
+                        <div class="all-card-img-wrap">
+                          <img src={resolveAsset(item.image)} alt="" class="all-card-img" loading="lazy" />
+                        </div>
+                        <div class="all-card-body">
+                          <h5 class="all-card-name">{item.name}</h5>
+                          <p class="all-card-spec">{item.spec}</p>
+                          <a
+                            href={item.affiliateUrl || AMAZON_STOREFRONT}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="all-card-cta btn-amazon-link"
+                          >
+                            <span>{itemHasProduct ? `View on Amazon` : 'Storefront'} <span aria-hidden="true">↗</span></span>
+                          </a>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
 
-                <!-- PREVIEW DETAILS & AMAZON CTA -->
-                <div class="preview-info-strip">
-                  <div class="preview-naming">
-                    <span class="preview-brand-label font-mono" id={`brand-${anchorId}`}>{defaultItem?.brand || 'CURATED PRODUCTION KIT'}</span>
-                    <h4 class="preview-item-title" id={`title-${anchorId}`}>{defaultItem?.name}</h4>
-                    <p class="preview-item-desc" id={`desc-${anchorId}`}>{defaultItem?.spec}</p>
-                  </div>
-
-                  <div class="preview-action-block">
-                    <a
-                      href={defaultItem?.affiliateUrl || AMAZON_STOREFRONT}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="btn-primary-influencer"
-                      id={`cta-${anchorId}`}
-                    >
-                      <span class="amz-btn-text">{isProductUrl(defaultItem?.affiliateUrl) ? `View ${defaultItem?.name} on Amazon` : 'Visit the storefront'}</span>
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" focusable="false">
-                        <path d="M2.5 11.5L11.5 2.5M11.5 2.5H5.5M11.5 2.5V8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    </a>
-                  </div>
+                <div class="all-grid-footer">
+                  <button type="button" class="btn-back-carousel font-mono" data-back-carousel={catKey}>
+                    ← Return to Carousel
+                  </button>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </section>
       );
@@ -530,7 +437,9 @@ const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl)
 </div>
 
 <style>
-  /* Gear Filter & Search Toolbar */
+  /* --------------------------------------------------------------------------
+     FILTER & SEARCH TOOLBAR
+     -------------------------------------------------------------------------- */
   .gear-filter-toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -562,7 +471,7 @@ const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl)
     font-family: var(--font-body);
     font-size: 0.88rem;
     outline: none;
-    transition: var(--transition-smooth);
+    transition: var(--transition-smooth, all 0.2s ease);
   }
   .gear-search-input:focus {
     border-color: var(--border-active, rgba(255, 255, 255, 0.5));
@@ -586,31 +495,22 @@ const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl)
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    /* Wrapped rows stay a hit area apart (44 - 32). */
-    row-gap: calc(var(--tap-min) - var(--btn-h-sm) + 2px);
+    row-gap: 0.5rem;
   }
-  /* A filter chip: the button standard's sm size, 44px hit area. */
   .gear-chip {
     position: relative;
-    z-index: 1; /* its hit area paints over what follows */
-    min-height: var(--btn-h-sm);
-    padding: calc(6 * var(--ui-u)) var(--btn-px-sm);
+    min-height: var(--btn-h-sm, 36px);
+    padding: 0.4rem 0.9rem;
     background: transparent;
     border: 1px solid var(--line, rgba(255, 255, 255, 0.15));
-    border-radius: var(--btn-radius);
+    border-radius: var(--btn-radius, 0);
     color: var(--muted, #888888);
     font-family: var(--font-mono);
-    font-size: var(--btn-fs-sm);
+    font-size: 0.75rem;
     text-transform: uppercase;
-    letter-spacing: var(--btn-ls);
+    letter-spacing: 0.1em;
     cursor: pointer;
-    transition: var(--transition-smooth);
-  }
-  .gear-chip::before,
-  .btn-amazon-link::before {
-    content: '';
-    position: absolute;
-    inset: min(0px, calc((var(--btn-h-sm) - var(--tap-min)) / 2 - 1px)) -1px /* from the padding box: past the 1px border */;
+    transition: all 0.2s ease;
   }
   .gear-chip:hover {
     border-color: var(--border-active, rgba(255, 255, 255, 0.4));
@@ -631,8 +531,7 @@ const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl)
     margin-bottom: 2rem;
   }
   .gear-empty-state[hidden],
-  .gear-hero-box[hidden],
-  .gear-collage-box[hidden] {
+  .gear-accordion-section[hidden] {
     display: none !important;
   }
   .gear-empty-text {
@@ -652,445 +551,323 @@ const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl)
     text-transform: uppercase;
     letter-spacing: 0.1em;
     cursor: pointer;
-    transition: var(--transition-smooth);
+    transition: all 0.2s ease;
   }
   .gear-reset-btn:hover {
     background: var(--surface-2, #1a1a1a);
     color: var(--color-white, #ffffff);
   }
 
-  /* STRICT ZERO-EMPTY-SPACE ARCHITECTURAL MONOLITH */
+  /* --------------------------------------------------------------------------
+     ACCORDION STRUCTURE (ONE GROUP OPEN AT A TIME)
+     -------------------------------------------------------------------------- */
   .gear-monolith {
     width: 100%;
     margin-top: 1.5rem;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 1.5rem;
   }
-
-  /* HERO BOX: CAMERA BODIES */
-  .gear-hero-box {
+  .gear-accordion-deck-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
     width: 100%;
+  }
+  .gear-accordion-section {
     background: #090909;
-    border: 1px solid var(--line);
+    border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
     display: flex;
     flex-direction: column;
     position: relative;
-    overflow: hidden;
+    transition: border-color 0.3s ease;
   }
-
-  .gear-box-topbar {
+  .gear-accordion-section.is-expanded {
+    border-color: rgba(255, 255, 255, 0.28);
+  }
+  .gear-accordion-header-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 1rem;
+    gap: 1.5rem;
     padding: 1.25rem 1.75rem;
     background: #0d0d0d;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid transparent;
+    transition: background-color 0.25s ease, border-color 0.25s ease;
+  }
+  .gear-accordion-section.is-expanded .gear-accordion-header-bar {
+    border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+    background: #0e0e0e;
+  }
+  .gear-accordion-section.is-collapsed .gear-accordion-header-bar:hover {
+    background: #141414;
+  }
+  .gear-accordion-heading {
+    margin: 0;
+    font: inherit;
+    flex: 1;
+    min-width: 0;
+  }
+  .gear-accordion-header {
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .gear-accordion-header:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 4px;
+  }
+  .accordion-chevron-btn {
+    background: none;
+    border: none;
+    color: var(--muted, #888888);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0.35rem;
+    transition: transform 0.3s ease, color 0.2s ease;
+  }
+  .gear-accordion-section.is-expanded .accordion-chevron-btn {
+    transform: rotate(180deg);
+    color: var(--ink, #ffffff);
   }
 
-  .gear-box-meta {
+  .gear-header-left {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.35rem;
+    flex: 1;
+    min-width: 0;
   }
-
   .box-idx {
     font-size: 0.68rem;
     letter-spacing: 0.18em;
-    color: var(--key-ink);
+    color: var(--key-ink, #c0c0c0);
     text-transform: uppercase;
   }
-
+  .gear-header-title-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+  }
   .box-title {
     font-family: var(--font-display);
-    font-size: clamp(1.4rem, 2vw, 1.85rem);
+    font-size: clamp(1.35rem, 2.2vw, 1.85rem);
     font-weight: 800;
     letter-spacing: -0.01em;
-    color: var(--ink);
+    color: var(--ink, #ffffff);
     margin: 0;
     line-height: 1.1;
   }
-
+  .gear-item-count-badge {
+    font-size: 0.65rem;
+    color: var(--muted, #888888);
+    letter-spacing: 0.12em;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.2rem 0.5rem;
+  }
   .box-subtitle {
     font-family: var(--font-mono);
     font-size: 0.78rem;
-    color: var(--muted);
+    color: var(--muted, #888888);
     letter-spacing: 0.02em;
   }
 
-  .brand-strip {
+  .gear-header-right {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
+    gap: 0.85rem;
+    flex-shrink: 0;
   }
 
-  .brand-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.85rem;
-    background: #141414;
-    border: 1px solid var(--line);
-    color: var(--ink);
-  }
-
-  .brand-svg-sony {
-    width: 68px;
-    height: 15px;
-  }
-
-  .alpha-mark {
-    font-family: var(--font-display);
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--ink);
-    line-height: 1;
-  }
-
-  .gm-badge-tag {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-size: 0.82rem;
-    color: var(--ink);
-    letter-spacing: 0.08em;
-  }
-
-  .brand-divider {
-    color: #444;
-    font-size: 0.8rem;
-  }
-
-  .viltrox-tag {
-    font-family: var(--font-mono);
-    font-size: 0.74rem;
-    color: #aaa;
-    letter-spacing: 0.06em;
-  }
-
-  .brand-apple {
-    color: #dedede;
-  }
-
-  .brand-svg-apple {
-    width: 14px;
-    height: 14px;
-  }
-
-  .apple-text, .aputure-text, .dji-text, .rode-text, .zhiyun-text, .smallrig-text {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
-    font-weight: 600;
-  }
-
+  /* STOREFRONT PILL (PRESERVED LIVE BEHAVIOR) */
   .influencer-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
-    padding: 0.4rem 0.85rem;
+    padding: 0.45rem 0.85rem;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    color: var(--ink);
+    color: var(--ink, #ffffff);
     font-family: var(--font-mono);
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     text-decoration: none;
     transition: all 0.2s ease;
+    white-space: nowrap;
+    min-height: 36px;
   }
-
   .influencer-pill:hover {
     background: #f0f0f0;
     color: #080808;
     border-color: #f0f0f0;
   }
-
   .influencer-dot {
     width: 6px;
     height: 6px;
-    background: var(--ink);
+    background: var(--ink, #ffffff);
     border-radius: 50%;
   }
-
   .influencer-pill:hover .influencer-dot {
     background: #080808;
   }
 
-  /* HERO BODY: LINKS | IMAGE PREVIEW DIVISION */
-  .gear-hero-body {
-    display: grid;
-    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-    width: 100%;
+  /* "ALL" VIEW TOGGLE BUTTON (FOR SECTIONS > 6 ITEMS) */
+  .btn-all-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.85rem;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: var(--ink, #ffffff);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 36px;
+  }
+  .btn-all-toggle:hover {
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+  }
+  .all-toggle-icon {
+    font-size: 0.9rem;
+    line-height: 1;
   }
 
-  @media (max-width: 980px) {
-    .gear-hero-body {
-      grid-template-columns: 1fr;
-    }
+  /* ACCORDION CHEVRON */
+  .accordion-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted, #888888);
+    transition: transform 0.3s ease, color 0.2s ease;
+  }
+  .gear-accordion-section.is-expanded .accordion-chevron {
+    transform: rotate(180deg);
+    color: var(--ink, #ffffff);
   }
 
-  /* LEFT: LINKS & SPECS */
-  .gear-hero-links {
-    padding: 1.5rem 1.75rem;
-    border-right: 1px solid var(--line);
+  /* ACCORDION BODY DISPLAY */
+  .gear-accordion-body {
     display: flex;
     flex-direction: column;
+    width: 100%;
+    overflow: hidden;
+  }
+  .gear-accordion-section.is-collapsed .gear-accordion-body {
+    display: none;
+  }
+
+  /* --------------------------------------------------------------------------
+     ZONE 1: HERO SPECIFICATION CARD + RIGHT PEEKING SLATS
+     -------------------------------------------------------------------------- */
+  .gear-deck-view {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 1.5rem 1.75rem;
+    gap: 1.5rem;
+    background: #0a0a0a;
+  }
+  .gear-deck-stage {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: stretch;
+    min-height: 380px;
     gap: 1rem;
   }
 
-  @media (max-width: 980px) {
-    .gear-hero-links {
-      border-right: none;
-      border-bottom: 1px solid var(--line);
-    }
-  }
-
-  @media (max-width: 640px) {
-    .gear-box-topbar {
-      padding: 1rem 0.85rem;
-      gap: 0.75rem;
-    }
-    .gear-hero-links,
-    .gear-hero-preview-col,
-    .gear-sub-links-col,
-    .gear-sub-preview-col {
-      padding: 1rem 0.85rem;
-    }
-    .amazon-preview-card {
-      padding: 1rem 0.85rem;
-    }
-    .camera-item-row,
-    .collage-item-row {
-      padding: 0.75rem 0.75rem;
-      gap: 0.65rem;
-    }
-  }
-
-  .hero-col-label {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    padding-bottom: 0.6rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .col-tag {
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
-    color: var(--key-ink);
-  }
-
-  .col-count {
-    font-size: 0.65rem;
-    letter-spacing: 0.08em;
-    color: var(--muted);
-  }
-
-  .camera-items-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.65rem;
-  }
-
-  .camera-item-row {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1.25rem;
-    padding: 1rem 1.25rem;
-    background: #111111;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    cursor: pointer;
-    transition: all 0.22s ease;
-  }
-
-  .camera-item-row:hover,
-  .camera-item-row.is-active {
-    background: #171717;
-    border-color: rgba(255, 255, 255, 0.25);
-    transform: translateX(4px);
-  }
-
-  .camera-select-indicator {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: transparent;
-    transition: background 0.2s ease;
-  }
-
-  .camera-item-row.is-active .camera-select-indicator,
-  .collage-item-row.is-active .camera-select-indicator {
-    background: #f0f0f0;
-  }
-
-  .camera-item-main {
+  /* HERO SPECIFICATION CARD */
+  .gear-hero-spec-card {
     flex: 1;
     min-width: 0;
-  }
-
-  .camera-item-header {
-    display: flex;
-    align-items: baseline;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    margin-bottom: 0.25rem;
-  }
-
-  .camera-name {
-    font-family: var(--font-display);
-    font-size: clamp(1.15rem, 1.6vw, 1.45rem);
-    font-weight: 700;
-    color: var(--ink);
-    margin: 0;
-    line-height: 1.2;
-  }
-
-  .camera-tag {
-    font-size: 0.68rem;
-    color: var(--key-ink);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
-
-  .camera-spec {
-    font-family: var(--font-mono);
-    font-size: max(0.8rem, 12px);
-    color: var(--muted);
-    line-height: 1.5;
-    margin: 0;
-  }
-
-  .camera-item-row:hover .camera-spec {
-    color: #dedede;
-  }
-
-  .camera-item-action, .collage-item-action {
-    flex-shrink: 0;
-  }
-
-  /* The button standard's sm size, 44px hit area. */
-  .btn-amazon-link {
-    position: relative;
-    z-index: 1;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    min-height: var(--btn-h-sm);
-    padding: calc(6 * var(--ui-u)) var(--btn-px-sm);
-    background: #1a1a1a;
-    border: 1px solid var(--line);
-    border-radius: var(--btn-radius);
-    color: var(--ink);
-    font-family: var(--font-mono);
-    font-size: var(--btn-fs-sm);
-    text-transform: uppercase;
-    letter-spacing: var(--btn-ls);
-    text-decoration: none;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-  }
-
-  .btn-amazon-link:hover {
-    background: #fff;
-    color: #000;
-    border-color: #fff;
-  }
-
-  /* RIGHT: LIVE IMAGE PREVIEW CARD */
-  .gear-hero-preview-col, .gear-sub-preview-col {
+    background: #111111;
+    border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
     padding: 1.5rem 1.75rem;
-    background: #0e0e0e;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    position: sticky;
-    top: calc(80px + env(safe-area-inset-top, 0px));
-  }
-
-  @media (max-width: 820px) {
-    .gear-hero-preview-col, .gear-sub-preview-col {
-      position: static;
-    }
-  }
-
-  .amazon-preview-card {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    border: 1px solid var(--line);
-    background: #121212;
-    padding: 1.5rem;
     gap: 1.25rem;
-    cursor: pointer;
-    transition: border-color 0.25s ease;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+    position: relative;
+    z-index: 2;
   }
-
-  .amazon-preview-card:hover {
-    border-color: rgba(255, 255, 255, 0.35);
-  }
-
-  .preview-badge-row {
+  .spec-card-badge-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
-
-  .preview-storefront-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
+  .spec-card-verified-tag {
     font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    color: var(--key-ink, #ffffff);
     font-weight: 700;
-    letter-spacing: 0.12em;
-    color: var(--ink);
   }
-
-  .pulse-indicator {
-    width: 6px;
-    height: 6px;
-    background: #f0f0f0;
-    border-radius: 50%;
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.45);
-  }
-
-  .preview-active-tag {
+  .spec-card-item-tag {
     font-size: 0.68rem;
-    color: var(--muted);
     letter-spacing: 0.1em;
+    color: var(--muted, #888888);
     text-transform: uppercase;
   }
+  .spec-card-counter {
+    font-size: 0.68rem;
+    color: var(--muted, #888888);
+    letter-spacing: 0.08em;
+  }
 
-  .preview-product-stage {
-    position: relative;
-    background: #070707;
+  /* SPEC SPLIT CONTENT: VISUAL ON LEFT, DETAILS & CTA ON RIGHT */
+  .spec-card-split-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    gap: 2rem;
+    align-items: center;
+    flex: 1;
+  }
+  @media (max-width: 860px) {
+    .spec-card-split-content {
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+  }
+
+  .spec-card-visual-col {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 220px;
+  }
+  .product-visual-stage {
+    width: 100%;
+    height: 100%;
+    background: #080808;
     border: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1.5rem;
-    min-height: 200px;
+    padding: 1.25rem;
   }
-
-  .sub-stage {
-    min-height: 170px;
-  }
-
-  .product-visual-container {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
   .product-visual-img {
     max-width: 100%;
     max-height: 240px;
@@ -1099,507 +876,809 @@ const heroDefaultHasProduct = isProductUrl(heroCat?.data.items[0]?.affiliateUrl)
     object-fit: contain;
     display: block;
     margin: 0 auto;
-    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.7));
+    filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.85));
+    transition: opacity 0.3s ease;
   }
-
   .product-visual-img[hidden] {
     display: none;
   }
-
   .schematic-wrap {
     width: 100%;
-    max-width: min(100%, 420px);
+    max-width: 320px;
     display: flex;
     justify-content: center;
   }
-
   .schematic-wrap[hidden] {
     display: none;
   }
-
   .camera-schematic {
     width: 100%;
     height: auto;
     filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.8));
   }
 
-  .preview-info-strip {
+  /* DETAILS COLUMN (FULL WIDTH DESCRIPTION - ELIMINATING WORD-BY-WORD WRAP) */
+  .spec-card-info-col {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    justify-content: space-between;
+    gap: 1.25rem;
+    height: 100%;
   }
-
-  .preview-naming {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-  }
-
-  .preview-brand-label {
-    font-size: 0.65rem;
-    letter-spacing: 0.16em;
-    color: var(--key-ink);
-  }
-
-  .preview-item-title {
-    font-family: var(--font-display);
-    font-size: clamp(1.2rem, 1.7vw, 1.5rem);
-    font-weight: 700;
-    color: var(--ink);
-    margin: 0;
-  }
-
-  .preview-item-desc {
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    color: var(--muted);
-    line-height: 1.55;
-    margin: 0;
-  }
-
-  .preview-action-block {
+  .spec-card-naming {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    padding-top: 0.5rem;
+  }
+  .spec-card-brand-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.16em;
+    color: var(--key-ink, #c0c0c0);
+  }
+  .spec-card-item-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.4rem, 2vw, 1.85rem);
+    font-weight: 700;
+    color: var(--ink, #ffffff);
+    margin: 0;
+    line-height: 1.15;
+  }
+  .spec-card-item-desc {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--muted, #a0a0a0);
+    line-height: 1.6;
+    margin: 0;
+    max-width: 100%; /* Full-width unconstrained description */
   }
 
+  .spec-card-action-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
   .btn-primary-influencer {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.6rem;
-    /* The button standard's md size. */
-    min-height: var(--btn-h-md);
+    min-height: var(--btn-h-md, 44px);
     background: transparent;
-    color: var(--ink);
-    padding: calc(8 * var(--ui-u)) var(--btn-px-md);
+    color: var(--ink, #ffffff);
+    padding: 0.6rem 1.25rem;
     font-family: var(--font-mono);
-    font-size: var(--btn-fs-md);
+    font-size: 0.82rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: var(--btn-ls);
+    letter-spacing: 0.08em;
     text-decoration: none;
     border: 1px solid #f0f0f0;
     transition: all 0.2s ease;
   }
-
   .btn-primary-influencer:hover,
   .btn-primary-influencer:focus-visible {
-    background: #f0f0f0;
-    border-color: #f0f0f0;
+    background: #ffffff;
+    border-color: #ffffff;
     color: #080808;
-    box-shadow: 0 0 24px rgba(255, 255, 255, 0.25);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
   }
-
   .preview-disclosure {
     font-size: 0.68rem;
-    color: var(--muted);
+    color: var(--muted, #888888);
     text-align: center;
     letter-spacing: 0.05em;
   }
 
-  /* ==========================================================================
-     COLLAGE OF BOXES: DYNAMIC MASONRY / BENTO OCCUPYING 100% OF SECTION
-     ========================================================================== */
-  .gear-collage {
-    display: grid;
-    grid-template-columns: repeat(12, 1fr);
-    gap: 1.25rem;
-    width: 100%;
+  /* --------------------------------------------------------------------------
+     PEEKING SLATS STACK (HQ FEATURED PATTERN)
+     -------------------------------------------------------------------------- */
+  .deck-slats-stack {
+    display: flex;
+    gap: 0.5rem;
+    align-items: stretch;
+    flex-shrink: 0;
+  }
+  @media (max-width: 900px) {
+    .deck-slats-stack {
+      display: none; /* Mobile/tablet hides peeking slats to prioritize hero card */
+    }
   }
 
-  /* INDIVIDUAL COLLAGE BOXES WITH VARYING PROMINENCE */
-  .gear-collage-box {
-    background: #090909;
-    border: 1px solid var(--line);
+  .deck-slat {
+    position: relative;
+    width: 52px;
+    background: #131313;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .deck-slat.next-1 {
+    opacity: 0.85;
+    z-index: 2;
+  }
+  .deck-slat.next-2 {
+    opacity: 0.55;
+    z-index: 1;
+  }
+  .deck-slat.hidden {
+    display: none;
+  }
+  .deck-slat:hover {
+    opacity: 1;
+    width: 68px;
+    border-color: rgba(255, 255, 255, 0.35);
+    background: #1c1c1c;
+  }
+  .peeking-spine {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    pointer-events: none;
+  }
+  .spine-text {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    color: #ffffff;
+    white-space: nowrap;
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+  .slat-peek-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.15;
+    filter: blur(1px) grayscale(100%);
+    transition: opacity 0.3s ease;
+  }
+  .deck-slat:hover .slat-peek-img {
+    opacity: 0.35;
+  }
+
+  /* --------------------------------------------------------------------------
+     PREV / NEXT NAVIGATION CONTROLS (EXPLICIT GEAR ENHANCEMENTS)
+     -------------------------------------------------------------------------- */
+  .deck-arrows-wrap {
+    position: absolute;
+    right: 1.5rem;
+    top: 1.5rem;
+    display: flex;
+    gap: 0.35rem;
+    z-index: 10;
+  }
+  .deck-nav-arrow {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(15, 15, 15, 0.85);
+    color: var(--ink, #ffffff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(4px);
+  }
+  .deck-nav-arrow:hover {
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+  }
+  .deck-nav-arrow:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
+
+  /* --------------------------------------------------------------------------
+     ZONE 2: THUMBNAIL STRIP BELOW (HQ FEATURED THUMBNAIL TRACK)
+     -------------------------------------------------------------------------- */
+  .deck-thumb-track {
+    width: 100%;
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    padding: 0.5rem 0.25rem 0.75rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .deck-thumb-track::-webkit-scrollbar {
+    display: none;
+  }
+  .deck-thumb-tile {
+    position: relative;
+    flex: 0 0 auto;
+    width: 175px;
+    background: #111111;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.6rem;
     display: flex;
     flex-direction: column;
-    position: relative;
+    gap: 0.5rem;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+    opacity: 0.55;
+    transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .deck-thumb-tile:hover {
+    opacity: 0.9;
+    background: #181818;
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+  }
+  .deck-thumb-tile.is-active {
+    opacity: 1;
+    background: #1a1a1a;
+    border-color: #ffffff;
+    box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+  }
+  .deck-thumb-tile:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+    opacity: 1;
+  }
+  .thumb-tile-img-box {
+    width: 100%;
+    height: 75px;
+    background: #080808;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     overflow: hidden;
   }
-
-  /* LENSES: HERO COLLAGE BOX (SPAN 7) - Most critical asset */
-  .box-lenses {
-    grid-column: span 7;
+  .thumb-tile-img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
   }
-
-  /* LIGHTING: STUDIO ILLUMINATION (SPAN 5) */
-  .box-lighting {
-    grid-column: span 5;
+  .thumb-tile-fallback {
+    font-size: 0.8rem;
+    color: var(--muted, #888888);
+    font-weight: 700;
   }
-
-  /* AUDIO: ACOUSTIC PIPELINE (SPAN 6) */
-  .box-audio {
-    grid-column: span 6;
-  }
-
-  /* TOOLS & RIGGING: STABILIZATION & GRIP (SPAN 6) */
-  .box-tools {
-    grid-column: span 6;
-  }
-
-  @media (max-width: 1100px) {
-    .box-lenses, .box-lighting, .box-audio, .box-tools {
-      grid-column: span 12;
-    }
-  }
-
-  /* TWO-PANEL SPLIT BODY INSIDE EACH COLLAGE BOX */
-  .gear-sub-split-body {
-    display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-    width: 100%;
-    flex: 1;
-  }
-
-  @media (max-width: 820px) {
-    .gear-sub-split-body {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .gear-sub-links-col {
-    padding: 1.25rem 1.5rem;
-    border-right: 1px solid var(--line);
+  .thumb-tile-meta {
     display: flex;
     flex-direction: column;
-    gap: 0.85rem;
+    gap: 0.2rem;
+  }
+  .thumb-tile-name {
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--ink, #ffffff);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .thumb-tile-tag {
+    font-size: 0.65rem;
+    color: var(--key-ink, #c0c0c0);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  @media (max-width: 820px) {
-    .gear-sub-links-col {
-      border-right: none;
-      border-bottom: 1px solid var(--line);
-    }
-  }
-
-  .sub-items-scroll-list {
+  /* --------------------------------------------------------------------------
+     "ALL" MULTI-COLUMN TILE GRID VIEW (FOR LENSES & SECTIONS > 6 ITEMS)
+     -------------------------------------------------------------------------- */
+  .gear-all-grid-view {
+    padding: 1.5rem 1.75rem;
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
-    padding-right: 0.25rem;
+    gap: 1.5rem;
+    background: #0a0a0a;
   }
-
-  .collage-item-row {
-    position: relative;
+  .gear-all-grid-view[hidden],
+  .gear-deck-view[hidden] {
+    display: none !important;
+  }
+  .all-grid-topbar, .all-grid-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 1rem;
-    padding: 0.85rem 1rem;
-    background: #111111;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .all-grid-footer {
+    border-bottom: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 1rem;
+    justify-content: flex-end;
+  }
+  .all-grid-tag {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    color: var(--key-ink, #c0c0c0);
+    text-transform: uppercase;
+  }
+  .all-grid-title {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--ink, #ffffff);
+    margin: 0.2rem 0 0;
+  }
+  .btn-back-carousel {
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--ink, #ffffff);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
     cursor: pointer;
     transition: all 0.2s ease;
   }
-
-  .collage-item-row:hover,
-  .collage-item-row.is-active {
-    background: #171717;
-    border-color: rgba(255, 255, 255, 0.22);
-    transform: translateX(3px);
+  .btn-back-carousel:hover {
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
   }
 
-  .collage-item-main {
-    flex: 1;
-    min-width: 0;
+  .all-grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+    width: 100%;
   }
-
-  .collage-item-header {
+  .all-grid-card {
+    background: #111111;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1.25rem;
     display: flex;
-    align-items: baseline;
-    gap: 0.6rem;
-    flex-wrap: wrap;
-    margin-bottom: 0.2rem;
+    flex-direction: column;
+    gap: 1rem;
+    transition: border-color 0.2s ease, transform 0.2s ease;
   }
-
-  .collage-item-name {
-    font-family: var(--font-display);
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--ink);
-    margin: 0;
-    line-height: 1.25;
+  .all-grid-card:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
   }
-
-  .collage-item-tag {
+  .all-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     font-size: 0.65rem;
-    color: var(--key-ink);
+  }
+  .all-card-tag {
+    color: var(--key-ink, #ffffff);
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
-
-  .collage-item-spec {
-    font-family: var(--font-mono);
-    font-size: max(0.74rem, 11px);
-    color: var(--muted);
-    line-height: 1.45;
+  .all-card-brand {
+    color: var(--muted, #888888);
+  }
+  .all-card-img-wrap {
+    width: 100%;
+    height: 140px;
+    background: #080808;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .all-card-img {
+    max-width: 85%;
+    max-height: 85%;
+    object-fit: contain;
+  }
+  .all-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    flex: 1;
+    justify-content: space-between;
+  }
+  .all-card-name {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--ink, #ffffff);
     margin: 0;
   }
+  .all-card-spec {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--muted, #a0a0a0);
+    line-height: 1.5;
+    margin: 0;
+  }
+  .all-card-cta {
+    align-self: flex-start;
+    margin-top: 0.5rem;
+  }
+  .btn-amazon-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: var(--btn-h-sm, 36px);
+    padding: 0.4rem 0.85rem;
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--ink, #ffffff);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+  .btn-amazon-link:hover {
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+  }
 
-  .collage-item-row:hover .collage-item-spec {
-    color: #ddd;
+  /* Responsive Adjustments */
+  @media (max-width: 640px) {
+    .gear-accordion-header {
+      padding: 1rem 1rem;
+      gap: 1rem;
+    }
+    .gear-deck-view {
+      padding: 1rem 0.85rem;
+    }
+    .gear-hero-spec-card {
+      padding: 1.25rem 1rem;
+    }
+    .product-visual-stage {
+      padding: 0.75rem;
+      min-height: 170px;
+    }
+    .product-visual-img {
+      max-height: 180px;
+    }
+    .deck-arrows-wrap {
+      right: 0.85rem;
+      top: 0.85rem;
+    }
+    .influencer-pill {
+      font-size: 0.65rem;
+      padding: 0.35rem 0.65rem;
+    }
   }
 </style>
 
 <script>
   (() => {
-    // 1. HERO CAMERA BOX INTERACTIVE PREVIEW
-    const heroBox = document.getElementById('gear-bodies');
-    if (heroBox) {
-      const cameraRows = Array.from(heroBox.querySelectorAll<HTMLElement>('.camera-item-row'));
-      const previewTag = document.getElementById('preview-camera-tag');
-      const previewBrand = document.getElementById('preview-camera-brand');
-      const previewTitle = document.getElementById('preview-camera-title');
-      const previewDesc = document.getElementById('preview-camera-desc');
-      const previewBtn = document.getElementById('preview-camera-btn') as HTMLAnchorElement | null;
-      const schematicView = document.getElementById('schematic-view');
+    function initGearAccordionsAndDecks() {
+      const container = document.getElementById('gear-accordion-container');
+      if (!container || container.dataset.gearWired === '1') return;
+      container.dataset.gearWired = '1';
 
-      const selectCamera = (row: HTMLElement) => {
-        cameraRows.forEach(r => {
-          r.classList.remove('is-active');
-          r.setAttribute('aria-pressed', 'false');
+      const sections = Array.from(container.querySelectorAll<HTMLElement>('.gear-accordion-section'));
+
+      // 1. ACCORDION GROUP EXPANSION (ONE GROUP OPEN AT A TIME)
+      sections.forEach(section => {
+        const toggleEls = [
+          section.querySelector<HTMLElement>('.gear-accordion-header'),
+          section.querySelector<HTMLElement>('.accordion-chevron-btn'),
+        ].filter(Boolean);
+
+        const expandThisSection = () => {
+          sections.forEach(s => {
+            const isMatch = s === section;
+            s.classList.toggle('is-expanded', isMatch);
+            s.classList.toggle('is-collapsed', !isMatch);
+            s.querySelector('.gear-accordion-header')?.setAttribute('aria-expanded', String(isMatch));
+            s.querySelector('.accordion-chevron-btn')?.setAttribute('aria-expanded', String(isMatch));
+          });
+        };
+
+        toggleEls.forEach(el => {
+          el?.addEventListener('click', () => {
+            if (section.classList.contains('is-expanded')) return;
+            expandThisSection();
+          });
         });
-        row.classList.add('is-active');
-        row.setAttribute('aria-pressed', 'true');
+      });
 
-        const name = row.dataset.itemName || '';
-        const brand = row.dataset.itemBrand || 'Sony';
-        const spec = row.dataset.itemSpec || '';
-        const tag = row.dataset.itemTag || 'Primary Body';
-        const url = row.dataset.itemUrl || 'https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh';
-        const image = row.dataset.itemImage || '';
-        const imageAlt = row.dataset.itemImageAlt || name;
+      // 2. PER-SECTION DECK CAROUSEL LOGIC (HERO SPEC CARD + SLATS + THUMBS + ARROWS + SWIPE)
+      sections.forEach(section => {
+        const catKey = section.dataset.category || '';
+        const tiles = Array.from(section.querySelectorAll<HTMLElement>('.deck-thumb-tile'));
+        const slats = Array.from(section.querySelectorAll<HTMLElement>('.deck-slat'));
+        const prevBtn = section.querySelector<HTMLButtonElement>(`[data-deck-prev="${catKey}"]`);
+        const nextBtn = section.querySelector<HTMLButtonElement>(`[data-deck-next="${catKey}"]`);
+        const counterEl = section.querySelector<HTMLElement>(`[data-card-counter="${catKey}"]`);
+        const allToggleBtn = section.querySelector<HTMLButtonElement>(`[data-all-toggle="${catKey}"]`);
+        const backCarouselBtns = Array.from(section.querySelectorAll<HTMLButtonElement>(`[data-back-carousel="${catKey}"]`));
+        const deckView = section.querySelector<HTMLElement>(`[data-deck-container="${catKey}"]`);
+        const allView = section.querySelector<HTMLElement>(`[data-all-view="${catKey}"]`);
 
-        if (previewTag) previewTag.textContent = tag;
-        if (previewBrand) previewBrand.textContent = brand.toUpperCase() + ' // WORKHORSE';
-        if (previewTitle) previewTitle.textContent = name;
-        if (previewDesc) previewDesc.textContent = spec;
-        if (previewBtn) {
-          previewBtn.href = url;
-          const btnText = previewBtn.querySelector('.amz-btn-text');
-          if (btnText) {
-            btnText.textContent = row.dataset.hasProductUrl === 'true' ? `View ${name} on Amazon` : 'Visit the storefront';
+        const isBodies = catKey === 'bodies';
+        const imgEl = section.querySelector<HTMLImageElement>(`#${isBodies ? 'preview-camera-img' : `img-gear-${catKey}`}`);
+        const ctaEl = section.querySelector<HTMLAnchorElement>(`#${isBodies ? 'preview-camera-btn' : `cta-gear-${catKey}`}`);
+        const brandEl = section.querySelector<HTMLElement>(`#${isBodies ? 'preview-camera-brand' : `brand-gear-${catKey}`}`);
+        const titleEl = section.querySelector<HTMLElement>(`#${isBodies ? 'preview-camera-title' : `title-gear-${catKey}`}`);
+        const descEl = section.querySelector<HTMLElement>(`#${isBodies ? 'preview-camera-desc' : `desc-gear-${catKey}`}`);
+        const tagEl = section.querySelector<HTMLElement>(`#${isBodies ? 'preview-camera-tag' : `tag-gear-${catKey}`}`);
+        const schematicEl = section.querySelector<HTMLElement>(`#schematic-gear-${catKey}`);
+
+        let activeIndex = 0;
+        const totalItems = tiles.length;
+
+        function renderActiveCard(index: number, smoothScroll = true) {
+          activeIndex = (index + totalItems) % totalItems;
+          const currentTile = tiles[activeIndex];
+          if (!currentTile) return;
+
+          // Update tiles
+          tiles.forEach((t, i) => {
+            const isActive = i === activeIndex;
+            t.classList.toggle('is-active', isActive);
+            t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+          });
+
+          // Scroll active thumbnail smoothly into view
+          if (smoothScroll) {
+            currentTile.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
           }
-        }
 
-        const imgEl = document.getElementById('preview-camera-img') as HTMLImageElement | null;
-        if (image && imgEl) {
-          imgEl.src = image;
-          imgEl.alt = '';
-          imgEl.hidden = false;
-          if (schematicView) schematicView.hidden = true;
-        } else {
-          if (imgEl) imgEl.hidden = true;
-          if (schematicView) {
-            schematicView.hidden = false;
-            if (name.includes('iPhone')) {
-              schematicView.innerHTML = `
-                <svg class="camera-schematic" viewBox="0 0 260 180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-                  <rect x="75" y="15" width="110" height="150" rx="18" fill="#151515" stroke="#3a3a3a" stroke-width="2.5"/>
-                  <rect x="85" y="25" width="55" height="55" rx="14" fill="#1e1e1e" stroke="#444" stroke-width="1.5"/>
-                  <circle cx="102" cy="42" r="11" fill="#0d0d0d" stroke="#555" stroke-width="2"/>
-                  <circle cx="102" cy="42" r="6" fill="#2a2a2a" stroke="#a2a2a2" stroke-width="1"/>
-                  <circle cx="123" cy="58" r="11" fill="#0d0d0d" stroke="#555" stroke-width="2"/>
-                  <circle cx="123" cy="58" r="6" fill="#2a2a2a" stroke="#a2a2a2" stroke-width="1"/>
-                  <circle cx="102" cy="66" r="8" fill="#0d0d0d" stroke="#555" stroke-width="1.5"/>
-                  <path d="M130 110c-3 0-5.5 2-8 2s-5-2-8-2c-4 0-8 3-10 8 0 7 6 15 10 15 3 0 4-2 8-2s5 2 8 2c4 0 9-7 10-13-5-2-7-7-7-10 0-4 3-7 7-9-3-4-8-5-10-5zm-3-4c2-3 2-6 1-8-2 0-5 2-7 4 0 2 0 6 1 8 2 0 4-2 5-4z" fill="#333"/>
-                  <text x="130" y="172" fill="#777" font-family="'JetBrains Mono', monospace" font-size="8" text-anchor="middle" font-weight="bold">APPLE // PRORES LOG 4K</text>
-                </svg>
-              `;
-            } else {
-              schematicView.innerHTML = `
-                <svg class="camera-schematic" viewBox="0 0 260 180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-                  <rect x="20" y="45" width="220" height="120" rx="3" fill="#141414" stroke="#333" stroke-width="2"/>
-                  <rect x="70" y="25" width="60" height="22" rx="2" fill="#1e1e1e" stroke="#444" stroke-width="1.5"/>
-                  <circle cx="100" cy="35" r="4" fill="#696969"/>
-                  <circle cx="130" cy="105" r="48" fill="#0d0d0d" stroke="#555" stroke-width="2"/>
-                  <circle cx="130" cy="105" r="38" fill="#181818" stroke="#909090" stroke-width="1.5"/>
-                  <rect x="110" y="88" width="40" height="34" rx="2" fill="#222222" stroke="#a2a2a2" stroke-width="1"/>
-                  <rect x="25" y="45" width="42" height="120" fill="#1a1a1a" stroke="#2a2a2a" stroke-width="1"/>
-                  <line x1="28" y1="65" x2="62" y2="65" stroke="#333" stroke-width="1"/>
-                  <line x1="28" y1="85" x2="62" y2="85" stroke="#333" stroke-width="1"/>
-                  <line x1="28" y1="105" x2="62" y2="105" stroke="#333" stroke-width="1"/>
-                  <rect x="195" y="32" width="24" height="14" rx="2" fill="#222" stroke="#555" stroke-width="1"/>
-                  <rect x="165" y="36" width="20" height="10" rx="2" fill="#222" stroke="#555" stroke-width="1"/>
-                  <text x="130" y="16" fill="#888" font-family="'JetBrains Mono', monospace" font-size="9" text-anchor="middle" font-weight="bold">SONY ALPHA // SYSTEM</text>
-                </svg>
-              `;
+          // Update Counter
+          if (counterEl) {
+            counterEl.textContent = `0${activeIndex + 1} / 0${totalItems}`;
+          }
+
+          // Read data attributes
+          const name = currentTile.dataset.itemName || '';
+          const brand = currentTile.dataset.itemBrand || 'Sony';
+          const spec = currentTile.dataset.itemSpec || '';
+          const tag = currentTile.dataset.itemTag || 'Production Spec';
+          const url = currentTile.dataset.itemUrl || 'https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh';
+          const hasProductUrl = currentTile.dataset.hasProductUrl === 'true';
+          const image = currentTile.dataset.itemImage || '';
+
+          // Update Hero Spec Card
+          if (titleEl) titleEl.textContent = name;
+          if (brandEl) brandEl.textContent = `${brand.toUpperCase()} // KIT`;
+          if (descEl) descEl.textContent = spec;
+          if (tagEl) tagEl.textContent = tag;
+
+          if (ctaEl) {
+            ctaEl.href = url;
+            const btnText = ctaEl.querySelector('.amz-btn-text');
+            if (btnText) {
+              btnText.textContent = hasProductUrl ? `View ${name} on Amazon` : 'Visit the storefront';
             }
           }
-        }
-      };
 
-      cameraRows.forEach(row => {
-        row.addEventListener('click', () => selectCamera(row));
-        row.addEventListener('mouseenter', () => selectCamera(row));
-        row.addEventListener('keydown', (e: KeyboardEvent) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            selectCamera(row);
+          // Image update
+          if (imgEl) {
+            if (image) {
+              imgEl.src = image;
+              imgEl.alt = '';
+              imgEl.hidden = false;
+              if (schematicEl) schematicEl.hidden = true;
+            } else {
+              imgEl.hidden = true;
+              if (schematicEl) schematicEl.hidden = false;
+            }
           }
-        });
-      });
-    }
 
-    // 2. SUB COLLAGE BOXES INTERACTIVE PREVIEWS (LENSES, LIGHTING, AUDIO, TOOLS)
-    const collageBoxes = Array.from(document.querySelectorAll<HTMLElement>('.gear-collage-box'));
-    collageBoxes.forEach(box => {
-      const slug = box.dataset.categorySlug || '';
-      const items = Array.from(box.querySelectorAll<HTMLElement>('.collage-item-row'));
-      const activeTag = document.getElementById(`tag-${slug}`);
-      const activeBrand = document.getElementById(`brand-${slug}`);
-      const activeTitle = document.getElementById(`title-${slug}`);
-      const activeDesc = document.getElementById(`desc-${slug}`);
-      const activeCta = document.getElementById(`cta-${slug}`) as HTMLAnchorElement | null;
+          // Update Peeking Slats (slat 1 = next item, slat 2 = 2nd next item)
+          const next1Idx = (activeIndex + 1) % totalItems;
+          const next2Idx = (activeIndex + 2) % totalItems;
 
-      const selectItem = (row: HTMLElement) => {
-        items.forEach(it => {
-          it.classList.remove('is-active');
-          it.setAttribute('aria-pressed', 'false');
-        });
-        row.classList.add('is-active');
-        row.setAttribute('aria-pressed', 'true');
-
-        const name = row.dataset.itemName || '';
-        const brand = row.dataset.itemBrand || 'Curated Kit';
-        const spec = row.dataset.itemSpec || '';
-        const tag = row.dataset.itemTag || 'Production Spec';
-        const url = row.dataset.itemUrl || 'https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh';
-        const image = row.dataset.itemImage || '';
-        const imageAlt = row.dataset.itemImageAlt || name;
-
-        if (activeTag) activeTag.textContent = tag;
-        if (activeBrand) activeBrand.textContent = brand.toUpperCase() + ' // KIT';
-        if (activeTitle) activeTitle.textContent = name;
-        if (activeDesc) activeDesc.textContent = spec;
-        if (activeCta) {
-          activeCta.href = url;
-          const btnText = activeCta.querySelector('.amz-btn-text');
-          if (btnText) {
-            btnText.textContent = row.dataset.hasProductUrl === 'true' ? `View ${name} on Amazon` : 'Visit the storefront';
-          }
+          slats.forEach((slat, idx) => {
+            slat.className = 'deck-slat';
+            if (idx === next1Idx) {
+              slat.classList.add('next-1');
+            } else if (idx === next2Idx) {
+              slat.classList.add('next-2');
+            } else {
+              slat.classList.add('hidden');
+            }
+          });
         }
 
-        const subImg = document.getElementById(`img-${slug}`) as HTMLImageElement | null;
-        const subSchematic = document.getElementById(`schematic-${slug}`);
-        if (image && subImg) {
-          subImg.src = image;
-          subImg.alt = '';
-          subImg.hidden = false;
-          if (subSchematic) subSchematic.hidden = true;
-        } else {
-          if (subImg) subImg.hidden = true;
-          if (subSchematic) subSchematic.hidden = false;
-        }
-      };
-
-      items.forEach(row => {
-        row.addEventListener('click', () => selectItem(row));
-        row.addEventListener('mouseenter', () => selectItem(row));
-        row.addEventListener('keydown', (e: KeyboardEvent) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            selectItem(row);
-          }
+        // Thumbnail Tile Click & Keydown
+        tiles.forEach((tile, idx) => {
+          tile.addEventListener('click', () => {
+            renderActiveCard(idx);
+          });
+          tile.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'ArrowRight') {
+              e.preventDefault();
+              renderActiveCard(activeIndex + 1);
+            } else if (e.key === 'ArrowLeft') {
+              e.preventDefault();
+              renderActiveCard(activeIndex - 1);
+            }
+          });
         });
-      });
-    });
 
-    // 3. INSTANT SEARCH & CATEGORY FILTER
-    const searchInput = document.getElementById('gear-search-input') as HTMLInputElement | null;
-    const clearBtn = document.getElementById('gear-search-clear') as HTMLButtonElement | null;
-    const chips = Array.from(document.querySelectorAll<HTMLButtonElement>('.gear-chip'));
-    const emptyState = document.getElementById('gear-empty-state');
-    const resetBtn = document.getElementById('gear-reset-btn');
+        // Slats Click
+        slats.forEach((slat, idx) => {
+          slat.addEventListener('click', () => {
+            renderActiveCard(idx);
+          });
+        });
 
-    let activeCategory = 'all';
-    let searchQuery = '';
+        // Prev & Next Buttons
+        prevBtn?.addEventListener('click', () => renderActiveCard(activeIndex - 1));
+        nextBtn?.addEventListener('click', () => renderActiveCard(activeIndex + 1));
 
-    function applyFilter() {
-      let totalVisible = 0;
-      const allBoxes = Array.from(document.querySelectorAll<HTMLElement>('.gear-hero-box, .gear-collage-box'));
+        // Touch Swipe Gestures
+        const deckStage = section.querySelector<HTMLElement>(`[data-deck-stage="${catKey}"]`);
+        if (deckStage) {
+          let touchStartX = 0;
+          deckStage.addEventListener('touchstart', (e: TouchEvent) => {
+            touchStartX = e.changedTouches[0].screenX;
+          }, { passive: true });
 
-      allBoxes.forEach((box) => {
-        const catSlug = box.id.replace('gear-', '');
-        const matchesCategory = activeCategory === 'all' || 
-          catSlug === activeCategory || 
-          (activeCategory === 'support' && catSlug === 'tools') ||
-          (activeCategory === 'tools' && catSlug === 'tools');
-
-        if (!matchesCategory) {
-          box.hidden = true;
-          return;
+          deckStage.addEventListener('touchend', (e: TouchEvent) => {
+            const diff = touchStartX - e.changedTouches[0].screenX;
+            if (Math.abs(diff) > 40) {
+              if (diff > 0) renderActiveCard(activeIndex + 1);
+              else renderActiveCard(activeIndex - 1);
+            }
+          }, { passive: true });
         }
 
-        const items = Array.from(box.querySelectorAll<HTMLElement>('.camera-item-row, .collage-item-row'));
-        let visibleItemsInBox = 0;
-
-        items.forEach((item) => {
-          const text = (item.textContent || '').toLowerCase();
-          const matchesSearch = !searchQuery || text.includes(searchQuery);
-          if (matchesSearch) {
-            item.style.display = '';
-            visibleItemsInBox++;
+        // "All" View Toggle
+        const toggleAllView = (showAll: boolean) => {
+          if (!allView || !deckView) return;
+          if (showAll) {
+            deckView.hidden = true;
+            allView.hidden = false;
+            if (allToggleBtn) {
+              allToggleBtn.setAttribute('aria-expanded', 'true');
+              const label = allToggleBtn.querySelector('.all-toggle-label');
+              const icon = allToggleBtn.querySelector('.all-toggle-icon');
+              if (label) label.textContent = 'Carousel View';
+              if (icon) icon.textContent = '⊟';
+            }
           } else {
-            item.style.display = 'none';
+            allView.hidden = true;
+            deckView.hidden = false;
+            if (allToggleBtn) {
+              allToggleBtn.setAttribute('aria-expanded', 'false');
+              const label = allToggleBtn.querySelector('.all-toggle-label');
+              const icon = allToggleBtn.querySelector('.all-toggle-icon');
+              if (label) label.textContent = `Show All (${totalItems})`;
+              if (icon) icon.textContent = '⊞';
+            }
+          }
+        };
+
+        allToggleBtn?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isCurrentlyAll = !allView?.hidden;
+          toggleAllView(!isCurrentlyAll);
+        });
+
+        backCarouselBtns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            toggleAllView(false);
+          });
+        });
+      });
+
+      // 3. SEARCH & CATEGORY CHIPS FILTERING
+      const searchInput = document.getElementById('gear-search-input') as HTMLInputElement | null;
+      const clearBtn = document.getElementById('gear-search-clear') as HTMLButtonElement | null;
+      const chips = Array.from(document.querySelectorAll<HTMLButtonElement>('.gear-chip'));
+      const emptyState = document.getElementById('gear-empty-state');
+      const resetBtn = document.getElementById('gear-reset-btn');
+
+      let activeCategory = 'all';
+      let searchQuery = '';
+
+      function applyFilter() {
+        let totalVisible = 0;
+
+        sections.forEach(section => {
+          const catKey = section.dataset.category || '';
+          const matchesCategory = activeCategory === 'all' || 
+            catKey === activeCategory || 
+            (activeCategory === 'support' && catKey === 'tools');
+
+          if (!matchesCategory) {
+            section.hidden = true;
+            return;
+          }
+
+          const tiles = Array.from(section.querySelectorAll<HTMLElement>('.deck-thumb-tile'));
+          let visibleTiles = 0;
+
+          tiles.forEach(tile => {
+            const text = (tile.textContent || '').toLowerCase();
+            const matchesSearch = !searchQuery || text.includes(searchQuery);
+            if (matchesSearch) {
+              tile.style.display = '';
+              visibleTiles++;
+            } else {
+              tile.style.display = 'none';
+            }
+          });
+
+          if (visibleTiles > 0) {
+            section.hidden = false;
+            totalVisible += visibleTiles;
+          } else {
+            section.hidden = true;
           }
         });
 
-        if (visibleItemsInBox > 0) {
-          box.hidden = false;
-          totalVisible += visibleItemsInBox;
-        } else {
-          box.hidden = true;
+        if (emptyState) emptyState.hidden = totalVisible > 0;
+        if (clearBtn) clearBtn.hidden = !searchQuery;
+
+        // Auto-expand the first visible section
+        const firstVisible = sections.find(s => !s.hidden);
+        if (firstVisible) {
+          sections.forEach(s => {
+            const isMatch = s === firstVisible;
+            s.classList.toggle('is-expanded', isMatch);
+            s.classList.toggle('is-collapsed', !isMatch);
+            s.querySelector('.gear-accordion-header')?.setAttribute('aria-expanded', String(isMatch));
+          });
         }
+      }
+
+      chips.forEach(chip => {
+        chip.addEventListener('click', () => {
+          chips.forEach(c => {
+            c.classList.remove('active');
+            c.setAttribute('aria-selected', 'false');
+          });
+          chip.classList.add('active');
+          chip.setAttribute('aria-selected', 'true');
+          activeCategory = chip.dataset.cat || 'all';
+          applyFilter();
+        });
       });
 
-      if (emptyState) {
-        emptyState.hidden = totalVisible > 0;
-      }
-      if (clearBtn) {
-        clearBtn.hidden = !searchQuery;
-      }
-      // A tab switch shows boxes that were hidden: reveal them now, never
-      // leave them at the reveal pre-state (audit defect 7).
-      document.dispatchEvent(new CustomEvent('reveal:force', { detail: document.getElementById('gear-monolith') }));
-    }
-
-    chips.forEach((chip) => {
-      chip.addEventListener('click', () => {
-        chips.forEach((c) => {
-          c.classList.remove('active');
-          c.setAttribute('aria-selected', 'false');
-        });
-        chip.classList.add('active');
-        chip.setAttribute('aria-selected', 'true');
-        activeCategory = chip.dataset.cat || 'all';
+      searchInput?.addEventListener('input', () => {
+        searchQuery = (searchInput.value || '').trim().toLowerCase();
         applyFilter();
       });
-    });
 
-    searchInput?.addEventListener('input', () => {
-      searchQuery = (searchInput.value || '').trim().toLowerCase();
-      applyFilter();
-    });
-
-    clearBtn?.addEventListener('click', () => {
-      if (searchInput) searchInput.value = '';
-      searchQuery = '';
-      applyFilter();
-      searchInput?.focus();
-    });
-
-    resetBtn?.addEventListener('click', () => {
-      if (searchInput) searchInput.value = '';
-      searchQuery = '';
-      activeCategory = 'all';
-      chips.forEach((c) => {
-        c.classList.toggle('active', c.dataset.cat === 'all');
-        c.setAttribute('aria-selected', c.dataset.cat === 'all' ? 'true' : 'false');
+      clearBtn?.addEventListener('click', () => {
+        if (searchInput) searchInput.value = '';
+        searchQuery = '';
+        applyFilter();
+        searchInput?.focus();
       });
-      applyFilter();
-    });
+
+      resetBtn?.addEventListener('click', () => {
+        if (searchInput) searchInput.value = '';
+        searchQuery = '';
+        activeCategory = 'all';
+        chips.forEach(c => {
+          c.classList.toggle('active', c.dataset.cat === 'all');
+          c.setAttribute('aria-selected', c.dataset.cat === 'all' ? 'true' : 'false');
+        });
+        applyFilter();
+      });
+    }
+
+    initGearAccordionsAndDecks();
+    document.addEventListener('astro:page-load', initGearAccordionsAndDecks);
   })();
 </script>
