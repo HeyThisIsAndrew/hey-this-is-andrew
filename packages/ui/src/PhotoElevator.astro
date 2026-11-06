@@ -36,8 +36,8 @@ interface DisplayPhoto {
 export interface Props {
   photos: DisplayPhoto[];
   emptyText?: string;
-  /** Where the credit line's "More about the work" goes. The homepage
-      passes "#about" (its own section); elsewhere it is the About page. */
+  /** Where the credit line's name links. The homepage passes "#about"
+      (its own section); elsewhere it is the About page. */
   aboutHref?: string;
 }
 
@@ -60,7 +60,9 @@ const directions = ['up', 'down', 'up', 'down'];
 const durations = [58, 74, 66, 82];
 // The note links to the About page (this section also renders on /work,
 // where there is no #about).
-const aboutUrl = aboutHref ?? `${import.meta.env.BASE_URL.replace(/\/$/, '')}/about/`;
+const siteBase = import.meta.env.BASE_URL.replace(/\/$/, '');
+const aboutUrl = aboutHref ?? `${siteBase}/about/`;
+const cccUrl = `${siteBase}/ccc/`;
 // Each reel renders its photos twice: the CSS/WAAPI loop translates the
 // track by -50%, which is seamless only over two identical sets. The copy
 // is aria-hidden and out of the tab order.
@@ -194,7 +196,8 @@ const SETS = [0, 1];
   </div>
 
   <p class="photo-note">
-    Photographs by Andrew Baxter. Shot for Capture Create Caffeinate. <a href={aboutUrl}>More about the work</a>.
+    Shot for <a href={cccUrl}>Capture Create Caffeinate</a>.<br />
+    Photographs by <a href={aboutUrl}>Andrew Baxter</a>.
   </p>
 </section>
 
@@ -427,16 +430,16 @@ const SETS = [0, 1];
   /* Mobile: two columns, shorter reels — the concept adapts, not hidden. */
   @media (max-width: 767px) {
     .photo-note {
-      margin-top: 0.75rem;
+      /* The links' 44px rows already leave ~14px above the first line. */
+      margin-top: 0;
     }
-    /* The link gets a full tap height on a phone. */
+    /* Each line holds one link, and on a phone each link gets a full 44px
+       tap height. The lines are a tap apart so the two never overlap (a
+       negative-margin squeeze put one link's tap area over the other's). */
     .photo-note a {
       display: inline-flex;
       align-items: center;
       min-height: 44px;
-      /* The box is 44 tall; the negative margin keeps it from spreading
-         the caption's lines apart. */
-      margin: -13px 0;
       vertical-align: middle;
     }
     .photo-wall {
