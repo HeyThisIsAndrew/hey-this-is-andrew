@@ -41,7 +41,11 @@ export const NAV_LINKS: NavItem[] = [
   },
 ];
 
-export const FOOTER_EXPLORE: FooterLink[] = NAV_LINKS.map(({ label, href }) => ({ label, href }));
+export const FOOTER_EXPLORE: FooterLink[] = [
+  ...NAV_LINKS.map(({ label, href }) => ({ label, href })),
+  // The link-in-bio page: reachable from the site, not only from bios.
+  { label: 'Links', href: page('links') },
+];
 
 export const FOOTER_UTILITY: FooterLink[] = [{ label: 'Sitemap', href: page('sitemap') }];
 

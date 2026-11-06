@@ -1,3 +1,4 @@
+import { formatFeedDate } from './dates';
 // Build-time fetchers for the "Recent work" section.
 // Both sources are keyless: the YouTube channel RSS feed and the
 // public Substack archive API. Anything that fails returns null, so a
@@ -56,8 +57,7 @@ function unwrapSubstackImage(url: string | null): string | null {
   return url;
 }
 
-const fmtDate = (d: Date) =>
-  d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+const fmtDate = (d: Date) => formatFeedDate(d, { month: 'short', year: 'numeric' });
 
 export async function getLatestVideo(): Promise<LatestItem | null> {
   const vids = await getLatestVideos(1);

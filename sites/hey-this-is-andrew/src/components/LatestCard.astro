@@ -1,9 +1,10 @@
 ---
 import type { LatestItem } from '../lib/latest-content';
+import { formatFeedDate } from '../lib/dates';
 
 interface Props { item: LatestItem }
 const { item } = Astro.props;
-const date = new Date(item.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+const date = formatFeedDate(item.date, { month: 'short', year: 'numeric' });
 const cta = item.kind === 'video' ? 'Watch the video' : 'Read on Substack';
 // Videos open the in-page player with a spatial zoom from the card.
 // Articles still open externally.
@@ -24,7 +25,7 @@ const isVideo = item.kind === 'video';
   )}
   {item.image && (
     <div class="ambient-glow-wrapper thumb">
-      <img class="cinematic-img" src={item.image} alt="" loading="lazy" referrerpolicy="no-referrer" />
+      <img class="cinematic-img" src={item.image} alt={`${isVideo ? 'Thumbnail' : 'Cover'} for ${item.title}`} loading="lazy" referrerpolicy="no-referrer" />
     </div>
   )}
   <div class="latest-meta">

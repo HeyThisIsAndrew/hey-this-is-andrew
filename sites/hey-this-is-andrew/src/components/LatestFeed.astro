@@ -1,4 +1,5 @@
 ---
+import { formatFeedDate } from '../lib/dates';
 /**
  * LatestFeed: the merged "Latest" list (was "Notes from the Build" +
  * "Activity across the brands"). Videos, writing (Substack and BE Unconventional
@@ -25,11 +26,8 @@ const NEW_HOURS = 24 * 7;
 const kindOf = (item: NetworkItem) =>
   item.kind === 'video' ? 'video' : item.kind === 'project' ? 'project' : 'writing';
 
-const fmtDate = (iso: string) => {
-  const d = new Date(iso);
-  if (Number.isNaN(+d)) return '';
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-};
+// Pacific time, as the publishers show it (src/lib/dates.ts).
+const fmtDate = (iso: string) => formatFeedDate(iso, { month: 'short', day: 'numeric', year: 'numeric' });
 ---
 {items.length > 0 ? (
   <ol class="network-list" id={id}>

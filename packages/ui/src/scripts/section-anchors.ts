@@ -74,7 +74,7 @@ export function initSectionAnchors(): void {
     anchor.dataset.targetId = targetId;
     anchor.innerHTML = `
       <span class="anchor-symbol" aria-hidden="true">#</span>
-      <span class="anchor-toast" aria-hidden="true">COPIED</span>
+      <span class="anchor-toast" aria-hidden="true"></span>
     `;
 
     // 4. Mount anchor link inside inner title or append to header
