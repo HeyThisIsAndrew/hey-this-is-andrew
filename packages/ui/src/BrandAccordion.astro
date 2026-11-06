@@ -76,6 +76,8 @@ const labels: AccordionLabels = {
 };
 const OPEN_SIZES = '(max-width: 767px) 100vw, calc(100vw - 2 * 180px)';
 /* A link on this site (a path) stays in the tab; another site opens a new one. */
+const inquiryHref = (q: { email: string; subject: string; body?: string }) =>
+  `mailto:${q.email}?subject=${encodeURIComponent(q.subject)}${q.body ? `&body=${encodeURIComponent(q.body)}` : ''}`;
 const linkAttrs = (href?: string) =>
   href && /^https?:\/\//.test(href) ? { target: '_blank', rel: 'noopener' } : {};
 ---
@@ -216,7 +218,7 @@ const linkAttrs = (href?: string) =>
                     /* One row of small buttons: the CTA first, then the
                        brand's other doors. Stacks on phones. */
                     <div class="bacc-actions">
-                      <a class="bacc-cta bacc-cta--sm" href={brand.url} {...linkAttrs(brand.url)}>
+                      <a class="bacc-cta bacc-cta--sm" href={brand.url} aria-label={`${brand.cta}, ${brand.name}`} {...linkAttrs(brand.url)}>
                         {brand.cta}
                         <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                           <path d="M2 12L12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
@@ -226,6 +228,7 @@ const linkAttrs = (href?: string) =>
                         <a
                           class="bacc-cta bacc-cta--sm bacc-cta--extra"
                           href={l.href}
+                          aria-label={`${l.label}, ${brand.name}`}
                           download={l.download ? '' : undefined}
                           target={l.external ? '_blank' : undefined}
                           rel={l.external ? 'noopener' : undefined}
@@ -240,10 +243,19 @@ const linkAttrs = (href?: string) =>
                           </svg>
                         </a>
                       ))}
+                      {brand.inquiry && (
+                        /* In the row, the inquiry is a button like the rest. */
+                        <a class="bacc-cta bacc-cta--sm bacc-cta--extra" href={inquiryHref(brand.inquiry)} aria-label={`${brand.inquiry.label}, ${brand.name}`}>
+                          {brand.inquiry.label}
+                          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                            <path d="M1 7h11M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
+                          </svg>
+                        </a>
+                      )}
                     </div>
                   )}
-                  {brand.inquiry && (
-                    <a class="bacc-inquiry" href={`mailto:${brand.inquiry.email}?subject=${encodeURIComponent(brand.inquiry.subject)}${brand.inquiry.body ? `&body=${encodeURIComponent(brand.inquiry.body)}` : ''}`}>
+                  {brand.inquiry && !(hasCta && extraLinks.length > 0) && (
+                    <a class="bacc-inquiry" href={inquiryHref(brand.inquiry)}>
                       {brand.inquiry.label} <span aria-hidden="true">→</span>
                     </a>
                   )}
@@ -729,15 +741,22 @@ const linkAttrs = (href?: string) =>
   }
   /* A row of CTAs (a brand with more than one door): the same button at
      the standard's small size, side by side. */
+  /* Every brand button on the site is the same size: one fixed width (in
+     em of the button's own type, so it scales with it) that fits the
+     longest label, and the same height. A row too narrow for all of them
+     wraps whole buttons, never shrinks one. */
   .bacc-actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
+    --bacc-btn-w: 18.5em;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, var(--bacc-btn-w));
     gap: calc(10 * var(--ui-u));
+    width: 100%;
     margin-top: calc(17.92 * var(--u));
+    font-size: var(--btn-fs-sm);
   }
   .bacc-actions .bacc-cta {
     margin-top: 0;
+    justify-content: center;
   }
   .bacc-cta--sm {
     gap: 0.5rem;
@@ -1446,9 +1465,8 @@ const linkAttrs = (href?: string) =>
     }
     /* Phones: the button row stacks, each button full tap height. */
     .bacc-viewport.is-fill .bacc-caption .bacc-actions {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
+      display: grid;
+      grid-template-columns: min(var(--bacc-btn-w), 100%);
       gap: 0.6rem;
       margin-top: 1.1rem;
     }

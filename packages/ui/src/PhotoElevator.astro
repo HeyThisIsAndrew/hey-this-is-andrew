@@ -181,16 +181,12 @@ const SETS = [0, 1];
   {/* The in-place player. A video tile zooms into the elevator view like
       a photo; only there, from the dock's Play button or a second tap on
       the zoomed tile, does it play, laid exactly over the zoomed tile.
-      Self-hosted file first (data-video-src, downloaded by the deploy's
-      Instagram sync); the Instagram embed only when there is no file. The
-      dock's "Watch on Instagram" link is always there as the way out. */}
+      Only a self-hosted file plays here (data-video-src, downloaded by the
+      deploy's Instagram sync or dropped in public/reels/<id>.mp4). A reel
+      without one has no Play button: Instagram's embed refuses those, so the
+      dock's "Watch on Instagram" link is the way to it. */}
   <div class="photo-player" data-photo-player hidden>
-    <button type="button" class="photo-player-close" data-photo-player-close aria-label="Stop video">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
-        <line x1="18" y1="6" x2="6" y2="18"></line>
-        <line x1="6" y1="6" x2="18" y2="18"></line>
-      </svg>
-    </button>
+    <button type="button" class="photo-player-close" data-photo-player-close aria-label="Stop video">&times;</button>
     <div class="photo-player-media" data-photo-player-media></div>
   </div>
 
@@ -750,26 +746,47 @@ const SETS = [0, 1];
   :global(.photo-player-media video) {
     object-fit: contain;
   }
+  /* The HQ modal close (BE Unconventional HQ .modal-close / .close-btn): a
+     bare white x floating above the player's top right corner, rotating a
+     quarter turn on hover. White on hover too: this site has no HQ red.
+     placePlayer() keeps room above the player so the nav never covers it. */
   :global(.photo-player-close) {
     position: absolute;
-    top: -14px;
-    right: -14px;
+    top: -46px;
+    right: -4px;
     z-index: 2;
-    width: 36px;
-    height: 36px;
-    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    background: #fff;
-    color: #000;
+    padding: 0;
+    appearance: none;
+    background: transparent;
     border: none;
+    border-radius: 0;
+    box-shadow: none;
+    color: #ffffff;
+    font-size: 2.5rem;
+    line-height: 1;
     cursor: pointer;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  :global(.photo-player-close:hover) {
+    transform: rotate(90deg);
+  }
+  :global(.photo-player-close:focus) {
+    outline: none;
   }
   :global(.photo-player-close:focus-visible) {
     outline: 2px solid #fff;
-    outline-offset: 3px;
+    outline-offset: 2px;
+  }
+  :global(.photo-play-btn[hidden]) {
+    display: none;
   }
 
   .photo-zoom-backdrop {
@@ -1285,30 +1302,22 @@ const SETS = [0, 1];
     let playingTarget: HTMLElement | null = null;
     let placeTimer = 0;
 
-    function getInstagramId(url: string): string | null {
-      const m = url.match(/\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
-      return m ? m[1] : null;
-    }
-
-    /* Exactly over the zoomed tile. The Instagram embed carries its own
-       header and caption and will not render under 326px wide, so it gets
-       the room it needs, centred on the tile, inside the viewport. */
+    /* Exactly over the zoomed tile, scaled down to fit between the nav
+       (plus room for the close button) and the dock. */
     function placePlayer() {
       if (!player || !playingTarget || player.hidden) return;
       const r = playingTarget.getBoundingClientRect();
       const vw = document.documentElement.clientWidth;
       const vh = window.innerHeight;
-      const top = navBottom();
+      // The close button floats 46px above the player: keep that clear of
+      // the nav.
+      const top = navBottom() + 48;
       const dock = 84;
       let w = r.width;
       let h = r.height;
-      if (player.dataset.kind === 'embed') {
-        w = Math.max(w, 328);
-        h = Math.max(h, w * (16 / 9) + 210);
-      }
       const maxH = Math.max(200, vh - top - dock - 12);
       if (h > maxH) {
-        if (player.dataset.kind === 'file') w *= maxH / h;
+        w *= maxH / h;
         h = maxH;
       }
       w = Math.min(w, vw - 24);
@@ -1344,35 +1353,26 @@ const SETS = [0, 1];
 
     function playInPlace(target: HTMLElement) {
       if (!player || !playerMedia || !isZoomed) return;
+      // Only a self-hosted file plays in place. The reels without one are
+      // the ones Instagram withholds (licensed audio), and its embed shows
+      // "the link may be broken" for them, so those go to Instagram via the
+      // dock's link instead of opening a broken player.
       const src = target.dataset.videoSrc;
-      const url = target.dataset.videoUrl;
-      if (!src && !url) return;
+      if (!src) return;
       stopPlayer();
-      if (src) {
-        player.dataset.kind = 'file';
-        const v = document.createElement('video');
-        v.src = src;
-        v.controls = true;
-        v.playsInline = true;
-        v.setAttribute('playsinline', '');
-        v.preload = 'auto';
-        const poster = target.querySelector('img')?.currentSrc;
-        if (poster) v.poster = poster;
-        playerMedia.appendChild(v);
-        // Started inside the reader's own click, so it may play with sound.
-        // If a browser still refuses, the controls are there: one more tap.
-        v.play()?.catch(() => {});
-      } else {
-        const id = url ? getInstagramId(url) : null;
-        if (!id) return;
-        player.dataset.kind = 'embed';
-        const f = document.createElement('iframe');
-        f.title = 'Instagram video';
-        f.allow = 'autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen';
-        f.setAttribute('allowfullscreen', '');
-        f.src = `https://www.instagram.com/reel/${encodeURIComponent(id)}/embed/`;
-        playerMedia.appendChild(f);
-      }
+      player.dataset.kind = 'file';
+      const v = document.createElement('video');
+      v.src = src;
+      v.controls = true;
+      v.playsInline = true;
+      v.setAttribute('playsinline', '');
+      v.preload = 'auto';
+      const poster = target.querySelector('img')?.currentSrc;
+      if (poster) v.poster = poster;
+      playerMedia.appendChild(v);
+      // Started inside the reader's own click, so it may play with sound.
+      // If a browser still refuses, the controls are there: one more tap.
+      v.play()?.catch(() => {});
       playingTarget = target;
       isReelOpen = true;
       player.hidden = false;
@@ -1403,6 +1403,7 @@ const SETS = [0, 1];
       currentVideoUrl = url || null;
       if (url) {
         if (watch) watch.href = url;
+        if (playBtn) playBtn.hidden = !target?.dataset.videoSrc;
         actions.hidden = false;
         void actions.offsetHeight;
         requestAnimationFrame(() => {
@@ -1423,7 +1424,7 @@ const SETS = [0, 1];
     playBtn?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (currentVideoUrl && activeTarget) playInPlace(activeTarget);
+      if (activeTarget?.dataset.videoSrc) playInPlace(activeTarget);
     });
 
     function setFrozen(target: HTMLElement | null) {

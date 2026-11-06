@@ -76,11 +76,31 @@ test.describe('Audit Fixes Verification', () => {
     await expect(player).toBeHidden();
     await expect(page.locator('#photo-reel-player')).toHaveCount(0);
 
-    // Play in the dock plays it in place: the self-hosted file when the
-    // sync saved one, otherwise the reel embed.
+    // A reel with no self-hosted file has no Play (Instagram's embed refuses
+    // those reels); the dock's Instagram link is the way to it, and a second
+    // tap on the tile opens no player.
+    const hasFile = await videoItem.evaluate((el) => Boolean((el as HTMLElement).dataset.videoSrc));
+    await expect(page.locator('[data-photo-watch]')).toBeVisible();
+    if (!hasFile) {
+      await expect(page.locator('[data-photo-play]')).toBeHidden();
+      await videoItem.evaluate((el) => (el as HTMLElement).click());
+      await expect(player).toBeHidden();
+      await expect(page.locator('iframe[src*="instagram.com"]')).toHaveCount(0);
+      await page.keyboard.press('Escape');
+      await expect(page.locator('.photo-section')).not.toHaveClass(/is-zoomed/);
+      return;
+    }
+
+    // Play in the dock plays the self-hosted file in place, with the HQ
+    // close button above it, clear of the nav.
     await page.locator('[data-photo-play]').click();
     await expect(player).toBeVisible();
-    await expect(player.locator('video, iframe[src*="instagram.com/reel/"]')).toHaveCount(1);
+    await expect(player.locator('video')).toHaveCount(1);
+    await expect(page.locator('iframe[src*="instagram.com"]')).toHaveCount(0);
+    const close = player.locator('[data-photo-player-close]');
+    await expect(close).toHaveText('×');
+    const gap = await close.evaluate((el) => el.getBoundingClientRect().top - document.querySelector('.site-nav')!.getBoundingClientRect().bottom);
+    expect(gap).toBeGreaterThanOrEqual(0);
 
     // Escape stops it and keeps the zoom; Escape again closes the zoom.
     await page.keyboard.press('Escape');
