@@ -15,7 +15,7 @@ export interface StorefrontPick {
 export const PICKS: StorefrontPick[] = [
   {
     kicker: 'Production Stack',
-    title: 'Verified Hardware Kit',
+    title: 'Full kit',
     desc: 'The complete inventory of cameras, lenses, lighting, and audio gear actively deployed in the studio.',
     cta: 'Browse complete kit',
     url: AMAZON_STOREFRONT,
