@@ -41,7 +41,7 @@ export interface AccordionPanel {
       the file instead of opening it; `external` opens a new tab. */
   links?: { label: string; href: string; external?: boolean; download?: boolean }[];
   /** Quiet secondary action under the CTA (e.g. a mailto). */
-  inquiry?: { email: string; subject: string; label: string };
+  inquiry?: { email: string; subject: string; label: string; body?: string };
   /** Coming-soon treatment: no CTA link, the teaser tag instead. */
   comingSoon?: boolean;
   teaserTag?: string;

@@ -31,7 +31,7 @@ interface BrandRow {
   teaserArt?: string;
   accent?: string;
   ctaFillOnPanelHover?: boolean;
-  inquiry?: { email: string; subject: string; label: string };
+  inquiry?: { email: string; subject: string; label: string; body?: string };
   /** More buttons beside the CTA. An href starting with "/" is a path on
    *  this site (the base is added here); anything else is a full URL. */
   links?: { label: string; href: string; external?: boolean; download?: boolean }[];

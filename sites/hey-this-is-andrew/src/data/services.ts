@@ -23,7 +23,7 @@ const rawData = data as typeof data & { clientBlock?: ClientBlockData };
 export const SERVICES_LEDE: string = rawData.lede;
 export const SERVICES: Service[] = rawData.items;
 export const SERVICES_CLIENT_BLOCK: ClientBlockData = rawData.clientBlock ?? {};
-export const PROJECT_INQUIRY_HREF =
-  'mailto:capturecreatecaffeinate@gmail.com?subject=' +
-  encodeURIComponent('Photography project inquiry');
+/** The CCC project mailto (subject and a short prefilled body), shared
+ *  with /ccc/ and the brand card. */
+export { CCC_INQUIRY_HREF as PROJECT_INQUIRY_HREF } from './ccc';
 

@@ -53,6 +53,7 @@ export default {
             { key: 'email', label: 'Email', type: 'email', required: true },
             { key: 'subject', label: 'Subject', type: 'text', required: true },
             { key: 'label', label: 'Label', type: 'text', required: true },
+            { key: 'body', label: 'Prefilled email body', type: 'textarea' },
           ],
         },
         {

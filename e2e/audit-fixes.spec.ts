@@ -27,7 +27,10 @@ test.describe('Audit Fixes Verification', () => {
   test('Start a project CTAs are present at all 4 specified locations', async ({ page }) => {
     await page.goto('./');
 
-    const expectedHref = 'mailto:capturecreatecaffeinate@gmail.com?subject=Photography%20project%20inquiry';
+    // Subject plus the short prefilled body (Venue / What you want to show off / Dates).
+    const expectedHref =
+      'mailto:capturecreatecaffeinate@gmail.com?subject=Photography%20project%20inquiry' +
+      '&body=Venue%3A%0AWhat%20you%20want%20to%20show%20off%3A%0ADates%20that%20work%3A%0A';
 
     // 1. End of Selected Work
     const selectedWorkCta = page.locator('#work a:has-text("Start a project")');

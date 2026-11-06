@@ -4,6 +4,8 @@
  * pitch deck (v7.3, public/ccc/Capture-Create-Caffeinate-Deck.pdf).
  */
 
+import { CONTACT } from './contact';
+
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 
@@ -35,7 +37,7 @@ export const CCC_DECK = {
   size: 'PDF, 2.6 MB',
 };
 export const CCC_PORTFOLIO = 'https://the.fotoapp.co/capturecreatecaffeinate';
-export const CCC_EMAIL = 'capturecreatecaffeinate@gmail.com';
+export const CCC_EMAIL = CONTACT.ccc;
 export const CCC_INQUIRY_HREF =
   `mailto:${CCC_EMAIL}?subject=${encodeURIComponent('Photography project inquiry')}` +
   `&body=${encodeURIComponent('Venue:\nWhat you want to show off:\nDates that work:\n')}`;
