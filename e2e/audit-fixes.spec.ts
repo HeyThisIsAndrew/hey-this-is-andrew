@@ -11,10 +11,11 @@ test.describe('Audit Fixes Verification', () => {
     await expect(cards).toHaveCount(4);
 
     await expect(cards.nth(0)).toContainText('Starting Rate');
-    await expect(cards.nth(0)).toContainText('Half-day shoots start at $1,200. Scoped to your shoot, deliverables, and usage.');
+    await expect(cards.nth(0)).toContainText('Photo sessions start at $950. Add a reel for $550, or get both for $1,200 (founding rate). Events quoted by scope.');
+    await expect(cards.nth(0).locator('a')).toHaveAttribute('href', /\/ccc\/#pricing$/);
 
     await expect(cards.nth(1)).toContainText('Turnaround');
-    await expect(cards.nth(1)).toContainText('Proofs in days, not weeks. Finals delivered on your approval.');
+    await expect(cards.nth(1)).toContainText('15 selects the next day. The full gallery within a week.');
 
     await expect(cards.nth(2)).toContainText('Deliverables & Usage');
     await expect(cards.nth(2)).toContainText('Edited photos and vertical reels, licensed for your social and web.');

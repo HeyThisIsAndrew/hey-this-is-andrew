@@ -12,6 +12,7 @@ import {
   SERVICES_CLIENT_BLOCK,
   PROJECT_INQUIRY_HREF,
 } from '../data/services';
+import { CCC_STARTING_RATE, CCC_TURNAROUND, CCC_PAGE } from '../data/ccc';
 
 interface Props {
   index?: string;
@@ -24,12 +25,14 @@ const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 const previewItems = SERVICES.slice(0, 3);
 const restItems = SERVICES.slice(3);
 
-const clientCards = [
-  { label: 'Starting Rate', value: SERVICES_CLIENT_BLOCK.startingRate },
-  { label: 'Turnaround', value: SERVICES_CLIENT_BLOCK.turnaround },
+/* Rate and turnaround come from the pitch deck's numbers (src/data/ccc.ts),
+   the same ones /ccc/ shows, so the two can never disagree. */
+const clientCards: { label: string; value?: string; link?: { label: string; href: string } }[] = [
+  { label: 'Starting Rate', value: CCC_STARTING_RATE, link: { label: "See what's included", href: `${CCC_PAGE}#pricing` } },
+  { label: 'Turnaround', value: CCC_TURNAROUND },
   { label: 'Deliverables & Usage', value: SERVICES_CLIENT_BLOCK.deliverablesAndUsage },
   { label: 'Client Results', value: SERVICES_CLIENT_BLOCK.clientResults },
-].filter((c): c is { label: string; value: string } => Boolean(c.value && c.value.trim()));
+].filter((c) => Boolean(c.value && c.value.trim()));
 ---
 <section id="services" aria-labelledby="services-heading" class="section-hairline work-section">
   <div class="container">
@@ -70,6 +73,11 @@ const clientCards = [
             <div class="client-card">
               <span class="client-card-label font-mono">{card.label}</span>
               <p class="client-card-value">{card.value}</p>
+              {card.link && (
+                <a class="client-card-link font-mono" href={card.link.href}>
+                  {card.link.label} <span aria-hidden="true">&rarr;</span>
+                </a>
+              )}
             </div>
           ))}
         </div>
@@ -154,6 +162,19 @@ const clientCards = [
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--muted);
+  }
+  .client-card-link {
+    margin-top: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 44px;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 4px;
   }
   .client-card-value {
     margin: 0;
