@@ -27,7 +27,6 @@ typographic.
 | sony-wh-1000xm4.jpg | Sony WH-1000XM4 headphones, black | https://www.bhphotovideo.com/c/product/1629872-REG/sony_wh_1000xm4_wireless_noise_canceling_over_ear.html | used; exact model confirmed in the photo |
 | ninja-cm371.jpg | Ninja Hot & Iced XL Coffee Maker with Rapid Cold Brew, CM371, black | https://www.crateandbarrel.com/ninja-hot-and-iced-xl-coffee-maker-with-rapid-cold-brew/s636861 | used; exact model confirmed in the photo |
 | normcore-tamper-v4.jpg | Normcore 58.5mm Espresso Tamper V4 | https://www.normcorewares.com/products/normcore-spring-loaded-tamper-v4-with-ripple-base | used; exact model confirmed in the photo |
-| wdt-tool.jpg | Magnetic espresso WDT needle distributor with stand | https://www.normcorewares.com/products/0-23mm-wdt-distribution-tool-v2-1-with-stand | used; photo is a Normcore WDT V2.1, the Amazon listing is a generic magnetic WDT, confirm |
 | fellow-monty-cup.jpg | Fellow Monty Latte Art Cup, 11oz, double wall ceramic | https://eightouncecoffee.ca/products/fellow-monty-latte-cup-325ml-11oz | used; matte white finish |
 | chemex-10-cup.jpg | Chemex 10-Cup Pour-Over, Glass Handle Series | https://chemexcoffeemaker.com/products/ten-cup-glass-handle-chemex | used; no printed markings, matched as the Glass Handle 10-cup |
 | chemex-filters.jpg | Chemex Bonded Filters, Square, 100 count | https://prima-coffee.com/equipment/chemex/fs-100 | used; exact model confirmed in the photo |
@@ -39,5 +38,20 @@ typographic.
 
 | file | product | why |
 | --- | --- | --- |
-| knock-box-station.jpg | 58mm knock box and tamping station | Wrong product: the photo is Normcore's compact knock box ("normcore" printed on it), which has no tamping station. |
-| neewer-np-fz100-2pack.jpg | NEEWER NP-FZ100 2 Pack | The photo is NEEWER's battery and dual-charger set; the charger would not cut away cleanly and may not be part of Andrew's pack. A batteries-only shot is needed. |
+| neewer-np-fz100-2pack.jpg | NEEWER NP-FZ100 2 Pack | The link is NEEWER's 2-pack with a dual USB charger case. Every studio shot of it at 1000px or more shows the charger or has text over it, and NEEWER's single-battery listing shows one battery. Needs Andrew's own photo of the two batteries. |
+| zhiyun-weebill-3.jpg | Zhiyun Weebill 3 (C020124) | Every studio shot at 1000px or more shows a ghosted camera on the gimbal, the accessory kit, or text. The card stays hidden (no store link) anyway. |
+| polarpro-67mm-vnd-6-9.jpg | PolarPro 67mm Peter McKinnon VND 6-9 | Not replaced, but flagged: Andrew's link (B07Q5VP7RD) is the First Edition (67-6/9-VND), and the photo in use shows the Signature Edition II. First Edition shots are all under 1000px or show the case. Andrew to confirm which edition is owned. |
+
+## Round 2 (`gear-photos-2`, 2026-11)
+
+Collected by Gemini against Andrew's Amazon links, which it resolved to the
+ASINs below. Reviewed here against the photo before use.
+
+| file | product | source page | review |
+| --- | --- | --- | --- |
+| knock-box-station.jpg | KNODOS 58mm knock box and tamping station, walnut (ASIN B0BPDDM711, link B0fdbdkT0) | https://www.knodos.com/product/espresso-knock-box-with-tamping-station | used; knock box plus three tamping wells, KNODOS emblem on the front. Replaces the held Normcore photo |
+| wdt-tool.jpg | KNODOS magnetic WDT tool with stand, Model B, black (ASIN B0CGV1RXHR, link B0d3a0ll7) | https://www.knodos.com/product/wdt-tool-espresso-distribution | used; KNODOS emblem on the stand base. Replaces the Normcore WDT V2.1 photo, which did not match the listing |
+| kupo-c-stands.jpg | Kupo KS704712 40" Master C-Stand with turtle base kit (ASIN B00LP3GUOG, link B0dMu3MJH) | https://www.bhphotovideo.com/c/product/1069639-REG/kupo_ks704712_master_40_c_stand_w.html | used; replaces the earlier stand photo |
+| amaran-pt1c.jpg | Aputure Amaran PT1c 1' pixel tube (AP10012A10) | https://www.bhphotovideo.com/c/product/1753982-REG/amaran_ap10012a10_amaran_pt1c_1.html | ready; the card stays hidden until it has a store link |
+| light-dome-mini-ii.jpg | Aputure Light Dome Mini II | https://www.bhphotovideo.com/c/replacement_for/1426992-REG/aputure_minidome_ii_light_dome_mini_ii.html | ready; "light Dome mini II" printed on it. The card stays hidden until it has a store link |
+| polarpro-82mm-vnd-2-5.jpg, fellow-scale.jpg, amaran-200d.jpg | as listed above | | confirmed against the links, no change |
