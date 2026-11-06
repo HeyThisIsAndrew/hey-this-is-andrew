@@ -167,7 +167,7 @@ const stateOf = (i: number, n: number) =>
                 </span>
               </button>
             </h2>
-            <div class="gear-header-right">
+            <div class="gear-header-right btn-group btn-group--row">
               {hasAll && (
                 <button
                   type="button"
@@ -180,7 +180,7 @@ const stateOf = (i: number, n: number) =>
                 </button>
               )}
               <a href={sec.collectionUrl} target="_blank" rel="noopener sponsored" class="influencer-pill font-mono">
-                <span class="influencer-text">{sec.collectionLabel}</span>
+                <span class="influencer-text">{sec.collectionLabel.replace(/ list$/i, '')}{/ list$/i.test(sec.collectionLabel) && <span class="influencer-text-long"> list</span>}</span>
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                   <path d="M2.5 9.5L9.5 2.5M9.5 2.5H4.5M9.5 2.5V7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
@@ -446,10 +446,24 @@ const stateOf = (i: number, n: number) =>
   .gear-search-clear:hover {
     color: #fff;
   }
+  /* Every chip the same size (the house rule for buttons that sit
+     together): equal columns at least as wide as the longest label,
+     wrapping whole chips on a phone. Em of the chips' own type. */
   .gear-category-chips {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    width: max-content;
+    max-width: 100%;
     gap: 0.4rem;
+    font-size: 0.68rem;
+  }
+  @media (max-width: 600px) {
+    .gear-category-chips {
+      grid-auto-flow: row;
+      grid-template-columns: repeat(auto-fill, minmax(9em, 1fr));
+      width: 100%;
+    }
   }
   .gear-chip {
     min-height: 44px;
@@ -613,9 +627,8 @@ const stateOf = (i: number, n: number) =>
     border-color: rgba(255, 255, 255, 0.4);
   }
   .gear-header-right {
-    display: flex;
+    --btn-group-gap: 0.5rem;
     align-items: center;
-    gap: 0.5rem;
     flex-shrink: 0;
   }
   .influencer-pill,
@@ -1290,9 +1303,23 @@ const stateOf = (i: number, n: number) =>
     .gear-accordion-header {
       padding: 0.95rem 0.25rem 0.5rem 1rem;
     }
+    /* Its own row under the title, the two buttons in equal halves. */
     .gear-header-right {
-      width: 100%;
-      padding-left: 1rem;
+      flex: 0 0 calc(100% - 1rem);
+      width: auto;
+      margin-left: 1rem;
+      grid-auto-columns: minmax(0, 1fr);
+    }
+    .gear-header-right > * {
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+    .gear-header-right {
+      align-items: stretch;
+    }
+    /* "Camera Gear" is enough on a phone; the arrow says it is a list. */
+    .influencer-text-long {
+      display: none;
     }
     .gear-item-count-badge {
       display: none;

@@ -130,6 +130,46 @@
   inset: min(0px, calc((var(--btn-h-sm) - var(--tap-min)) / 2 - 1px)) -1px /* from the padding box: past the 1px border */;
 }
 
+/* A GROUP of buttons. House rule: buttons that sit together are one size,
+   whatever their labels: one height, and every one as wide as the widest.
+   Side by side while the screen is wide; on a phone they stack, still all
+   the same width. `.btn-group--row` never stacks (two short controls that
+   fit a phone side by side). Put any set of 2+ buttons in one. */
+.btn-group {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--btn-group-gap, 0.75rem);
+  width: max-content;
+  max-width: 100%;
+}
+.btn-group > * {
+  justify-content: center;
+  text-align: center;
+  margin: 0;
+}
+/* A text-only button in a group would be the odd one out: it takes the
+   secondary outline, so every button in the group reads as the same box. */
+.btn-group > .btn-ghost {
+  padding-left: var(--btn-px-md);
+  padding-right: var(--btn-px-md);
+  border-color: var(--muted);
+}
+.btn-group > .btn-ghost::after {
+  display: none;
+}
+.btn-group > .btn-ghost:hover,
+.btn-group > .btn-ghost:focus-visible {
+  background-color: var(--ink);
+  color: var(--color-black);
+  border-color: var(--ink);
+}
+@media (max-width: 600px) {
+  .btn-group:not(.btn-group--row) {
+    grid-auto-flow: row;
+  }
+}
+
 /* Full-width variant for stacked mobile layouts. */
 .btn--block {
   width: 100%;

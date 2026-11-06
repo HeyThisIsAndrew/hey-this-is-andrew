@@ -33,8 +33,8 @@ export const CCC_DESCRIPTOR = 'Photo and video for bars, restaurants, and events
 export const CCC_PAGE = `${base}/ccc/`;
 export const CCC_DECK = {
   href: `${base}/ccc/Capture-Create-Caffeinate-Deck.pdf`,
-  /** Shown beside the download link. Update with the file. */
-  size: 'PDF, 2.6 MB',
+  /** The download button's label, file size included. Update with the file. */
+  label: 'Pitch deck (PDF, 2.6 MB)',
 };
 export const CCC_PORTFOLIO = 'https://the.fotoapp.co/capturecreatecaffeinate';
 export const CCC_EMAIL = CONTACT.ccc;
