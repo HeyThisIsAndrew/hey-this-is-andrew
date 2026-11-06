@@ -210,6 +210,9 @@ const stateOf = (i: number, n: number) =>
                 {sec.items.map((it, i) => {
                   const primary = it.stores[0];
                   const extraAffiliates = it.stores.filter((s) => s.affiliate).map((s) => s.store);
+                  // The Amazon line covers Amazon links only (James Coffee Co.
+                  // links to its own shop and carries no disclosure).
+                  const hasAmazon = it.stores.some((s) => s.store === 'Amazon');
                   return (
                     <article
                       class={`deck-card ${stateOf(i, n)}`}
@@ -292,10 +295,12 @@ const stateOf = (i: number, n: number) =>
                             </a>
                           )}
                         </div>
-                        <p class="card-disclosure font-mono">
-                          As an Amazon Associate, I earn from qualifying purchases.
-                          {extraAffiliates.length > 0 && ` The ${extraAffiliates.join(' and ')} link is an affiliate link too.`}
-                        </p>
+                        {(hasAmazon || extraAffiliates.length > 0) && (
+                          <p class="card-disclosure font-mono">
+                            {hasAmazon && 'As an Amazon Associate, I earn from qualifying purchases.'}
+                            {extraAffiliates.length > 0 && ` The ${extraAffiliates.join(' and ')} link is an affiliate link${hasAmazon ? ' too' : ''}.`}
+                          </p>
+                        )}
                       </div>
 
                       <span class="card-spine" aria-hidden="true"><span class="spine-text">{it.short}</span></span>
