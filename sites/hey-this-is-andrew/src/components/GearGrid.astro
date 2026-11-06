@@ -1687,25 +1687,79 @@ const stateOf = (i: number, n: number) =>
         }, true);
 
         // Trackpad: a horizontal two-finger swipe moves one card, fired on
-        // the leading edge and locked until the gesture goes quiet (HQ).
+        // the leading edge (40px of deltaX) and then locked. Ported from the
+        // HQ /featured deck, which hit the same bug first.
+        //
+        // The lock used to be released by silence alone (140ms with no
+        // wheel events). macOS keeps sending momentum events for a second
+        // or two after the fingers lift, and each one re-armed the timer,
+        // so a second swipe made during that tail was swallowed: "swipe,
+        // swipe again, nothing happens" until the pointer left the deck.
+        //
+        // Now the lock is also released by INPUT, in two stages. A momentum
+        // tail peaks and then only decays, so: (1) while still near the peak
+        // it is the rest of the push that already fired, and never releases;
+        // (2) once it has fallen to 60% of the peak it is coasting, and a
+        // delta that climbs well back above the lowest point so far (2.5x
+        // the trough, and at least 10px) can only be fingers on the pad
+        // again. Measuring against the trough, not the previous sample, is
+        // what keeps noisy macOS momentum from re-arming it. MIN_FIRE_GAP
+        // makes "one swipe, one card" unconditional; the quiet timer stays
+        // as a backstop.
+        const SWIPE_DELTA = 40;
+        const QUIET_MS = 120;
+        const TAIL_RATIO = 0.6;
+        const REARM_FACTOR = 2.5;
+        const REARM_FLOOR = 10;
+        const MIN_FIRE_GAP = 220;
         let wheelAcc = 0;
         let wheelLocked = false;
+        let peak = 0;
+        let tailing = false;
+        let trough = Infinity;
+        let lastFire = -Infinity;
         let quietTimer = 0;
+        const releaseWheel = () => {
+          wheelLocked = false;
+          wheelAcc = 0;
+          peak = 0;
+          tailing = false;
+          trough = Infinity;
+        };
         stage.addEventListener('wheel', (e) => {
           if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
           e.preventDefault();
+          const abs = Math.abs(e.deltaX);
           window.clearTimeout(quietTimer);
-          quietTimer = window.setTimeout(() => {
-            wheelLocked = false;
-            wheelAcc = 0;
-          }, 140);
-          if (wheelLocked) return;
-          wheelAcc += e.deltaX;
-          if (Math.abs(wheelAcc) >= 40) {
-            step(wheelAcc > 0 ? 1 : -1);
-            wheelLocked = true;
-            wheelAcc = 0;
+          quietTimer = window.setTimeout(releaseWheel, QUIET_MS);
+          if (wheelLocked) {
+            if (abs > peak) peak = abs;
+            if (!tailing) {
+              if (abs < peak * TAIL_RATIO) {
+                tailing = true;
+                trough = abs;
+              }
+              return;
+            }
+            if (abs < trough) trough = abs;
+            if (abs < REARM_FLOOR || abs < trough * REARM_FACTOR) return;
+            releaseWheel();
           }
+          wheelAcc += e.deltaX;
+          if (Math.abs(wheelAcc) < SWIPE_DELTA) return;
+          const now = e.timeStamp || performance.now();
+          if (now - lastFire < MIN_FIRE_GAP) {
+            wheelAcc = 0;
+            return;
+          }
+          const forward = wheelAcc > 0;
+          wheelLocked = true;
+          peak = abs;
+          tailing = false;
+          trough = Infinity;
+          lastFire = now;
+          wheelAcc = 0;
+          step(forward ? 1 : -1);
         }, { passive: false });
 
         // Show all <-> deck.

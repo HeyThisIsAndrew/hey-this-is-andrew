@@ -115,6 +115,45 @@ test.describe('Gear page', () => {
     await expect(page.locator('.gear-accordion-section:visible')).toHaveCount(7);
   });
 
+  test('trackpad: a second swipe during the first one\'s momentum moves one more card', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/hey-this-is-andrew/gear/');
+    const lenses = await openSection(page, 'gear-lenses');
+    const stage = lenses.locator('.deck-stage');
+    await stage.scrollIntoViewIfNeeded();
+    const titles = await lenses.locator('.deck-card .card-title').allTextContents();
+    const at = async () => titles.indexOf(((await activeTitle(lenses).textContent()) || '').trim());
+    const start = await at();
+
+    // A macOS two-finger swipe: the push accelerates, then momentum decays
+    // with a little noise, one event per frame (16ms), the pointer never
+    // leaving the deck. Dispatched in the page so the cadence is exact;
+    // CDP-driven wheel events arrive 30-70ms apart, which no trackpad does.
+    const swipe = (push: number[], tail: number[]) =>
+      stage.evaluate(async (el, deltas) => {
+        for (const d of deltas) {
+          el.dispatchEvent(new WheelEvent('wheel', { deltaX: d, deltaY: 0, bubbles: true, cancelable: true }));
+          await new Promise((r) => setTimeout(r, 16));
+        }
+      }, [...push, ...tail]);
+    const push = [4, 10, 22, 38, 52, 60];
+    const tail = [56, 50, 43, 37, 33, 28, 25, 22, 20, 17, 15, 13, 12, 10, 9, 8, 7];
+    const noisyTail = [56, 50, 45, 39, 41, 33, 30, 32, 26, 24, 25, 20, 18, 19, 15, 13, 14, 11, 10, 9, 10, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1];
+
+    // One swipe, one card, however long its momentum runs.
+    await swipe(push, noisyTail);
+    await expect.poll(at).toBe(start + 1);
+    await page.waitForTimeout(300);
+    expect(await at()).toBe(start + 1);
+
+    // Swipe again while the first swipe's tail is still arriving. This is
+    // the bug: the lock waited for silence, the tail never went quiet, and
+    // the second swipe did nothing.
+    await swipe(push, tail.slice(0, 8));
+    await swipe(push, tail);
+    await expect.poll(at).toBe(start + 3);
+  });
+
   test('phone: every gear control is at least 44x44', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/hey-this-is-andrew/gear/');
