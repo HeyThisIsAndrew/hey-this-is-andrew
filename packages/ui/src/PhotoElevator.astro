@@ -36,9 +36,12 @@ interface DisplayPhoto {
 export interface Props {
   photos: DisplayPhoto[];
   emptyText?: string;
+  /** Where the credit line's "More about the work" goes. The homepage
+      passes "#about" (its own section); elsewhere it is the About page. */
+  aboutHref?: string;
 }
 
-const { photos: displayPhotos, emptyText = 'No photos configured yet.' } = Astro.props;
+const { photos: displayPhotos, emptyText = 'No photos configured yet.', aboutHref } = Astro.props;
 
 const categoryLabels: Record<string, string> = {
   cocktails: 'Cocktails',
@@ -57,7 +60,7 @@ const directions = ['up', 'down', 'up', 'down'];
 const durations = [58, 74, 66, 82];
 // The note links to the About page (this section also renders on /work,
 // where there is no #about).
-const aboutUrl = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/about/`;
+const aboutUrl = aboutHref ?? `${import.meta.env.BASE_URL.replace(/\/$/, '')}/about/`;
 // Each reel renders its photos twice: the CSS/WAAPI loop translates the
 // track by -50%, which is seamless only over two identical sets. The copy
 // is aria-hidden and out of the tab order.
@@ -191,8 +194,7 @@ const SETS = [0, 1];
   </div>
 
   <p class="photo-note">
-    All photographs by Andrew. The cocktails and dishes pictured are the bar's.
-    The photography is his.
+    Photographs by Andrew Baxter. Shot for Capture Create Caffeinate. <a href={aboutUrl}>More about the work</a>.
   </p>
 </section>
 
@@ -398,7 +400,9 @@ const SETS = [0, 1];
     position: relative;
     z-index: 10;
     width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw));
-    margin: 2.5rem auto 0;
+    /* A caption: close under the wall (whose last ~30px already fade
+       out), not floating in the gap below it. */
+    margin: 1.25rem auto 0;
     font-size: 0.85rem;
     color: var(--color-white-muted, #888);
     text-align: center;
@@ -422,6 +426,19 @@ const SETS = [0, 1];
 
   /* Mobile: two columns, shorter reels — the concept adapts, not hidden. */
   @media (max-width: 767px) {
+    .photo-note {
+      margin-top: 0.75rem;
+    }
+    /* The link gets a full tap height on a phone. */
+    .photo-note a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      /* The box is 44 tall; the negative margin keeps it from spreading
+         the caption's lines apart. */
+      margin: -13px 0;
+      vertical-align: middle;
+    }
     .photo-wall {
       grid-template-columns: repeat(2, 1fr);
       height: 74vh;
