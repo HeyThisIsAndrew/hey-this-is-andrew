@@ -228,6 +228,8 @@ test.describe('Global QA', () => {
     const index = page.waitForResponse((r) => r.url().endsWith('/hey-this-is-andrew/api/search.json'));
     await page.goto('./');
     if (isMobile) {
+      // One search on a phone: inside the Menu, not beside it too.
+      await expect(page.locator('#nav-search-trigger')).toBeHidden();
       await page.locator('.menu-btn').click();
       await page.locator('#mobile-search-trigger').click();
     } else {
