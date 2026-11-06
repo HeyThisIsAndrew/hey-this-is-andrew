@@ -168,10 +168,10 @@ const SETS = [0, 1];
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <path d="M8 5v14l11-7z" />
       </svg>
-      <span>Play Video</span>
+      <span>Play<span class="photo-label-long"> Video</span></span>
     </button>
-    <a class="btn btn-secondary photo-watch" href="#" target="_blank" rel="noopener" data-photo-watch>
-      <span>Watch video on Instagram</span>
+    <a class="btn btn-secondary photo-watch" href="#" target="_blank" rel="noopener" data-photo-watch aria-label="Watch video on Instagram">
+      <span><span class="photo-label-long">Watch video on </span>Instagram</span>
       <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
         <path d="M2 12L12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
       </svg>
@@ -575,7 +575,11 @@ const SETS = [0, 1];
     .photo-actions .btn {
       font-size: 0.68rem;
       padding: 0.5rem 0.85rem;
-      min-height: 40px;
+      min-height: 44px;
+    }
+    /* Both buttons fit a phone: "Play" and "Instagram". */
+    .photo-label-long {
+      display: none;
     }
   }
 
@@ -774,6 +778,15 @@ const SETS = [0, 1];
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     touch-action: manipulation;
+  }
+  :global(.photo-player[data-close='right'] .photo-player-close) {
+    top: -4px;
+    right: -50px;
+  }
+  :global(.photo-player[data-close='left'] .photo-player-close) {
+    top: -4px;
+    right: auto;
+    left: -50px;
   }
   :global(.photo-player-close:hover) {
     transform: rotate(90deg);
@@ -1309,9 +1322,11 @@ const SETS = [0, 1];
       const r = playingTarget.getBoundingClientRect();
       const vw = document.documentElement.clientWidth;
       const vh = window.innerHeight;
-      // The close button floats 46px above the player: keep that clear of
-      // the nav.
-      const top = navBottom() + 48;
+      // The close button floats 46px above the player, clear of the nav.
+      // A short screen (phone landscape) has no height to spare for it, so
+      // there it sits beside the player's top corner instead.
+      const side = vh < 600;
+      const top = navBottom() + (side ? 0 : 48);
       const dock = 84;
       let w = r.width;
       let h = r.height;
@@ -1325,6 +1340,7 @@ const SETS = [0, 1];
       const cy = r.top + r.height / 2;
       const left = Math.min(Math.max(12, cx - w / 2), vw - 12 - w);
       const topPx = Math.min(Math.max(top + 6, cy - h / 2), vh - dock - h);
+      player.dataset.close = !side ? 'above' : left + w + 50 <= vw ? 'right' : 'left';
       player.style.left = `${Math.round(left)}px`;
       player.style.top = `${Math.round(topPx)}px`;
       player.style.width = `${Math.round(w)}px`;
