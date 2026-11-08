@@ -581,6 +581,9 @@ const easy = [
     pointer-events: none;
     display: flex;
     flex-direction: column;
+    will-change: transform, opacity;
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.25, 1),
+                opacity 0.22s ease-out;
   }
 
   .ccc-dock-row {
@@ -1271,7 +1274,6 @@ const easy = [
     color: var(--ccc-cream);
     transform-origin: center center;
     will-change: transform;
-    transition: transform 0.15s ease-out;
   }
   .ccc-closer-body {
     margin: 0;
@@ -1483,11 +1485,9 @@ const easy = [
 
         let shouldDock = false;
         if (s.id === 'pricing') {
-          // Final section collapses when scrolling towards closer, or when rect.bottom passes stack, or near bottom
-          const contactRect = closerSection ? closerSection.getBoundingClientRect() : null;
+          // Final section collapses when scrolling past stack or near bottom
           shouldDock = isNearBottom ||
-            rect.bottom <= (navH + stackOffset + (isLandscapeShort ? 30 : 60)) ||
-            (contactRect !== null && contactRect.top <= (navH + stackOffset + (isLandscapeShort ? 100 : 200)));
+            rect.bottom <= (navH + stackOffset + (isLandscapeShort ? 25 : 45));
         } else {
           shouldDock = rect.bottom <= (navH + stackOffset + (isLandscapeShort ? 20 : 40));
         }
@@ -1542,22 +1542,28 @@ const easy = [
         // In landscape / short viewports, only 1 slim row is active at a time
         const effectiveStackH = isLandscapeShort
           ? (latestDockedRow ? (latestDockedRow.offsetHeight || 38) : 0)
-          : currentStackH;
+          : Math.max(currentStackH, (sections.length * 44 + 58));
         const stackBottom = navH + effectiveStackH;
 
-        if (contactRect.top < stackBottom) {
-          // As #contact scrolls up past stackBottom, push stack up proportionally
-          const pushDist = stackBottom - contactRect.top;
-          const maxPush = effectiveStackH + navH + 30;
-          const clampedPush = Math.min(maxPush, Math.max(0, pushDist));
+        const pushRange = effectiveStackH + navH + 40;
+        // Trigger push-up slightly earlier as contact approaches so the entry is soft and eased
+        const startTrigger = stackBottom + 40;
 
-          stack.style.transform = `translate3d(0, -${clampedPush.toFixed(1)}px, 0)`;
+        if (contactRect.top < startTrigger) {
+          const rawProgress = (startTrigger - contactRect.top) / pushRange;
+          const progress = Math.min(1, Math.max(0, rawProgress));
 
-          // Fade out the stack smoothly as it pushes up
-          const fadeDistance = effectiveStackH * 0.65 || 120;
-          const fadeProgress = Math.min(1, Math.max(0, clampedPush / fadeDistance));
-          stack.style.opacity = (1 - fadeProgress).toFixed(3);
-          stack.style.pointerEvents = clampedPush > 30 ? 'none' : '';
+          // Smooth cubic ease-out curve (starts gently, accelerates gracefully)
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const pushY = eased * (effectiveStackH + navH + 40);
+
+          stack.style.transform = `translate3d(0, -${pushY.toFixed(1)}px, 0)`;
+
+          // Smooth curved fade out
+          const fadeProgress = Math.min(1, Math.max(0, progress / 0.85));
+          const opacity = 1 - Math.pow(fadeProgress, 1.4);
+          stack.style.opacity = Math.max(0, opacity).toFixed(3);
+          stack.style.pointerEvents = progress > 0.15 ? 'none' : '';
         } else {
           stack.style.transform = '';
           stack.style.opacity = '1';
