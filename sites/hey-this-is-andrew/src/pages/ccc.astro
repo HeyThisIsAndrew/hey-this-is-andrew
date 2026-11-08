@@ -1,21 +1,12 @@
 ---
 /**
- * /ccc/: Capture Create Caffeinate.
- * High-impact, visual, low-friction client presentation for hospitality venues.
+ * /ccc/: Capture Create Caffeinate. The pitch deck (v7.3) rebuilt as one
+ * scrolling page: same sections, same order, the deck's own words. Prices,
+ * the deck file, the contact link and the video switch live in
+ * src/data/ccc.ts (the homepage reads the same numbers).
  *
- * Hero: CCC logo, reduced-size headline ("Content that brings people through your door",
- * max 2 lines), category line, and CTA buttons.
- *
- * Sections:
- *   01 Why it matters
- *   02 Where it goes
- *   03 The work
- *   04 Real nights
- *   05 How it works
- *
- * Pricing: removed from page body, relocated to the "Start a project" inquiry modal.
- *
- * Zero em dashes across all visible copy and markup.
+ * No embeds, no third-party scripts: the reel and the portfolio are plain
+ * links (the privacy page promises no tracking).
  */
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
@@ -23,8 +14,10 @@ import CccPhoto from '../components/ccc/CccPhoto.astro';
 import CccInquiryModal from '../components/ccc/CccInquiryModal.astro';
 import { Image } from 'astro:assets';
 import {
+  CCC_PRICING as P,
   CCC_DECK,
   CCC_PORTFOLIO,
+  CCC_INQUIRY_HREF,
   CCC_SHOW_VIDEO,
   CCC_REEL_URL,
 } from '../data/ccc';
@@ -55,68 +48,44 @@ import real2 from '../assets/ccc/s09-video-real-2-dj.jpg';
 import real3 from '../assets/ccc/s09-video-real-3-marios.jpg';
 import howCrew from '../assets/ccc/s10-how-crew.jpg';
 import howCocktails from '../assets/ccc/s11-how-easy-cocktails.jpg';
+import pricingCoupe from '../assets/ccc/s12-pricing-coupe.jpg';
 import closerBg from '../assets/ccc/s13-closer-bg.jpg';
 
 const where = [
-  {
-    title: 'Instagram and TikTok',
-    line: 'Posts, reels, and stories for weeks',
-    img: whereInstagram,
-    alt: 'A dark drink topped with a lace tuile on a black napkin, candlelight behind it',
-  },
-  {
-    title: 'Your website',
-    line: 'Photos that sell the room',
-    img: whereWebsite,
-    alt: 'A venue entrance under a striped awning, MAKE in large white letters above it',
-  },
-  {
-    title: 'Google and Yelp',
-    line: 'The first thing people see',
-    img: whereGoogle,
-    alt: 'A red beer in a stemmed tulip glass on a wooden bar top',
-  },
-  {
-    title: 'Press and partners',
-    line: 'Ready when someone asks for photos',
-    img: wherePress,
-    alt: 'Three bottles of spirits lit on a white shelf',
-  },
+  { title: 'Instagram and TikTok', line: 'Posts, reels, and stories for weeks', img: whereInstagram, alt: 'A dark drink topped with a lace tuile on a black napkin, candlelight behind it' },
+  { title: 'Your website', line: 'Photos that sell the room', img: whereWebsite, alt: 'A venue entrance under a striped awning, MAKE in large white letters above it' },
+  { title: 'Google and Yelp', line: 'The first thing people see', img: whereGoogle, alt: 'A red beer in a stemmed tulip glass on a wooden bar top' },
+  { title: 'Press and partners', line: 'Ready when someone asks for photos', img: wherePress, alt: 'Three bottles of spirits lit on a white shelf' },
 ];
-
 const drinks = [
   { cap: 'The pour', img: drinksPour, alt: 'Two cocktails on a bar top, one dark red and one glowing orange' },
   { cap: 'The lineup', img: drinksLineup, alt: 'Three dark cocktails with orange peel lined up on the bar' },
   { cap: 'The mood', img: drinksMood, alt: 'A stemmed glass in black and white against soft blurred light' },
 ];
-
 const nightTiles = [
   { img: night1, alt: 'A tall glass with a pale drink in warm candlelight' },
   { img: night2, alt: 'Two cocktails on the bar with warm orange light behind them' },
   { img: night3, alt: 'A red beer in a stemmed glass, close up' },
   { img: night4, alt: 'Cocktails with orange peel on the bar, a bartender at work behind them' },
 ];
-
+const nightList = ['The signature drinks', 'The little details', 'The room', 'Your crew', 'The front door'];
 const desert = [
   { cap: 'The opening shot', img: desert1, alt: 'A desert hotel pool with palm trees and mountains behind, titled Spirit of Hospitality' },
   { cap: 'The marquee', img: desert2, alt: 'The Ace Hotel and Swim Club marquee announcing Desert Escape 2026' },
   { cap: 'The DJ', img: desert3, alt: 'A DJ at the decks in front of a wood-slat wall at the Ace Hotel and Swim Club' },
   { cap: 'The layback', img: desert4, alt: 'Guests laughing together in front of an Angeleno booth' },
 ];
-
 const real = [
   { img: real1, alt: 'A crowd around a hotel pool under yellow Topo Chico umbrellas' },
   { img: real2, alt: 'A DJ in a patterned shirt at the decks, captioned This guy can dance' },
   { img: real3, alt: "A Mario's Hard Espresso table with a Nitro Espresso Martini sign" },
 ];
-
 const steps = [
   { n: '01', title: 'A quick call', body: 'We talk through what you want to show off: the menu, the room, the people, anything new.' },
   { n: '02', title: 'Drinks and food first', body: "I shoot your best items while they're fresh, before service picks up." },
   { n: '03', title: 'Then the night', body: 'Guests, crew, and atmosphere as service happens. I stay small and out of the way.' },
   { n: '04', title: 'Ready to post', body: '15 selects the next day so you can post right away. The full gallery follows within a week.' },
 ];
-
 const easy = [
   { title: 'Small footprint', body: "A light kit that stays out of your guests' way. No blocking the floor during service." },
   { title: 'Every good shot', body: "No cap on photos. If it's a keeper, it gets edited and it's yours." },
@@ -127,48 +96,31 @@ const easy = [
 
 <BaseLayout
   title="Capture Create Caffeinate · HEY_THISISANDREW"
-  description="Photo and video for bars, restaurants, and events. One shoot, everywhere you post."
+  description="Photo and video for bars, restaurants, and events. One shoot, everywhere you post. Photo sessions from $950."
   image="/ccc/og.jpg"
 >
   <div class="page-head" aria-hidden="true"></div>
 
-  <!-- 1. Hero: Logo + Headline reduced to max 2 lines + Category line + CTAs (no image in hero) -->
+  <!-- 1. Hero (deck slide 1) -->
   <section class="ccc-hero" aria-labelledby="ccc-title">
     <div class="container ccc-hero-inner">
-      <Image
-        src={logo}
-        alt="Capture Create Caffeinate logo"
-        width={240}
-        densities={[1, 2]}
-        class="ccc-hero-logo"
-        loading="eager"
-        fetchpriority="high"
-      />
+      <Image src={logo} alt="Capture Create Caffeinate logo" width={260} densities={[1, 2]} class="ccc-hero-logo" loading="eager" fetchpriority="high" />
       <h1 id="ccc-title" class="ccc-hero-title">Content that brings people through your door</h1>
-      <p class="ccc-hero-sub font-mono">Bars · Restaurants · Events</p>
+      <p class="ccc-hero-sub">Bars · Restaurants · Events</p>
       <div class="ccc-actions btn-group">
-        <button type="button" class="btn btn-primary" data-open-ccc-modal>
-          Start a project <span aria-hidden="true">&rarr;</span>
-        </button>
-        <a class="btn btn-secondary" href={CCC_DECK.href} download>
-          {CCC_DECK.label} <span aria-hidden="true">&darr;</span>
-        </a>
+        <a class="btn btn-primary" href={CCC_INQUIRY_HREF} data-open-ccc-modal>Start a project <span aria-hidden="true">&rarr;</span></a>
+        <a class="btn btn-secondary" href={CCC_DECK.href} download>{CCC_DECK.label} <span aria-hidden="true">&darr;</span></a>
       </div>
     </div>
   </section>
 
-  <!-- 01 Why it matters -->
+  <!-- 2. Why it matters (slides 2, 3) -->
   <section id="why" class="ccc-section" aria-labelledby="ccc-why">
     <div class="container">
       <SectionHeader id="ccc-why" index="01" kicker="Why it matters" title="People decide with their eyes" />
       <div class="ccc-split">
         <div class="ccc-split-media">
-          <CccPhoto
-            src={whyCoupe}
-            alt="A coupe cocktail glass on a dark bar, warm light glowing behind it"
-            sizes="(min-width: 900px) 45vw, 100vw"
-            eager
-          />
+          <CccPhoto src={whyCoupe} alt="A coupe cocktail glass on a dark bar, warm light glowing behind it" sizes="(min-width: 900px) 45vw, 100vw" />
         </div>
         <div class="ccc-split-copy">
           <p>Before anyone books a table, they've already scrolled your feed, your Google listing, and every post you've been tagged in. If the photos don't look like the night you actually deliver, you lose them before they ever walk in.</p>
@@ -176,11 +128,7 @@ const easy = [
       </div>
       <div class="ccc-split is-flip">
         <div class="ccc-split-media">
-          <CccPhoto
-            src={whyShelves}
-            alt="Bar shelves of bottles and records under glowing copper pendant lights, a reel-to-reel deck in front"
-            sizes="(min-width: 900px) 45vw, 100vw"
-          />
+          <CccPhoto src={whyShelves} alt="Bar shelves of bottles and records under glowing copper pendant lights, a reel-to-reel deck in front" sizes="(min-width: 900px) 45vw, 100vw" />
         </div>
         <div class="ccc-split-copy">
           <h3 class="ccc-subtitle">You're busy running the place</h3>
@@ -190,16 +138,14 @@ const easy = [
     </div>
   </section>
 
-  <!-- 02 Where it goes -->
+  <!-- 3. Where it goes (slide 4) -->
   <section id="where" class="ccc-section" aria-labelledby="ccc-where">
     <div class="container">
       <SectionHeader id="ccc-where" index="02" kicker="Where it goes" title="One shoot, everywhere you post" />
-      <ul class="ccc-cards4" role="list">
+      <ul class="ccc-cards4">
         {where.map((w) => (
           <li class="ccc-card">
-            <div class="ccc-card-media">
-              <CccPhoto src={w.img} alt={w.alt} sizes="(min-width: 900px) 22vw, 46vw" />
-            </div>
+            <div class="ccc-card-media"><CccPhoto src={w.img} alt={w.alt} sizes="(min-width: 900px) 22vw, 46vw" /></div>
             <h3 class="ccc-card-title">{w.title}</h3>
             <p class="ccc-card-line">{w.line}</p>
           </li>
@@ -208,11 +154,11 @@ const easy = [
     </div>
   </section>
 
-  <!-- 03 The work -->
+  <!-- 4. The work (slides 5, 6, 7) -->
   <section id="work" class="ccc-section" aria-labelledby="ccc-work">
     <div class="container">
       <SectionHeader id="ccc-work" index="03" kicker="The work" title="Drinks people want to order" />
-      <ul class="ccc-grid3" role="list">
+      <ul class="ccc-grid3">
         {drinks.map((d) => (
           <li>
             <figure class="ccc-fig">
@@ -224,14 +170,18 @@ const easy = [
       </ul>
 
       <div class="ccc-night">
+        <div class="ccc-night-copy">
+          <h3 class="ccc-subtitle">Every part of your night</h3>
+          <ul class="ccc-dotlist">
+            {nightList.map((t) => <li>{t}</li>)}
+          </ul>
+        </div>
         <div class="ccc-mosaic">
           <div class="ccc-mosaic-wide">
             <CccPhoto src={nightWide} alt="A drink being poured into a glass, close up" sizes="(min-width: 900px) 55vw, 100vw" />
           </div>
           {nightTiles.map((t) => (
-            <div class="ccc-mosaic-tile">
-              <CccPhoto src={t.img} alt={t.alt} sizes="(min-width: 900px) 14vw, 48vw" />
-            </div>
+            <div class="ccc-mosaic-tile"><CccPhoto src={t.img} alt={t.alt} sizes="(min-width: 900px) 14vw, 48vw" /></div>
           ))}
         </div>
       </div>
@@ -248,16 +198,16 @@ const easy = [
         </figure>
       </div>
 
-      <p class="ccc-credit">Photographs by Andrew Baxter. Shot for Capture Create Caffeinate.</p>
+      <p class="ccc-credit">All photographs by Andrew. The cocktails and dishes pictured are the bar's. The photography is mine.</p>
     </div>
   </section>
 
-  <!-- 04 Real nights -->
+  <!-- 5. Video (slides 8, 9). Hidden with one line: CCC_SHOW_VIDEO in src/data/ccc.ts. -->
   {CCC_SHOW_VIDEO && (
     <section id="video" class="ccc-section" aria-labelledby="ccc-video">
       <div class="container">
         <SectionHeader id="ccc-video" index="04" kicker="Video" title="Desert Escape, shot by shot" />
-        <ul class="ccc-grid4" role="list">
+        <ul class="ccc-grid4">
           {desert.map((d) => (
             <li>
               <figure class="ccc-fig ccc-fig--wide">
@@ -272,7 +222,7 @@ const easy = [
           <div class="ccc-real-copy">
             <h3 class="ccc-subtitle">Real nights, nothing staged</h3>
             <p>I move through the room like a guest would, so the reel carries the pace and sound of a real night.</p>
-            <ul class="ccc-dotlist" role="list">
+            <ul class="ccc-dotlist">
               <li>The crowd</li>
               <li>The pour</li>
               <li>The brands behind the bar</li>
@@ -284,25 +234,19 @@ const easy = [
             )}
           </div>
           <div class="ccc-real-frames">
-            <div class="ccc-real-main">
-              <CccPhoto src={real[0].img} alt={real[0].alt} sizes="(min-width: 900px) 50vw, 100vw" />
-            </div>
-            <div>
-              <CccPhoto src={real[1].img} alt={real[1].alt} sizes="(min-width: 900px) 25vw, 50vw" />
-            </div>
-            <div>
-              <CccPhoto src={real[2].img} alt={real[2].alt} sizes="(min-width: 900px) 25vw, 50vw" />
-            </div>
+            <div class="ccc-real-main"><CccPhoto src={real[0].img} alt={real[0].alt} sizes="(min-width: 900px) 50vw, 100vw" /></div>
+            <div><CccPhoto src={real[1].img} alt={real[1].alt} sizes="(min-width: 900px) 25vw, 50vw" /></div>
+            <div><CccPhoto src={real[2].img} alt={real[2].alt} sizes="(min-width: 900px) 25vw, 50vw" /></div>
           </div>
         </div>
       </div>
     </section>
   )}
 
-  <!-- 05 How it works -->
+  <!-- 6. How it works (slides 10, 11) -->
   <section id="how" class="ccc-section" aria-labelledby="ccc-how">
     <div class="container">
-      <SectionHeader id="ccc-how" index="05" kicker="How it works" title="Four hours, no disruption" />
+      <SectionHeader id="ccc-how" index={CCC_SHOW_VIDEO ? '05' : '04'} kicker="How it works" title="Four hours, no disruption" />
       <div class="ccc-split">
         <div class="ccc-split-media">
           <CccPhoto src={howCrew} alt="Kitchen crew at work at the pass of a busy restaurant" sizes="(min-width: 900px) 40vw, 100vw" />
@@ -325,7 +269,7 @@ const easy = [
         <div class="ccc-split-media">
           <CccPhoto src={howCocktails} alt="A bartender setting two cocktails down on a bar mat" sizes="(min-width: 900px) 40vw, 100vw" />
         </div>
-        <ul class="ccc-easy" role="list">
+        <ul class="ccc-easy">
           {easy.map((e) => (
             <li class="ccc-easy-card">
               <h4 class="ccc-step-title">{e.title}</h4>
@@ -337,7 +281,37 @@ const easy = [
     </div>
   </section>
 
-  <!-- Closer (slide 13): No pricing on page -->
+  <!-- 7. Pricing (slide 12) -->
+  <section id="pricing" class="ccc-section" aria-labelledby="ccc-pricing">
+    <div class="container">
+      <SectionHeader id="ccc-pricing" index={CCC_SHOW_VIDEO ? '06' : '05'} kicker="What it costs" title="Pick what you need" />
+      <div class="ccc-pricing">
+        <div class="ccc-pricing-media">
+          <CccPhoto src={pricingCoupe} alt="A coupe cocktail with a green garnish, warm light behind it" sizes="(min-width: 900px) 30vw, 100vw" />
+        </div>
+        <div class="ccc-pricing-list">
+          <div class="ccc-price">
+            <div class="ccc-price-head"><h3>{P.photo.label}</h3><p class="ccc-price-amt">{P.photo.price}</p></div>
+            <p>{P.photo.desc}</p>
+          </div>
+          <div class="ccc-price">
+            <div class="ccc-price-head"><h3>{P.reel.label}</h3><p class="ccc-price-amt">{P.reel.price}</p></div>
+            <p>{P.reel.desc}</p>
+          </div>
+          <div class="ccc-price is-featured">
+            <div class="ccc-price-head">
+              <h3>{P.bundle.label}</h3>
+              <p class="ccc-price-amt">{P.bundle.price} <span class="ccc-price-was">{P.bundle.regular}</span></p>
+            </div>
+            <p>{P.bundle.desc}</p>
+          </div>
+          <p class="ccc-price-foot">{P.footer}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. Closer (slide 13) -->
   <section id="contact" class="ccc-closer" aria-labelledby="ccc-closer">
     <div class="ccc-closer-bg" aria-hidden="true">
       <CccPhoto src={closerBg} alt="" sizes="100vw" />
@@ -347,16 +321,11 @@ const easy = [
       <p class="ccc-closer-eyebrow">Let's get you on the calendar</p>
       <h2 id="ccc-closer" class="ccc-closer-title">Show people what they're missing</h2>
       <p class="ccc-closer-body">One shoot. Weeks of content. A better reason for people to come see you.</p>
+      <p class="ccc-closer-price">{P.summary}</p>
       <div class="ccc-actions btn-group">
-        <button type="button" class="btn btn-primary" data-open-ccc-modal>
-          Start a project <span aria-hidden="true">&rarr;</span>
-        </button>
-        <a class="btn btn-secondary" href={CCC_DECK.href} download>
-          {CCC_DECK.label} <span aria-hidden="true">&darr;</span>
-        </a>
-        <a class="btn btn-secondary" href={CCC_PORTFOLIO} target="_blank" rel="noopener">
-          Portfolio <span aria-hidden="true">&#8599;</span>
-        </a>
+        <a class="btn btn-primary" href={CCC_INQUIRY_HREF} data-open-ccc-modal>Start a project <span aria-hidden="true">&rarr;</span></a>
+        <a class="btn btn-secondary" href={CCC_DECK.href} download>{CCC_DECK.label} <span aria-hidden="true">&darr;</span></a>
+        <a class="btn btn-secondary" href={CCC_PORTFOLIO} target="_blank" rel="noopener">Portfolio <span aria-hidden="true">&#8599;</span></a>
       </div>
     </div>
   </section>
@@ -366,42 +335,38 @@ const easy = [
 </BaseLayout>
 
 <style>
-  /* Fixed nav clearance */
-  .page-head {
-    height: clamp(4.5rem, 8vw, 6rem);
-  }
+  /* Fixed nav clearance (same as /about). */
+  .page-head { height: clamp(4.5rem, 8vw, 6rem); }
 
-  /* Hero: Logo + Headline reduced to max 2 lines + Category line */
   .ccc-hero {
-    padding: clamp(2.5rem, 6vw, 4.5rem) 0 clamp(3rem, 7vw, 5.5rem);
+    padding: clamp(2rem, 6vw, 5rem) 0 clamp(3rem, 7vw, 6rem);
     text-align: center;
   }
   .ccc-hero-inner {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.85rem;
+    gap: 1rem;
   }
   .ccc-hero-logo {
-    width: clamp(160px, 28vw, 250px);
+    width: clamp(150px, 30vw, 260px);
     height: auto;
   }
   .ccc-hero-title {
-    margin: 0.25rem 0 0;
-    max-width: 26ch;
+    margin: 0.5rem 0 0;
+    max-width: 20ch;
     font-family: var(--font-display);
-    font-size: clamp(1.15rem, 2.5vw, 1.55rem);
-    font-weight: 700;
-    line-height: 1.25;
+    font-size: clamp(1.9rem, 5.6vw, 3.6rem);
+    font-weight: 800;
+    line-height: 1.05;
     text-transform: uppercase;
-    letter-spacing: -0.01em;
     color: var(--ink);
   }
   .ccc-hero-sub {
     margin: 0;
-    font-size: 0.76rem;
-    font-weight: 500;
-    letter-spacing: 0.22em;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.24em;
     text-transform: uppercase;
     color: var(--muted);
   }
@@ -409,7 +374,6 @@ const easy = [
     margin: 0.75rem auto 0;
   }
 
-  /* Standard Sections */
   .ccc-section {
     padding: clamp(3.5rem, 8vw, 6.5rem) 0;
     border-top: 1px solid var(--line);
@@ -428,60 +392,36 @@ const easy = [
     text-transform: uppercase;
     color: var(--ink);
   }
-  .ccc-subtitle--spaced {
-    margin-top: clamp(3rem, 6vw, 5rem);
-  }
+  .ccc-subtitle--spaced { margin-top: clamp(3rem, 6vw, 5rem); }
+  /* Phones: the display face is wide, so a long word ("EVERYWHERE",
+     "DISRUPTION") would break mid-word at the default title size. */
   @media (max-width: 480px) {
-    .ccc-section :global(.sec-head .section-title) {
-      font-size: 4.8vw;
-    }
-    .ccc-hero-title {
-      font-size: clamp(1.1rem, 4.8vw, 1.35rem);
-    }
-    .ccc-closer-title {
-      font-size: 7.6vw;
-    }
+    .ccc-section :global(.sec-head .section-title) { font-size: 4.8vw; }
+    .ccc-hero-title { font-size: 7.6vw; }
+    .ccc-closer-title { font-size: 7.6vw; }
   }
   .ccc-section p {
     color: var(--text, #d6d6d6);
     line-height: 1.7;
   }
 
-  /* Image and copy side by side */
+  /* Image and copy side by side; .is-flip puts the image on the right. */
   .ccc-split {
     display: grid;
     gap: clamp(1.5rem, 4vw, 3.5rem);
     align-items: center;
     margin-top: clamp(1.5rem, 3vw, 2.5rem);
   }
-  .ccc-split-copy p {
-    margin: 0;
-    font-size: clamp(1rem, 1.6vw, 1.15rem);
-    max-width: 52ch;
-  }
+  .ccc-split-copy p { margin: 0; font-size: clamp(1rem, 1.6vw, 1.15rem); max-width: 52ch; }
   @media (min-width: 900px) {
-    .ccc-split {
-      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-      grid-template-areas: 'media copy';
-    }
-    .ccc-split.is-flip {
-      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-      grid-template-areas: 'copy media';
-    }
-    .ccc-split > :first-child {
-      grid-area: media;
-    }
-    .ccc-split > :last-child {
-      grid-area: copy;
-    }
+    .ccc-split { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); grid-template-areas: 'media copy'; }
+    .ccc-split.is-flip { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); grid-template-areas: 'copy media'; }
+    .ccc-split > :first-child { grid-area: media; }
+    .ccc-split > :last-child { grid-area: copy; }
   }
-  .ccc-split-media {
-    max-width: 520px;
-    width: 100%;
-    justify-self: center;
-  }
+  .ccc-split-media { max-width: 520px; width: 100%; justify-self: center; }
 
-  /* 02 Where it goes: 2x2 on phones, 4 across on desktop */
+  /* Where it goes: 2x2 on phones, 4 across on desktop. */
   .ccc-cards4,
   .ccc-grid3,
   .ccc-grid4,
@@ -498,20 +438,9 @@ const easy = [
     gap: clamp(0.75rem, 2vw, 1.5rem);
     margin-top: clamp(1.5rem, 3vw, 2.5rem);
   }
-  @media (min-width: 900px) {
-    .ccc-cards4 {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-  }
-  .ccc-card-media {
-    aspect-ratio: 4 / 5;
-    overflow: hidden;
-    background: #0d0d0d;
-  }
-  .ccc-card-media :global(img) {
-    height: 100%;
-    object-fit: cover;
-  }
+  @media (min-width: 900px) { .ccc-cards4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .ccc-card-media { aspect-ratio: 4 / 5; overflow: hidden; background: #0d0d0d; }
+  .ccc-card-media :global(img) { height: 100%; object-fit: cover; }
   .ccc-card-title {
     margin: 0.9rem 0 0.3rem;
     font-family: var(--font-mono);
@@ -521,25 +450,16 @@ const easy = [
     text-transform: uppercase;
     color: var(--ink);
   }
-  .ccc-card-line {
-    margin: 0;
-    font-size: 0.92rem;
-  }
+  .ccc-card-line { margin: 0; font-size: 0.92rem; }
 
-  /* 03 The work */
+  /* The work */
   .ccc-grid3 {
     display: grid;
     gap: clamp(0.75rem, 2vw, 1.5rem);
     margin-top: clamp(1.5rem, 3vw, 2.5rem);
   }
-  @media (min-width: 640px) {
-    .ccc-grid3 {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-  .ccc-fig {
-    margin: 0;
-  }
+  @media (min-width: 640px) { .ccc-grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .ccc-fig { margin: 0; }
   .ccc-fig figcaption {
     margin-top: 0.7rem;
     font-family: var(--font-mono);
@@ -548,11 +468,7 @@ const easy = [
     text-transform: uppercase;
     color: var(--muted);
   }
-  .ccc-dotlist {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem 0;
-  }
+  .ccc-dotlist { display: flex; flex-wrap: wrap; gap: 0.4rem 0; }
   .ccc-dotlist li {
     font-family: var(--font-mono);
     font-size: 0.78rem;
@@ -560,111 +476,62 @@ const easy = [
     text-transform: uppercase;
     color: var(--ink);
   }
-  .ccc-dotlist li:not(:last-child)::after {
-    content: '·';
-    margin: 0 0.6rem;
-    color: var(--muted);
-  }
+  .ccc-dotlist li:not(:last-child)::after { content: '·'; margin: 0 0.6rem; color: var(--muted); }
 
   .ccc-night {
+    display: grid;
+    gap: clamp(1.5rem, 3vw, 2.5rem);
     margin-top: clamp(3rem, 6vw, 5rem);
+    align-items: center;
   }
+  @media (min-width: 900px) { .ccc-night { grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr); } }
   .ccc-mosaic {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: clamp(0.5rem, 1.2vw, 0.9rem);
   }
-  @media (min-width: 640px) {
-    .ccc-mosaic {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-  }
-  .ccc-mosaic-wide {
-    grid-column: 1 / -1;
-  }
-  .ccc-mosaic-tile {
-    aspect-ratio: 252 / 464;
-    overflow: hidden;
-  }
-  .ccc-mosaic-tile :global(img) {
-    height: 100%;
-    object-fit: cover;
-  }
+  @media (min-width: 640px) { .ccc-mosaic { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .ccc-mosaic-wide { grid-column: 1 / -1; }
+  .ccc-mosaic-tile { aspect-ratio: 252 / 464; overflow: hidden; }
+  .ccc-mosaic-tile :global(img) { height: 100%; object-fit: cover; }
 
-  .ccc-room {
-    display: grid;
-    gap: clamp(0.75rem, 2vw, 1.5rem);
-  }
-  @media (min-width: 900px) {
-    .ccc-room {
-      grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
-      align-items: start;
-    }
-  }
+  .ccc-room { display: grid; gap: clamp(0.75rem, 2vw, 1.5rem); }
+  @media (min-width: 900px) { .ccc-room { grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); align-items: start; } }
   .ccc-credit {
     margin: clamp(2rem, 4vw, 3rem) 0 0;
     font-size: 0.82rem;
     color: var(--muted) !important;
   }
 
-  /* 04 Video / Real nights */
+  /* Video */
   .ccc-grid4 {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: clamp(0.75rem, 2vw, 1.25rem);
     margin-top: clamp(1.5rem, 3vw, 2.5rem);
   }
-  @media (min-width: 900px) {
-    .ccc-grid4 {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-  }
-  .ccc-fig--wide :global(img) {
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-  }
+  @media (min-width: 900px) { .ccc-grid4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .ccc-fig--wide :global(img) { aspect-ratio: 16 / 9; object-fit: cover; }
   .ccc-real {
     display: grid;
     gap: clamp(1.5rem, 3vw, 2.5rem);
     margin-top: clamp(3rem, 6vw, 5rem);
     align-items: center;
   }
-  @media (min-width: 900px) {
-    .ccc-real {
-      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-    }
-  }
-  .ccc-real-copy p {
-    margin: 0 0 1rem;
-    max-width: 46ch;
-  }
-  .ccc-reel-link {
-    margin-top: 1.25rem;
-  }
+  @media (min-width: 900px) { .ccc-real { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); } }
+  .ccc-real-copy p { margin: 0 0 1rem; max-width: 46ch; }
+  .ccc-reel-link { margin-top: 1.25rem; }
   .ccc-real-frames {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: clamp(0.5rem, 1.2vw, 0.9rem);
   }
-  .ccc-real-frames :global(img) {
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-  }
-  .ccc-real-main {
-    grid-column: 1 / -1;
-  }
+  .ccc-real-frames :global(img) { aspect-ratio: 16 / 9; object-fit: cover; }
+  .ccc-real-main { grid-column: 1 / -1; }
 
-  /* 05 How it works */
-  .ccc-steps {
-    display: grid;
-    gap: 1.5rem;
-  }
-  .ccc-steps li {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 1rem;
-    align-items: start;
-  }
+  /* How it works */
+  .ccc-steps { display: grid; gap: 1.5rem; }
+  .ccc-steps li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1rem; align-items: start; }
   .ccc-step-n {
     font-family: var(--font-display);
     font-size: 1.6rem;
@@ -682,82 +549,105 @@ const easy = [
     color: var(--ink);
   }
   .ccc-steps p,
-  .ccc-easy p {
-    margin: 0;
-    font-size: 0.95rem;
-  }
-  .ccc-easy {
+  .ccc-easy p { margin: 0; font-size: 0.95rem; }
+  .ccc-easy { display: grid; gap: 1rem; }
+  @media (min-width: 640px) { .ccc-easy { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .ccc-easy-card { padding: 1.25rem; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.02); }
+
+  /* Pricing: the bundle carries the outline, as on the deck. */
+  .ccc-pricing {
     display: grid;
-    gap: 1rem;
+    gap: clamp(1.5rem, 4vw, 3rem);
+    margin-top: clamp(1.5rem, 3vw, 2.5rem);
+    align-items: center;
   }
-  @media (min-width: 640px) {
-    .ccc-easy {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+  @media (min-width: 900px) { .ccc-pricing { grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr); } }
+  .ccc-pricing-media { max-width: 420px; width: 100%; justify-self: center; }
+  .ccc-pricing-list { display: grid; gap: 1rem; }
+  .ccc-price { padding: 1.25rem 1.4rem; border: 1px solid var(--line); }
+  .ccc-price p { margin: 0; font-size: 0.95rem; }
+  .ccc-price.is-featured { border: 2px solid var(--ink); background: rgba(255, 255, 255, 0.04); }
+  .ccc-price-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    margin-bottom: 0.5rem;
   }
-  .ccc-easy-card {
-    padding: 1.25rem;
-    background: #0d0d0d;
-    border: 1px solid var(--border);
+  .ccc-price-head h3 {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .ccc-price .ccc-price-amt {
+    font-family: var(--font-display);
+    font-size: clamp(1.4rem, 3vw, 1.9rem);
+    font-weight: 800;
+    color: var(--ink);
+  }
+  .ccc-price-was {
+    display: inline-block;
+    margin-left: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .ccc-price-foot {
+    margin: 0.25rem 0 0 !important;
+    font-family: var(--font-mono);
+    font-size: 0.72rem !important;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted) !important;
   }
 
   /* Closer */
   .ccc-closer {
     position: relative;
-    padding: clamp(5rem, 12vw, 9rem) 0;
-    text-align: center;
-    overflow: hidden;
+    padding: clamp(4rem, 10vw, 8rem) 0;
     border-top: 1px solid var(--line);
+    text-align: center;
+    isolation: isolate;
+    overflow: hidden;
   }
-  .ccc-closer-bg {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    opacity: 0.28;
-    filter: saturate(0.9);
-  }
-  .ccc-closer-bg :global(img) {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .ccc-closer-inner {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-  }
-  .ccc-closer-logo {
-    width: clamp(110px, 20vw, 150px);
-    height: auto;
-    opacity: 0.9;
-  }
+  .ccc-closer-bg { position: absolute; inset: 0; z-index: -1; }
+  .ccc-closer-bg :global(img) { width: 100%; height: 100%; object-fit: cover; }
+  .ccc-closer-bg::after { content: ''; position: absolute; inset: 0; background: rgba(0, 0, 0, 0.72); }
+  .ccc-closer-inner { display: flex; flex-direction: column; align-items: center; gap: 0.9rem; }
+  .ccc-closer-logo { width: clamp(100px, 18vw, 150px); height: auto; }
   .ccc-closer-eyebrow {
-    margin: 0;
+    margin: 0.5rem 0 0;
     font-family: var(--font-mono);
     font-size: 0.72rem;
-    font-weight: 500;
     letter-spacing: 0.24em;
     text-transform: uppercase;
     color: var(--muted);
   }
   .ccc-closer-title {
     margin: 0;
+    max-width: 18ch;
     font-family: var(--font-display);
-    font-size: clamp(2rem, 5vw, 3.8rem);
+    font-size: clamp(1.8rem, 5vw, 3.2rem);
     font-weight: 800;
     line-height: 1.05;
     text-transform: uppercase;
-    letter-spacing: -0.01em;
     color: var(--ink);
   }
-  .ccc-closer-body {
+  .ccc-closer-body { margin: 0; max-width: 46ch; color: var(--text, #d6d6d6); line-height: 1.7; }
+  .ccc-closer-price {
     margin: 0;
-    max-width: 38ch;
-    font-size: clamp(1rem, 1.8vw, 1.2rem);
-    line-height: 1.5;
-    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink);
   }
 </style>
