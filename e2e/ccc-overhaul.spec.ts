@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('CCC Page Overhaul Acceptance Verification', () => {
-  test('Hero: logo + "Bars. Restaurants. Events" + coupe image, no tagline, logo largest', async ({ page }) => {
+  test('Hero: logo + headline (max 2 lines) + category line, no image in hero', async ({ page }) => {
     const errors: string[] = [];
     page.on('console', (msg) => {
       if (msg.type() === 'error') errors.push(msg.text());
@@ -13,24 +13,23 @@ test.describe('CCC Page Overhaul Acceptance Verification', () => {
     await expect(hero).toBeVisible();
 
     const logo = hero.locator('.ccc-hero-logo');
-    const sub = hero.locator('#ccc-title');
-    const heroImg = hero.locator('.ccc-hero-media img');
+    const title = hero.locator('#ccc-title');
+    const sub = hero.locator('.ccc-hero-sub');
 
     await expect(logo).toBeVisible();
-    await expect(sub).toHaveText('Bars. Restaurants. Events');
-    await expect(heroImg).toBeVisible();
+    await expect(title).toHaveText('Content that brings people through your door');
+    await expect(sub).toContainText('Bars · Restaurants · Events');
 
-    // No tagline or paragraph in hero
-    await expect(hero).not.toContainText('Content that brings people through your door');
-    await expect(hero.locator('p')).toHaveCount(0);
+    // Only the logo image is present in hero - no photo in hero
+    const heroImages = hero.locator('img');
+    await expect(heroImages).toHaveCount(1);
+    await expect(heroImages.first()).toHaveAttribute('alt', 'Capture Create Caffeinate logo');
 
-    // Logo must outweigh the text line
-    const logoBox = await logo.boundingBox();
-    const subBox = await sub.boundingBox();
-    expect(logoBox).not.toBeNull();
-    expect(subBox).not.toBeNull();
-    expect(logoBox!.width).toBeGreaterThan(subBox!.width);
-    expect(logoBox!.height).toBeGreaterThan(subBox!.height);
+    // Verify headline does not exceed 2 lines
+    const titleBox = await title.boundingBox();
+    expect(titleBox).not.toBeNull();
+    // At line-height ~1.25 with clamp font-size, 2 lines is well under 90px
+    expect(titleBox!.height).toBeLessThan(90);
 
     expect(errors).toEqual([]);
   });
@@ -137,105 +136,55 @@ test.describe('CCC Page Overhaul Acceptance Verification', () => {
     await expect(modal).toBeHidden();
   });
 
-  for (const vp of [
-    { name: 'desktop-1920', width: 1920, height: 1080 },
-    { name: 'mobile-390', width: 390, height: 844 },
-  ]) {
-    test(`Scroll collapse & strip tap works at ${vp.name}`, async ({ page }) => {
-      await page.setViewportSize({ width: vp.width, height: vp.height });
-      await page.goto('./ccc/');
-
-      const panels = page.locator('[data-ccc-panel]');
-      await expect(panels).toHaveCount(5);
-
-      const expectedTitles = [
-        '01 Why it matters',
-        '02 Where it goes',
-        '03 The work',
-        '04 Real nights',
-        '05 How it works',
-      ];
-      for (let i = 0; i < 5; i++) {
-        const strip = panels.nth(i).locator('[data-ccc-strip]');
-        const num = (await strip.locator('.ccc-strip-num').textContent())?.trim() ?? '';
-        const title = (await strip.locator('.ccc-strip-title').textContent())?.trim() ?? '';
-        expect(`${num} ${title}`).toBe(expectedTitles[i]);
-      }
-
-      // Panel 01 open on load, rest collapsed
-      await expect(panels.nth(0)).toHaveClass(/is-expanded/);
-      for (let i = 1; i < 5; i++) {
-        await expect(panels.nth(i)).toHaveClass(/is-collapsed/);
-      }
-
-      // Scroll down past Panel 01 -> Panel 01 collapses, Panel 02 expands
-      await page.evaluate(() => {
-        const p1 = document.querySelectorAll('[data-ccc-panel]')[1];
-        const y = p1.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.4;
-        window.scrollTo(0, y);
-      });
-      await page.waitForTimeout(450);
-
-      await expect(panels.nth(0)).toHaveClass(/is-collapsed/);
-      await expect(panels.nth(1)).toHaveClass(/is-expanded/);
-      await expect(page.locator('[data-ccc-panel].is-expanded')).toHaveCount(1);
-
-      // Tapping Strip 04 expands only Panel 04 and collapses the rest
-      await panels.nth(3).locator('[data-ccc-strip]').click();
-      await expect(panels.nth(3)).toHaveClass(/is-expanded/);
-      await expect(page.locator('[data-ccc-panel].is-expanded')).toHaveCount(1);
-
-      // Passed strips (01, 02, 03) are stacked in order at the top
-      const r0 = await panels.nth(0).locator('[data-ccc-strip]').boundingBox();
-      const r1 = await panels.nth(1).locator('[data-ccc-strip]').boundingBox();
-      const r2 = await panels.nth(2).locator('[data-ccc-strip]').boundingBox();
-      expect(r0!.y).toBeLessThan(r1!.y);
-      expect(r1!.y).toBeLessThan(r2!.y);
-
-      // Tapping Strip 01 expands Panel 01 again
-      await panels.nth(0).locator('[data-ccc-strip]').click();
-      await expect(panels.nth(0)).toHaveClass(/is-expanded/);
-      await expect(page.locator('[data-ccc-panel].is-expanded')).toHaveCount(1);
-    });
-  }
-
-  test('Reduced motion disables scroll-driven collapse while preserving click accordion', async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: 'reduce' });
+  test('Scrolling up and down maintains section visibility', async ({ page }) => {
     await page.goto('./ccc/');
 
-    const panels = page.locator('[data-ccc-panel]');
-    await expect(panels.nth(0)).toHaveClass(/is-expanded/);
+    const sectionIds = ['why', 'where', 'work', 'video', 'how', 'contact'];
+    for (const id of sectionIds) {
+      const sec = page.locator(`#${id}`);
+      await expect(sec).toBeVisible();
+    }
 
-    // Scrolling does not auto-collapse Panel 01 under reduced motion
-    await page.evaluate(() => window.scrollTo(0, 1200));
-    await page.waitForTimeout(300);
-    await expect(panels.nth(0)).toHaveClass(/is-expanded/);
+    // Scroll down to the bottom
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(100);
+    await expect(page.locator('#contact')).toBeVisible();
 
-    // Clicking Strip 02 expands Panel 02 and collapses Panel 01
-    await panels.nth(1).locator('[data-ccc-strip]').click();
-    await expect(panels.nth(1)).toHaveClass(/is-expanded/);
-    await expect(panels.nth(0)).toHaveClass(/is-collapsed/);
+    // Scroll back up to the top
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(100);
+    await expect(page.locator('.ccc-hero')).toBeVisible();
+
+    // Verify all sections remain fully visible in the DOM (no collapse failure)
+    for (const id of sectionIds) {
+      const sec = page.locator(`#${id}`);
+      await expect(sec).toBeVisible();
+      const box = await sec.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.height).toBeGreaterThan(100);
+    }
   });
 
   test('Copy trim, photo credit, buyer facts, and monochrome rules', async ({ page }) => {
     await page.goto('./ccc/');
 
-    // Open Panel 03 to verify photo credit and deleted nightList
-    const panels = page.locator('[data-ccc-panel]');
-    await panels.nth(2).locator('[data-ccc-strip]').click();
+    // Photo credit in Section 03
     await expect(page.locator('.ccc-credit')).toHaveText(
       'Photographs by Andrew Baxter. Shot for Capture Create Caffeinate.'
     );
-    await expect(panels.nth(2)).not.toContainText('Every part of your night');
 
-    // Open Panel 05 to verify buyer facts survive
-    await panels.nth(4).locator('[data-ccc-strip]').click();
-    await expect(panels.nth(4)).toContainText('15 selects the next day');
-    await expect(panels.nth(4)).toContainText('within a week');
-    await expect(panels.nth(4)).toContainText('No cap on photos');
-    await expect(panels.nth(4)).toContainText('Small footprint');
+    // Section 05 buyer facts survive
+    const howSec = page.locator('#how');
+    await expect(howSec).toContainText('15 selects the next day');
+    await expect(howSec).toContainText('within a week');
+    await expect(howSec).toContainText('No cap on photos');
+    await expect(howSec).toContainText('Small footprint');
 
-    // No em dashes anywhere on the page
+    // Section 01 contains the coupe photo
+    const whyCoupe = page.locator('#why img[alt*="coupe cocktail"]');
+    await expect(whyCoupe).toBeVisible();
+
+    // Zero em dashes anywhere on the page
     const fullHtmlText = await page.evaluate(() => document.body.textContent || '');
     expect(fullHtmlText).not.toContain('—');
   });
