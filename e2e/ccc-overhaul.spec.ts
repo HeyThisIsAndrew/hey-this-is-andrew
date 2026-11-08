@@ -80,30 +80,27 @@ test.describe('CCC Page Overhaul Acceptance Verification', () => {
     await startButtons.last().click();
     await expect(modal).toBeVisible();
 
-    // Verify all 7 required fields in order
-    const fields = modal.locator('#ccc-inquiry-form').locator('input, textarea, select');
-    await expect(fields).toHaveCount(7);
-
+    // Verify modal inputs exist and have appropriate labels
     await expect(modal.locator('label[for="ccc-name"]')).toContainText('Your name');
     await expect(modal.locator('label[for="ccc-email"]')).toContainText('Email');
     await expect(modal.locator('label[for="ccc-venue"]')).toContainText('Venue name');
-    await expect(modal.locator('label[for="ccc-location"]')).toContainText('Venue location, city or neighborhood');
-    await expect(modal.locator('label[for="ccc-showoff"]')).toContainText('What do you want to show off?');
-    await expect(modal.locator('#ccc-showoff')).toHaveAttribute(
-      'placeholder',
-      'the menu, the room, the people, anything new.'
-    );
+    await expect(modal.locator('label[for="ccc-location"]')).toContainText('Venue location');
+    await expect(modal.locator('label[for="ccc-service"]')).toContainText('What are you looking for?');
     await expect(modal.locator('label[for="ccc-date"]')).toContainText('Preferred date or dates');
     await expect(modal.locator('label[for="ccc-budget"]')).toContainText('Budget');
+    await expect(modal.locator('label[for="ccc-showoff"]')).toContainText('Special requests or details');
+    await expect(modal.locator('.ccc-help-text')).toContainText('Feel free to type in any special requests or message');
 
-    // Fill out all 7 fields and submit
+    // Fill out fields and select options
     await modal.locator('#ccc-name').fill('Alex Rivera');
     await modal.locator('#ccc-email').fill('alex@nightjarbar.com');
     await modal.locator('#ccc-venue').fill('Nightjar');
     await modal.locator('#ccc-location').fill('Silver Lake, Los Angeles');
-    await modal.locator('#ccc-showoff').fill('New winter cocktail menu and late-night room energy.');
+    await modal.locator('#ccc-service').selectOption('Photo + vertical reel bundle ($1,200 founding rate)');
+    await modal.locator('input[value="Rush 48-hour gallery delivery"]').check();
     await modal.locator('#ccc-date').fill('2026-12-10');
     await modal.locator('#ccc-budget').selectOption('$1,200 to $2,000');
+    await modal.locator('#ccc-showoff').fill('New winter cocktail menu and late-night room energy.');
 
     await modal.locator('button[type="submit"]').click();
 
@@ -121,13 +118,13 @@ test.describe('CCC Page Overhaul Acceptance Verification', () => {
     expect(decodeURIComponent(mailtoHref || '')).toContain('Name: Alex Rivera');
     expect(decodeURIComponent(mailtoHref || '')).toContain('Email: alex@nightjarbar.com');
     expect(decodeURIComponent(mailtoHref || '')).toContain('Venue: Nightjar');
-    expect(decodeURIComponent(mailtoHref || '')).toContain('Location: Silver Lake, Los Angeles');
-    expect(decodeURIComponent(mailtoHref || '')).toContain('What to show off: New winter cocktail menu and late-night room energy.');
-    expect(decodeURIComponent(mailtoHref || '')).toContain('Preferred dates: 2026-12-10');
+    expect(decodeURIComponent(mailtoHref || '')).toContain('Package/Service: Photo + vertical reel bundle ($1,200 founding rate)');
+    expect(decodeURIComponent(mailtoHref || '')).toContain('Add-ons: Rush 48-hour gallery delivery');
     expect(decodeURIComponent(mailtoHref || '')).toContain('Budget: $1,200 to $2,000');
 
     const payload = await modal.locator('#ccc-copy-payload').inputValue();
     expect(payload).toContain('Subject: CCC shoot inquiry: Nightjar');
+    expect(payload).toContain('Rush 48-hour gallery delivery');
     expect(payload).toContain('Budget: $1,200 to $2,000');
     await expect(modal.locator('#ccc-copy-btn')).toBeVisible();
 

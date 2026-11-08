@@ -1,9 +1,12 @@
 ---
 /**
  * CccInquiryModal.astro
- * Accessible project inquiry modal for Capture Create Caffeinate.
- * Native <dialog> opened via showModal(), with prefilled mailto composition
- * and an in-modal copyable fallback for visitors without a mail client.
+ * Premium, wide project inquiry modal for Capture Create Caffeinate.
+ * Features a spacious 2-column desktop layout, package/service selection dropdown
+ * with 'Other' option, optional add-on checkboxes, special requests field,
+ * budget selector, prefilled mailto composition, and fallback copy tool.
+ *
+ * Punctuation hygiene: zero em dashes throughout.
  */
 import { CCC_EMAIL } from '../../data/ccc';
 ---
@@ -16,7 +19,10 @@ import { CCC_EMAIL } from '../../data/ccc';
 >
   <div class="ccc-modal-card">
     <header class="ccc-modal-head">
-      <h2 id="ccc-modal-title" class="ccc-modal-title">Start a project</h2>
+      <div class="ccc-modal-titles">
+        <p class="ccc-modal-eyebrow font-mono">Capture Create Caffeinate</p>
+        <h2 id="ccc-modal-title" class="ccc-modal-title">Start a project</h2>
+      </div>
       <button
         type="button"
         class="ccc-modal-close"
@@ -31,94 +37,139 @@ import { CCC_EMAIL } from '../../data/ccc';
     </header>
 
     <form id="ccc-inquiry-form" class="ccc-form">
-      <div class="ccc-field">
-        <label for="ccc-name">Your name <span class="ccc-req" aria-hidden="true">*</span></label>
-        <input
-          type="text"
-          id="ccc-name"
-          name="name"
-          required
-          autocomplete="name"
-          autofocus
-        />
+      <!-- 2-Column Contact Info -->
+      <div class="ccc-form-grid">
+        <div class="ccc-field">
+          <label for="ccc-name">Your name <span class="ccc-req" aria-hidden="true">*</span></label>
+          <input
+            type="text"
+            id="ccc-name"
+            name="name"
+            required
+            autocomplete="name"
+            placeholder="First and last name"
+            autofocus
+          />
+        </div>
+
+        <div class="ccc-field">
+          <label for="ccc-email">Email <span class="ccc-req" aria-hidden="true">*</span></label>
+          <input
+            type="email"
+            id="ccc-email"
+            name="email"
+            required
+            autocomplete="email"
+            placeholder="you@venue.com"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+          />
+        </div>
+
+        <div class="ccc-field">
+          <label for="ccc-venue">Venue name <span class="ccc-req" aria-hidden="true">*</span></label>
+          <input
+            type="text"
+            id="ccc-venue"
+            name="venue"
+            required
+            placeholder="The bar, restaurant, or brand"
+            autocomplete="organization"
+          />
+        </div>
+
+        <div class="ccc-field">
+          <label for="ccc-location">Venue location <span class="ccc-req" aria-hidden="true">*</span></label>
+          <input
+            type="text"
+            id="ccc-location"
+            name="location"
+            required
+            placeholder="City or neighborhood"
+            autocomplete="address-level2"
+          />
+        </div>
       </div>
 
-      <div class="ccc-field">
-        <label for="ccc-email">Email <span class="ccc-req" aria-hidden="true">*</span></label>
-        <input
-          type="email"
-          id="ccc-email"
-          name="email"
-          required
-          autocomplete="email"
-          autocorrect="off"
-          autocapitalize="off"
-          spellcheck="false"
-        />
+      <!-- Scope & Services -->
+      <div class="ccc-form-grid">
+        <div class="ccc-field">
+          <label for="ccc-service">What are you looking for? <span class="ccc-req" aria-hidden="true">*</span></label>
+          <select id="ccc-service" name="service" required>
+            <option value="" disabled selected>Select an option</option>
+            <option value="Photo + vertical reel bundle ($1,200 founding rate)">Photo + vertical reel bundle ($1,200 founding rate)</option>
+            <option value="Half-day photo session ($950)">Half-day photo session ($950)</option>
+            <option value="Vertical reel only ($550)">Vertical reel only ($550)</option>
+            <option value="Events or multi-day coverage">Events or multi-day coverage</option>
+            <option value="Other (describe in requests below)">Other (describe in requests below)</option>
+          </select>
+        </div>
+
+        <div class="ccc-field">
+          <label for="ccc-date">Preferred date or dates <span class="ccc-req" aria-hidden="true">*</span></label>
+          <input
+            type="date"
+            id="ccc-date"
+            name="preferredDate"
+            required
+          />
+        </div>
       </div>
 
-      <div class="ccc-field">
-        <label for="ccc-venue">Venue name <span class="ccc-req" aria-hidden="true">*</span></label>
-        <input
-          type="text"
-          id="ccc-venue"
-          name="venue"
-          required
-          autocomplete="organization"
-        />
+      <!-- Add-on Options (Optional checkboxes) -->
+      <div class="ccc-field ccc-field--full">
+        <span class="ccc-field-label font-mono">Optional add-ons</span>
+        <div class="ccc-checkbox-group">
+          <label class="ccc-checkbox-label">
+            <input type="checkbox" name="addons" value="Vertical reel add-on" />
+            <span>Vertical reel add-on (+$550)</span>
+          </label>
+          <label class="ccc-checkbox-label">
+            <input type="checkbox" name="addons" value="Rush 48-hour gallery delivery" />
+            <span>Rush 48-hour delivery (+ $150)</span>
+          </label>
+          <label class="ccc-checkbox-label">
+            <input type="checkbox" name="addons" value="Multiple shoot sessions or locations" />
+            <span>Multiple sessions or locations</span>
+          </label>
+        </div>
       </div>
 
-      <div class="ccc-field">
-        <label for="ccc-location">Venue location, city or neighborhood <span class="ccc-req" aria-hidden="true">*</span></label>
-        <input
-          type="text"
-          id="ccc-location"
-          name="location"
-          required
-          autocomplete="address-level2"
-        />
+      <!-- Budget Selection & Founding Note -->
+      <div class="ccc-field ccc-field--full">
+        <p id="ccc-pricing-note" class="ccc-pricing-note">
+          Half-day photo + reel starts at $1,200. Founding rate for the first 3 venues, regularly $1,500.
+        </p>
+        <div class="ccc-field-sub">
+          <label for="ccc-budget">Budget <span class="ccc-req" aria-hidden="true">*</span></label>
+          <select
+            id="ccc-budget"
+            name="budget"
+            required
+            aria-describedby="ccc-pricing-note"
+          >
+            <option value="" disabled selected>Select a range</option>
+            <option value="Under $950">Under $950</option>
+            <option value="$950 to $1,200">$950 to $1,200</option>
+            <option value="$1,200 to $2,000">$1,200 to $2,000</option>
+            <option value="$2,000 plus">$2,000 plus</option>
+            <option value="Not sure yet">Not sure yet</option>
+          </select>
+        </div>
       </div>
 
-      <div class="ccc-field">
-        <label for="ccc-showoff">What do you want to show off? <span class="ccc-req" aria-hidden="true">*</span></label>
+      <!-- Message & Special Requests -->
+      <div class="ccc-field ccc-field--full">
+        <label for="ccc-showoff">Special requests or details <span class="ccc-req" aria-hidden="true">*</span></label>
         <textarea
           id="ccc-showoff"
           name="showOff"
-          rows="3"
+          rows="4"
           required
           placeholder="the menu, the room, the people, anything new."
         ></textarea>
-      </div>
-
-      <div class="ccc-field">
-        <label for="ccc-date">Preferred date or dates <span class="ccc-req" aria-hidden="true">*</span></label>
-        <input
-          type="date"
-          id="ccc-date"
-          name="preferredDate"
-          required
-        />
-      </div>
-
-      <p id="ccc-pricing-note" class="ccc-pricing-note">
-        Half-day photo + reel starts at $1,200. Founding rate for the first 3 venues, regularly $1,500.
-      </p>
-
-      <div class="ccc-field">
-        <label for="ccc-budget">Budget <span class="ccc-req" aria-hidden="true">*</span></label>
-        <select
-          id="ccc-budget"
-          name="budget"
-          required
-          aria-describedby="ccc-pricing-note"
-        >
-          <option value="" disabled selected>Select a range</option>
-          <option value="Under $950">Under $950</option>
-          <option value="$950 to $1,200">$950 to $1,200</option>
-          <option value="$1,200 to $2,000">$1,200 to $2,000</option>
-          <option value="$2,000 plus">$2,000 plus</option>
-          <option value="Not sure yet">Not sure yet</option>
-        </select>
+        <p class="ccc-help-text">Feel free to type in any special requests or message and we will get back to you as soon as possible.</p>
       </div>
 
       <button type="submit" class="btn btn-primary ccc-submit-btn">
@@ -126,21 +177,26 @@ import { CCC_EMAIL } from '../../data/ccc';
       </button>
     </form>
 
+    <!-- Confirmation / Fallback State -->
     <div id="ccc-confirm-box" class="ccc-confirm-box" hidden>
-      <p id="ccc-confirm-msg" class="ccc-confirm-title" role="status" aria-live="polite">
-        Thanks. We will get back to you to schedule a call.
-      </p>
+      <div class="ccc-confirm-header">
+        <div class="ccc-confirm-icon" aria-hidden="true">&#10003;</div>
+        <p id="ccc-confirm-msg" class="ccc-confirm-title" role="status" aria-live="polite">
+          Thanks. We will get back to you to schedule a call.
+        </p>
+      </div>
       <p class="ccc-confirm-desc">
-        If your mail app did not open automatically, copy the composed inquiry below and send it to <a href={`mailto:${CCC_EMAIL}`}>{CCC_EMAIL}</a>.
+        If your email client did not launch automatically, copy the composed inquiry below and email it to
+        <a href={`mailto:${CCC_EMAIL}`}>{CCC_EMAIL}</a>.
       </p>
 
       <div class="ccc-copy-wrap">
-        <label for="ccc-copy-payload" class="ccc-copy-label">Composed email text</label>
+        <label for="ccc-copy-payload" class="ccc-copy-label font-mono">Composed email text</label>
         <textarea
           id="ccc-copy-payload"
           class="ccc-copy-payload"
           readonly
-          rows="8"
+          rows="10"
         ></textarea>
         <div class="ccc-confirm-actions btn-group">
           <button type="button" id="ccc-copy-btn" class="btn btn-primary">
@@ -156,60 +212,70 @@ import { CCC_EMAIL } from '../../data/ccc';
 </dialog>
 
 <style>
-  /* MANDATORY per modern-web-guidance: contain scroll on dialog:modal and dialog::backdrop */
+  /* Modern Web Guidance: modal overscroll containment */
   .ccc-modal:modal {
     overscroll-behavior: contain;
   }
   .ccc-modal::backdrop {
     overflow: hidden;
     overscroll-behavior: contain;
-    background: rgba(0, 0, 0, 0.82);
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(4px);
   }
   .ccc-modal {
     padding: 0;
     margin: auto;
-    width: min(100% - 1.5rem, 34rem);
-    max-height: calc(100svh - 2rem);
+    width: min(100% - 2rem, 50rem);
+    max-height: calc(100svh - 3rem);
     background: #0d0d0d;
     color: var(--ink, #f5f5f5);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85);
     overflow-y: auto;
   }
   .ccc-modal[open] {
     display: block;
   }
   .ccc-modal-card {
-    padding: clamp(1.25rem, 4vw, 2rem);
+    padding: clamp(1.5rem, 3.5vw, 2.75rem);
   }
   .ccc-modal-head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1.25rem;
-    padding-bottom: 0.75rem;
+    gap: 1.5rem;
+    margin-bottom: 1.75rem;
+    padding-bottom: 1.25rem;
     border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  }
+  .ccc-modal-eyebrow {
+    margin: 0 0 0.35rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted, #888);
   }
   .ccc-modal-title {
     margin: 0;
     font-family: var(--font-display);
-    font-size: clamp(1.25rem, 3vw, 1.5rem);
+    font-size: clamp(1.4rem, 3vw, 1.85rem);
     font-weight: 800;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
     text-transform: uppercase;
     color: var(--ink, #fff);
   }
   .ccc-modal-close {
     appearance: none;
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     color: var(--ink, #fff);
-    min-width: 44px;
-    min-height: 44px;
+    width: 44px;
+    height: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    flex-shrink: 0;
     transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
   .ccc-modal-close:hover,
@@ -222,14 +288,30 @@ import { CCC_EMAIL } from '../../data/ccc';
   .ccc-form {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.35rem;
   }
+  .ccc-form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  @media (min-width: 640px) {
+    .ccc-form-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.5rem;
+    }
+  }
+
   .ccc-field {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.45rem;
+  }
+  .ccc-field--full {
+    width: 100%;
   }
   .ccc-field label,
+  .ccc-field-label,
   .ccc-copy-label {
     font-family: var(--font-mono);
     font-size: 0.72rem;
@@ -240,26 +322,24 @@ import { CCC_EMAIL } from '../../data/ccc';
   }
   .ccc-req {
     color: var(--muted, #888);
+    font-weight: 400;
   }
-  .ccc-field input,
+  .ccc-field input:not([type="checkbox"]),
   .ccc-field textarea,
   .ccc-field select {
     width: 100%;
     min-height: 48px;
-    padding: 0.65rem 0.85rem;
+    padding: 0.75rem 0.95rem;
     background: #141414;
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 0;
     color: var(--ink, #fff);
     font-family: inherit;
-    font-size: 1rem;
+    font-size: 0.95rem;
     line-height: 1.4;
     box-sizing: border-box;
     color-scheme: dark;
-  }
-  .ccc-field textarea {
-    min-height: 5.5rem;
-    resize: vertical;
+    transition: border-color 0.2s ease;
   }
   .ccc-field input:focus-visible,
   .ccc-field textarea:focus-visible,
@@ -268,34 +348,105 @@ import { CCC_EMAIL } from '../../data/ccc';
     outline-offset: 2px;
     border-color: var(--ink, #fff);
   }
-  .ccc-pricing-note {
-    margin: 0.25rem 0 0;
+  .ccc-field textarea {
+    min-height: 6rem;
+    resize: vertical;
+  }
+
+  /* Checkboxes */
+  .ccc-checkbox-group {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+    margin-top: 0.35rem;
+  }
+  @media (min-width: 640px) {
+    .ccc-checkbox-group {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+  }
+  .ccc-checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
     padding: 0.75rem 0.9rem;
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 0.82rem;
+    line-height: 1.35;
+    color: var(--text, #d6d6d6);
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+  }
+  .ccc-checkbox-label:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    background: #181818;
+  }
+  .ccc-checkbox-label input[type="checkbox"] {
+    margin-top: 0.15rem;
+    accent-color: var(--ink, #fff);
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .ccc-pricing-note {
+    margin: 0 0 0.85rem;
+    padding: 0.85rem 1rem;
     background: rgba(255, 255, 255, 0.04);
-    border-left: 2px solid var(--ink, #fff);
+    border-left: 3px solid var(--ink, #fff);
     font-family: var(--font-mono);
     font-size: 0.74rem;
     line-height: 1.5;
     letter-spacing: 0.04em;
     color: var(--text, #d6d6d6);
   }
+  .ccc-help-text {
+    margin: 0.35rem 0 0;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--muted, #888);
+  }
   .ccc-submit-btn {
     width: 100%;
-    margin-top: 0.25rem;
+    min-height: 52px;
+    margin-top: 0.5rem;
+    font-size: 0.88rem;
+    letter-spacing: 0.14em;
   }
 
+  /* Confirmation */
   .ccc-confirm-box[hidden] {
     display: none;
   }
   .ccc-confirm-box {
     display: flex;
     flex-direction: column;
+    gap: 1.25rem;
+  }
+  .ccc-confirm-header {
+    display: flex;
+    align-items: center;
     gap: 1rem;
+  }
+  .ccc-confirm-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--ink, #fff);
+    color: var(--ink, #fff);
+    font-size: 1.15rem;
+    flex-shrink: 0;
   }
   .ccc-confirm-title {
     margin: 0;
     font-family: var(--font-display);
-    font-size: clamp(1.15rem, 2.5vw, 1.35rem);
+    font-size: clamp(1.2rem, 2.5vw, 1.45rem);
     font-weight: 800;
     line-height: 1.25;
     text-transform: uppercase;
@@ -303,7 +454,7 @@ import { CCC_EMAIL } from '../../data/ccc';
   }
   .ccc-confirm-desc {
     margin: 0;
-    font-size: 0.92rem;
+    font-size: 0.94rem;
     line-height: 1.6;
     color: var(--text, #d6d6d6);
   }
@@ -314,16 +465,16 @@ import { CCC_EMAIL } from '../../data/ccc';
   .ccc-copy-wrap {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.65rem;
   }
   .ccc-copy-payload {
     width: 100%;
-    padding: 0.75rem;
+    padding: 0.85rem;
     background: #141414;
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     color: var(--text, #d6d6d6);
     font-family: var(--font-mono);
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     line-height: 1.5;
     resize: vertical;
     box-sizing: border-box;
@@ -425,9 +576,13 @@ import { CCC_EMAIL } from '../../data/ccc';
       const email = String(data.get('email') || '').trim();
       const venue = String(data.get('venue') || '').trim();
       const location = String(data.get('location') || '').trim();
-      const showOff = String(data.get('showOff') || '').trim();
+      const service = String(data.get('service') || '').trim();
       const preferredDates = String(data.get('preferredDate') || '').trim();
       const budget = String(data.get('budget') || '').trim();
+      const showOff = String(data.get('showOff') || '').trim();
+
+      const selectedAddons = data.getAll('addons').map((a) => String(a).trim()).filter(Boolean);
+      const addonsSummary = selectedAddons.length > 0 ? selectedAddons.join(', ') : 'None selected';
 
       const recipient = 'capturecreatecaffeinate@gmail.com';
       const subject = `CCC shoot inquiry: ${venue}`;
@@ -436,9 +591,11 @@ import { CCC_EMAIL } from '../../data/ccc';
         `Email: ${email}`,
         `Venue: ${venue}`,
         `Location: ${location}`,
-        `What to show off: ${showOff}`,
+        `Package/Service: ${service}`,
+        `Add-ons: ${addonsSummary}`,
         `Preferred dates: ${preferredDates}`,
         `Budget: ${budget}`,
+        `Special requests & details: ${showOff}`,
       ];
       const bodyText = bodyLines.join('\n');
       const mailtoUrl = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
