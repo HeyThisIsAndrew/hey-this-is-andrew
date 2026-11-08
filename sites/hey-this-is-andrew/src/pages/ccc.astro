@@ -486,6 +486,8 @@ const easy = [
     padding: clamp(3.5rem, 8vw, 6rem) 0;
     border-top: 1px solid var(--line);
     background: var(--bg, #080808);
+    transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+    transform-origin: center top;
   }
 
   /* Persistent Docked Stack: Each section collapses here on scroll and ALWAYS remains visible at the top */
@@ -509,17 +511,19 @@ const easy = [
     pointer-events: none;
     background: #080808;
     border-bottom: 1px solid transparent;
-    transform: translateY(-6px);
-    transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-                opacity 0.25s ease,
-                transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-                border-color 0.25s ease;
+    transform: translateY(-10px) scale(0.99);
+    transform-origin: center top;
+    transition: max-height 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.3s ease;
+    will-change: max-height, opacity, transform;
   }
 
   .ccc-dock-row.is-docked {
-    max-height: 54px;
+    max-height: 52px;
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
     pointer-events: auto;
     border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.12));
   }
@@ -886,17 +890,48 @@ const easy = [
   /* Closer */
   .ccc-closer {
     position: relative;
-    padding: clamp(4rem, 10vw, 8rem) 0;
+    min-height: calc(100vh - var(--nav-bar-h, 76px) - 200px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(6rem, 14vw, 12rem) 0;
     border-top: 1px solid var(--line);
     text-align: center;
     isolation: isolate;
     overflow: hidden;
   }
-  .ccc-closer-bg { position: absolute; inset: 0; z-index: -1; }
-  .ccc-closer-bg :global(img) { width: 100%; height: 100%; object-fit: cover; }
+  .ccc-closer-bg {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+  }
+  .ccc-closer-bg :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform-origin: center center;
+    will-change: transform;
+    transition: transform 0.15s ease-out;
+  }
   .ccc-closer-bg::after { content: ''; position: absolute; inset: 0; background: rgba(0, 0, 0, 0.72); }
-  .ccc-closer-inner { display: flex; flex-direction: column; align-items: center; gap: 0.9rem; }
-  .ccc-closer-logo { width: clamp(100px, 18vw, 150px) !important; max-width: 150px; height: auto; }
+  .ccc-closer-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+    transform-origin: center center;
+    will-change: transform;
+    transition: transform 0.15s ease-out;
+  }
+  .ccc-closer-logo {
+    width: clamp(100px, 18vw, 150px) !important;
+    max-width: 150px;
+    height: auto;
+    transform-origin: center center;
+    will-change: transform;
+    transition: transform 0.15s ease-out;
+  }
   .ccc-closer-eyebrow {
     margin: 0.5rem 0 0;
     font-family: var(--font-mono);
@@ -914,6 +949,9 @@ const easy = [
     line-height: 1.05;
     text-transform: uppercase;
     color: var(--ink);
+    transform-origin: center center;
+    will-change: transform;
+    transition: transform 0.15s ease-out;
   }
   .ccc-closer-body { margin: 0; max-width: 46ch; color: var(--text, #d6d6d6); line-height: 1.7; }
   .ccc-closer-price {
@@ -932,8 +970,15 @@ const easy = [
     if (!stack) return;
 
     const heroSection = document.getElementById('hero');
+    const heroInner = heroSection?.querySelector<HTMLElement>('.ccc-hero-inner');
     const heroBigLogo = heroSection?.querySelector<HTMLElement>('.ccc-hero-logo');
     const heroDockRow = stack.querySelector<HTMLElement>('.ccc-dock-row[data-target="hero"]');
+
+    const closerSection = document.getElementById('contact');
+    const closerInner = closerSection?.querySelector<HTMLElement>('.ccc-closer-inner');
+    const closerLogo = closerSection?.querySelector<HTMLElement>('.ccc-closer-logo');
+    const closerTitle = closerSection?.querySelector<HTMLElement>('.ccc-closer-title');
+    const closerBgImg = closerSection?.querySelector<HTMLElement>('.ccc-closer-bg img');
 
     const sectionIds = ['why', 'where', 'work', 'video', 'how', 'pricing'];
 
@@ -986,6 +1031,8 @@ const easy = [
     function onScroll() {
       const scrollY = window.scrollY;
       const navH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-bar-h')) || 76;
+      const winH = window.innerHeight;
+      const isNearBottom = (scrollY + winH) >= (document.documentElement.scrollHeight - 50);
 
       // 1. Hero scroll parallax & dock trigger
       const heroThreshold = 140;
@@ -994,6 +1041,9 @@ const easy = [
       if (heroBigLogo) {
         heroBigLogo.style.opacity = (1 - heroProgress).toFixed(3);
         heroBigLogo.style.transform = `translate3d(0, -${(heroProgress * 40).toFixed(1)}px, 0) scale(${(1 - heroProgress * 0.25).toFixed(3)})`;
+      }
+      if (heroInner) {
+        heroInner.style.opacity = (1 - heroProgress * 0.85).toFixed(3);
       }
 
       if (heroDockRow) {
@@ -1004,21 +1054,76 @@ const easy = [
         }
       }
 
-      // 2. Cumulative section docking triggers
+      // 2. Cumulative section docking triggers and smooth exit movement
       let currentStackH = (heroDockRow && heroDockRow.classList.contains('is-docked')) ? (heroDockRow.offsetHeight || 60) : 0;
 
       for (let i = 0; i < sections.length; i++) {
         const s = sections[i];
         const rect = s.el.getBoundingClientRect();
 
-        // Section docks when its bottom scrolls past the bottom of current stack (+ small threshold)
-        const shouldDock = rect.bottom <= (navH + currentStackH + 40);
+        let shouldDock = false;
+        if (s.id === 'pricing') {
+          // Final section collapses when scrolling towards closer, or when rect.bottom passes stack, or near bottom
+          const contactRect = closerSection ? closerSection.getBoundingClientRect() : null;
+          shouldDock = isNearBottom ||
+            rect.bottom <= (navH + currentStackH + 60) ||
+            (contactRect !== null && contactRect.top <= (navH + currentStackH + 200));
+        } else {
+          shouldDock = rect.bottom <= (navH + currentStackH + 40);
+        }
+
+        // Smooth in-page exit animation as section approaches collapsed view
+        const exitTriggerDist = 150;
+        const stackBottom = navH + currentStackH;
+        if (rect.bottom < stackBottom + exitTriggerDist) {
+          const exitProgress = Math.min(1, Math.max(0, (stackBottom + exitTriggerDist - rect.bottom) / exitTriggerDist));
+          s.el.style.opacity = (1 - exitProgress * 0.85).toFixed(3);
+          s.el.style.transform = `translate3d(0, -${(exitProgress * 18).toFixed(1)}px, 0)`;
+        } else {
+          s.el.style.opacity = '1';
+          s.el.style.transform = '';
+        }
 
         if (shouldDock) {
           s.dockRow.classList.add('is-docked');
           currentStackH += s.dockRow.offsetHeight || 44;
         } else {
           s.dockRow.classList.remove('is-docked');
+        }
+      }
+
+      // 3. Bottom-most section (closer) parallax increase in size as it scrolls into view
+      if (closerSection) {
+        const closerRect = closerSection.getBoundingClientRect();
+        // Progress runs from when closer top enters the bottom of the viewport
+        // to when closer top reaches near the bottom of the pinned stack
+        const enterY = winH;
+        const finishY = navH + currentStackH + 40;
+        const totalDist = Math.max(1, enterY - finishY);
+        const closerProgress = Math.min(1, Math.max(0, (enterY - closerRect.top) / totalDist));
+
+        if (closerLogo) {
+          // Logo increases in size like a parallax (0.82 -> 1.25)
+          const logoScale = 0.82 + closerProgress * 0.43;
+          closerLogo.style.transform = `scale(${logoScale.toFixed(3)})`;
+        }
+
+        if (closerTitle) {
+          // Title increases in size (0.88 -> 1.10)
+          const titleScale = 0.88 + closerProgress * 0.22;
+          closerTitle.style.transform = `scale(${titleScale.toFixed(3)})`;
+        }
+
+        if (closerInner) {
+          // Content slides smoothly up with parallax depth
+          const translateY = (1 - closerProgress) * 40;
+          closerInner.style.transform = `translate3d(0, ${translateY.toFixed(1)}px, 0)`;
+        }
+
+        if (closerBgImg) {
+          // Background zooms smoothly (1.0 -> 1.15)
+          const bgScale = 1.0 + closerProgress * 0.15;
+          closerBgImg.style.transform = `scale(${bgScale.toFixed(3)})`;
         }
       }
 
