@@ -1,15 +1,14 @@
 ---
 /**
- * /ccc/: Capture Create Caffeinate. The pitch deck (v7.3) rebuilt as one
- * scrolling page: same sections, same order, the deck's own words. Prices,
- * the deck file, the contact link and the video switch live in
- * src/data/ccc.ts (the homepage reads the same numbers).
+ * /ccc/: Capture Create Caffeinate.
+ * Full-width collapsed section rows with 1:1 production scaling and layout.
  *
- * No embeds, no third-party scripts: the reel and the portfolio are plain
- * links (the privacy page promises no tracking).
+ * Each section occupies the entire width of the page with:
+ * - Left: Number and kicker (e.g. "01 Why it matters")
+ * - Right: Large display title (e.g. "People decide with their eyes")
+ * - Collapsible body preserving exact original internal layouts, grids, and aspect ratios.
  */
 import BaseLayout from '../layouts/BaseLayout.astro';
-import SectionHeader from '@andrew/ui/SectionHeader.astro';
 import CccPhoto from '../components/ccc/CccPhoto.astro';
 import CccInquiryModal from '../components/ccc/CccInquiryModal.astro';
 import { Image } from 'astro:assets';
@@ -101,7 +100,7 @@ const easy = [
 >
   <div class="page-head" aria-hidden="true"></div>
 
-  <!-- 1. Hero (deck slide 1) -->
+  <!-- 1. Hero -->
   <section class="ccc-hero" aria-labelledby="ccc-title">
     <div class="container ccc-hero-inner">
       <Image src={logo} alt="Capture Create Caffeinate logo" width={260} densities={[1, 2]} class="ccc-hero-logo" loading="eager" fetchpriority="high" />
@@ -114,218 +113,324 @@ const easy = [
     </div>
   </section>
 
-  <!-- 2. Why it matters (slides 2, 3) -->
-  <section id="why" class="ccc-section" aria-labelledby="ccc-why">
-    <div class="container">
-      <SectionHeader id="ccc-why" index="01" kicker="Why it matters" title="People decide with their eyes" />
-      <div class="ccc-split">
-        <div class="ccc-split-media">
-          <CccPhoto src={whyCoupe} alt="A coupe cocktail glass on a dark bar, warm light glowing behind it" sizes="(min-width: 900px) 45vw, 100vw" />
+  <!-- 01 Why it matters -->
+  <section id="why" class="ccc-section ccc-collapsible" aria-labelledby="ccc-why">
+    <div class="ccc-row-head">
+      <button type="button" class="ccc-row-btn" data-ccc-toggle aria-expanded="false" aria-controls="ccc-body-why">
+        <div class="ccc-row-left">
+          <span class="ccc-row-num font-mono">01</span>
+          <span class="ccc-row-kicker font-mono">Why it matters</span>
         </div>
-        <div class="ccc-split-copy">
-          <p>Before anyone books a table, they've already scrolled your feed, your Google listing, and every post you've been tagged in. If the photos don't look like the night you actually deliver, you lose them before they ever walk in.</p>
+        <div class="ccc-row-title" id="ccc-why">People decide with their eyes</div>
+        <div class="ccc-row-chevron" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
         </div>
-      </div>
-      <div class="ccc-split is-flip">
-        <div class="ccc-split-media">
-          <CccPhoto src={whyShelves} alt="Bar shelves of bottles and records under glowing copper pendant lights, a reel-to-reel deck in front" sizes="(min-width: 900px) 45vw, 100vw" />
-        </div>
-        <div class="ccc-split-copy">
-          <h3 class="ccc-subtitle">You're busy running the place</h3>
-          <p>Nobody behind the bar has time to stop and shoot the pour, the room at 9pm, or the crew in the middle of a rush. That's my job. I come in, stay out of the way, and catch the good stuff your guests already love.</p>
-        </div>
-      </div>
+      </button>
     </div>
-  </section>
-
-  <!-- 3. Where it goes (slide 4) -->
-  <section id="where" class="ccc-section" aria-labelledby="ccc-where">
-    <div class="container">
-      <SectionHeader id="ccc-where" index="02" kicker="Where it goes" title="One shoot, everywhere you post" />
-      <ul class="ccc-cards4">
-        {where.map((w) => (
-          <li class="ccc-card">
-            <div class="ccc-card-media"><CccPhoto src={w.img} alt={w.alt} sizes="(min-width: 900px) 22vw, 46vw" /></div>
-            <h3 class="ccc-card-title">{w.title}</h3>
-            <p class="ccc-card-line">{w.line}</p>
-          </li>
-        ))}
-      </ul>
-    </div>
-  </section>
-
-  <!-- 4. The work (slides 5, 6, 7) -->
-  <section id="work" class="ccc-section" aria-labelledby="ccc-work">
-    <div class="container">
-      <SectionHeader id="ccc-work" index="03" kicker="The work" title="Drinks people want to order" />
-      <ul class="ccc-grid3">
-        {drinks.map((d) => (
-          <li>
-            <figure class="ccc-fig">
-              <CccPhoto src={d.img} alt={d.alt} sizes="(min-width: 900px) 30vw, 100vw" />
-              <figcaption>{d.cap}</figcaption>
-            </figure>
-          </li>
-        ))}
-      </ul>
-
-      <div class="ccc-night">
-        <div class="ccc-night-copy">
-          <h3 class="ccc-subtitle">Every part of your night</h3>
-          <ul class="ccc-dotlist">
-            {nightList.map((t) => <li>{t}</li>)}
-          </ul>
-        </div>
-        <div class="ccc-mosaic">
-          <div class="ccc-mosaic-wide">
-            <CccPhoto src={nightWide} alt="A drink being poured into a glass, close up" sizes="(min-width: 900px) 55vw, 100vw" />
-          </div>
-          {nightTiles.map((t) => (
-            <div class="ccc-mosaic-tile"><CccPhoto src={t.img} alt={t.alt} sizes="(min-width: 900px) 14vw, 48vw" /></div>
-          ))}
-        </div>
-      </div>
-
-      <h3 class="ccc-subtitle ccc-subtitle--spaced">The room and the details</h3>
-      <div class="ccc-room">
-        <figure class="ccc-fig ccc-room-wide">
-          <CccPhoto src={workRoom} alt="A warm wood-panelled bar room under glowing pendant lights" sizes="(min-width: 900px) 62vw, 100vw" />
-          <figcaption>The room</figcaption>
-        </figure>
-        <figure class="ccc-fig">
-          <CccPhoto src={workDetail} alt="A hand setting a garnish on a dark drink topped with a lace tuile" sizes="(min-width: 900px) 34vw, 100vw" />
-          <figcaption>The detail</figcaption>
-        </figure>
-      </div>
-
-      <p class="ccc-credit">All photographs by Andrew. The cocktails and dishes pictured are the bar's. The photography is mine.</p>
-    </div>
-  </section>
-
-  <!-- 5. Video (slides 8, 9). Hidden with one line: CCC_SHOW_VIDEO in src/data/ccc.ts. -->
-  {CCC_SHOW_VIDEO && (
-    <section id="video" class="ccc-section" aria-labelledby="ccc-video">
+    <div id="ccc-body-why" class="ccc-section-body" inert>
       <div class="container">
-        <SectionHeader id="ccc-video" index="04" kicker="Video" title="Desert Escape, shot by shot" />
-        <ul class="ccc-grid4">
-          {desert.map((d) => (
+        <div class="ccc-split">
+          <div class="ccc-split-media">
+            <CccPhoto src={whyCoupe} alt="A coupe cocktail glass on a dark bar, warm light glowing behind it" sizes="(min-width: 900px) 45vw, 100vw" />
+          </div>
+          <div class="ccc-split-copy">
+            <p>Before anyone books a table, they've already scrolled your feed, your Google listing, and every post you've been tagged in. If the photos don't look like the night you actually deliver, you lose them before they ever walk in.</p>
+          </div>
+        </div>
+        <div class="ccc-split is-flip">
+          <div class="ccc-split-media">
+            <CccPhoto src={whyShelves} alt="Bar shelves of bottles and records under glowing copper pendant lights, a reel-to-reel deck in front" sizes="(min-width: 900px) 45vw, 100vw" />
+          </div>
+          <div class="ccc-split-copy">
+            <h3 class="ccc-subtitle">You're busy running the place</h3>
+            <p>Nobody behind the bar has time to stop and shoot the pour, the room at 9pm, or the crew in the middle of a rush. That's my job. I come in, stay out of the way, and catch the good stuff your guests already love.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 Where it goes -->
+  <section id="where" class="ccc-section ccc-collapsible" aria-labelledby="ccc-where">
+    <div class="ccc-row-head">
+      <button type="button" class="ccc-row-btn" data-ccc-toggle aria-expanded="false" aria-controls="ccc-body-where">
+        <div class="ccc-row-left">
+          <span class="ccc-row-num font-mono">02</span>
+          <span class="ccc-row-kicker font-mono">Where it goes</span>
+        </div>
+        <div class="ccc-row-title" id="ccc-where">One shoot, everywhere you post</div>
+        <div class="ccc-row-chevron" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </button>
+    </div>
+    <div id="ccc-body-where" class="ccc-section-body" inert>
+      <div class="container">
+        <ul class="ccc-cards4">
+          {where.map((w) => (
+            <li class="ccc-card">
+              <div class="ccc-card-media"><CccPhoto src={w.img} alt={w.alt} sizes="(min-width: 900px) 22vw, 46vw" /></div>
+              <h3 class="ccc-card-title">{w.title}</h3>
+              <p class="ccc-card-line">{w.line}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 The work -->
+  <section id="work" class="ccc-section ccc-collapsible" aria-labelledby="ccc-work">
+    <div class="ccc-row-head">
+      <button type="button" class="ccc-row-btn" data-ccc-toggle aria-expanded="false" aria-controls="ccc-body-work">
+        <div class="ccc-row-left">
+          <span class="ccc-row-num font-mono">03</span>
+          <span class="ccc-row-kicker font-mono">The work</span>
+        </div>
+        <div class="ccc-row-title" id="ccc-work">Drinks people want to order</div>
+        <div class="ccc-row-chevron" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </button>
+    </div>
+    <div id="ccc-body-work" class="ccc-section-body" inert>
+      <div class="container">
+        <ul class="ccc-grid3">
+          {drinks.map((d) => (
             <li>
-              <figure class="ccc-fig ccc-fig--wide">
-                <CccPhoto src={d.img} alt={d.alt} sizes="(min-width: 900px) 22vw, 46vw" />
+              <figure class="ccc-fig">
+                <CccPhoto src={d.img} alt={d.alt} sizes="(min-width: 900px) 30vw, 100vw" />
                 <figcaption>{d.cap}</figcaption>
               </figure>
             </li>
           ))}
         </ul>
 
-        <div class="ccc-real">
-          <div class="ccc-real-copy">
-            <h3 class="ccc-subtitle">Real nights, nothing staged</h3>
-            <p>I move through the room like a guest would, so the reel carries the pace and sound of a real night.</p>
+        <div class="ccc-night">
+          <div class="ccc-night-copy">
+            <h3 class="ccc-subtitle">Every part of your night</h3>
             <ul class="ccc-dotlist">
-              <li>The crowd</li>
-              <li>The pour</li>
-              <li>The brands behind the bar</li>
+              {nightList.map((t) => <li>{t}</li>)}
             </ul>
-            {CCC_REEL_URL && (
-              <a class="btn btn-ghost ccc-reel-link" href={CCC_REEL_URL} target="_blank" rel="noopener">
-                Watch the reel <span aria-hidden="true">&#8599;</span>
-              </a>
-            )}
           </div>
-          <div class="ccc-real-frames">
-            <div class="ccc-real-main"><CccPhoto src={real[0].img} alt={real[0].alt} sizes="(min-width: 900px) 50vw, 100vw" /></div>
-            <div><CccPhoto src={real[1].img} alt={real[1].alt} sizes="(min-width: 900px) 25vw, 50vw" /></div>
-            <div><CccPhoto src={real[2].img} alt={real[2].alt} sizes="(min-width: 900px) 25vw, 50vw" /></div>
+          <div class="ccc-mosaic">
+            <div class="ccc-mosaic-wide">
+              <CccPhoto src={nightWide} alt="A drink being poured into a glass, close up" sizes="(min-width: 900px) 55vw, 100vw" />
+            </div>
+            {nightTiles.map((t) => (
+              <div class="ccc-mosaic-tile"><CccPhoto src={t.img} alt={t.alt} sizes="(min-width: 900px) 14vw, 48vw" /></div>
+            ))}
+          </div>
+        </div>
+
+        <h3 class="ccc-subtitle ccc-subtitle--spaced">The room and the details</h3>
+        <div class="ccc-room">
+          <figure class="ccc-fig ccc-room-wide">
+            <CccPhoto src={workRoom} alt="A warm wood-panelled bar room under glowing pendant lights" sizes="(min-width: 900px) 62vw, 100vw" />
+            <figcaption>The room</figcaption>
+          </figure>
+          <figure class="ccc-fig">
+            <CccPhoto src={workDetail} alt="A hand setting a garnish on a dark drink topped with a lace tuile" sizes="(min-width: 900px) 34vw, 100vw" />
+            <figcaption>The detail</figcaption>
+          </figure>
+        </div>
+
+        <p class="ccc-credit">All photographs by Andrew. The cocktails and dishes pictured are the bar's. The photography is mine.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 Video -->
+  {CCC_SHOW_VIDEO && (
+    <section id="video" class="ccc-section ccc-collapsible" aria-labelledby="ccc-video">
+      <div class="ccc-row-head">
+        <button type="button" class="ccc-row-btn" data-ccc-toggle aria-expanded="false" aria-controls="ccc-body-video">
+          <div class="ccc-row-left">
+            <span class="ccc-row-num font-mono">04</span>
+            <span class="ccc-row-kicker font-mono">Video</span>
+          </div>
+          <div class="ccc-row-title" id="ccc-video">Desert Escape, shot by shot</div>
+          <div class="ccc-row-chevron" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+        </button>
+      </div>
+      <div id="ccc-body-video" class="ccc-section-body" inert>
+        <div class="container">
+          <ul class="ccc-grid4">
+            {desert.map((d) => (
+              <li>
+                <figure class="ccc-fig ccc-fig--wide">
+                  <CccPhoto src={d.img} alt={d.alt} sizes="(min-width: 900px) 22vw, 46vw" />
+                  <figcaption>{d.cap}</figcaption>
+                </figure>
+              </li>
+            ))}
+          </ul>
+
+          <div class="ccc-real">
+            <div class="ccc-real-copy">
+              <h3 class="ccc-subtitle">Real nights, nothing staged</h3>
+              <p>I move through the room like a guest would, so the reel carries the pace and sound of a real night.</p>
+              <ul class="ccc-dotlist">
+                <li>The crowd</li>
+                <li>The pour</li>
+                <li>The brands behind the bar</li>
+              </ul>
+              {CCC_REEL_URL && (
+                <a class="btn btn-ghost ccc-reel-link" href={CCC_REEL_URL} target="_blank" rel="noopener">
+                  Watch the reel <span aria-hidden="true">&#8599;</span>
+                </a>
+              )}
+            </div>
+            <div class="ccc-real-frames">
+              <div class="ccc-real-main"><CccPhoto src={real[0].img} alt={real[0].alt} sizes="(min-width: 900px) 50vw, 100vw" /></div>
+              <div><CccPhoto src={real[1].img} alt={real[1].alt} sizes="(min-width: 900px) 25vw, 50vw" /></div>
+              <div><CccPhoto src={real[2].img} alt={real[2].alt} sizes="(min-width: 900px) 25vw, 50vw" /></div>
+            </div>
           </div>
         </div>
       </div>
     </section>
   )}
 
-  <!-- 6. How it works (slides 10, 11) -->
-  <section id="how" class="ccc-section" aria-labelledby="ccc-how">
-    <div class="container">
-      <SectionHeader id="ccc-how" index={CCC_SHOW_VIDEO ? '05' : '04'} kicker="How it works" title="Four hours, no disruption" />
-      <div class="ccc-split">
-        <div class="ccc-split-media">
-          <CccPhoto src={howCrew} alt="Kitchen crew at work at the pass of a busy restaurant" sizes="(min-width: 900px) 40vw, 100vw" />
+  <!-- 05 How it works -->
+  <section id="how" class="ccc-section ccc-collapsible" aria-labelledby="ccc-how">
+    <div class="ccc-row-head">
+      <button type="button" class="ccc-row-btn" data-ccc-toggle aria-expanded="false" aria-controls="ccc-body-how">
+        <div class="ccc-row-left">
+          <span class="ccc-row-num font-mono">05</span>
+          <span class="ccc-row-kicker font-mono">How it works</span>
         </div>
-        <ol class="ccc-steps">
-          {steps.map((s) => (
-            <li>
-              <span class="ccc-step-n" aria-hidden="true">{s.n}</span>
-              <div>
-                <h3 class="ccc-step-title">{s.title}</h3>
-                <p>{s.body}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </div>
+        <div class="ccc-row-title" id="ccc-how">Four hours, no disruption</div>
+        <div class="ccc-row-chevron" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </button>
+    </div>
+    <div id="ccc-body-how" class="ccc-section-body" inert>
+      <div class="container">
+        <div class="ccc-split">
+          <div class="ccc-split-media">
+            <CccPhoto src={howCrew} alt="Kitchen crew at work at the pass of a busy restaurant" sizes="(min-width: 900px) 40vw, 100vw" />
+          </div>
+          <ol class="ccc-steps">
+            {steps.map((s) => (
+              <li>
+                <span class="ccc-step-n" aria-hidden="true">{s.n}</span>
+                <div>
+                  <h3 class="ccc-step-title">{s.title}</h3>
+                  <p>{s.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
 
-      <h3 class="ccc-subtitle ccc-subtitle--spaced">Easy on your end</h3>
-      <div class="ccc-split is-flip">
-        <div class="ccc-split-media">
-          <CccPhoto src={howCocktails} alt="A bartender setting two cocktails down on a bar mat" sizes="(min-width: 900px) 40vw, 100vw" />
+        <h3 class="ccc-subtitle ccc-subtitle--spaced">Easy on your end</h3>
+        <div class="ccc-split is-flip">
+          <div class="ccc-split-media">
+            <CccPhoto src={howCocktails} alt="A bartender setting two cocktails down on a bar mat" sizes="(min-width: 900px) 40vw, 100vw" />
+          </div>
+          <ul class="ccc-easy">
+            {easy.map((e) => (
+              <li class="ccc-easy-card">
+                <h4 class="ccc-step-title">{e.title}</h4>
+                <p>{e.body}</p>
+              </li>
+            ))}
+          </ul>
         </div>
-        <ul class="ccc-easy">
-          {easy.map((e) => (
-            <li class="ccc-easy-card">
-              <h4 class="ccc-step-title">{e.title}</h4>
-              <p>{e.body}</p>
-            </li>
-          ))}
-        </ul>
       </div>
     </div>
   </section>
 
-  <!-- 7. Pricing (slide 12) -->
-  <section id="pricing" class="ccc-section" aria-labelledby="ccc-pricing">
-    <div class="container">
-      <SectionHeader id="ccc-pricing" index={CCC_SHOW_VIDEO ? '06' : '05'} kicker="What it costs" title="Pick what you need" />
-      <div class="ccc-pricing">
-        <div class="ccc-pricing-media">
-          <CccPhoto src={pricingCoupe} alt="A coupe cocktail with a green garnish, warm light behind it" sizes="(min-width: 900px) 30vw, 100vw" />
+  <!-- 06 Pricing -->
+  <section id="pricing" class="ccc-section ccc-collapsible" aria-labelledby="ccc-pricing">
+    <div class="ccc-row-head">
+      <button type="button" class="ccc-row-btn" data-ccc-toggle aria-expanded="false" aria-controls="ccc-body-pricing">
+        <div class="ccc-row-left">
+          <span class="ccc-row-num font-mono">06</span>
+          <span class="ccc-row-kicker font-mono">What it costs</span>
         </div>
-        <div class="ccc-pricing-list">
-          <div class="ccc-price">
-            <div class="ccc-price-head"><h3>{P.photo.label}</h3><p class="ccc-price-amt">{P.photo.price}</p></div>
-            <p>{P.photo.desc}</p>
+        <div class="ccc-row-title" id="ccc-pricing">Pick what you need</div>
+        <div class="ccc-row-chevron" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </button>
+    </div>
+    <div id="ccc-body-pricing" class="ccc-section-body" inert>
+      <div class="container">
+        <div class="ccc-pricing">
+          <div class="ccc-pricing-media">
+            <CccPhoto src={pricingCoupe} alt="A coupe cocktail with a green garnish, warm light behind it" sizes="(min-width: 900px) 30vw, 100vw" />
           </div>
-          <div class="ccc-price">
-            <div class="ccc-price-head"><h3>{P.reel.label}</h3><p class="ccc-price-amt">{P.reel.price}</p></div>
-            <p>{P.reel.desc}</p>
-          </div>
-          <div class="ccc-price is-featured">
-            <div class="ccc-price-head">
-              <h3>{P.bundle.label}</h3>
-              <p class="ccc-price-amt">{P.bundle.price} <span class="ccc-price-was">{P.bundle.regular}</span></p>
+          <div class="ccc-pricing-list">
+            <div class="ccc-price">
+              <div class="ccc-price-head"><h3>{P.photo.label}</h3><p class="ccc-price-amt">{P.photo.price}</p></div>
+              <p>{P.photo.desc}</p>
             </div>
-            <p>{P.bundle.desc}</p>
+            <div class="ccc-price">
+              <div class="ccc-price-head"><h3>{P.reel.label}</h3><p class="ccc-price-amt">{P.reel.price}</p></div>
+              <p>{P.reel.desc}</p>
+            </div>
+            <div class="ccc-price is-featured">
+              <div class="ccc-price-head">
+                <h3>{P.bundle.label}</h3>
+                <p class="ccc-price-amt">{P.bundle.price} <span class="ccc-price-was">{P.bundle.regular}</span></p>
+              </div>
+              <p>{P.bundle.desc}</p>
+            </div>
+            <p class="ccc-price-foot">{P.footer}</p>
           </div>
-          <p class="ccc-price-foot">{P.footer}</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- 8. Closer (slide 13) -->
-  <section id="contact" class="ccc-closer" aria-labelledby="ccc-closer">
-    <div class="ccc-closer-bg" aria-hidden="true">
-      <CccPhoto src={closerBg} alt="" sizes="100vw" />
+  <!-- 07 Closer -->
+  <section id="contact" class="ccc-section ccc-closer ccc-collapsible" aria-labelledby="ccc-closer">
+    <div class="ccc-row-head">
+      <button type="button" class="ccc-row-btn" data-ccc-toggle aria-expanded="false" aria-controls="ccc-body-closer">
+        <div class="ccc-row-left">
+          <span class="ccc-row-num font-mono">07</span>
+          <span class="ccc-row-kicker font-mono">Let's connect</span>
+        </div>
+        <div class="ccc-row-title" id="ccc-closer">Show people what they're missing</div>
+        <div class="ccc-row-chevron" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </button>
     </div>
-    <div class="container ccc-closer-inner">
-      <Image src={logo} alt="Capture Create Caffeinate logo" width={150} densities={[1, 2]} class="ccc-closer-logo" />
-      <p class="ccc-closer-eyebrow">Let's get you on the calendar</p>
-      <h2 id="ccc-closer" class="ccc-closer-title">Show people what they're missing</h2>
-      <p class="ccc-closer-body">One shoot. Weeks of content. A better reason for people to come see you.</p>
-      <p class="ccc-closer-price">{P.summary}</p>
-      <div class="ccc-actions btn-group">
-        <a class="btn btn-primary" href={CCC_INQUIRY_HREF} data-open-ccc-modal>Start a project <span aria-hidden="true">&rarr;</span></a>
-        <a class="btn btn-secondary" href={CCC_DECK.href} download>{CCC_DECK.label} <span aria-hidden="true">&darr;</span></a>
-        <a class="btn btn-secondary" href={CCC_PORTFOLIO} target="_blank" rel="noopener">Portfolio <span aria-hidden="true">&#8599;</span></a>
+    <div id="ccc-body-closer" class="ccc-section-body" inert>
+      <div class="ccc-closer-bg" aria-hidden="true">
+        <CccPhoto src={closerBg} alt="" sizes="100vw" />
+      </div>
+      <div class="container ccc-closer-inner">
+        <Image src={logo} alt="Capture Create Caffeinate logo" width={150} densities={[1, 2]} class="ccc-closer-logo" />
+        <p class="ccc-closer-eyebrow">Let's get you on the calendar</p>
+        <h2 class="ccc-closer-title">Show people what they're missing</h2>
+        <p class="ccc-closer-body">One shoot. Weeks of content. A better reason for people to come see you.</p>
+        <p class="ccc-closer-price">{P.summary}</p>
+        <div class="ccc-actions btn-group">
+          <a class="btn btn-primary" href={CCC_INQUIRY_HREF} data-open-ccc-modal>Start a project <span aria-hidden="true">&rarr;</span></a>
+          <a class="btn btn-secondary" href={CCC_DECK.href} download>{CCC_DECK.label} <span aria-hidden="true">&darr;</span></a>
+          <a class="btn btn-secondary" href={CCC_PORTFOLIO} target="_blank" rel="noopener">Portfolio <span aria-hidden="true">&#8599;</span></a>
+        </div>
       </div>
     </div>
   </section>
@@ -374,10 +479,103 @@ const easy = [
     margin: 0.75rem auto 0;
   }
 
-  .ccc-section {
-    padding: clamp(3.5rem, 8vw, 6.5rem) 0;
+  /* Full-width Collapsible Section Rows */
+  .ccc-collapsible {
+    padding: 0 !important;
     border-top: 1px solid var(--line);
+    background: transparent;
   }
+  .ccc-row-head {
+    width: 100%;
+    background: #080808;
+    transition: background-color 0.2s ease;
+  }
+  .ccc-row-head:hover {
+    background: #111111;
+  }
+  .ccc-row-btn {
+    appearance: none;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(1rem, 3vw, 2.5rem);
+    padding: clamp(1.25rem, 2.5vw, 1.85rem) clamp(1.25rem, 4vw, 3.5rem);
+    background: transparent;
+    border: none;
+    color: var(--ink, #fff);
+    cursor: pointer;
+    text-align: left;
+    box-sizing: border-box;
+  }
+  .ccc-row-btn:focus-visible {
+    outline: 2px solid var(--focus-ring, #fff);
+    outline-offset: -2px;
+  }
+  .ccc-row-left {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    font-family: var(--font-mono);
+    font-size: clamp(0.72rem, 1.2vw, 0.82rem);
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted, #888);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .ccc-row-num {
+    color: var(--ink, #fff);
+    font-weight: 700;
+  }
+  .ccc-row-title {
+    flex: 1;
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 3.2vw, 2.4rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: var(--ink, #fff);
+  }
+  @media (max-width: 640px) {
+    .ccc-row-btn {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .ccc-row-title {
+      order: 2;
+      width: calc(100% - 2rem);
+      font-size: clamp(1.15rem, 5.5vw, 1.6rem);
+    }
+    .ccc-row-chevron {
+      order: 1;
+      margin-left: auto;
+    }
+  }
+  .ccc-row-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted, #888);
+    transition: transform 0.25s ease, color 0.2s ease;
+    flex-shrink: 0;
+  }
+  .ccc-collapsible.is-open .ccc-row-chevron {
+    transform: rotate(180deg);
+    color: var(--ink, #fff);
+  }
+  .ccc-section-body {
+    display: none;
+    padding: clamp(3rem, 7vw, 5.5rem) 0;
+    border-top: 1px solid var(--line);
+    background: var(--bg, #080808);
+  }
+  .ccc-collapsible.is-open .ccc-section-body {
+    display: block;
+  }
+
   .ccc-section :global(img) {
     display: block;
     width: 100%;
@@ -393,10 +591,7 @@ const easy = [
     color: var(--ink);
   }
   .ccc-subtitle--spaced { margin-top: clamp(3rem, 6vw, 5rem); }
-  /* Phones: the display face is wide, so a long word ("EVERYWHERE",
-     "DISRUPTION") would break mid-word at the default title size. */
   @media (max-width: 480px) {
-    .ccc-section :global(.sec-head .section-title) { font-size: 4.8vw; }
     .ccc-hero-title { font-size: 7.6vw; }
     .ccc-closer-title { font-size: 7.6vw; }
   }
@@ -554,7 +749,7 @@ const easy = [
   @media (min-width: 640px) { .ccc-easy { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .ccc-easy-card { padding: 1.25rem; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.02); }
 
-  /* Pricing: the bundle carries the outline, as on the deck. */
+  /* Pricing */
   .ccc-pricing {
     display: grid;
     gap: clamp(1.5rem, 4vw, 3rem);
@@ -612,7 +807,6 @@ const easy = [
   /* Closer */
   .ccc-closer {
     position: relative;
-    padding: clamp(4rem, 10vw, 8rem) 0;
     border-top: 1px solid var(--line);
     text-align: center;
     isolation: isolate;
@@ -651,3 +845,33 @@ const easy = [
     color: var(--ink);
   }
 </style>
+
+<script>
+  function initCccCollapsible() {
+    document.querySelectorAll<HTMLButtonElement>('[data-ccc-toggle]').forEach((btn) => {
+      if (btn.dataset.wired === '1') return;
+      btn.dataset.wired = '1';
+
+      btn.addEventListener('click', () => {
+        const sec = btn.closest('.ccc-collapsible');
+        if (!sec) return;
+        const bodyId = btn.getAttribute('aria-controls');
+        const body = bodyId ? document.getElementById(bodyId) : sec.querySelector('.ccc-section-body');
+
+        const isOpen = sec.classList.toggle('is-open');
+        btn.setAttribute('aria-expanded', String(isOpen));
+
+        if (body) {
+          if (isOpen) {
+            body.removeAttribute('inert');
+          } else {
+            body.setAttribute('inert', '');
+          }
+        }
+      });
+    });
+  }
+
+  initCccCollapsible();
+  document.addEventListener('astro:page-load', initCccCollapsible);
+</script>
