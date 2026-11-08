@@ -1,23 +1,16 @@
 ---
 /**
- * /ccc/: Capture Create Caffeinate. The pitch deck (v7.3) rebuilt as one
- * scrolling page: same sections, same order, the deck's own words. Prices,
- * the deck file, the contact link and the video switch live in
- * src/data/ccc.ts (the homepage reads the same numbers).
- *
- * No embeds, no third-party scripts: the reel and the portfolio are plain
- * links (the privacy page promises no tracking).
+ * /ccc/: Capture Create Caffeinate.
+ * Short, visual, collapsible section stack with an in-page project inquiry modal.
+ * No embeds, no third-party scripts, no public prices on the page.
  */
 import BaseLayout from '../layouts/BaseLayout.astro';
-import SectionHeader from '@andrew/ui/SectionHeader.astro';
 import CccPhoto from '../components/ccc/CccPhoto.astro';
+import CccInquiryModal from '../components/ccc/CccInquiryModal.astro';
 import { Image } from 'astro:assets';
 import {
-  CCC_PRICING as P,
   CCC_DECK,
   CCC_PORTFOLIO,
-  CCC_INQUIRY_HREF,
-  CCC_SHOW_VIDEO,
   CCC_REEL_URL,
 } from '../data/ccc';
 
@@ -47,7 +40,6 @@ import real2 from '../assets/ccc/s09-video-real-2-dj.jpg';
 import real3 from '../assets/ccc/s09-video-real-3-marios.jpg';
 import howCrew from '../assets/ccc/s10-how-crew.jpg';
 import howCocktails from '../assets/ccc/s11-how-easy-cocktails.jpg';
-import pricingCoupe from '../assets/ccc/s12-pricing-coupe.jpg';
 import closerBg from '../assets/ccc/s13-closer-bg.jpg';
 
 const where = [
@@ -56,35 +48,40 @@ const where = [
   { title: 'Google and Yelp', line: 'The first thing people see', img: whereGoogle, alt: 'A red beer in a stemmed tulip glass on a wooden bar top' },
   { title: 'Press and partners', line: 'Ready when someone asks for photos', img: wherePress, alt: 'Three bottles of spirits lit on a white shelf' },
 ];
+
 const drinks = [
   { cap: 'The pour', img: drinksPour, alt: 'Two cocktails on a bar top, one dark red and one glowing orange' },
   { cap: 'The lineup', img: drinksLineup, alt: 'Three dark cocktails with orange peel lined up on the bar' },
   { cap: 'The mood', img: drinksMood, alt: 'A stemmed glass in black and white against soft blurred light' },
 ];
+
 const nightTiles = [
   { img: night1, alt: 'A tall glass with a pale drink in warm candlelight' },
   { img: night2, alt: 'Two cocktails on the bar with warm orange light behind them' },
   { img: night3, alt: 'A red beer in a stemmed glass, close up' },
   { img: night4, alt: 'Cocktails with orange peel on the bar, a bartender at work behind them' },
 ];
-const nightList = ['The signature drinks', 'The little details', 'The room', 'Your crew', 'The front door'];
+
 const desert = [
   { cap: 'The opening shot', img: desert1, alt: 'A desert hotel pool with palm trees and mountains behind, titled Spirit of Hospitality' },
   { cap: 'The marquee', img: desert2, alt: 'The Ace Hotel and Swim Club marquee announcing Desert Escape 2026' },
   { cap: 'The DJ', img: desert3, alt: 'A DJ at the decks in front of a wood-slat wall at the Ace Hotel and Swim Club' },
   { cap: 'The layback', img: desert4, alt: 'Guests laughing together in front of an Angeleno booth' },
 ];
+
 const real = [
-  { img: real1, alt: 'A crowd around a hotel pool under yellow Topo Chico umbrellas' },
-  { img: real2, alt: 'A DJ in a patterned shirt at the decks, captioned This guy can dance' },
-  { img: real3, alt: "A Mario's Hard Espresso table with a Nitro Espresso Martini sign" },
+  { cap: 'The crowd', img: real1, alt: 'A crowd around a hotel pool under yellow Topo Chico umbrellas' },
+  { cap: 'The pour', img: real2, alt: 'A DJ in a patterned shirt at the decks, captioned This guy can dance' },
+  { cap: 'The brands behind the bar', img: real3, alt: "A Mario's Hard Espresso table with a Nitro Espresso Martini sign" },
 ];
+
 const steps = [
   { n: '01', title: 'A quick call', body: 'We talk through what you want to show off: the menu, the room, the people, anything new.' },
   { n: '02', title: 'Drinks and food first', body: "I shoot your best items while they're fresh, before service picks up." },
   { n: '03', title: 'Then the night', body: 'Guests, crew, and atmosphere as service happens. I stay small and out of the way.' },
   { n: '04', title: 'Ready to post', body: '15 selects the next day so you can post right away. The full gallery follows within a week.' },
 ];
+
 const easy = [
   { title: 'Small footprint', body: "A light kit that stays out of your guests' way. No blocking the floor during service." },
   { title: 'Every good shot', body: "No cap on photos. If it's a keeper, it gets edited and it's yours." },
@@ -95,222 +92,344 @@ const easy = [
 
 <BaseLayout
   title="Capture Create Caffeinate · HEY_THISISANDREW"
-  description="Photo and video for bars, restaurants, and events. One shoot, everywhere you post. Photo sessions from $950."
+  description="Photo and video for bars, restaurants, and events. One shoot, everywhere you post."
   image="/ccc/og.jpg"
 >
   <div class="page-head" aria-hidden="true"></div>
 
-  <!-- 1. Hero (deck slide 1) -->
+  <!-- 1. Hero: Logo + "Bars. Restaurants. Events" + coupe cocktail image -->
   <section class="ccc-hero" aria-labelledby="ccc-title">
     <div class="container ccc-hero-inner">
-      <Image src={logo} alt="Capture Create Caffeinate logo" width={260} densities={[1, 2]} class="ccc-hero-logo" loading="eager" fetchpriority="high" />
-      <h1 id="ccc-title" class="ccc-hero-title">Content that brings people through your door</h1>
-      <p class="ccc-hero-sub">Bars · Restaurants · Events</p>
+      <Image
+        src={logo}
+        alt="Capture Create Caffeinate logo"
+        width={340}
+        densities={[1, 2]}
+        class="ccc-hero-logo"
+        loading="eager"
+        fetchpriority="high"
+      />
+      <h1 id="ccc-title" class="ccc-hero-sub">Bars. Restaurants. Events</h1>
+      <div class="ccc-hero-media">
+        <CccPhoto
+          src={whyCoupe}
+          alt="A coupe cocktail glass on a dark bar, warm light glowing behind it"
+          sizes="(min-width: 900px) 460px, 88vw"
+          eager
+        />
+      </div>
       <div class="ccc-actions btn-group">
-        <a class="btn btn-primary" href={CCC_INQUIRY_HREF}>Start a project <span aria-hidden="true">&rarr;</span></a>
-        <a class="btn btn-secondary" href={CCC_DECK.href} download>{CCC_DECK.label} <span aria-hidden="true">&darr;</span></a>
+        <button type="button" class="btn btn-primary" data-open-ccc-modal>
+          Start a project <span aria-hidden="true">&rarr;</span>
+        </button>
+        <a class="btn btn-secondary" href={CCC_DECK.href} download>
+          {CCC_DECK.label} <span aria-hidden="true">&darr;</span>
+        </a>
       </div>
     </div>
   </section>
 
-  <!-- 2. Why it matters (slides 2, 3) -->
-  <section id="why" class="ccc-section" aria-labelledby="ccc-why">
-    <div class="container">
-      <SectionHeader id="ccc-why" index="01" kicker="Why it matters" title="People decide with their eyes" />
-      <div class="ccc-split">
-        <div class="ccc-split-media">
-          <CccPhoto src={whyCoupe} alt="A coupe cocktail glass on a dark bar, warm light glowing behind it" sizes="(min-width: 900px) 45vw, 100vw" />
-        </div>
-        <div class="ccc-split-copy">
-          <p>Before anyone books a table, they've already scrolled your feed, your Google listing, and every post you've been tagged in. If the photos don't look like the night you actually deliver, you lose them before they ever walk in.</p>
-        </div>
-      </div>
-      <div class="ccc-split is-flip">
-        <div class="ccc-split-media">
-          <CccPhoto src={whyShelves} alt="Bar shelves of bottles and records under glowing copper pendant lights, a reel-to-reel deck in front" sizes="(min-width: 900px) 45vw, 100vw" />
-        </div>
-        <div class="ccc-split-copy">
-          <h3 class="ccc-subtitle">You're busy running the place</h3>
-          <p>Nobody behind the bar has time to stop and shoot the pour, the room at 9pm, or the crew in the middle of a rush. That's my job. I come in, stay out of the way, and catch the good stuff your guests already love.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 3. Where it goes (slide 4) -->
-  <section id="where" class="ccc-section" aria-labelledby="ccc-where">
-    <div class="container">
-      <SectionHeader id="ccc-where" index="02" kicker="Where it goes" title="One shoot, everywhere you post" />
-      <ul class="ccc-cards4">
-        {where.map((w) => (
-          <li class="ccc-card">
-            <div class="ccc-card-media"><CccPhoto src={w.img} alt={w.alt} sizes="(min-width: 900px) 22vw, 46vw" /></div>
-            <h3 class="ccc-card-title">{w.title}</h3>
-            <p class="ccc-card-line">{w.line}</p>
-          </li>
-        ))}
-      </ul>
-    </div>
-  </section>
-
-  <!-- 4. The work (slides 5, 6, 7) -->
-  <section id="work" class="ccc-section" aria-labelledby="ccc-work">
-    <div class="container">
-      <SectionHeader id="ccc-work" index="03" kicker="The work" title="Drinks people want to order" />
-      <ul class="ccc-grid3">
-        {drinks.map((d) => (
-          <li>
-            <figure class="ccc-fig">
-              <CccPhoto src={d.img} alt={d.alt} sizes="(min-width: 900px) 30vw, 100vw" />
-              <figcaption>{d.cap}</figcaption>
-            </figure>
-          </li>
-        ))}
-      </ul>
-
-      <div class="ccc-night">
-        <div class="ccc-night-copy">
-          <h3 class="ccc-subtitle">Every part of your night</h3>
-          <ul class="ccc-dotlist">
-            {nightList.map((t) => <li>{t}</li>)}
-          </ul>
-        </div>
-        <div class="ccc-mosaic">
-          <div class="ccc-mosaic-wide">
-            <CccPhoto src={nightWide} alt="A drink being poured into a glass, close up" sizes="(min-width: 900px) 55vw, 100vw" />
-          </div>
-          {nightTiles.map((t) => (
-            <div class="ccc-mosaic-tile"><CccPhoto src={t.img} alt={t.alt} sizes="(min-width: 900px) 14vw, 48vw" /></div>
-          ))}
-        </div>
-      </div>
-
-      <h3 class="ccc-subtitle ccc-subtitle--spaced">The room and the details</h3>
-      <div class="ccc-room">
-        <figure class="ccc-fig ccc-room-wide">
-          <CccPhoto src={workRoom} alt="A warm wood-panelled bar room under glowing pendant lights" sizes="(min-width: 900px) 62vw, 100vw" />
-          <figcaption>The room</figcaption>
-        </figure>
-        <figure class="ccc-fig">
-          <CccPhoto src={workDetail} alt="A hand setting a garnish on a dark drink topped with a lace tuile" sizes="(min-width: 900px) 34vw, 100vw" />
-          <figcaption>The detail</figcaption>
-        </figure>
-      </div>
-
-      <p class="ccc-credit">All photographs by Andrew. The cocktails and dishes pictured are the bar's. The photography is mine.</p>
-    </div>
-  </section>
-
-  <!-- 5. Video (slides 8, 9). Hidden with one line: CCC_SHOW_VIDEO in src/data/ccc.ts. -->
-  {CCC_SHOW_VIDEO && (
-    <section id="video" class="ccc-section" aria-labelledby="ccc-video">
-      <div class="container">
-        <SectionHeader id="ccc-video" index="04" kicker="Video" title="Desert Escape, shot by shot" />
-        <ul class="ccc-grid4">
-          {desert.map((d) => (
-            <li>
-              <figure class="ccc-fig ccc-fig--wide">
-                <CccPhoto src={d.img} alt={d.alt} sizes="(min-width: 900px) 22vw, 46vw" />
-                <figcaption>{d.cap}</figcaption>
-              </figure>
-            </li>
-          ))}
-        </ul>
-
-        <div class="ccc-real">
-          <div class="ccc-real-copy">
-            <h3 class="ccc-subtitle">Real nights, nothing staged</h3>
-            <p>I move through the room like a guest would, so the reel carries the pace and sound of a real night.</p>
-            <ul class="ccc-dotlist">
-              <li>The crowd</li>
-              <li>The pour</li>
-              <li>The brands behind the bar</li>
-            </ul>
-            {CCC_REEL_URL && (
-              <a class="btn btn-ghost ccc-reel-link" href={CCC_REEL_URL} target="_blank" rel="noopener">
-                Watch the reel <span aria-hidden="true">&#8599;</span>
-              </a>
-            )}
-          </div>
-          <div class="ccc-real-frames">
-            <div class="ccc-real-main"><CccPhoto src={real[0].img} alt={real[0].alt} sizes="(min-width: 900px) 50vw, 100vw" /></div>
-            <div><CccPhoto src={real[1].img} alt={real[1].alt} sizes="(min-width: 900px) 25vw, 50vw" /></div>
-            <div><CccPhoto src={real[2].img} alt={real[2].alt} sizes="(min-width: 900px) 25vw, 50vw" /></div>
+  <!-- Collapsible Section Stack (01 through 05) -->
+  <div class="ccc-stack" id="ccc-stack" data-ccc-stack>
+    <!-- 01 Why it matters -->
+    <section
+      id="why"
+      class="ccc-panel is-expanded"
+      data-ccc-panel
+      data-panel-index="0"
+      style="--panel-index: 0;"
+      aria-labelledby="ccc-strip-why"
+    >
+      <h2 class="ccc-strip-heading">
+        <button
+          type="button"
+          id="ccc-strip-why"
+          class="ccc-strip-btn"
+          data-ccc-strip
+          aria-expanded="true"
+          aria-controls="ccc-body-why"
+        >
+          <span class="ccc-strip-num font-mono">01</span>
+          <span class="ccc-strip-title">Why it matters</span>
+          <span class="ccc-strip-chevron" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </span>
+        </button>
+      </h2>
+      <div id="ccc-body-why" class="ccc-panel-body" data-ccc-body role="region" aria-labelledby="ccc-strip-why">
+        <div class="container ccc-panel-inner">
+          <p class="ccc-lead">
+            If the photos don't look like the night you actually deliver, you lose people before they ever walk in.
+          </p>
+          <div class="ccc-split is-flip">
+            <div class="ccc-split-media">
+              <CccPhoto
+                src={whyShelves}
+                alt="Bar shelves of bottles and records under glowing copper pendant lights, a reel-to-reel deck in front"
+                sizes="(min-width: 900px) 45vw, 100vw"
+                eager
+              />
+            </div>
+            <div class="ccc-split-copy">
+              <h3 class="ccc-subtitle">You're busy running the place</h3>
+              <p>
+                Nobody behind the bar has time to stop and shoot the pour, the room at 9pm, or the crew in the middle of a rush. I come in, stay out of the way, and catch the good stuff your guests already love.
+              </p>
+            </div>
           </div>
         </div>
       </div>
     </section>
-  )}
 
-  <!-- 6. How it works (slides 10, 11) -->
-  <section id="how" class="ccc-section" aria-labelledby="ccc-how">
-    <div class="container">
-      <SectionHeader id="ccc-how" index={CCC_SHOW_VIDEO ? '05' : '04'} kicker="How it works" title="Four hours, no disruption" />
-      <div class="ccc-split">
-        <div class="ccc-split-media">
-          <CccPhoto src={howCrew} alt="Kitchen crew at work at the pass of a busy restaurant" sizes="(min-width: 900px) 40vw, 100vw" />
+    <!-- 02 Where it goes -->
+    <section
+      id="where"
+      class="ccc-panel is-collapsed"
+      data-ccc-panel
+      data-panel-index="1"
+      style="--panel-index: 1;"
+      aria-labelledby="ccc-strip-where"
+    >
+      <h2 class="ccc-strip-heading">
+        <button
+          type="button"
+          id="ccc-strip-where"
+          class="ccc-strip-btn"
+          data-ccc-strip
+          aria-expanded="false"
+          aria-controls="ccc-body-where"
+        >
+          <span class="ccc-strip-num font-mono">02</span>
+          <span class="ccc-strip-title">Where it goes</span>
+          <span class="ccc-strip-chevron" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </span>
+        </button>
+      </h2>
+      <div id="ccc-body-where" class="ccc-panel-body" data-ccc-body role="region" aria-labelledby="ccc-strip-where" inert>
+        <div class="container ccc-panel-inner">
+          <ul class="ccc-cards4" role="list">
+            {where.map((w) => (
+              <li class="ccc-card">
+                <div class="ccc-card-media">
+                  <CccPhoto src={w.img} alt={w.alt} sizes="(min-width: 900px) 22vw, 46vw" />
+                </div>
+                <h3 class="ccc-card-title">{w.title}</h3>
+                <p class="ccc-card-line">{w.line}</p>
+              </li>
+            ))}
+          </ul>
         </div>
-        <ol class="ccc-steps">
-          {steps.map((s) => (
-            <li>
-              <span class="ccc-step-n" aria-hidden="true">{s.n}</span>
-              <div>
-                <h3 class="ccc-step-title">{s.title}</h3>
-                <p>{s.body}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
       </div>
+    </section>
 
-      <h3 class="ccc-subtitle ccc-subtitle--spaced">Easy on your end</h3>
-      <div class="ccc-split is-flip">
-        <div class="ccc-split-media">
-          <CccPhoto src={howCocktails} alt="A bartender setting two cocktails down on a bar mat" sizes="(min-width: 900px) 40vw, 100vw" />
-        </div>
-        <ul class="ccc-easy">
-          {easy.map((e) => (
-            <li class="ccc-easy-card">
-              <h4 class="ccc-step-title">{e.title}</h4>
-              <p>{e.body}</p>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  </section>
+    <!-- 03 The work -->
+    <section
+      id="work"
+      class="ccc-panel is-collapsed"
+      data-ccc-panel
+      data-panel-index="2"
+      style="--panel-index: 2;"
+      aria-labelledby="ccc-strip-work"
+    >
+      <h2 class="ccc-strip-heading">
+        <button
+          type="button"
+          id="ccc-strip-work"
+          class="ccc-strip-btn"
+          data-ccc-strip
+          aria-expanded="false"
+          aria-controls="ccc-body-work"
+        >
+          <span class="ccc-strip-num font-mono">03</span>
+          <span class="ccc-strip-title">The work</span>
+          <span class="ccc-strip-chevron" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </span>
+        </button>
+      </h2>
+      <div id="ccc-body-work" class="ccc-panel-body" data-ccc-body role="region" aria-labelledby="ccc-strip-work" inert>
+        <div class="container ccc-panel-inner">
+          <ul class="ccc-grid3" role="list">
+            {drinks.map((d) => (
+              <li>
+                <figure class="ccc-fig">
+                  <CccPhoto src={d.img} alt={d.alt} sizes="(min-width: 900px) 30vw, 100vw" />
+                  <figcaption>{d.cap}</figcaption>
+                </figure>
+              </li>
+            ))}
+          </ul>
 
-  <!-- 7. Pricing (slide 12) -->
-  <section id="pricing" class="ccc-section" aria-labelledby="ccc-pricing">
-    <div class="container">
-      <SectionHeader id="ccc-pricing" index={CCC_SHOW_VIDEO ? '06' : '05'} kicker="What it costs" title="Pick what you need" />
-      <div class="ccc-pricing">
-        <div class="ccc-pricing-media">
-          <CccPhoto src={pricingCoupe} alt="A coupe cocktail with a green garnish, warm light behind it" sizes="(min-width: 900px) 30vw, 100vw" />
-        </div>
-        <div class="ccc-pricing-list">
-          <div class="ccc-price">
-            <div class="ccc-price-head"><h3>{P.photo.label}</h3><p class="ccc-price-amt">{P.photo.price}</p></div>
-            <p>{P.photo.desc}</p>
-          </div>
-          <div class="ccc-price">
-            <div class="ccc-price-head"><h3>{P.reel.label}</h3><p class="ccc-price-amt">{P.reel.price}</p></div>
-            <p>{P.reel.desc}</p>
-          </div>
-          <div class="ccc-price is-featured">
-            <div class="ccc-price-head">
-              <h3>{P.bundle.label}</h3>
-              <p class="ccc-price-amt">{P.bundle.price} <span class="ccc-price-was">{P.bundle.regular}</span></p>
+          <div class="ccc-mosaic">
+            <div class="ccc-mosaic-wide">
+              <CccPhoto src={nightWide} alt="A drink being poured into a glass, close up" sizes="(min-width: 900px) 55vw, 100vw" />
             </div>
-            <p>{P.bundle.desc}</p>
+            {nightTiles.map((t) => (
+              <div class="ccc-mosaic-tile">
+                <CccPhoto src={t.img} alt={t.alt} sizes="(min-width: 900px) 14vw, 48vw" />
+              </div>
+            ))}
           </div>
-          <p class="ccc-price-foot">{P.footer}</p>
+
+          <div class="ccc-room">
+            <figure class="ccc-fig ccc-room-wide">
+              <CccPhoto src={workRoom} alt="A warm wood-panelled bar room under glowing pendant lights" sizes="(min-width: 900px) 62vw, 100vw" />
+              <figcaption>The room</figcaption>
+            </figure>
+            <figure class="ccc-fig">
+              <CccPhoto src={workDetail} alt="A hand setting a garnish on a dark drink topped with a lace tuile" sizes="(min-width: 900px) 34vw, 100vw" />
+              <figcaption>The detail</figcaption>
+            </figure>
+          </div>
+
+          <p class="ccc-credit">Photographs by Andrew Baxter. Shot for Capture Create Caffeinate.</p>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- 8. Closer (slide 13) -->
+    <!-- 04 Real nights -->
+    <section
+      id="video"
+      class="ccc-panel is-collapsed"
+      data-ccc-panel
+      data-panel-index="3"
+      style="--panel-index: 3;"
+      aria-labelledby="ccc-strip-video"
+    >
+      <h2 class="ccc-strip-heading">
+        <button
+          type="button"
+          id="ccc-strip-video"
+          class="ccc-strip-btn"
+          data-ccc-strip
+          aria-expanded="false"
+          aria-controls="ccc-body-video"
+        >
+          <span class="ccc-strip-num font-mono">04</span>
+          <span class="ccc-strip-title">Real nights</span>
+          <span class="ccc-strip-chevron" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </span>
+        </button>
+      </h2>
+      <div id="ccc-body-video" class="ccc-panel-body" data-ccc-body role="region" aria-labelledby="ccc-strip-video" inert>
+        <div class="container ccc-panel-inner">
+          <ul class="ccc-grid4" role="list">
+            {desert.map((d) => (
+              <li>
+                <figure class="ccc-fig ccc-fig--wide">
+                  <CccPhoto src={d.img} alt={d.alt} sizes="(min-width: 900px) 22vw, 46vw" />
+                  <figcaption>{d.cap}</figcaption>
+                </figure>
+              </li>
+            ))}
+          </ul>
+
+          <div class="ccc-real">
+            <div class="ccc-real-copy">
+              <p>
+                I move through the room like a guest would, so the reel carries the pace and sound of a real night.
+              </p>
+              {CCC_REEL_URL && (
+                <a class="btn btn-ghost ccc-reel-link" href={CCC_REEL_URL} target="_blank" rel="noopener">
+                  Watch the reel <span aria-hidden="true">&#8599;</span>
+                </a>
+              )}
+            </div>
+            <div class="ccc-real-frames">
+              <figure class="ccc-fig ccc-real-main">
+                <CccPhoto src={real[0].img} alt={real[0].alt} sizes="(min-width: 900px) 50vw, 100vw" />
+                <figcaption>{real[0].cap}</figcaption>
+              </figure>
+              <figure class="ccc-fig">
+                <CccPhoto src={real[1].img} alt={real[1].alt} sizes="(min-width: 900px) 25vw, 50vw" />
+                <figcaption>{real[1].cap}</figcaption>
+              </figure>
+              <figure class="ccc-fig">
+                <CccPhoto src={real[2].img} alt={real[2].alt} sizes="(min-width: 900px) 25vw, 50vw" />
+                <figcaption>{real[2].cap}</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 How it works -->
+    <section
+      id="how"
+      class="ccc-panel is-collapsed"
+      data-ccc-panel
+      data-panel-index="4"
+      style="--panel-index: 4;"
+      aria-labelledby="ccc-strip-how"
+    >
+      <h2 class="ccc-strip-heading">
+        <button
+          type="button"
+          id="ccc-strip-how"
+          class="ccc-strip-btn"
+          data-ccc-strip
+          aria-expanded="false"
+          aria-controls="ccc-body-how"
+        >
+          <span class="ccc-strip-num font-mono">05</span>
+          <span class="ccc-strip-title">How it works</span>
+          <span class="ccc-strip-chevron" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </span>
+        </button>
+      </h2>
+      <div id="ccc-body-how" class="ccc-panel-body" data-ccc-body role="region" aria-labelledby="ccc-strip-how" inert>
+        <div class="container ccc-panel-inner">
+          <div class="ccc-split">
+            <div class="ccc-split-media">
+              <CccPhoto src={howCrew} alt="Kitchen crew at work at the pass of a busy restaurant" sizes="(min-width: 900px) 40vw, 100vw" />
+            </div>
+            <ol class="ccc-steps" role="list">
+              {steps.map((s) => (
+                <li>
+                  <span class="ccc-step-n" aria-hidden="true">{s.n}</span>
+                  <div>
+                    <h3 class="ccc-step-title">{s.title}</h3>
+                    <p>{s.body}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          <h3 class="ccc-subtitle ccc-subtitle--spaced">Easy on your end</h3>
+          <div class="ccc-split is-flip">
+            <div class="ccc-split-media">
+              <CccPhoto src={howCocktails} alt="A bartender setting two cocktails down on a bar mat" sizes="(min-width: 900px) 40vw, 100vw" />
+            </div>
+            <ul class="ccc-easy" role="list">
+              {easy.map((e) => (
+                <li class="ccc-easy-card">
+                  <h4 class="ccc-step-title">{e.title}</h4>
+                  <p>{e.body}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Close: standalone final block after the panels -->
   <section id="contact" class="ccc-closer" aria-labelledby="ccc-closer">
     <div class="ccc-closer-bg" aria-hidden="true">
       <CccPhoto src={closerBg} alt="" sizes="100vw" />
@@ -320,110 +439,244 @@ const easy = [
       <p class="ccc-closer-eyebrow">Let's get you on the calendar</p>
       <h2 id="ccc-closer" class="ccc-closer-title">Show people what they're missing</h2>
       <p class="ccc-closer-body">One shoot. Weeks of content. A better reason for people to come see you.</p>
-      <p class="ccc-closer-price">{P.summary}</p>
       <div class="ccc-actions btn-group">
-        <a class="btn btn-primary" href={CCC_INQUIRY_HREF}>Start a project <span aria-hidden="true">&rarr;</span></a>
-        <a class="btn btn-secondary" href={CCC_DECK.href} download>{CCC_DECK.label} <span aria-hidden="true">&darr;</span></a>
-        <a class="btn btn-secondary" href={CCC_PORTFOLIO} target="_blank" rel="noopener">Portfolio <span aria-hidden="true">&#8599;</span></a>
+        <button type="button" class="btn btn-primary" data-open-ccc-modal>
+          Start a project <span aria-hidden="true">&rarr;</span>
+        </button>
+        <a class="btn btn-secondary" href={CCC_DECK.href} download>
+          {CCC_DECK.label} <span aria-hidden="true">&darr;</span>
+        </a>
+        <a class="btn btn-secondary" href={CCC_PORTFOLIO} target="_blank" rel="noopener">
+          Portfolio <span aria-hidden="true">&#8599;</span>
+        </a>
       </div>
     </div>
   </section>
+
+  <!-- Start a Project Modal -->
+  <CccInquiryModal />
 </BaseLayout>
 
 <style>
-  /* Fixed nav clearance (same as /about). */
-  .page-head { height: clamp(4.5rem, 8vw, 6rem); }
+  /* Fixed nav clearance */
+  .page-head {
+    height: clamp(4.5rem, 8vw, 6rem);
+  }
 
+  /* Hero: Logo is the largest element, followed by "Bars. Restaurants. Events" and the coupe image */
   .ccc-hero {
-    padding: clamp(2rem, 6vw, 5rem) 0 clamp(3rem, 7vw, 6rem);
+    padding: clamp(2rem, 5vw, 4rem) 0 clamp(2.5rem, 6vw, 4.5rem);
     text-align: center;
   }
   .ccc-hero-inner {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
+    gap: 1.25rem;
   }
   .ccc-hero-logo {
-    width: clamp(150px, 30vw, 260px);
+    width: clamp(280px, 78vw, 380px);
     height: auto;
-  }
-  .ccc-hero-title {
-    margin: 0.5rem 0 0;
-    max-width: 20ch;
-    font-family: var(--font-display);
-    font-size: clamp(1.9rem, 5.6vw, 3.6rem);
-    font-weight: 800;
-    line-height: 1.05;
-    text-transform: uppercase;
-    color: var(--ink);
   }
   .ccc-hero-sub {
     margin: 0;
     font-family: var(--font-mono);
-    font-size: 0.78rem;
-    letter-spacing: 0.24em;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--muted);
   }
-  .ccc-actions {
-    margin: 0.75rem auto 0;
+  .ccc-hero-media {
+    width: 100%;
+    max-width: 460px;
+    margin-top: 0.25rem;
   }
-
-  .ccc-section {
-    padding: clamp(3.5rem, 8vw, 6.5rem) 0;
-    border-top: 1px solid var(--line);
-  }
-  .ccc-section :global(img) {
+  .ccc-hero-media :global(img) {
     display: block;
     width: 100%;
     height: auto;
   }
-  .ccc-subtitle {
-    margin: 0 0 1rem;
+  .ccc-actions {
+    margin: 0.5rem auto 0;
+  }
+
+  /* Collapsible Stack */
+  .ccc-stack {
+    --ccc-nav-h: 72px;
+    --ccc-strip-h: 48px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--line);
+  }
+  .ccc-panel {
+    position: relative;
+    background: var(--bg, #080808);
+    border-bottom: 1px solid var(--line);
+  }
+  /* Collapsed panels stick in order at the top so passed sections stay visible */
+  .ccc-panel.is-collapsed {
+    position: sticky;
+    top: calc(var(--ccc-nav-h) + (var(--panel-index, 0) * var(--ccc-strip-h)));
+    z-index: calc(30 - var(--panel-index, 0));
+  }
+  .ccc-strip-heading {
+    margin: 0;
+    font: inherit;
+  }
+  .ccc-panel.is-expanded .ccc-strip-heading {
+    position: sticky;
+    top: calc(var(--ccc-nav-h) + (var(--panel-index, 0) * var(--ccc-strip-h)));
+    z-index: calc(30 - var(--panel-index, 0));
+    background: #0e0e0e;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .ccc-strip-btn {
+    appearance: none;
+    width: 100%;
+    min-height: var(--ccc-strip-h);
+    height: var(--ccc-strip-h);
+    padding: 0 max(1.25rem, calc((100vw - var(--maxw, 1200px)) / 2 + 1.25rem));
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: #0e0e0e;
+    border: none;
+    color: var(--ink, #fff);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  .ccc-strip-btn:hover {
+    background: #151515;
+  }
+  .ccc-strip-btn:focus-visible {
+    outline: 2px solid var(--focus-ring, #fff);
+    outline-offset: -2px;
+  }
+  .ccc-strip-num {
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted, #888);
+    min-width: 2ch;
+  }
+  .ccc-strip-title {
+    flex: 1;
     font-family: var(--font-display);
-    font-size: clamp(1.25rem, 2.6vw, 1.9rem);
+    font-size: clamp(1rem, 2vw, 1.35rem);
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ink, #fff);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ccc-strip-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    color: var(--muted, #888);
+    transition: transform 0.24s ease-out, color 0.2s ease;
+  }
+  .ccc-panel.is-expanded .ccc-strip-chevron {
+    transform: rotate(180deg);
+    color: var(--ink, #fff);
+  }
+
+  .ccc-panel-body {
+    min-height: 100svh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(2.5rem, 6vw, 4.5rem) 0;
+    transform: translate3d(0, 0, 0);
+    transition: transform 0.24s ease-out;
+  }
+  .ccc-panel-body.is-entering {
+    transform: translate3d(0, 14px, 0);
+  }
+  .ccc-panel.is-collapsed .ccc-panel-body {
+    display: none;
+    min-height: 0;
+  }
+  .ccc-panel-inner {
+    width: 100%;
+  }
+  .ccc-panel :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .ccc-panel p {
+    color: var(--text, #d6d6d6);
+    line-height: 1.65;
+  }
+
+  .ccc-lead {
+    margin: 0 0 clamp(2rem, 4vw, 3rem);
+    max-width: 54ch;
+    font-size: clamp(1.1rem, 2vw, 1.35rem);
+    color: var(--ink, #fff) !important;
+  }
+
+  .ccc-subtitle {
+    margin: 0 0 0.85rem;
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 2.6vw, 1.85rem);
     font-weight: 800;
     line-height: 1.1;
     text-transform: uppercase;
     color: var(--ink);
   }
-  .ccc-subtitle--spaced { margin-top: clamp(3rem, 6vw, 5rem); }
-  /* Phones: the display face is wide, so a long word ("EVERYWHERE",
-     "DISRUPTION") would break mid-word at the default title size. */
-  @media (max-width: 480px) {
-    .ccc-section :global(.sec-head .section-title) { font-size: 4.8vw; }
-    .ccc-hero-title { font-size: 7.6vw; }
-    .ccc-closer-title { font-size: 7.6vw; }
-  }
-  .ccc-section p {
-    color: var(--text, #d6d6d6);
-    line-height: 1.7;
+  .ccc-subtitle--spaced {
+    margin-top: clamp(2.5rem, 5vw, 4rem);
   }
 
-  /* Image and copy side by side; .is-flip puts the image on the right. */
+  /* Image and copy side by side */
   .ccc-split {
     display: grid;
     gap: clamp(1.5rem, 4vw, 3.5rem);
     align-items: center;
-    margin-top: clamp(1.5rem, 3vw, 2.5rem);
   }
-  .ccc-split-copy p { margin: 0; font-size: clamp(1rem, 1.6vw, 1.15rem); max-width: 52ch; }
+  .ccc-split-copy p {
+    margin: 0;
+    font-size: clamp(1rem, 1.6vw, 1.12rem);
+    max-width: 52ch;
+  }
   @media (min-width: 900px) {
-    .ccc-split { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); grid-template-areas: 'media copy'; }
-    .ccc-split.is-flip { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); grid-template-areas: 'copy media'; }
-    .ccc-split > :first-child { grid-area: media; }
-    .ccc-split > :last-child { grid-area: copy; }
+    .ccc-split {
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      grid-template-areas: 'media copy';
+    }
+    .ccc-split.is-flip {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      grid-template-areas: 'copy media';
+    }
+    .ccc-split > :first-child {
+      grid-area: media;
+    }
+    .ccc-split > :last-child {
+      grid-area: copy;
+    }
   }
-  .ccc-split-media { max-width: 520px; width: 100%; justify-self: center; }
+  .ccc-split-media {
+    max-width: 520px;
+    width: 100%;
+    justify-self: center;
+  }
 
-  /* Where it goes: 2x2 on phones, 4 across on desktop. */
+  /* Lists */
   .ccc-cards4,
   .ccc-grid3,
   .ccc-grid4,
   .ccc-easy,
-  .ccc-steps,
-  .ccc-dotlist {
+  .ccc-steps {
     list-style: none;
     margin: 0;
     padding: 0;
@@ -432,11 +685,21 @@ const easy = [
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: clamp(0.75rem, 2vw, 1.5rem);
-    margin-top: clamp(1.5rem, 3vw, 2.5rem);
   }
-  @media (min-width: 900px) { .ccc-cards4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-  .ccc-card-media { aspect-ratio: 4 / 5; overflow: hidden; background: #0d0d0d; }
-  .ccc-card-media :global(img) { height: 100%; object-fit: cover; }
+  @media (min-width: 900px) {
+    .ccc-cards4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+  .ccc-card-media {
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    background: #0d0d0d;
+  }
+  .ccc-card-media :global(img) {
+    height: 100%;
+    object-fit: cover;
+  }
   .ccc-card-title {
     margin: 0.9rem 0 0.3rem;
     font-family: var(--font-mono);
@@ -446,97 +709,140 @@ const easy = [
     text-transform: uppercase;
     color: var(--ink);
   }
-  .ccc-card-line { margin: 0; font-size: 0.92rem; }
+  .ccc-card-line {
+    margin: 0;
+    font-size: 0.92rem;
+  }
 
   /* The work */
   .ccc-grid3 {
     display: grid;
     gap: clamp(0.75rem, 2vw, 1.5rem);
-    margin-top: clamp(1.5rem, 3vw, 2.5rem);
   }
-  @media (min-width: 640px) { .ccc-grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-  .ccc-fig { margin: 0; }
+  @media (min-width: 640px) {
+    .ccc-grid3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .ccc-fig {
+    margin: 0;
+  }
   .ccc-fig figcaption {
-    margin-top: 0.7rem;
+    margin-top: 0.65rem;
     font-family: var(--font-mono);
     font-size: 0.7rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--muted);
   }
-  .ccc-dotlist { display: flex; flex-wrap: wrap; gap: 0.4rem 0; }
-  .ccc-dotlist li {
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink);
-  }
-  .ccc-dotlist li:not(:last-child)::after { content: '·'; margin: 0 0.6rem; color: var(--muted); }
 
-  .ccc-night {
-    display: grid;
-    gap: clamp(1.5rem, 3vw, 2.5rem);
-    margin-top: clamp(3rem, 6vw, 5rem);
-    align-items: center;
-  }
-  @media (min-width: 900px) { .ccc-night { grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr); } }
   .ccc-mosaic {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: clamp(0.5rem, 1.2vw, 0.9rem);
+    margin-top: clamp(2rem, 4vw, 3.5rem);
   }
-  @media (min-width: 640px) { .ccc-mosaic { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-  .ccc-mosaic-wide { grid-column: 1 / -1; }
-  .ccc-mosaic-tile { aspect-ratio: 252 / 464; overflow: hidden; }
-  .ccc-mosaic-tile :global(img) { height: 100%; object-fit: cover; }
+  @media (min-width: 640px) {
+    .ccc-mosaic {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+  .ccc-mosaic-wide {
+    grid-column: 1 / -1;
+  }
+  .ccc-mosaic-tile {
+    aspect-ratio: 252 / 464;
+    overflow: hidden;
+  }
+  .ccc-mosaic-tile :global(img) {
+    height: 100%;
+    object-fit: cover;
+  }
 
-  .ccc-room { display: grid; gap: clamp(0.75rem, 2vw, 1.5rem); }
-  @media (min-width: 900px) { .ccc-room { grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); align-items: start; } }
+  .ccc-room {
+    display: grid;
+    gap: clamp(0.75rem, 2vw, 1.5rem);
+    margin-top: clamp(2rem, 4vw, 3.5rem);
+  }
+  @media (min-width: 900px) {
+    .ccc-room {
+      grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
+      align-items: start;
+    }
+  }
   .ccc-credit {
-    margin: clamp(2rem, 4vw, 3rem) 0 0;
+    margin: clamp(1.75rem, 3.5vw, 2.5rem) 0 0;
     font-size: 0.82rem;
     color: var(--muted) !important;
   }
 
-  /* Video */
+  /* Real nights */
   .ccc-grid4 {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: clamp(0.75rem, 2vw, 1.25rem);
-    margin-top: clamp(1.5rem, 3vw, 2.5rem);
   }
-  @media (min-width: 900px) { .ccc-grid4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-  .ccc-fig--wide :global(img) { aspect-ratio: 16 / 9; object-fit: cover; }
+  @media (min-width: 900px) {
+    .ccc-grid4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+  .ccc-fig--wide :global(img) {
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
   .ccc-real {
     display: grid;
     gap: clamp(1.5rem, 3vw, 2.5rem);
-    margin-top: clamp(3rem, 6vw, 5rem);
+    margin-top: clamp(2.5rem, 5vw, 4rem);
     align-items: center;
   }
-  @media (min-width: 900px) { .ccc-real { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); } }
-  .ccc-real-copy p { margin: 0 0 1rem; max-width: 46ch; }
-  .ccc-reel-link { margin-top: 1.25rem; }
+  @media (min-width: 900px) {
+    .ccc-real {
+      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    }
+  }
+  .ccc-real-copy p {
+    margin: 0;
+    max-width: 46ch;
+    font-size: clamp(1rem, 1.6vw, 1.15rem);
+  }
+  .ccc-reel-link {
+    margin-top: 1.25rem;
+  }
   .ccc-real-frames {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: clamp(0.5rem, 1.2vw, 0.9rem);
   }
-  .ccc-real-frames :global(img) { aspect-ratio: 16 / 9; object-fit: cover; }
-  .ccc-real-main { grid-column: 1 / -1; }
+  .ccc-real-frames :global(img) {
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+  .ccc-real-main {
+    grid-column: 1 / -1;
+  }
 
   /* How it works */
-  .ccc-steps { display: grid; gap: 1.5rem; }
-  .ccc-steps li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1rem; align-items: start; }
+  .ccc-steps {
+    display: grid;
+    gap: 1.35rem;
+  }
+  .ccc-steps li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+  }
   .ccc-step-n {
     font-family: var(--font-display);
-    font-size: 1.6rem;
+    font-size: 1.5rem;
     font-weight: 800;
     line-height: 1;
     color: var(--muted);
   }
   .ccc-step-title {
-    margin: 0 0 0.35rem;
+    margin: 0 0 0.3rem;
     font-family: var(--font-mono);
     font-size: 0.78rem;
     font-weight: 600;
@@ -545,64 +851,23 @@ const easy = [
     color: var(--ink);
   }
   .ccc-steps p,
-  .ccc-easy p { margin: 0; font-size: 0.95rem; }
-  .ccc-easy { display: grid; gap: 1rem; }
-  @media (min-width: 640px) { .ccc-easy { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  .ccc-easy-card { padding: 1.25rem; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.02); }
-
-  /* Pricing: the bundle carries the outline, as on the deck. */
-  .ccc-pricing {
-    display: grid;
-    gap: clamp(1.5rem, 4vw, 3rem);
-    margin-top: clamp(1.5rem, 3vw, 2.5rem);
-    align-items: center;
-  }
-  @media (min-width: 900px) { .ccc-pricing { grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr); } }
-  .ccc-pricing-media { max-width: 420px; width: 100%; justify-self: center; }
-  .ccc-pricing-list { display: grid; gap: 1rem; }
-  .ccc-price { padding: 1.25rem 1.4rem; border: 1px solid var(--line); }
-  .ccc-price p { margin: 0; font-size: 0.95rem; }
-  .ccc-price.is-featured { border: 2px solid var(--ink); background: rgba(255, 255, 255, 0.04); }
-  .ccc-price-head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.25rem 1rem;
-    margin-bottom: 0.5rem;
-  }
-  .ccc-price-head h3 {
+  .ccc-easy p {
     margin: 0;
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--ink);
+    font-size: 0.95rem;
   }
-  .ccc-price .ccc-price-amt {
-    font-family: var(--font-display);
-    font-size: clamp(1.4rem, 3vw, 1.9rem);
-    font-weight: 800;
-    color: var(--ink);
+  .ccc-easy {
+    display: grid;
+    gap: 1rem;
   }
-  .ccc-price-was {
-    display: inline-block;
-    margin-left: 0.5rem;
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted);
+  @media (min-width: 640px) {
+    .ccc-easy {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
-  .ccc-price-foot {
-    margin: 0.25rem 0 0 !important;
-    font-family: var(--font-mono);
-    font-size: 0.72rem !important;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted) !important;
+  .ccc-easy-card {
+    padding: 1.25rem;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.02);
   }
 
   /* Closer */
@@ -614,11 +879,32 @@ const easy = [
     isolation: isolate;
     overflow: hidden;
   }
-  .ccc-closer-bg { position: absolute; inset: 0; z-index: -1; }
-  .ccc-closer-bg :global(img) { width: 100%; height: 100%; object-fit: cover; }
-  .ccc-closer-bg::after { content: ''; position: absolute; inset: 0; background: rgba(0, 0, 0, 0.72); }
-  .ccc-closer-inner { display: flex; flex-direction: column; align-items: center; gap: 0.9rem; }
-  .ccc-closer-logo { width: clamp(100px, 18vw, 150px); height: auto; }
+  .ccc-closer-bg {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+  .ccc-closer-bg :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .ccc-closer-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+  }
+  .ccc-closer-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+  }
+  .ccc-closer-logo {
+    width: clamp(100px, 18vw, 150px);
+    height: auto;
+  }
   .ccc-closer-eyebrow {
     margin: 0.5rem 0 0;
     font-family: var(--font-mono);
@@ -637,13 +923,207 @@ const easy = [
     text-transform: uppercase;
     color: var(--ink);
   }
-  .ccc-closer-body { margin: 0; max-width: 46ch; color: var(--text, #d6d6d6); line-height: 1.7; }
-  .ccc-closer-price {
+  .ccc-closer-body {
     margin: 0;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink);
+    max-width: 46ch;
+    color: var(--text, #d6d6d6);
+    line-height: 1.7;
+  }
+
+  @media (max-width: 480px) {
+    .ccc-closer-title {
+      font-size: 7.6vw;
+    }
+    .ccc-strip-btn {
+      padding: 0 1rem;
+      gap: 0.75rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ccc-panel-body,
+    .ccc-strip-chevron {
+      transition: none;
+    }
+    .ccc-panel-body.is-entering {
+      transform: none;
+    }
   }
 </style>
+
+<script>
+  function initCccStack() {
+    const stack = document.getElementById('ccc-stack');
+    if (!stack || stack.dataset.cccStackWired === '1') return;
+    stack.dataset.cccStackWired = '1';
+
+    const panels = Array.from(stack.querySelectorAll<HTMLElement>('[data-ccc-panel]'));
+    if (panels.length === 0) return;
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let activeIdx = 0;
+    let isInView = false;
+    let rafId = 0;
+    let lastScrollY = window.scrollY;
+    let lockUntil = 0;
+
+    function getNavHeight(): number {
+      const nav = document.querySelector<HTMLElement>('.site-nav');
+      const h = nav ? Math.round(nav.getBoundingClientRect().height) : 72;
+      stack!.style.setProperty('--ccc-nav-h', `${h}px`);
+      return h;
+    }
+
+    getNavHeight();
+    window.addEventListener('resize', getNavHeight, { passive: true });
+
+    function activatePanel(nextIdx: number, { animate = true, scrollAlign = false }: { animate?: boolean; scrollAlign?: boolean } = {}) {
+      if (nextIdx < 0 || nextIdx >= panels.length) return;
+      const changed = nextIdx !== activeIdx;
+      activeIdx = nextIdx;
+
+      const html = document.documentElement;
+      const prevAnchor = html.style.overflowAnchor;
+      html.style.overflowAnchor = 'none';
+
+      panels.forEach((panel, i) => {
+        const open = i === activeIdx;
+        const passed = i < activeIdx;
+        panel.classList.toggle('is-expanded', open);
+        panel.classList.toggle('is-collapsed', !open);
+        panel.classList.toggle('is-passed', passed);
+
+        const btn = panel.querySelector<HTMLButtonElement>('[data-ccc-strip]');
+        const body = panel.querySelector<HTMLElement>('[data-ccc-body]');
+        btn?.setAttribute('aria-expanded', String(open));
+        if (body) {
+          body.inert = !open;
+          if (open && changed && animate && !reducedMotion.matches) {
+            body.classList.add('is-entering');
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                body.classList.remove('is-entering');
+              });
+            });
+          } else {
+            body.classList.remove('is-entering');
+          }
+        }
+      });
+
+      if (scrollAlign) {
+        const navH = getNavHeight();
+        const stackDocTop = stack!.getBoundingClientRect().top + window.scrollY;
+        const targetY = Math.max(0, stackDocTop - navH);
+        lockUntil = performance.now() + 360;
+        window.scrollTo({
+          top: targetY,
+          behavior: 'instant' as ScrollBehavior,
+        });
+        lastScrollY = window.scrollY;
+      }
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          html.style.overflowAnchor = prevAnchor;
+        });
+      });
+    }
+
+    // Strip click handler: tapping any strip expands only that panel and collapses the others
+    panels.forEach((panel, idx) => {
+      const btn = panel.querySelector<HTMLButtonElement>('[data-ccc-strip]');
+      btn?.addEventListener('click', () => {
+        const navH = getNavHeight();
+        activatePanel(idx, { animate: !reducedMotion.matches, scrollAlign: false });
+        lockUntil = performance.now() + 450;
+        requestAnimationFrame(() => {
+          const stackDocTop = stack!.getBoundingClientRect().top + window.scrollY;
+          const targetY = Math.max(0, stackDocTop - navH);
+          const behavior: ScrollBehavior = reducedMotion.matches ? 'auto' : 'smooth';
+          window.scrollTo({ top: targetY, behavior });
+          lastScrollY = targetY;
+        });
+      });
+    });
+
+    // Hash deep-link support (#why, #where, #work, #video, #how)
+    function checkHash() {
+      const hash = window.location.hash.slice(1);
+      if (!hash) return;
+      const idx = panels.findIndex((p) => p.id === hash);
+      if (idx !== -1) {
+        activatePanel(idx, { animate: false, scrollAlign: true });
+      }
+    }
+    checkHash();
+    window.addEventListener('hashchange', checkHash);
+
+    // IntersectionObserver gates scroll tracking to when stack is on screen
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            isInView = entry.isIntersecting;
+          }
+        },
+        { rootMargin: '10% 0px 10% 0px' }
+      );
+      io.observe(stack);
+    } else {
+      isInView = true;
+    }
+
+    function onScrollFrame() {
+      rafId = 0;
+      if (reducedMotion.matches || !isInView) {
+        lastScrollY = window.scrollY;
+        return;
+      }
+
+      const now = performance.now();
+      const currentY = window.scrollY;
+      const dy = currentY - lastScrollY;
+      lastScrollY = currentY;
+
+      if (now < lockUntil || Math.abs(dy) < 2) return;
+
+      const currentPanel = panels[activeIdx];
+      if (!currentPanel) return;
+
+      const vh = window.innerHeight;
+      const navH = getNavHeight();
+
+      if (dy > 0 && activeIdx < panels.length - 1) {
+        // Scrolling down: when the next panel's strip rises into the viewport trigger zone,
+        // collapse the active panel to its strip and expand the next panel.
+        const nextPanel = panels[activeIdx + 1];
+        const nextTop = nextPanel.getBoundingClientRect().top;
+        if (nextTop <= vh * 0.62) {
+          activatePanel(activeIdx + 1, { animate: true, scrollAlign: true });
+        }
+      } else if (dy < 0 && activeIdx > 0) {
+        // Scrolling up: when the user scrolls above the top of the current panel's aligned position,
+        // expand the previous panel.
+        const stackDocTop = stack!.getBoundingClientRect().top + currentY;
+        const alignedTop = stackDocTop - navH;
+        if (currentY < alignedTop - 32) {
+          activatePanel(activeIdx - 1, { animate: true, scrollAlign: true });
+        }
+      }
+    }
+
+    window.addEventListener(
+      'scroll',
+      () => {
+        if (!rafId && !reducedMotion.matches) {
+          rafId = requestAnimationFrame(onScrollFrame);
+        }
+      },
+      { passive: true }
+    );
+  }
+
+  initCccStack();
+  document.addEventListener('astro:page-load', initCccStack);
+</script>

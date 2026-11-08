@@ -12,7 +12,7 @@ test.describe('Audit Fixes Verification', () => {
 
     await expect(cards.nth(0)).toContainText('Starting Rate');
     await expect(cards.nth(0)).toContainText('Photo sessions start at $950. Add a reel for $550, or get both for $1,200 (founding rate). Events quoted by scope.');
-    await expect(cards.nth(0).locator('a')).toHaveAttribute('href', /\/ccc\/#pricing$/);
+    await expect(cards.nth(0).locator('a')).toHaveAttribute('href', /\/ccc\/(#how|#pricing)?$/);
 
     await expect(cards.nth(1)).toContainText('Turnaround');
     await expect(cards.nth(1)).toContainText('15 selects the next day. The full gallery within a week.');

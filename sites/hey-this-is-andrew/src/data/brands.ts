@@ -31,7 +31,7 @@ interface BrandRow {
   teaserArt?: string;
   accent?: string;
   ctaFillOnPanelHover?: boolean;
-  inquiry?: { email: string; subject: string; label: string; body?: string };
+  inquiry?: { email: string; subject: string; label: string; body?: string; href?: string };
   /** More buttons beside the CTA. An href starting with "/" is a path on
    *  this site (the base is added here); anything else is a full URL. */
   links?: { label: string; href: string; external?: boolean; download?: boolean }[];
@@ -70,7 +70,7 @@ export const childBrands: ChildBrand[] = (rows as BrandRow[]).map((b) => ({
   teaserSvg: b.teaserArt ? TEASER_ART[b.teaserArt] : undefined,
   accent: b.accent || undefined,
   ctaFillOnPanelHover: b.ctaFillOnPanelHover || undefined,
-  inquiry: b.inquiry,
+  inquiry: b.inquiry ? { ...b.inquiry, href: sitePath(b.inquiry.href) ?? b.inquiry.href } : undefined,
   links: b.links?.map((l) => ({ ...l, href: sitePath(l.href) ?? l.href })),
   comingSoon: b.comingSoon || undefined,
   teaserTag: b.teaserTag,

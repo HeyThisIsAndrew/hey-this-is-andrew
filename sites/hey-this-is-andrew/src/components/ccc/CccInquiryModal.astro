@@ -1,0 +1,498 @@
+---
+/**
+ * CccInquiryModal.astro
+ * Accessible project inquiry modal for Capture Create Caffeinate.
+ * Native <dialog> opened via showModal(), with prefilled mailto composition
+ * and an in-modal copyable fallback for visitors without a mail client.
+ */
+import { CCC_EMAIL } from '../../data/ccc';
+---
+
+<dialog
+  id="ccc-inquiry-modal"
+  class="ccc-modal"
+  closedby="any"
+  aria-labelledby="ccc-modal-title"
+>
+  <div class="ccc-modal-card">
+    <header class="ccc-modal-head">
+      <h2 id="ccc-modal-title" class="ccc-modal-title">Start a project</h2>
+      <button
+        type="button"
+        class="ccc-modal-close"
+        id="ccc-modal-close"
+        aria-label="Close modal"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </header>
+
+    <form id="ccc-inquiry-form" class="ccc-form">
+      <div class="ccc-field">
+        <label for="ccc-name">Your name <span class="ccc-req" aria-hidden="true">*</span></label>
+        <input
+          type="text"
+          id="ccc-name"
+          name="name"
+          required
+          autocomplete="name"
+          autofocus
+        />
+      </div>
+
+      <div class="ccc-field">
+        <label for="ccc-email">Email <span class="ccc-req" aria-hidden="true">*</span></label>
+        <input
+          type="email"
+          id="ccc-email"
+          name="email"
+          required
+          autocomplete="email"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <div class="ccc-field">
+        <label for="ccc-venue">Venue name <span class="ccc-req" aria-hidden="true">*</span></label>
+        <input
+          type="text"
+          id="ccc-venue"
+          name="venue"
+          required
+          autocomplete="organization"
+        />
+      </div>
+
+      <div class="ccc-field">
+        <label for="ccc-location">Venue location, city or neighborhood <span class="ccc-req" aria-hidden="true">*</span></label>
+        <input
+          type="text"
+          id="ccc-location"
+          name="location"
+          required
+          autocomplete="address-level2"
+        />
+      </div>
+
+      <div class="ccc-field">
+        <label for="ccc-showoff">What do you want to show off? <span class="ccc-req" aria-hidden="true">*</span></label>
+        <textarea
+          id="ccc-showoff"
+          name="showOff"
+          rows="3"
+          required
+          placeholder="the menu, the room, the people, anything new."
+        ></textarea>
+      </div>
+
+      <div class="ccc-field">
+        <label for="ccc-date">Preferred date or dates <span class="ccc-req" aria-hidden="true">*</span></label>
+        <input
+          type="date"
+          id="ccc-date"
+          name="preferredDate"
+          required
+        />
+      </div>
+
+      <p id="ccc-pricing-note" class="ccc-pricing-note">
+        Half-day photo + reel starts at $1,200. Founding rate for the first 3 venues, regularly $1,500.
+      </p>
+
+      <div class="ccc-field">
+        <label for="ccc-budget">Budget <span class="ccc-req" aria-hidden="true">*</span></label>
+        <select
+          id="ccc-budget"
+          name="budget"
+          required
+          aria-describedby="ccc-pricing-note"
+        >
+          <option value="" disabled selected>Select a range</option>
+          <option value="Under $950">Under $950</option>
+          <option value="$950 to $1,200">$950 to $1,200</option>
+          <option value="$1,200 to $2,000">$1,200 to $2,000</option>
+          <option value="$2,000 plus">$2,000 plus</option>
+          <option value="Not sure yet">Not sure yet</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary ccc-submit-btn">
+        Send inquiry <span aria-hidden="true">&rarr;</span>
+      </button>
+    </form>
+
+    <div id="ccc-confirm-box" class="ccc-confirm-box" hidden>
+      <p id="ccc-confirm-msg" class="ccc-confirm-title" role="status" aria-live="polite">
+        Thanks. We will get back to you to schedule a call.
+      </p>
+      <p class="ccc-confirm-desc">
+        If your mail app did not open automatically, copy the composed inquiry below and send it to <a href={`mailto:${CCC_EMAIL}`}>{CCC_EMAIL}</a>.
+      </p>
+
+      <div class="ccc-copy-wrap">
+        <label for="ccc-copy-payload" class="ccc-copy-label">Composed email text</label>
+        <textarea
+          id="ccc-copy-payload"
+          class="ccc-copy-payload"
+          readonly
+          rows="8"
+        ></textarea>
+        <div class="ccc-confirm-actions btn-group">
+          <button type="button" id="ccc-copy-btn" class="btn btn-primary">
+            Copy email text
+          </button>
+          <a id="ccc-mailto-link" class="btn btn-secondary" href={`mailto:${CCC_EMAIL}`}>
+            Open mail app
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<style>
+  /* MANDATORY per modern-web-guidance: contain scroll on dialog:modal and dialog::backdrop */
+  .ccc-modal:modal {
+    overscroll-behavior: contain;
+  }
+  .ccc-modal::backdrop {
+    overflow: hidden;
+    overscroll-behavior: contain;
+    background: rgba(0, 0, 0, 0.82);
+  }
+  .ccc-modal {
+    padding: 0;
+    margin: auto;
+    width: min(100% - 1.5rem, 34rem);
+    max-height: calc(100svh - 2rem);
+    background: #0d0d0d;
+    color: var(--ink, #f5f5f5);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow-y: auto;
+  }
+  .ccc-modal[open] {
+    display: block;
+  }
+  .ccc-modal-card {
+    padding: clamp(1.25rem, 4vw, 2rem);
+  }
+  .ccc-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  }
+  .ccc-modal-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 3vw, 1.5rem);
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink, #fff);
+  }
+  .ccc-modal-close {
+    appearance: none;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: var(--ink, #fff);
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .ccc-modal-close:hover,
+  .ccc-modal-close:focus-visible {
+    background: var(--ink, #fff);
+    color: #000;
+    border-color: var(--ink, #fff);
+  }
+
+  .ccc-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .ccc-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .ccc-field label,
+  .ccc-copy-label {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink, #fff);
+  }
+  .ccc-req {
+    color: var(--muted, #888);
+  }
+  .ccc-field input,
+  .ccc-field textarea,
+  .ccc-field select {
+    width: 100%;
+    min-height: 48px;
+    padding: 0.65rem 0.85rem;
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 0;
+    color: var(--ink, #fff);
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: 1.4;
+    box-sizing: border-box;
+    color-scheme: dark;
+  }
+  .ccc-field textarea {
+    min-height: 5.5rem;
+    resize: vertical;
+  }
+  .ccc-field input:focus-visible,
+  .ccc-field textarea:focus-visible,
+  .ccc-field select:focus-visible {
+    outline: 2px solid var(--focus-ring, #fff);
+    outline-offset: 2px;
+    border-color: var(--ink, #fff);
+  }
+  .ccc-pricing-note {
+    margin: 0.25rem 0 0;
+    padding: 0.75rem 0.9rem;
+    background: rgba(255, 255, 255, 0.04);
+    border-left: 2px solid var(--ink, #fff);
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    line-height: 1.5;
+    letter-spacing: 0.04em;
+    color: var(--text, #d6d6d6);
+  }
+  .ccc-submit-btn {
+    width: 100%;
+    margin-top: 0.25rem;
+  }
+
+  .ccc-confirm-box[hidden] {
+    display: none;
+  }
+  .ccc-confirm-box {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .ccc-confirm-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(1.15rem, 2.5vw, 1.35rem);
+    font-weight: 800;
+    line-height: 1.25;
+    text-transform: uppercase;
+    color: var(--ink, #fff);
+  }
+  .ccc-confirm-desc {
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: var(--text, #d6d6d6);
+  }
+  .ccc-confirm-desc a {
+    color: var(--ink, #fff);
+    text-decoration: underline;
+  }
+  .ccc-copy-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .ccc-copy-payload {
+    width: 100%;
+    padding: 0.75rem;
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: var(--text, #d6d6d6);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    line-height: 1.5;
+    resize: vertical;
+    box-sizing: border-box;
+  }
+  .ccc-confirm-actions {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+</style>
+
+<script>
+  function initCccModal() {
+    const dialog = document.getElementById('ccc-inquiry-modal') as HTMLDialogElement | null;
+    if (!dialog || dialog.dataset.cccWired === '1') return;
+    dialog.dataset.cccWired = '1';
+
+    const closeBtn = document.getElementById('ccc-modal-close');
+    const form = document.getElementById('ccc-inquiry-form') as HTMLFormElement | null;
+    const confirmBox = document.getElementById('ccc-confirm-box');
+    const copyBtn = document.getElementById('ccc-copy-btn');
+    const copyPayload = document.getElementById('ccc-copy-payload') as HTMLTextAreaElement | null;
+    const mailtoLink = document.getElementById('ccc-mailto-link') as HTMLAnchorElement | null;
+    const dateInput = document.getElementById('ccc-date') as HTMLInputElement | null;
+
+    if (dateInput && !dateInput.min) {
+      dateInput.min = new Date().toISOString().split('T')[0];
+    }
+
+    function openModal() {
+      if (!dialog) return;
+      if (form && confirmBox) {
+        form.hidden = false;
+        confirmBox.hidden = true;
+      }
+      if (!dialog.open) {
+        dialog.showModal();
+      }
+    }
+
+    function closeModal() {
+      if (dialog?.open) {
+        dialog.close();
+      }
+    }
+
+    document.querySelectorAll<HTMLElement>('[data-open-ccc-modal]').forEach((trigger) => {
+      trigger.addEventListener('click', (e) => {
+        e.preventDefault();
+        openModal();
+      });
+    });
+
+    closeBtn?.addEventListener('click', closeModal);
+
+    // Fallback for browsers without declarative closedby="any" support
+    if (!('closedBy' in HTMLDialogElement.prototype)) {
+      const outside = (e: PointerEvent, d: HTMLDialogElement) => {
+        const r = d.getBoundingClientRect();
+        return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+      };
+      let pressedOutside = false;
+      dialog.addEventListener('pointerdown', (e) => {
+        pressedOutside = outside(e, dialog);
+      });
+      dialog.addEventListener('pointerup', (e) => {
+        if (pressedOutside && outside(e, dialog)) dialog.close();
+      });
+    }
+
+    // Wrap Tab focus inside open modal
+    dialog.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab' || !dialog.open) return;
+      const focusables = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((el) => !el.closest('[hidden]') && el.offsetWidth > 0 && el.offsetHeight > 0);
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    });
+
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      const data = new FormData(form);
+      const name = String(data.get('name') || '').trim();
+      const email = String(data.get('email') || '').trim();
+      const venue = String(data.get('venue') || '').trim();
+      const location = String(data.get('location') || '').trim();
+      const showOff = String(data.get('showOff') || '').trim();
+      const preferredDates = String(data.get('preferredDate') || '').trim();
+      const budget = String(data.get('budget') || '').trim();
+
+      const recipient = 'capturecreatecaffeinate@gmail.com';
+      const subject = `CCC shoot inquiry: ${venue}`;
+      const bodyLines = [
+        `Name: ${name}`,
+        `Email: ${email}`,
+        `Venue: ${venue}`,
+        `Location: ${location}`,
+        `What to show off: ${showOff}`,
+        `Preferred dates: ${preferredDates}`,
+        `Budget: ${budget}`,
+      ];
+      const bodyText = bodyLines.join('\n');
+      const mailtoUrl = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+
+      form.dataset.lastMailto = mailtoUrl;
+      form.hidden = true;
+      if (confirmBox) confirmBox.hidden = false;
+      if (copyPayload) {
+        copyPayload.value = `To: ${recipient}\nSubject: ${subject}\n\n${bodyText}`;
+      }
+      if (mailtoLink) {
+        mailtoLink.href = mailtoUrl;
+      }
+
+      // Open mail client via temporary link click
+      const tempLink = document.createElement('a');
+      tempLink.href = mailtoUrl;
+      tempLink.style.display = 'none';
+      document.body.appendChild(tempLink);
+      tempLink.click();
+      tempLink.remove();
+
+      copyBtn?.focus();
+    });
+
+    copyBtn?.addEventListener('click', () => {
+      if (!copyPayload) return;
+      const text = copyPayload.value;
+      const onCopied = () => {
+        copyBtn.textContent = 'Copied';
+        window.setTimeout(() => {
+          copyBtn.textContent = 'Copy email text';
+        }, 2000);
+      };
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(text).then(onCopied).catch(() => {
+          copyPayload.select();
+          document.execCommand('copy');
+          onCopied();
+        });
+      } else {
+        copyPayload.select();
+        document.execCommand('copy');
+        onCopied();
+      }
+    });
+
+    // Support ?inquiry=1 query param to auto-open modal
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('inquiry') === '1') {
+      openModal();
+    }
+  }
+
+  initCccModal();
+  document.addEventListener('astro:page-load', initCccModal);
+</script>
