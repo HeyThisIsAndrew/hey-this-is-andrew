@@ -28,12 +28,7 @@ import { CCC_EMAIL } from '../../data/ccc';
         class="ccc-modal-close"
         id="ccc-modal-close"
         aria-label="Close modal"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
+      >&times;</button>
     </header>
 
     <form id="ccc-inquiry-form" class="ccc-form">
@@ -48,7 +43,6 @@ import { CCC_EMAIL } from '../../data/ccc';
             required
             autocomplete="name"
             placeholder="First and last name"
-            autofocus
           />
         </div>
 
@@ -231,25 +225,32 @@ import { CCC_EMAIL } from '../../data/ccc';
   .ccc-modal::backdrop {
     overflow: hidden;
     overscroll-behavior: contain;
-    background: rgba(0, 0, 0, 0.88);
-    backdrop-filter: blur(6px);
+    background: rgba(0, 0, 0, 0.94);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
   .ccc-modal {
     padding: 0;
     margin: auto;
     width: min(100% - 2rem, 50rem);
+    max-width: calc(100vw - 2rem);
     max-height: calc(100svh - 3rem);
     background: #0b0b0b;
     color: var(--ccc-cream, #fbf7f0);
     border: 1px solid rgba(201, 169, 110, 0.35);
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.9);
     overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
   }
   .ccc-modal[open] {
     display: block;
   }
   .ccc-modal-card {
     padding: clamp(1.5rem, 3.5vw, 2.75rem);
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
   .ccc-modal-head {
     display: flex;
@@ -277,11 +278,21 @@ import { CCC_EMAIL } from '../../data/ccc';
     text-transform: uppercase;
     color: var(--ccc-cream, #fbf7f0);
   }
+
+  /* The Close X: exact Be Unconventional HQ design
+     Bare white x, no box, no border, no background in any state.
+     Hover and click rotate 90 degrees smoothly. */
   .ccc-modal-close {
     appearance: none;
-    background: transparent;
-    border: 1px solid rgba(201, 169, 110, 0.4);
+    background: none;
+    border: none;
     color: var(--ccc-cream, #fbf7f0);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 2.5rem;
+    font-weight: 300;
+    line-height: 1;
+    padding: 0;
+    margin: 0;
     width: 44px;
     height: 44px;
     display: inline-flex;
@@ -289,13 +300,28 @@ import { CCC_EMAIL } from '../../data/ccc';
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
-    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    outline: none;
+    box-shadow: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: color 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .ccc-modal-close:hover,
+
+  @media (hover: hover) {
+    .ccc-modal-close:hover {
+      color: var(--ccc-gold, #c9a96e);
+      transform: rotate(90deg);
+    }
+  }
+
   .ccc-modal-close:focus-visible {
-    background: var(--ccc-gold, #c9a96e);
-    color: #000;
-    border-color: var(--ccc-gold, #c9a96e);
+    outline: 1px solid var(--ccc-gold, #c9a96e);
+    outline-offset: 2px;
+  }
+
+  .ccc-modal-close.is-turning {
+    color: var(--ccc-gold, #c9a96e);
+    transform: rotate(90deg);
   }
 
   .ccc-form {
@@ -341,6 +367,7 @@ import { CCC_EMAIL } from '../../data/ccc';
   .ccc-field textarea,
   .ccc-field select {
     width: 100%;
+    max-width: 100%;
     min-height: 48px;
     padding: 0.75rem 0.95rem;
     background: #121212;
@@ -348,7 +375,7 @@ import { CCC_EMAIL } from '../../data/ccc';
     border-radius: 0;
     color: var(--ccc-cream, #fbf7f0);
     font-family: inherit;
-    font-size: 0.95rem;
+    font-size: 16px; /* Prevents iOS Safari auto-zoom on input focus */
     line-height: 1.4;
     box-sizing: border-box;
     color-scheme: dark;
@@ -415,6 +442,9 @@ import { CCC_EMAIL } from '../../data/ccc';
     font-size: 1.15rem;
     line-height: 1.5;
     color: var(--ccc-cream-soft, #ede7dc);
+    box-sizing: border-box;
+    max-width: 100%;
+    word-break: break-word;
   }
   .ccc-help-text {
     margin: 0.35rem 0 0;
@@ -432,6 +462,55 @@ import { CCC_EMAIL } from '../../data/ccc';
     font-size: 0.88rem;
     letter-spacing: 0.16em;
     text-transform: uppercase;
+  }
+
+  /* Mobile Fullscreen & iOS Keyboard Hardening */
+  @media (max-width: 640px) {
+    .ccc-modal {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      max-width: 100vw !important;
+      height: 100% !important;
+      height: 100dvh !important;
+      max-height: 100dvh !important;
+      margin: 0 !important;
+      border: none !important;
+      border-top: 1px solid rgba(201, 169, 110, 0.35) !important;
+      border-radius: 0 !important;
+      background: #080808 !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+    .ccc-modal-card {
+      padding: 1.25rem 1.1rem calc(2.5rem + env(safe-area-inset-bottom, 20px)) !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+      overflow-x: hidden !important;
+      background: #080808;
+    }
+    .ccc-modal-head {
+      margin-bottom: 1.25rem;
+      padding-bottom: 1rem;
+    }
+    .ccc-field input:not([type="checkbox"]),
+    .ccc-field textarea,
+    .ccc-field select {
+      font-size: 16px !important;
+      min-height: 48px;
+    }
+    .ccc-copy-payload {
+      font-size: 16px !important;
+    }
+    .ccc-checkbox-group {
+      grid-template-columns: 1fr !important;
+    }
+    .ccc-form-grid {
+      grid-template-columns: 1fr !important;
+    }
   }
 
   /* Confirmation */
@@ -504,6 +583,8 @@ import { CCC_EMAIL } from '../../data/ccc';
 </style>
 
 <script>
+  import { lockBody } from '../../lib/spatial.ts';
+
   function initCccModal() {
     const dialog = document.getElementById('ccc-inquiry-modal') as HTMLDialogElement | null;
     if (!dialog || dialog.dataset.cccWired === '1') return;
@@ -517,8 +598,27 @@ import { CCC_EMAIL } from '../../data/ccc';
     const mailtoLink = document.getElementById('ccc-mailto-link') as HTMLAnchorElement | null;
     const dateInput = document.getElementById('ccc-date') as HTMLInputElement | null;
 
+    let unlockBody: (() => void) | null = null;
+
     if (dateInput && !dateInput.min) {
       dateInput.min = new Date().toISOString().split('T')[0];
+    }
+
+    function updateVisualViewport() {
+      if (!window.visualViewport || !dialog?.open) return;
+      if (window.innerWidth <= 640) {
+        const vvH = window.visualViewport.height;
+        dialog.style.height = `${vvH}px`;
+        dialog.style.maxHeight = `${vvH}px`;
+      } else {
+        dialog.style.height = '';
+        dialog.style.maxHeight = '';
+      }
+    }
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateVisualViewport);
+      window.visualViewport.addEventListener('scroll', updateVisualViewport);
     }
 
     function openModal() {
@@ -527,8 +627,12 @@ import { CCC_EMAIL } from '../../data/ccc';
         form.hidden = false;
         confirmBox.hidden = true;
       }
+      closeBtn?.classList.remove('is-turning');
       if (!dialog.open) {
+        unlockBody = lockBody();
         dialog.showModal();
+        dialog.focus();
+        updateVisualViewport();
       }
     }
 
@@ -536,7 +640,28 @@ import { CCC_EMAIL } from '../../data/ccc';
       if (dialog?.open) {
         dialog.close();
       }
+      if (unlockBody) {
+        unlockBody();
+        unlockBody = null;
+      }
+      closeBtn?.classList.remove('is-turning');
+      if (dialog) {
+        dialog.style.height = '';
+        dialog.style.maxHeight = '';
+      }
     }
+
+    dialog.addEventListener('close', () => {
+      if (unlockBody) {
+        unlockBody();
+        unlockBody = null;
+      }
+      closeBtn?.classList.remove('is-turning');
+      if (dialog) {
+        dialog.style.height = '';
+        dialog.style.maxHeight = '';
+      }
+    });
 
     document.querySelectorAll<HTMLElement>('[data-open-ccc-modal]').forEach((trigger) => {
       trigger.addEventListener('click', (e) => {
@@ -545,22 +670,22 @@ import { CCC_EMAIL } from '../../data/ccc';
       });
     });
 
-    closeBtn?.addEventListener('click', closeModal);
+    // The X rotates 90 degrees on click / tap before closing, matching Be Unconventional HQ
+    closeBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeBtn.classList.add('is-turning');
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.setTimeout(() => {
+        closeModal();
+      }, prefersReduced ? 0 : 250);
+    });
 
-    // Fallback for browsers without declarative closedby="any" support
-    if (!('closedBy' in HTMLDialogElement.prototype)) {
-      const outside = (e: PointerEvent, d: HTMLDialogElement) => {
-        const r = d.getBoundingClientRect();
-        return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
-      };
-      let pressedOutside = false;
-      dialog.addEventListener('pointerdown', (e) => {
-        pressedOutside = outside(e, dialog);
-      });
-      dialog.addEventListener('pointerup', (e) => {
-        if (pressedOutside && outside(e, dialog)) dialog.close();
-      });
-    }
+    // A click on the dialog backdrop outside the modal card closes it
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) {
+        closeModal();
+      }
+    });
 
     // Wrap Tab focus inside open modal
     dialog.addEventListener('keydown', (e) => {
