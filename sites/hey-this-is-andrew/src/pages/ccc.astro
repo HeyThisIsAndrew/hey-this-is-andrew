@@ -451,7 +451,7 @@ const easy = [
   .ccc-hero {
     position: relative;
     z-index: 1;
-    padding: clamp(3rem, 8vw, 6rem) 0;
+    padding: clamp(3rem, 8vw, 6rem) 0 clamp(5rem, 11vw, 8rem);
     text-align: center;
     transform-origin: center top;
     will-change: transform, opacity;
@@ -460,9 +460,11 @@ const easy = [
   .ccc-section {
     position: relative;
     padding: clamp(4rem, 9vw, 7rem) 0;
-    border-top: 1px solid var(--line);
+    margin-top: -clamp(2.5rem, 5vw, 4.5rem);
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: clamp(18px, 3vw, 28px) clamp(18px, 3vw, 28px) 0 0;
     background: var(--bg, #080808);
-    box-shadow: 0 -28px 60px -10px rgba(0, 0, 0, 0.95), 0 -10px 24px -5px rgba(0, 0, 0, 0.85);
+    box-shadow: 0 -30px 65px -10px rgba(0, 0, 0, 0.98), 0 -12px 28px -5px rgba(0, 0, 0, 0.9);
     transform-origin: center top;
     will-change: transform, opacity;
   }
@@ -732,6 +734,34 @@ const easy = [
     gap: 1.5rem;
     align-items: center;
     position: relative;
+  }
+  @media (max-width: 899px) {
+    .ccc-why-pair--top .ccc-why-copy {
+      margin-top: -1.75rem;
+      z-index: 1;
+      position: relative;
+      background: rgba(8, 8, 8, 0.88);
+      backdrop-filter: blur(8px);
+      padding: 1.25rem 1rem 0.5rem;
+      border-radius: 12px;
+    }
+    .ccc-why-pair--top .ccc-why-media {
+      z-index: 2;
+      position: relative;
+    }
+    .ccc-why-pair--bottom .ccc-why-copy {
+      margin-bottom: -1.75rem;
+      z-index: 1;
+      position: relative;
+      background: rgba(8, 8, 8, 0.88);
+      backdrop-filter: blur(8px);
+      padding: 0.5rem 1rem 1.25rem;
+      border-radius: 12px;
+    }
+    .ccc-why-pair--bottom .ccc-why-media {
+      z-index: 2;
+      position: relative;
+    }
   }
   @media (min-width: 900px) {
     .ccc-why-pair--top {
@@ -1127,7 +1157,10 @@ const easy = [
     align-items: center;
     justify-content: center;
     padding: clamp(6rem, 14vw, 12rem) 0;
-    border-top: 1px solid var(--line);
+    margin-top: -clamp(2.5rem, 5vw, 4.5rem);
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: clamp(18px, 3vw, 28px) clamp(18px, 3vw, 28px) 0 0;
+    box-shadow: 0 -30px 65px -10px rgba(0, 0, 0, 0.98), 0 -12px 28px -5px rgba(0, 0, 0, 0.9);
     text-align: center;
     isolation: isolate;
     overflow: hidden;
@@ -1450,7 +1483,7 @@ const easy = [
           }
         }
 
-        // Section 02 (Where it goes): Center fold-out into 4-column row
+        // Section 02 (Where it goes): Center fold-out into 4-column row (desktop) or 2x2 grid (mobile)
         if (whereSection && whereCards.length === 4) {
           const whereRect = whereSection.getBoundingClientRect();
           const enterY = winH;
@@ -1459,8 +1492,9 @@ const easy = [
           const whereProgress = Math.min(1, Math.max(0, (enterY - whereRect.top) / dist));
 
           if (whereRect.bottom > 0 && whereRect.top < winH) {
-            const offsets = [110, 35, -35, -110];
-            const rotations = [-2.5, -1.0, 1.0, 2.5];
+            const isNarrow = window.innerWidth < 900;
+            const offsets = isNarrow ? [35, -35, 35, -35] : [110, 35, -35, -110];
+            const rotations = isNarrow ? [-1.5, 1.5, -1.5, 1.5] : [-2.5, -1.0, 1.0, 2.5];
             const cardScale = 0.88 + whereProgress * 0.12;
             const cardOpacity = 0.40 + whereProgress * 0.60;
 
