@@ -1,27 +1,27 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Audit Fixes Verification', () => {
-  test('Brand-Client Block under #services renders 4-column card grid with exact copy', async ({ page }) => {
+  test('Brand-Client Block under #services renders 3-column card grid with no pricing', async ({ page }) => {
     await page.goto('./');
 
     const clientBlock = page.locator('#services [data-client-block]');
     await expect(clientBlock).toBeVisible();
 
     const cards = clientBlock.locator('.client-card');
-    await expect(cards).toHaveCount(4);
+    await expect(cards).toHaveCount(3);
 
-    await expect(cards.nth(0)).toContainText('Starting Rate');
-    await expect(cards.nth(0)).toContainText('Photo sessions start at $950. Add a reel for $550, or get both for $1,200 (founding rate). Events quoted by scope.');
-    await expect(cards.nth(0).locator('a')).toHaveAttribute('href', /\/ccc\/(#how|#pricing)?$/);
+    // No Starting Rate or pricing numbers
+    await expect(clientBlock).not.toContainText('Starting Rate');
+    await expect(clientBlock).not.toContainText('$');
 
-    await expect(cards.nth(1)).toContainText('Turnaround');
-    await expect(cards.nth(1)).toContainText('15 selects the next day. The full gallery within a week.');
+    await expect(cards.nth(0)).toContainText('Turnaround');
+    await expect(cards.nth(0)).toContainText('15 selects the next day. The full gallery within a week.');
 
-    await expect(cards.nth(2)).toContainText('Deliverables & Usage');
-    await expect(cards.nth(2)).toContainText('Edited photos and vertical reels, licensed for your social and web.');
+    await expect(cards.nth(1)).toContainText('Deliverables & Usage');
+    await expect(cards.nth(1)).toContainText('Edited photos and vertical reels, licensed for your social and web.');
 
-    await expect(cards.nth(3)).toContainText('Client Results');
-    await expect(cards.nth(3)).toContainText('Shot on location for Desert Escape at Ace Hotel Palm Springs, the Stone Groove Stillhouse launch, and brand and creator campaigns.');
+    await expect(cards.nth(2)).toContainText('Client Results');
+    await expect(cards.nth(2)).toContainText('Shot on location for Desert Escape at Ace Hotel Palm Springs, the Stone Groove Stillhouse launch, and brand and creator campaigns.');
   });
 
   test('Contact rule: UGC CTA on homepage, no CCC email on homepage or gear page', async ({ page }) => {

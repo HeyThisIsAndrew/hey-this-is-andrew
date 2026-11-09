@@ -34,18 +34,18 @@ test.describe('Gear page', () => {
 
     // Exact kit counts (owned items with no store link are hidden).
     const counts: Record<string, number> = {
-      'gear-bodies': 5, 'gear-lenses': 9, 'gear-lighting': 2, 'gear-tools': 8, 'gear-audio': 6, brew: 13, 'gear-gaming': 1,
+      'gear-bodies': 5, 'gear-lenses': 9, 'gear-lighting': 2, 'gear-tools': 9, 'gear-audio': 6, brew: 13, 'gear-gaming': 1,
     };
     for (const [id, n] of Object.entries(counts)) {
       await expect(page.locator(`#${id} .deck-card`)).toHaveCount(n);
     }
-    for (const hidden of ['Amaran PT1c', 'Light Dome Mini II', 'Weebill 3', 'NEEWER NP-FZ100']) {
+    for (const hidden of ['Amaran PT1c', 'Light Dome Mini II', 'Weebill 3']) {
       await expect(page.locator('.deck-card', { hasText: hidden })).toHaveCount(0);
     }
 
     // Catalog picks carry a Recommended badge; the 24 owned items do not.
-    await expect(page.locator('.deck-card .reco-badge')).toHaveCount(20);
-    await expect(page.locator('.deck-card:has(.reco-badge)')).toHaveCount(20);
+    await expect(page.locator('.deck-card .reco-badge')).toHaveCount(21);
+    await expect(page.locator('.deck-card:has(.reco-badge)')).toHaveCount(21);
     await expect(page.locator('.deck-card:not(:has(.reco-badge))')).toHaveCount(24);
     await expect(page.locator('.deck-card', { hasText: 'Sony a7IV' }).locator('.reco-badge')).toHaveCount(0);
     await expect(page.locator('.deck-card', { hasText: 'PlayStation Portal' }).locator('.reco-badge')).toHaveText('Recommended');

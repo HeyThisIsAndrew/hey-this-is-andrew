@@ -10,8 +10,7 @@ export interface ClientResult {
   outcome: string;
 }
 
-/* Starting rate and turnaround are not here: they come from the pitch deck's
-   numbers in ./ccc.ts (shared with /ccc/). */
+/* Turnaround and client details come from ./ccc.ts and services.json. */
 export interface ClientBlockData {
   deliverablesAndUsage?: string;
   clientResults?: string;

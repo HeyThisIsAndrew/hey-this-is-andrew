@@ -1,14 +1,17 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
+import cloudflare from '@astrojs/cloudflare';
 import { localCms } from '@andrew/local-cms';
 import localCmsConfig from './local-cms.config.mjs';
 
 const isBuild = process.argv.includes('build') || Boolean(process.env.GITHUB_ACTIONS) || Boolean(process.env.CI);
+const isCloudflare = process.env.CF_WORKERS === '1';
 const base = process.env.ASTRO_BASE || (isBuild ? '/hey-this-is-andrew' : '/');
 
 const withBase = (path) => `${base.replace(/\/$/, '')}${path}`;
 
 export default defineConfig({
+  adapter: isCloudflare ? cloudflare({ imageService: 'passthrough' }) : undefined,
   site: 'https://heythisisandrew.github.io',
   base,
   // /feed was a second archive of the same videos and articles; /latest is

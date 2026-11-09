@@ -18,7 +18,7 @@ for (const vp of viewports) {
       const clientBlock = page.locator('#services [data-client-block]');
       await expect(clientBlock).toBeVisible();
       const cards = clientBlock.locator('.client-card');
-      await expect(cards).toHaveCount(4);
+      await expect(cards).toHaveCount(3);
 
       // 2. UGC CTA on homepage services section (no CCC mailto on homepage)
       const ctaUgc = page.locator('#services a[href^="mailto:heythisisandrewb@gmail.com"]');

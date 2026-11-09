@@ -12,8 +12,6 @@
  * a sensor, the orange G Master badge, a walnut handle. A photo with no
  * vivid colour at all falls back to a cool silver.
  */
-import sharp from 'sharp';
-
 export const NEUTRAL_ACCENT = '176, 184, 196';
 
 const cache = new Map<string, string>();
@@ -48,6 +46,8 @@ export async function sampleAccent(file: string): Promise<string> {
   if (hit) return hit;
   let out = NEUTRAL_ACCENT;
   try {
+    const sharpModule = await import('sharp');
+    const sharp = sharpModule.default || sharpModule;
     const { data, info } = await sharp(file)
       .resize(72, 72, { fit: 'inside' })
       .removeAlpha()

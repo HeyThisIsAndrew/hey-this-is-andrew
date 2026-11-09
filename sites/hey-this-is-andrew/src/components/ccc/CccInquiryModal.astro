@@ -34,7 +34,7 @@ import { CCC_EMAIL } from '../../data/ccc';
       >&times;</button>
     </header>
 
-    <form id="ccc-inquiry-form" class="ccc-form">
+    <form id="ccc-inquiry-form" class="ccc-form" data-ccc-email={CCC_EMAIL}>
       <div class="ccc-form-grid">
         <div class="ccc-field">
           <label for="ccc-name">Your name <span class="ccc-req" aria-hidden="true">*</span></label>
@@ -436,6 +436,9 @@ import { CCC_EMAIL } from '../../data/ccc';
     flex-direction: column;
     gap: 0.65rem;
   }
+  .ccc-copy-wrap[hidden] {
+    display: none !important;
+  }
   .ccc-copy-payload {
     width: 100%;
     padding: 0.85rem;
@@ -697,7 +700,7 @@ import { CCC_EMAIL } from '../../data/ccc';
       }
     });
 
-    form?.addEventListener('submit', (e) => {
+    form?.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!form.checkValidity()) {
         form.reportValidity();
@@ -711,7 +714,7 @@ import { CCC_EMAIL } from '../../data/ccc';
       const service = String(data.get('service') || '').trim();
       const notes = String(data.get('notes') || '').trim();
 
-      const recipient = 'capturecreatecaffeinate@gmail.com';
+      const recipient = form.dataset.cccEmail || '';
       const subject = `CCC shoot inquiry: ${venue || name}`;
       const bodyLines = [
         `Name: ${name}`,
@@ -723,9 +726,64 @@ import { CCC_EMAIL } from '../../data/ccc';
       const bodyText = bodyLines.join('\n');
       const mailtoUrl = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
 
+      const payload = {
+        name,
+        email,
+        venue,
+        service,
+        notes,
+        recipient,
+        subject,
+      };
+
+      let success = false;
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          success = true;
+        }
+      } catch {
+        success = false;
+      }
+
+      if (success) {
+        form.hidden = true;
+        if (confirmBox) {
+          confirmBox.hidden = false;
+          const confirmMsg = document.getElementById('ccc-confirm-msg');
+          if (confirmMsg) confirmMsg.textContent = 'Thanks. We will get back to you to schedule a call.';
+          const confirmDesc = confirmBox.querySelector<HTMLElement>('.ccc-confirm-desc');
+          if (confirmDesc) confirmDesc.textContent = 'Your inquiry has been received. We will be in touch shortly.';
+          const copyWrap = confirmBox.querySelector<HTMLElement>('.ccc-copy-wrap');
+          if (copyWrap) {
+            copyWrap.hidden = true;
+            copyWrap.style.display = 'none';
+          }
+        }
+        return;
+      }
+
+      // Fallback: mailto behavior
       form.dataset.lastMailto = mailtoUrl;
       form.hidden = true;
-      if (confirmBox) confirmBox.hidden = false;
+      if (confirmBox) {
+        confirmBox.hidden = false;
+        const confirmMsg = document.getElementById('ccc-confirm-msg');
+        if (confirmMsg) confirmMsg.textContent = 'Your inquiry is ready to send';
+        const confirmDesc = confirmBox.querySelector<HTMLElement>('.ccc-confirm-desc');
+        if (confirmDesc) {
+          confirmDesc.innerHTML = `Send the message from your mail app, or copy the composed inquiry below and email it to <a href="mailto:${recipient}">${recipient}</a>.`;
+        }
+        const copyWrap = confirmBox.querySelector<HTMLElement>('.ccc-copy-wrap');
+        if (copyWrap) {
+          copyWrap.hidden = false;
+          copyWrap.style.display = '';
+        }
+      }
       if (copyPayload) {
         copyPayload.value = `To: ${recipient}\nSubject: ${subject}\n\n${bodyText}`;
       }
