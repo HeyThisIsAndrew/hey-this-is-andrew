@@ -594,12 +594,14 @@ import { CCC_EMAIL } from '../../data/ccc';
 
     // Delegated click handler for modal triggers
     document.addEventListener('click', (e) => {
-      const trigger = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-open-ccc-modal]');
+      const target = e.target as HTMLElement | null;
+      if (!target || target.closest('.flip-card, .ccc-pricing-cards')) return;
+      const trigger = target.closest<HTMLElement>('[data-open-ccc-modal]');
       if (!trigger) return;
       // Do not intercept if clicked inside an open dialog form or other interactive controls
       if (trigger.closest('#ccc-inquiry-modal')) return;
       e.preventDefault();
-      const pkg = trigger.dataset.cccPackage || trigger.closest<HTMLElement>('[data-ccc-package]')?.dataset.cccPackage;
+      const pkg = trigger.dataset.cccPackage;
       openModal(pkg);
     });
 

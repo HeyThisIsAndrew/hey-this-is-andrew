@@ -20,8 +20,6 @@ interface Props {
   longValue?: boolean;
   class?: string;
   delay?: number;
-  dataCccPackage?: string;
-  sendActionLabel?: string;
 }
 
 const {
@@ -34,8 +32,6 @@ const {
   longValue = false,
   class: className = '',
   delay,
-  dataCccPackage,
-  sendActionLabel,
 } = Astro.props;
 
 const backId = `${idPrefix}-${index}`;
@@ -45,7 +41,6 @@ const backId = `${idPrefix}-${index}`;
   type="button"
   class:list={['stat-card', 'flip-card', className]}
   data-delay={delay}
-  data-ccc-package={dataCccPackage}
   aria-label={`${label}: ${value}. ${desc}`}
   aria-describedby={backId}
   aria-pressed="false"
@@ -75,16 +70,6 @@ const backId = `${idPrefix}-${index}`;
     </div>
     <div class="flip-card-back">
       <p id={backId}>{backText}</p>
-      {sendActionLabel && (
-        <span
-          class="btn btn-primary flip-action-btn"
-          data-open-ccc-modal
-          data-ccc-package={dataCccPackage}
-        >
-          {sendActionLabel} <span aria-hidden="true">&rarr;</span>
-        </span>
-      )}
-      <slot name="back-action" />
     </div>
   </div>
 </button>
@@ -157,7 +142,24 @@ const backId = `${idPrefix}-${index}`;
     align-items: center;
     background: var(--flip-bg, var(--color-surface, #111111));
     border: 1px solid var(--flip-border, rgba(255, 255, 255, 0.06));
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    transition:
+      border-color 0.3s ease,
+      box-shadow 0.3s ease,
+      opacity 0.25s ease 0.12s;
+  }
+
+  .flip-card-front {
+    transform: rotateY(0deg) translateZ(1px);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .flip-card-back {
+    transform: rotateY(180deg) translateZ(1px);
+    background: var(--flip-bg-back, rgba(25, 25, 25, 0.96));
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
   }
 
   @media (hover: hover) and (pointer: fine) {
@@ -165,6 +167,16 @@ const backId = `${idPrefix}-${index}`;
     .flip-card:hover .flip-card-back {
       border-color: var(--flip-accent-border, var(--color-accent, #cc0000));
       box-shadow: var(--flip-accent-shadow, 0 8px 30px rgba(204, 0, 0, 0.1));
+    }
+
+    .flip-card:hover .flip-card-front {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .flip-card:hover .flip-card-back {
+      opacity: 1;
+      pointer-events: auto;
     }
   }
 
@@ -176,11 +188,16 @@ const backId = `${idPrefix}-${index}`;
     box-shadow: var(--flip-accent-shadow, 0 8px 30px rgba(204, 0, 0, 0.1));
   }
 
-  .flip-card-back {
-    transform: rotateY(180deg);
-    background: var(--flip-bg-back, rgba(25, 25, 25, 0.96));
-    text-align: center;
-    gap: 0.5rem;
+  .flip-card:focus-visible .flip-card-front,
+  .flip-card.is-flipped .flip-card-front {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .flip-card:focus-visible .flip-card-back,
+  .flip-card.is-flipped .flip-card-back {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .stat-value {
@@ -230,17 +247,6 @@ const backId = `${idPrefix}-${index}`;
     text-wrap: balance;
   }
 
-  .flip-action-btn {
-    margin-top: 0.5rem;
-    padding: 0.35rem 0.85rem;
-    font-size: 0.7rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    font-family: var(--flip-font-label, inherit);
-    cursor: pointer;
-    box-sizing: border-box;
-  }
-
   .flip-hint {
     position: absolute;
     right: 0.85rem;
@@ -284,48 +290,38 @@ const backId = `${idPrefix}-${index}`;
 
 <script>
   function initFlipCards() {
-    const cards = document.querySelectorAll<HTMLButtonElement>('.flip-card');
-    cards.forEach((card) => {
-      if (card.dataset.flipWired === '1') return;
-      card.dataset.flipWired = '1';
+    if (document.documentElement.dataset.flipDocWired === '1') return;
+    document.documentElement.dataset.flipDocWired = '1';
 
-      card.addEventListener('click', (e) => {
-        // If clicking an inner action button (like Send inquiry), do not toggle card flip
-        const target = e.target as HTMLElement | null;
-        if (target && target.closest('[data-open-ccc-modal], [data-no-flip]')) {
-          return;
-        }
+    document.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement | null;
+      const card = target?.closest<HTMLButtonElement>('.flip-card');
 
-        const wasFlipped = card.classList.contains('is-flipped');
-        document.querySelectorAll<HTMLButtonElement>('.flip-card.is-flipped').forEach((other) => {
-          if (other !== card) {
-            other.classList.remove('is-flipped');
-            other.setAttribute('aria-pressed', 'false');
-          }
+      if (!card) {
+        document.querySelectorAll<HTMLButtonElement>('.flip-card.is-flipped').forEach((openCard) => {
+          openCard.classList.remove('is-flipped');
+          openCard.setAttribute('aria-pressed', 'false');
         });
+        return;
+      }
 
-        if (wasFlipped) {
-          card.classList.remove('is-flipped');
-          card.setAttribute('aria-pressed', 'false');
-          card.blur();
-        } else {
-          card.classList.add('is-flipped');
-          card.setAttribute('aria-pressed', 'true');
+      const wasFlipped = card.classList.contains('is-flipped');
+      document.querySelectorAll<HTMLButtonElement>('.flip-card.is-flipped').forEach((other) => {
+        if (other !== card) {
+          other.classList.remove('is-flipped');
+          other.setAttribute('aria-pressed', 'false');
         }
       });
+
+      if (wasFlipped) {
+        card.classList.remove('is-flipped');
+        card.setAttribute('aria-pressed', 'false');
+        card.blur();
+      } else {
+        card.classList.add('is-flipped');
+        card.setAttribute('aria-pressed', 'true');
+      }
     });
-
-    if (document.documentElement.dataset.flipDocWired !== '1') {
-      document.documentElement.dataset.flipDocWired = '1';
-      document.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement | null;
-        if (target && target.closest('.flip-card')) return;
-        document.querySelectorAll<HTMLButtonElement>('.flip-card.is-flipped').forEach((card) => {
-          card.classList.remove('is-flipped');
-          card.setAttribute('aria-pressed', 'false');
-        });
-      });
-    }
   }
 
   initFlipCards();
