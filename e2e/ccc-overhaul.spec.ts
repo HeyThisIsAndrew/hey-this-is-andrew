@@ -197,6 +197,35 @@ test.describe('CCC Page Overhaul & Regression Acceptance (CCC-01 through CCC-07)
     const logoSrcset = await page.locator('.ccc-hero-logo').getAttribute('srcset');
     expect(logoSrcset).toContain('150w');
     expect(logoSrcset).toContain('700w');
+
+    // Verify closer price line: "Complete packages" on its own line on mobile, one line on desktop
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('./ccc/');
+    const mobileCloserPrice = await page.evaluate(() => {
+      const lead = document.querySelector<HTMLElement>('.ccc-closer-price-lead')!;
+      const tail = document.querySelector<HTMLElement>('.ccc-closer-price-tail')!;
+      const rLead = lead.getBoundingClientRect();
+      const rTail = tail.getBoundingClientRect();
+      return {
+        leadTop: rLead.top,
+        leadBottom: rLead.bottom,
+        tailTop: rTail.top,
+        isStacked: rLead.bottom <= rTail.top + 2,
+        leadNoWrap: lead.scrollWidth <= lead.clientWidth + 1,
+        tailNoWrap: tail.scrollWidth <= tail.clientWidth + 1,
+      };
+    });
+    expect(mobileCloserPrice.isStacked).toBe(true);
+    expect(mobileCloserPrice.leadNoWrap).toBe(true);
+    expect(mobileCloserPrice.tailNoWrap).toBe(true);
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const desktopCloserPrice = await page.evaluate(() => {
+      const lead = document.querySelector<HTMLElement>('.ccc-closer-price-lead')!;
+      const tail = document.querySelector<HTMLElement>('.ccc-closer-price-tail')!;
+      return Math.abs(lead.getBoundingClientRect().top - tail.getBoundingClientRect().top);
+    });
+    expect(desktopCloserPrice).toBeLessThanOrEqual(4);
   });
 
   test('CCC-03: Scroll timing, hero readability at 140px, independent subject progress, 4K anchor clearance, and reversible states', async ({ page }) => {
