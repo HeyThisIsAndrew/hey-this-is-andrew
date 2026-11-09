@@ -37,7 +37,7 @@ test.describe('CCC Page Overhaul Acceptance Verification', () => {
     await page.goto('./ccc/');
 
     const startButtons = page.locator('[data-open-ccc-modal]');
-    await expect(startButtons).toHaveCount(2);
+    await expect(startButtons).toHaveCount(5);
 
     // Open modal from hero button
     await startButtons.first().click();
