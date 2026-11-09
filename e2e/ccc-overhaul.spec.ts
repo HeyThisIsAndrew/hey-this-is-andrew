@@ -47,7 +47,7 @@ test.describe('CCC Page Overhaul Acceptance Verification', () => {
     // Verify modal inputs exist and have appropriate labels (streamlined 5 fields)
     await expect(modal.locator('label[for="ccc-name"]')).toContainText('Your name');
     await expect(modal.locator('label[for="ccc-email"]')).toContainText('Email');
-    await expect(modal.locator('label[for="ccc-venue"]')).toContainText('Venue name & city');
+    await expect(modal.locator('label[for="ccc-venue"]')).toContainText('Venue name');
     await expect(modal.locator('label[for="ccc-service"]')).toContainText('What do you need?');
     await expect(modal.locator('label[for="ccc-notes"]')).toContainText('Dates, details, or questions');
 
