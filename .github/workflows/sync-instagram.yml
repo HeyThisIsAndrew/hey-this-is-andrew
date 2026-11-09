@@ -1,0 +1,52 @@
+name: Sync Instagram Media
+
+on:
+  schedule:
+    # Run once daily at 06:00 UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-instagram
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Fetch and self-host latest Instagram media
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Sync Instagram photos
+        run: pnpm --filter hey-this-is-andrew run sync:instagram
+        env:
+          CCC_INSTAGRAM_ACCESS_TOKEN: ${{ secrets.CCC_INSTAGRAM_ACCESS_TOKEN }}
+          CCC_INSTAGRAM_USER_ID: ${{ secrets.CCC_INSTAGRAM_USER_ID }}
+
+      - name: Commit and push new assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add sites/hey-this-is-andrew/src/assets/instagram/ sites/hey-this-is-andrew/src/data/
+          if ! git diff-index --quiet HEAD; then
+            git commit -m "chore(instagram): sync latest self-hosted photos"
+            git push
+          else
+            echo "No new Instagram photos to commit."
+          fi

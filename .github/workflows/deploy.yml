@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   build:
+    name: Build site
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,11 +30,6 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Sync Instagram photos
-        run: pnpm --filter hey-this-is-andrew run sync:instagram
-        env:
-          CCC_INSTAGRAM_ACCESS_TOKEN: ${{ secrets.CCC_INSTAGRAM_ACCESS_TOKEN }}
-          CCC_INSTAGRAM_USER_ID: ${{ secrets.CCC_INSTAGRAM_USER_ID }}
       - name: Workspace checks
         run: pnpm --filter hey-this-is-andrew check
       # Reelay's marketing site is built once directly for its preview subpath
@@ -54,12 +50,50 @@ jobs:
         env:
           ASTRO_BASE: /hey-this-is-andrew/
           ASTRO_TELEMETRY_DISABLED: '1'
-      - name: Build starter
-        run: pnpm --filter site-starter build
       - name: Check the built site
         run: pnpm --filter hey-this-is-andrew exec node scripts/audit-dist.mjs
         env:
           ASTRO_BASE: /hey-this-is-andrew/
+      - name: Add the Reelay preview to the site
+        run: cp -R sites/reelay/dist sites/hey-this-is-andrew/dist/reelay
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./sites/hey-this-is-andrew/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  e2e:
+    name: Playwright E2E smoke
+    runs-on: ubuntu-latest
+    # Runs in parallel with build and deploy so browser test execution does not gate or delay site publishing
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build site
+        run: pnpm --filter hey-this-is-andrew build
+        env:
+          ASTRO_BASE: /hey-this-is-andrew/
+          ASTRO_TELEMETRY_DISABLED: '1'
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         id: playwright-cache
@@ -74,20 +108,3 @@ jobs:
         run: pnpm exec playwright install-deps chromium
       - name: Run Playwright E2E tests
         run: pnpm exec playwright test
-      - name: Add the Reelay preview to the site
-        run: cp -R sites/reelay/dist sites/hey-this-is-andrew/dist/reelay
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./sites/hey-this-is-andrew/dist
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
