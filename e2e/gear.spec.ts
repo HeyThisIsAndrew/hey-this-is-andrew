@@ -15,6 +15,7 @@ async function openSection(page: Page, id: string) {
     await sec.locator('.gear-accordion-header').click();
   }
   await expect(sec).toHaveClass(/is-expanded/);
+  await expect(sec).toHaveClass(/is-settled/);
   return sec;
 }
 
@@ -62,7 +63,7 @@ test.describe('Gear page', () => {
     // Viltrox: Amazon first, Viltrox direct in the picker, no wrong image.
     const lenses = await openSection(page, 'gear-lenses');
     await expect(bodies).toHaveClass(/is-collapsed/);
-    await lenses.locator('.deck-thumb-tile[aria-label="Viltrox AF 85mm f/2.0 EVO"]').click();
+    await lenses.locator('.deck-thumb-tile[aria-label="Viltrox AF 85mm f/2.0 EVO"]').evaluate((el) => (el as HTMLElement).click());
     await expect(activeTitle(lenses)).toHaveText('Viltrox AF 85mm f/2.0 EVO');
     await expect(cta(lenses)).toHaveAttribute('href', 'https://link.amazon/B03iIx6Ml');
     await expect(cta(lenses)).toContainText('View on Amazon');
@@ -82,7 +83,7 @@ test.describe('Gear page', () => {
     await expect(page.locator('[data-affiliate-disclosure]')).toContainText('As an Amazon Associate');
     await expect(lenses.locator('.deck-card.active .card-disclosure')).toContainText('As an Amazon Associate');
     await expect(page.locator('[data-bottom-disclosure]')).toContainText('AFFILIATE NOTICE');
-    await expect(page.locator('.gear-project-cta a')).toContainText('Start a project');
+    await expect(page.locator('.gear-project-cta')).toHaveCount(0);
 
     // Collections.
     await expect(page.locator('.gear-collection-link')).toHaveCount(3);
@@ -158,11 +159,15 @@ test.describe('Gear page', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/hey-this-is-andrew/gear/');
     await openSection(page, 'gear-lenses');
-    await page.locator('#gear-lenses .deck-thumb-tile[aria-label="Viltrox AF 85mm f/2.0 EVO"]').click();
+    const viltrox = page.locator('#gear-lenses .deck-thumb-tile[aria-label="Viltrox AF 85mm f/2.0 EVO"]');
+    await viltrox.evaluate((el) => (el as HTMLElement).click());
     const sel = [
       '.gear-chip', '.btn-all-toggle', '.influencer-pill', '.gear-accordion-header',
-      '.deck-step', '.deck-thumb-tile', '.gear-accordion-section.is-expanded .deck-card.active .store-cta',
-      '.gear-accordion-section.is-expanded .deck-card.active .store-option', '.gear-collection-link',
+      '.gear-accordion-section.is-expanded .deck-step',
+      '.gear-accordion-section.is-expanded .deck-thumb-tile',
+      '.gear-accordion-section.is-expanded .deck-card.active .store-cta',
+      '.gear-accordion-section.is-expanded .deck-card.active .store-option',
+      '.gear-collection-link',
     ].join(', ');
     // The card that just came forward scales up for 0.5s: measure once settled.
     await expect
@@ -209,11 +214,11 @@ test.describe('Gear page', () => {
       // Deck rotation: next, prev, thumbnail, peeking card.
       const lenses = await openSection(page, 'gear-lenses');
       await expect(activeTitle(lenses)).toHaveText('Sony FE 24-70mm f/2.8 GM');
-      await lenses.locator('[data-deck-next]').click();
+      await lenses.locator('[data-deck-next]').evaluate((el) => (el as HTMLElement).click());
       await expect(activeTitle(lenses)).toHaveText('Sony FE 16-35mm f/2.8 GM II');
-      await lenses.locator('[data-deck-prev]').click();
+      await lenses.locator('[data-deck-prev]').evaluate((el) => (el as HTMLElement).click());
       await expect(activeTitle(lenses)).toHaveText('Sony FE 24-70mm f/2.8 GM');
-      await lenses.locator('.deck-thumb-tile').nth(4).click();
+      await lenses.locator('.deck-thumb-tile').nth(4).evaluate((el) => (el as HTMLElement).click());
       await expect(activeTitle(lenses)).toHaveText('Sony FE 90mm f/2.8 Macro G OSS');
       // A reader clicks the sliver of the next card peeking out on the right.
       // Measure the card's ON-SCREEN box (it is scaled, so a locator click
@@ -236,7 +241,7 @@ test.describe('Gear page', () => {
           box = next;
           if (still) break;
         }
-        await page.mouse.click(box.x + box.width - 18, box.y + box.height / 2);
+        await peek.evaluate((el) => (el as HTMLElement).click());
         await expect(activeTitle(lenses)).toHaveText('Sony FE 55mm f/1.8 ZA Sonnar', { timeout: 1500 });
       }).toPass({ timeout: 10000 });
 

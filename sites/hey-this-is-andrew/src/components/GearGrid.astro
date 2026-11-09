@@ -117,7 +117,6 @@ const stateOf = (i: number, n: number) =>
       <button type="button" id="gear-search-clear" class="gear-search-clear" aria-label="Clear search" hidden>×</button>
     </div>
     <div class="gear-category-chips" role="group" aria-label="Gear categories">
-      <button type="button" class="gear-chip active" data-cat="all" aria-pressed="true">All</button>
       {sections.map((sec) => (
         <button type="button" class="gear-chip" data-cat={sec.chipKey} aria-pressed="false">{sec.chip}</button>
       ))}
@@ -658,11 +657,24 @@ const stateOf = (i: number, n: number) =>
   }
   .gear-accordion-body {
     position: relative;
-    overflow: hidden;
+    display: grid;
+    grid-template-rows: 1fr;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
+    transition: grid-template-rows 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .gear-accordion-section.is-settled .gear-accordion-body {
+    overflow: visible;
+  }
+  .gear-accordion-section:not(.is-settled) .gear-accordion-body {
+    overflow: hidden;
+  }
+  .gear-accordion-section:not(.is-settled) .gear-accordion-body > * {
+    min-height: 0;
+    overflow: hidden;
   }
   .gear-accordion-section.is-collapsed .gear-accordion-body {
-    display: none;
+    grid-template-rows: 0fr;
+    border-top-color: transparent;
   }
 
   /* ------------------------------------------------------------------
@@ -1166,9 +1178,23 @@ const stateOf = (i: number, n: number) =>
   .gear-all-grid-view {
     padding: 1.75rem clamp(1rem, 2.5vw, 2rem);
     background: #070707;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transition: grid-template-rows 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
+  .gear-all-grid-view > * {
+    min-height: 0;
+  }
+  .gear-all-grid-view.is-collapsed,
   .gear-all-grid-view[hidden] {
-    display: none;
+    display: grid !important;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    pointer-events: none;
   }
   .all-grid-topbar {
     display: flex;
@@ -1437,7 +1463,10 @@ const stateOf = (i: number, n: number) =>
     .deck-card,
     .deck-glow-layer,
     .deck-thumb-tile,
-    .card-plate {
+    .card-plate,
+    .gear-accordion-body,
+    .gear-all-grid-view,
+    .header-chevron {
       transition-duration: 0.01ms !important;
     }
   }
@@ -1461,10 +1490,55 @@ const stateOf = (i: number, n: number) =>
       const sections = Array.from(root.querySelectorAll<HTMLElement>('.gear-accordion-section'));
       const decks = new Map<HTMLElement, { refresh: () => void }>();
 
+      sections.forEach((s) => {
+        const body = s.querySelector<HTMLElement>('.gear-accordion-body');
+        if (s.classList.contains('is-expanded')) {
+          s.classList.add('is-settled');
+          if (body) body.style.contentVisibility = 'visible';
+        } else {
+          s.classList.add('is-collapsed');
+          if (body) body.style.contentVisibility = 'hidden';
+        }
+      });
+
       const setOpen = (section: HTMLElement, open: boolean) => {
+        const isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         section.classList.toggle('is-expanded', open);
         section.classList.toggle('is-collapsed', !open);
         section.querySelector('.gear-accordion-header')?.setAttribute('aria-expanded', String(open));
+        const body = section.querySelector<HTMLElement>('.gear-accordion-body');
+        if (body) {
+          body.inert = !open;
+          if (open) {
+            body.style.contentVisibility = 'visible';
+            section.classList.add('is-animating');
+            if (isReduced) {
+              section.classList.remove('is-animating');
+              section.classList.add('is-settled');
+            } else {
+              setTimeout(() => {
+                if (section.classList.contains('is-expanded')) {
+                  section.classList.remove('is-animating');
+                  section.classList.add('is-settled');
+                }
+              }, 400);
+            }
+          } else {
+            section.classList.remove('is-settled');
+            section.classList.add('is-animating');
+            if (isReduced) {
+              section.classList.remove('is-animating');
+              body.style.contentVisibility = 'hidden';
+            } else {
+              setTimeout(() => {
+                if (section.classList.contains('is-collapsed')) {
+                  section.classList.remove('is-animating');
+                  body.style.contentVisibility = 'hidden';
+                }
+              }, 400);
+            }
+          }
+        }
       };
 
       /** Open one section and close the rest; or close it if it is open. */
@@ -1481,7 +1555,7 @@ const stateOf = (i: number, n: number) =>
           requestAnimationFrame(() => {
             const header = document.querySelector<HTMLElement>('.site-nav');
             const headerBottom = header ? Math.max(0, header.getBoundingClientRect().bottom) : 88;
-            const behavior: ScrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+            const behavior: ScrollBehavior = 'auto';
             const short = window.innerHeight < 560;
             const target = short ? section.querySelector<HTMLElement>('.deck-stage') : section;
             if (!target) return;
@@ -1800,15 +1874,32 @@ const stateOf = (i: number, n: number) =>
         const showAll = (on: boolean) => {
           if (!allView || !deck) return;
           if (on && !section.classList.contains('is-expanded')) toggleSection(section, true);
-          allView.hidden = !on;
-          deck.hidden = on;
           allToggle?.setAttribute('aria-expanded', String(on));
           const lbl = allToggle?.querySelector('.all-toggle-label');
           if (lbl) lbl.textContent = on ? 'Deck view' : `Show all (${cards.length})`;
+          if (on) {
+            allView.removeAttribute('hidden');
+            allView.classList.remove('is-collapsed');
+            deck.hidden = true;
+          } else {
+            allView.classList.add('is-collapsed');
+            deck.hidden = false;
+            const isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (isReduced) {
+              allView.setAttribute('hidden', '');
+            } else {
+              setTimeout(() => {
+                if (allView.classList.contains('is-collapsed')) {
+                  allView.setAttribute('hidden', '');
+                }
+              }, 400);
+            }
+          }
         };
         allToggle?.addEventListener('click', (e) => {
           e.stopPropagation();
-          showAll(Boolean(allView?.hidden));
+          const isCurrentlyOpen = !allView?.hidden && !allView?.classList.contains('is-collapsed');
+          showAll(!isCurrentlyOpen);
         });
         section.querySelectorAll('[data-back-carousel]').forEach((b) => b.addEventListener('click', () => showAll(false)));
 
@@ -1822,14 +1913,14 @@ const stateOf = (i: number, n: number) =>
       const empty = document.getElementById('gear-empty-state');
       const reset = document.getElementById('gear-reset-btn');
       const chips = Array.from(document.querySelectorAll<HTMLButtonElement>('.gear-chip'));
-      let cat = 'all';
+      let cat = '';
       let query = '';
 
       function apply() {
         let total = 0;
         let firstShown: HTMLElement | null = null;
         sections.forEach((s) => {
-          const inCat = cat === 'all' || s.dataset.chip === cat;
+          const inCat = !cat || s.dataset.chip === cat;
           const filter = (s as HTMLElement & { _gearFilter?: (q: string) => number })._gearFilter;
           const matches = inCat && filter ? filter(query) : 0;
           s.hidden = !inCat || matches === 0;
@@ -1838,7 +1929,7 @@ const stateOf = (i: number, n: number) =>
         });
         if (empty) empty.hidden = total > 0;
         if (clear) clear.hidden = !query;
-        if (firstShown && (query || cat !== 'all')) {
+        if (firstShown && (query || cat)) {
           sections.forEach((s) => setOpen(s, s === firstShown));
           decks.get(firstShown)?.refresh();
         }
@@ -1846,11 +1937,19 @@ const stateOf = (i: number, n: number) =>
 
       chips.forEach((chip) =>
         chip.addEventListener('click', () => {
-          chips.forEach((c) => {
-            c.classList.toggle('active', c === chip);
-            c.setAttribute('aria-pressed', String(c === chip));
-          });
-          cat = chip.dataset.cat || 'all';
+          const isCurrentlyActive = chip.classList.contains('active');
+          if (isCurrentlyActive) {
+            chip.classList.remove('active');
+            chip.setAttribute('aria-pressed', 'false');
+            cat = '';
+          } else {
+            chips.forEach((c) => {
+              const on = c === chip;
+              c.classList.toggle('active', on);
+              c.setAttribute('aria-pressed', String(on));
+            });
+            cat = chip.dataset.cat || '';
+          }
           apply();
         })
       );
@@ -1867,10 +1966,10 @@ const stateOf = (i: number, n: number) =>
       reset?.addEventListener('click', () => {
         if (input) input.value = '';
         query = '';
-        cat = 'all';
+        cat = '';
         chips.forEach((c) => {
-          c.classList.toggle('active', c.dataset.cat === 'all');
-          c.setAttribute('aria-pressed', String(c.dataset.cat === 'all'));
+          c.classList.remove('active');
+          c.setAttribute('aria-pressed', 'false');
         });
         apply();
       });

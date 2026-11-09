@@ -222,8 +222,8 @@ const hasMedia = Astro.slots.has('media');
     transform: rotate(180deg);
   }
 
-  /* A row's height changes in one step, never animated (Accordion.astro
-     says why); its content fades and slides in instead, below. */
+  /* Height and content transitions: ease in and out seamlessly on open
+     and close with the house curve. Instant under prefers-reduced-motion. */
   .accordion-body {
     display: grid;
     grid-template-rows: 1fr;
@@ -246,17 +246,20 @@ const hasMedia = Astro.slots.has('media');
     padding-bottom: 2.5rem;
   }
   /* Open: nothing clips (an iframe inside must have no clipping ancestor
-     on iOS). */
+     on iOS). Applied only once the expand transition settles. */
   .accordion-row.is-settled .accordion-body-inner {
     overflow: visible;
   }
-  /* Opening: the content fades in and settles 8px down into place, with an
-     ease in and out. Opacity and transform only, so the compositor runs it:
-     no layout per frame, however much is inside. Closing is instant. */
+  /* Opening & closing: animated height on .accordion-body with compositor
+     fade/slide on .accordion-body-inner. */
   @media (prefers-reduced-motion: no-preference) {
+    :global(html.acc-js) .accordion-body {
+      transition: grid-template-rows 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
     :global(html.acc-js) .accordion-row:not(.is-expanded) .accordion-body-inner {
       opacity: 0;
       transform: translate3d(0, -0.5rem, 0);
+      transition: opacity 0.35s cubic-bezier(0.65, 0, 0.35, 1), transform 0.35s cubic-bezier(0.65, 0, 0.35, 1);
     }
     .accordion-row.is-expanded .accordion-body-inner {
       transition: opacity 0.45s cubic-bezier(0.65, 0, 0.35, 1), transform 0.5s cubic-bezier(0.65, 0, 0.35, 1);
@@ -264,6 +267,12 @@ const hasMedia = Astro.slots.has('media');
   }
   @media (prefers-reduced-motion: reduce) {
     .accordion-chevron {
+      transition: none;
+    }
+    :global(html.acc-js) .accordion-body {
+      transition: none;
+    }
+    .accordion-body-inner {
       transition: none;
     }
   }

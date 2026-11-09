@@ -23,7 +23,11 @@ const rawData = data as typeof data & { clientBlock?: ClientBlockData };
 export const SERVICES_LEDE: string = rawData.lede;
 export const SERVICES: Service[] = rawData.items;
 export const SERVICES_CLIENT_BLOCK: ClientBlockData = rawData.clientBlock ?? {};
-/** The CCC project mailto (subject and a short prefilled body), shared
- *  with /ccc/ and the brand card. */
-export { CCC_INQUIRY_HREF as PROJECT_INQUIRY_HREF } from './ccc';
+
+/** The UGC inquiry mailto for brands and sponsorships. */
+export const UGC_INQUIRY_HREF =
+  'mailto:heythisisandrewb@gmail.com?subject=' +
+  encodeURIComponent('Product review / brand partnership') +
+  '&body=' +
+  encodeURIComponent('Brand:\nProduct:\nWhat you want shown:\nTimeline:\n');
 

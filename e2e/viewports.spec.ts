@@ -20,13 +20,11 @@ for (const vp of viewports) {
       const cards = clientBlock.locator('.client-card');
       await expect(cards).toHaveCount(4);
 
-      // 2. Start a project CTAs
-      const ctaWork = page.locator('#work a[href^="mailto:capturecreatecaffeinate@gmail.com"]');
-      await expect(ctaWork).toBeVisible();
-      const ctaServices = page.locator('#services a[href^="mailto:capturecreatecaffeinate@gmail.com"]');
-      await expect(ctaServices).toBeVisible();
-      const ctaGear = page.locator('#gear a[href^="mailto:capturecreatecaffeinate@gmail.com"]');
-      await expect(ctaGear).toBeVisible();
+      // 2. UGC CTA on homepage services section (no CCC mailto on homepage)
+      const ctaUgc = page.locator('#services a[href^="mailto:heythisisandrewb@gmail.com"]');
+      await expect(ctaUgc).toBeVisible();
+      await expect(page.locator('#work a:has-text("Start a project")')).toHaveCount(0);
+      await expect(page.locator('#gear a:has-text("Start a project")')).toHaveCount(0);
 
       // 3. Section order (#services above #goals)
       const servicesY = await page.locator('#services').evaluate((el) => el.getBoundingClientRect().top);
@@ -51,10 +49,10 @@ for (const vp of viewports) {
         }
       }
 
-      // 5. Gear page
+      // 5. Gear page: no CCC mailto per Nov 9 contact rule
       await page.goto('./gear/');
-      const ctaGearPage = page.locator('.gear-project-cta a[href^="mailto:capturecreatecaffeinate@gmail.com"]');
-      await expect(ctaGearPage).toBeVisible();
+      await expect(page.locator('.gear-project-cta')).toHaveCount(0);
+      await expect(page.locator('a[href*="capturecreatecaffeinate@gmail.com"]')).toHaveCount(0);
 
       const disclosure = page.locator('[data-affiliate-disclosure]');
       await expect(disclosure).toBeVisible();

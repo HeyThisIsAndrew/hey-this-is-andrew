@@ -59,10 +59,28 @@ const { exclusive = false } = Astro.props;
     if (body) body.inert = !open;
     row.dispatchEvent(new CustomEvent('accordion:toggle', { bubbles: true, detail: { open } }));
     if (open) {
-      // The row is at its full height at once, so it stops clipping at once
-      // (see AccordionRow.astro): nothing inside it is cut off while it fades in.
-      row.classList.add(SETTLED);
-      row.dispatchEvent(new CustomEvent('accordion:settled', { bubbles: true }));
+      if (reduced()) {
+        row.classList.add(SETTLED);
+        row.dispatchEvent(new CustomEvent('accordion:settled', { bubbles: true }));
+      } else {
+        const onEnd = (e: TransitionEvent) => {
+          if (e.target === body && e.propertyName === 'grid-template-rows') {
+            body.removeEventListener('transitionend', onEnd);
+            if (row.classList.contains(OPEN)) {
+              row.classList.add(SETTLED);
+              row.dispatchEvent(new CustomEvent('accordion:settled', { bubbles: true }));
+            }
+          }
+        };
+        body?.addEventListener('transitionend', onEnd);
+        setTimeout(() => {
+          if (row.classList.contains(OPEN) && !row.classList.contains(SETTLED)) {
+            body?.removeEventListener('transitionend', onEnd);
+            row.classList.add(SETTLED);
+            row.dispatchEvent(new CustomEvent('accordion:settled', { bubbles: true }));
+          }
+        }, 450);
+      }
     }
   }
 

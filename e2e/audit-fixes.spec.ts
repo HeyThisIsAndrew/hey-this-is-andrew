@@ -24,34 +24,32 @@ test.describe('Audit Fixes Verification', () => {
     await expect(cards.nth(3)).toContainText('Shot on location for Desert Escape at Ace Hotel Palm Springs, the Stone Groove Stillhouse launch, and brand and creator campaigns.');
   });
 
-  test('Start a project CTAs are present at all 4 specified locations', async ({ page }) => {
+  test('Contact rule: UGC CTA on homepage, no CCC email on homepage or gear page', async ({ page }) => {
     await page.goto('./');
 
-    // Subject plus the short prefilled body (Venue / What you want to show off / Dates).
-    const expectedHref =
-      'mailto:capturecreatecaffeinate@gmail.com?subject=Photography%20project%20inquiry' +
-      '&body=Venue%3A%0AWhat%20you%20want%20to%20show%20off%3A%0ADates%20that%20work%3A%0A';
+    const expectedUgcHref =
+      'mailto:heythisisandrewb@gmail.com?subject=Product%20review%20%2F%20brand%20partnership' +
+      '&body=Brand%3A%0AProduct%3A%0AWhat%20you%20want%20shown%3A%0ATimeline%3A%0A';
 
-    // 1. End of Selected Work
-    const selectedWorkCta = page.locator('#work a:has-text("Start a project")');
-    await expect(selectedWorkCta).toBeVisible();
-    await expect(selectedWorkCta).toHaveAttribute('href', expectedHref);
-
-    // 2. End of What I do (#services)
-    const servicesCta = page.locator('#services a:has-text("Start a project")');
+    // 1. Homepage services has exactly one UGC CTA
+    const servicesCta = page.locator('#services a:has-text("Send a product to review")');
     await expect(servicesCta).toBeVisible();
-    await expect(servicesCta).toHaveAttribute('href', expectedHref);
+    await expect(servicesCta).toHaveAttribute('href', expectedUgcHref);
 
-    // 3. End of Gear teaser (#gear on homepage)
-    const gearTeaserCta = page.locator('#gear a:has-text("Start a project")');
-    await expect(gearTeaserCta).toBeVisible();
-    await expect(gearTeaserCta).toHaveAttribute('href', expectedHref);
+    // 2. No CCC mailto buttons on homepage
+    await expect(page.locator('#work a:has-text("Start a project")')).toHaveCount(0);
+    await expect(page.locator('#gear a:has-text("Start a project")')).toHaveCount(0);
+    await expect(page.locator('a[href*="capturecreatecaffeinate@gmail.com"]')).toHaveCount(0);
 
-    // 4. On /gear/
+    // 3. On /gear/: no CCC mailto and no project CTA
     await page.goto('./gear/');
-    const gearPageCta = page.locator('.gear-project-cta a:has-text("Start a project")');
-    await expect(gearPageCta).toBeVisible();
-    await expect(gearPageCta).toHaveAttribute('href', expectedHref);
+    await expect(page.locator('.gear-project-cta')).toHaveCount(0);
+    await expect(page.locator('a[href*="capturecreatecaffeinate@gmail.com"]')).toHaveCount(0);
+
+    // 4. On /ccc/: Contact opens the CCC inquiry modal
+    await page.goto('./ccc/');
+    const cccContactBtn = page.locator('.ccc-actions a[data-open-ccc-modal]').first();
+    await expect(cccContactBtn).toBeVisible();
   });
 
   test('Homepage section order has What I do (#services) above Goals (#goals)', async ({ page }) => {
