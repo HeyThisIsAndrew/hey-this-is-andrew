@@ -60,7 +60,7 @@ interface Props {
   /** Step into the site header wherever the rail would cover page text. */
   headerFallback?: boolean;
 }
-const { items = [], heading = 'On this page', selector = 'main h2[id], main [data-pn-entry][id]', topLabel = 'Top', headerFallback = false } = Astro.props;
+const { items = [], heading = 'Contents', selector = 'main h2[id], main [data-pn-entry][id]', topLabel = 'Overview', headerFallback = false } = Astro.props;
 ---
 <nav class="page-nav" id="page-nav" aria-label={heading} data-page-nav data-selector={selector} data-top-label={topLabel} data-mode="rail" data-header-fallback={headerFallback ? '' : undefined} hidden={items.length < 2 ? true : undefined}>
   <button type="button" class="pn-handle" aria-expanded="false" data-pn-handle>
@@ -552,11 +552,11 @@ const { items = [], heading = 'On this page', selector = 'main h2[id], main [dat
       }
     }
     // Top first. An element marked as it (data-pn-top, or a heading labelled
-    // "Top") is it; otherwise add one, aimed at <main> (its top is the page's
-    // top once the header is cleared).
+    // "Top" or "Overview") is it; otherwise add one, aimed at <main> (its top
+    // is the page's top once the header is cleared).
     const first = list.querySelector<HTMLAnchorElement>('[data-pn-link]');
     const firstEl = first ? document.getElementById(first.dataset.pnLink ?? '') : null;
-    if (first && firstEl && ('pnTop' in firstEl.dataset || firstEl.dataset.pnLabel === 'Top')) {
+    if (first && firstEl && ('pnTop' in firstEl.dataset || firstEl.dataset.pnLabel === 'Top' || firstEl.dataset.pnLabel === 'Overview')) {
       first.dataset.pnTop = '';
     } else if (first) {
       const li = document.createElement('li');
@@ -570,7 +570,7 @@ const { items = [], heading = 'On this page', selector = 'main h2[id], main [dat
       tick.setAttribute('aria-hidden', 'true');
       const label = document.createElement('span');
       label.className = 'pn-label';
-      label.textContent = nav.dataset.topLabel || 'Top';
+      label.textContent = nav.dataset.topLabel || 'Overview';
       a.append(tick, label);
       li.append(a);
       list.prepend(li);
@@ -653,7 +653,12 @@ const { items = [], heading = 'On this page', selector = 'main h2[id], main [dat
       });
     };
     let pinnedId: string | null = null; // a link key ("" is an added Top)
-    const zoneTop = () => (document.querySelector('.site-nav')?.getBoundingClientRect().bottom ?? 0) + 16;
+    const zoneTop = () => {
+      const navBottom = document.querySelector('.site-nav')?.getBoundingClientRect().bottom ?? 0;
+      const cccDock = document.querySelector<HTMLElement>('#ccc-pinned-stack .ccc-dock-row--hero.is-docked');
+      const dockBottom = cccDock ? cccDock.getBoundingClientRect().bottom : 0;
+      return Math.max(navBottom, dockBottom) + 16;
+    };
     const resolveActive = () => {
       if (pinnedId !== null) return;
       const ZONE_TOP = zoneTop();
@@ -766,10 +771,20 @@ const { items = [], heading = 'On this page', selector = 'main h2[id], main [dat
         // clearance in html's scroll-padding-top keeps it: Reelay's covers
         // the section bar it pins under the header, which scrollIntoView
         // honoured and a bare header offset parked the heading under.
-        const aim = target.matches('[data-sec]') ? target.querySelector<HTMLElement>('[data-sec-head]') ?? target : target;
+        const aim = target.matches('[data-sec]')
+          ? target.querySelector<HTMLElement>('[data-sec-head], .sec-head') ?? target
+          : target.closest<HTMLElement>('[data-sec-head], .sec-head, .ccc-closer-inner') ?? target;
         const navH = document.querySelector('.site-nav')?.getBoundingClientRect().height ?? 76;
+        const cccStack = document.getElementById('ccc-pinned-stack');
+        const isCloser = id === 'ccc-closer' || Boolean(target.closest('#contact'));
+        let extraStackH = 0;
+        if (cccStack && !isCloser) {
+          const heroRow = cccStack.querySelector<HTMLElement>('.ccc-dock-row--hero');
+          const measured = heroRow?.offsetHeight || 0;
+          extraStackH = measured > 10 ? measured : (window.innerWidth <= 640 ? 44 : 48);
+        }
         const padding = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
-        const top = pageTop(aim) - Math.max(navH + 14, padding);
+        const top = pageTop(aim) - Math.max(navH + extraStackH + 28, padding);
         window.scrollTo({ top: Math.max(0, top), behavior });
         history.replaceState(null, '', `#${id}`);
       });

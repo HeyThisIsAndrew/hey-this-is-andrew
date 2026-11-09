@@ -15,7 +15,6 @@ import CccInquiryModal from '../components/ccc/CccInquiryModal.astro';
 import { Image } from 'astro:assets';
 import {
   CCC_PRICING as P,
-  CCC_DECK,
   CCC_PORTFOLIO,
   CCC_INQUIRY_HREF,
   CCC_SHOW_VIDEO,
@@ -98,6 +97,8 @@ const easy = [
   title="Capture Create Caffeinate · HEY_THISISANDREW"
   description="Photo and video for bars, restaurants, and events. One shoot, everywhere you post."
   image="/ccc/og.jpg"
+  pane="Capture Create Caffeinate"
+  topLabel="Overview"
 >
   <div class="page-head" aria-hidden="true"></div>
 
@@ -120,7 +121,7 @@ const easy = [
       <p class="ccc-hero-sub">Bars · Restaurants · Events</p>
       <div class="ccc-actions btn-group">
         <a class="btn btn-primary" href={CCC_INQUIRY_HREF} data-open-ccc-modal>Contact <span aria-hidden="true">&rarr;</span></a>
-        <a class="btn btn-secondary" href={CCC_DECK.href} download>{CCC_DECK.label} <span aria-hidden="true">&darr;</span></a>
+        <a class="btn btn-secondary" href={CCC_PORTFOLIO} target="_blank" rel="noopener">Portfolio <span aria-hidden="true">&#8599;</span></a>
       </div>
     </div>
   </section>
@@ -367,7 +368,6 @@ const easy = [
       <p class="ccc-closer-price">Photo sessions · Vertical reels · Complete packages</p>
       <div class="ccc-actions btn-group">
         <a class="btn btn-primary" href={CCC_INQUIRY_HREF} data-open-ccc-modal>Contact <span aria-hidden="true">&rarr;</span></a>
-        <a class="btn btn-secondary" href={CCC_DECK.href} download>{CCC_DECK.label} <span aria-hidden="true">&darr;</span></a>
         <a class="btn btn-secondary" href={CCC_PORTFOLIO} target="_blank" rel="noopener">Portfolio <span aria-hidden="true">&#8599;</span></a>
       </div>
     </div>
@@ -1320,11 +1320,21 @@ const easy = [
           const curr = allSections[i];
           const next = allSections[i + 1];
           const nextRect = next.getBoundingClientRect();
+          const currHead = curr.querySelector<HTMLElement>('.sec-head, .ccc-hero-inner');
+          const currHeadTop = currHead ? currHead.getBoundingClientRect().top : curr.getBoundingClientRect().top;
+
+          // Keep curr completely crisp and unshifted while its header is at or below the top bar
+          if (currHeadTop >= dockBottom - 4) {
+            curr.style.transform = '';
+            curr.style.opacity = '1';
+            continue;
+          }
 
           // Overlap calculation: as next enters viewport and scrolls up over curr
-          const overlapRange = Math.max(1, winH - dockBottom);
-          if (nextRect.top < winH && nextRect.bottom > dockBottom) {
-            const rawProgress = (winH - nextRect.top) / overlapRange;
+          const overlapStart = winH * 0.85;
+          const overlapRange = Math.max(1, overlapStart - dockBottom);
+          if (nextRect.top < overlapStart && nextRect.bottom > dockBottom) {
+            const rawProgress = (overlapStart - nextRect.top) / overlapRange;
             const progress = Math.min(1, Math.max(0, rawProgress));
 
             // Curr section scales down, dims, and drifts upward as next cards over it
@@ -1334,8 +1344,8 @@ const easy = [
 
             curr.style.transform = `translate3d(0, -${driftY.toFixed(1)}px, 0) scale(${scale.toFixed(3)})`;
             curr.style.opacity = Math.max(0.2, opacity).toFixed(3);
-          } else if (nextRect.top >= winH) {
-            // Next hasn't reached curr yet
+          } else if (nextRect.top >= overlapStart) {
+            // Next hasn't reached curr overlap zone yet
             curr.style.transform = '';
             curr.style.opacity = '1';
           } else {

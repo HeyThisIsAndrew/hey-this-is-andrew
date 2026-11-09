@@ -32,6 +32,10 @@ interface Props {
   /** Link preview image: a path under public/ (e.g. "/ccc/og.jpg"),
    *  1200x630. Omitted: the site's og-image.png. */
   image?: string;
+  /** The side pane's title: the page's own name (default: the title before its dot/pipe). */
+  pane?: string;
+  /** The label of the topmost entry in the side pane. */
+  topLabel?: string;
 }
 
 const {
@@ -39,7 +43,10 @@ const {
   description = siteData.description,
   noindex = false,
   image,
+  pane,
+  topLabel = 'Overview',
 } = Astro.props;
+const paneHeading = pane ?? (title.split('·')[0].split('|')[0].trim() || 'HEY_THISISANDREW');
 
 import siteData from '../data/site.json';
 
@@ -170,7 +177,7 @@ const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href
     </div>
     {/* Outside the camera stage: it is fixed to the screen, and the stage is
         transformed during a route zoom. */}
-    <PageNav headerFallback />
+    <PageNav heading={paneHeading} topLabel={topLabel} headerFallback />
     <Footer
       logo={{ src: footerLogo.src, width: Number(footerLogo.attributes.width), height: Number(footerLogo.attributes.height), alt: 'HEY_THISISANDREW' }}
       homeHref={homeUrl}
@@ -220,8 +227,17 @@ const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href
         function scrollToTarget(target: Element, pushHash = false, hash = '') {
           if (!target) return;
           const isTop = hash === '#top' || hash === '#overview' || target.id === 'overview' || target.id === 'top';
+          const aim = target.closest('[data-sec-head], .sec-head, .ccc-closer-inner') ?? target;
           const navH = getNavHeight();
-          const targetTop = isTop ? 0 : Math.max(0, pageTop(target) - navH);
+          const cccStack = document.getElementById('ccc-pinned-stack');
+          const isCloser = target.id === 'ccc-closer' || Boolean(target.closest('#contact'));
+          let extraStackH = 0;
+          if (cccStack && !isCloser) {
+            const heroRow = cccStack.querySelector<HTMLElement>('.ccc-dock-row--hero');
+            const measured = heroRow?.offsetHeight || 0;
+            extraStackH = measured > 10 ? measured : (window.innerWidth <= 640 ? 44 : 48);
+          }
+          const targetTop = isTop ? 0 : Math.max(0, pageTop(aim) - (navH + extraStackH + 28));
           if (pushHash && hash) {
             history.pushState(null, '', hash);
           }
