@@ -415,6 +415,24 @@ test.describe('Global QA', () => {
     const mobileHqSubLink = page.locator('.mobile-sub-link').filter({ hasText: /BE Unconventional HQ/i });
     await expect(mobileHqSubLink).toHaveAttribute('aria-current', 'page');
 
+    // Publication Section: Live latest content rendering
+    const missionMedia = page.locator('#mission .hq-why-media');
+    await expect(missionMedia).toHaveCount(2);
+    const missionLinks = page.locator('#mission .hq-why-link');
+    if ((await missionLinks.count()) === 2) {
+      await expect(missionLinks.first()).toHaveAttribute('href', /beunconventionalhq\.com/);
+      await expect(missionMedia.first().locator('.hq-why-badge')).toContainText(/Latest Article/i);
+      await expect(missionMedia.nth(1).locator('.hq-why-badge')).toContainText(/Latest Video/i);
+    }
+    const missionSec = page.locator('#mission');
+    await missionSec.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: '/Users/thisisandrew/.gemini/antigravity/brain/d3d268a9-49cf-4122-b8e9-94c199d498fc/publication-latest-desktop.png' });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await missionSec.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: '/Users/thisisandrew/.gemini/antigravity/brain/d3d268a9-49cf-4122-b8e9-94c199d498fc/publication-latest-mobile.png' });
+    await page.setViewportSize({ width: 1440, height: 900 });
+
     // Closer Press inquiry button routes to Collaborations
     const pressBtn = page.locator('#visit .hq-actions a', { hasText: /Press inquiry/i });
     await expect(pressBtn).toHaveAttribute('href', 'https://beunconventionalhq.com/collaborations');
