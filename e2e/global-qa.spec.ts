@@ -103,11 +103,13 @@ test.describe('Global QA', () => {
     await expect(bePrimaryBtn).toContainText('Enter the HQ');
     await expect(bePanel.locator('.bacc-actions')).toBeHidden();
 
-    // Clicking the primary button opens brand view with all buttons in even size
+    // Clicking the primary button opens brand view with all buttons in even size and zero duplicates
     await bePrimaryBtn.click();
     await expect(viewport).toHaveClass(/is-zoomed/);
     const captionActions = viewport.locator('.bacc-caption .bacc-actions .bacc-cta');
     await expect(captionActions).toHaveCount(3);
+    // Strict guarantee: exactly three visible action buttons in the caption, no duplicate bottom CTA
+    await expect(viewport.locator('.bacc-caption .bacc-cta:visible')).toHaveCount(3);
     await expect(captionActions.nth(0)).toContainText('Enter the HQ');
     await expect(captionActions.nth(1)).toContainText('Visit site');
     await expect(captionActions.nth(2)).toContainText('YouTube');
@@ -137,6 +139,7 @@ test.describe('Global QA', () => {
     await expect(viewport).toHaveClass(/is-zoomed/);
     const cccActions = viewport.locator('.bacc-caption .bacc-actions .bacc-cta');
     await expect(cccActions).toHaveCount(3);
+    await expect(viewport.locator('.bacc-caption .bacc-cta:visible')).toHaveCount(3);
     const cccBtnWidths = await cccActions.evaluateAll((btns) =>
       btns.map((b) => Math.round(b.getBoundingClientRect().width))
     );

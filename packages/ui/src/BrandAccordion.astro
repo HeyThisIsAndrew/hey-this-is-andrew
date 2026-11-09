@@ -273,13 +273,6 @@ const linkAttrs = (href?: string) =>
                     </a>
                   )}
                 </div>
-                {focusOnly && hasCta && (
-                  <template data-bacc-focused-action>
-                    <a class="bacc-cta" href={brand.url}>
-                      {brand.cta} <span aria-hidden="true">→</span>
-                    </a>
-                  </template>
-                )}
 
                 <div class="bacc-progress" aria-hidden="true"><span class="bacc-progress-fill"></span></div>
               </article>
@@ -818,8 +811,8 @@ const linkAttrs = (href?: string) =>
     display: inline-flex;
   }
 
-  /* Fullscreen brand view (caption): hide single primary button, show all action buttons in even size */
-  .bacc-caption .bacc-primary-btn {
+  /* Fullscreen brand view (caption): hide single primary button when action group is present, show all action buttons in even size */
+  .bacc-caption:has(.bacc-actions) .bacc-primary-btn {
     display: none !important;
   }
   .bacc-caption .bacc-actions {
@@ -1862,8 +1855,6 @@ const linkAttrs = (href?: string) =>
         clone.removeAttribute('id');
         clone.removeAttribute('role');
         clone.removeAttribute('aria-labelledby');
-        const action = panel.querySelector<HTMLTemplateElement>('[data-bacc-focused-action]');
-        if (action) clone.appendChild(action.content.cloneNode(true));
         caption.appendChild(clone);
         if (panel.dataset.accent) caption.dataset.accent = panel.dataset.accent;
         else delete caption.dataset.accent;
