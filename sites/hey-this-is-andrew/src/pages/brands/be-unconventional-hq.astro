@@ -214,15 +214,50 @@ const standards = [
       <SectionHeader kicker="What we cover" title="Four lanes, one editorial standard" id="hq-coverage" />
       <ul class="hq-cards4" id="hq-coverage-grid">
         {coverageLanes.map((lane, idx) => (
-          <li class="hq-card" data-card-index={idx}>
-            <div class="hq-card-media" data-hq-motion="coverage">
-              <Image src={lane.img} alt={lane.alt} widths={[320, 640]} sizes="(min-width: 900px) 22vw, 46vw" class="hq-card-img" data-hq-motion-layer />
-              <div class="hq-card-media-fade" aria-hidden="true" />
-            </div>
-            <div class="hq-card-body">
-              <span class="hq-card-kicker font-mono">Editorial</span>
-              <h3 class="hq-card-title">{lane.title}</h3>
-              <p class="hq-card-line">{lane.line}</p>
+          <li class="hq-card flip-card" data-card-index={idx}>
+            <button
+              type="button"
+              class="flip-card-toggle"
+              aria-label={`${lane.title}: ${lane.line}`}
+              aria-describedby={`hq-coverage-back-${idx}`}
+              aria-pressed="false"
+            ></button>
+            <div class="hq-card-inner">
+              <div class="hq-card-face hq-card-front">
+                <div class="hq-card-media" data-hq-motion="coverage">
+                  <Image
+                    src={lane.img}
+                    alt={lane.alt}
+                    widths={[320, 640]}
+                    sizes="(min-width: 900px) 22vw, 46vw"
+                    class="hq-card-img"
+                    data-hq-motion-layer
+                  />
+                  <div class="hq-card-media-fade" aria-hidden="true" />
+                </div>
+                <div class="hq-card-body">
+                  <h3 class="hq-card-title">{lane.title}</h3>
+                </div>
+                <span class="hq-card-flip-hint" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="13"
+                    height="13"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M2 12a10 10 0 0 1 17-7.1L22 8" />
+                    <path d="M22 3v5h-5" />
+                  </svg>
+                </span>
+              </div>
+              <div class="hq-card-face hq-card-back">
+                <span class="hq-card-back-title font-mono">{lane.title}</span>
+                <p id={`hq-coverage-back-${idx}`} class="hq-card-back-line">{lane.line}</p>
+              </div>
             </div>
           </li>
         ))}
@@ -626,25 +661,100 @@ const standards = [
   }
 
   .hq-card {
-    background: linear-gradient(180deg, rgba(20, 20, 24, 0.88) 0%, rgba(10, 10, 13, 0.98) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-top: 1px solid rgba(204, 0, 0, 0.65);
-    border-radius: 4px;
+    position: relative;
+    background: transparent;
+    border: none;
     padding: 0;
-    display: flex;
-    flex-direction: column;
+    perspective: 1000px;
+    width: 100%;
     min-height: 100%;
-    overflow: hidden;
     color: inherit;
-    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.65);
-    transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .hq-card:hover {
+  .hq-card .flip-card-toggle {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    z-index: 3;
+    padding: 0;
+    margin: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .hq-card .flip-card-toggle:focus-visible {
+    outline: none;
+  }
+
+  .hq-card-inner {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-style: preserve-3d;
+    pointer-events: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .hq-card:hover:not(.is-dismissed) .hq-card-inner {
+      transform: rotateY(180deg);
+    }
+  }
+
+  .hq-card.is-flipped .hq-card-inner {
+    transform: rotateY(180deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hq-card-inner {
+      transition: none !important;
+    }
+  }
+
+  .hq-card-face {
+    grid-area: 1 / 1;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid rgba(204, 0, 0, 0.65);
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.65);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    pointer-events: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .hq-card:hover:not(.is-dismissed) .hq-card-face {
+      border-color: rgba(204, 0, 0, 0.6);
+      border-top-color: var(--hq-red-bright);
+      box-shadow: 0 14px 32px -4px rgba(0, 0, 0, 0.85), 0 0 24px -2px rgba(204, 0, 0, 0.3);
+    }
+  }
+
+  .hq-card .flip-card-toggle:focus-visible ~ .hq-card-inner .hq-card-face,
+  .hq-card:focus-within .hq-card-face,
+  .hq-card.is-flipped .hq-card-face {
     border-color: rgba(204, 0, 0, 0.6);
     border-top-color: var(--hq-red-bright);
     box-shadow: 0 14px 32px -4px rgba(0, 0, 0, 0.85), 0 0 24px -2px rgba(204, 0, 0, 0.3);
-    transform: translateY(-2px);
+  }
+
+  .hq-card-front {
+    background: linear-gradient(180deg, rgba(20, 20, 24, 0.92) 0%, rgba(10, 10, 13, 0.98) 100%);
+    display: flex;
+    flex-direction: column;
   }
 
   .hq-card-media {
@@ -684,19 +794,12 @@ const standards = [
   }
 
   .hq-card-body {
-    padding: 0.65rem 0.85rem 0.85rem;
+    padding: 0.75rem 0.85rem 0.85rem;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    justify-content: center;
+    align-items: flex-start;
     flex-grow: 1;
-  }
-
-  .hq-card-kicker {
-    font-size: 0.6rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--hq-red-bright);
-    font-weight: 700;
   }
 
   .hq-card-title {
@@ -709,16 +812,55 @@ const standards = [
     margin: 0;
   }
 
-  .hq-card-title span {
-    color: var(--hq-red-bright);
-    margin-inline-start: 0.2em;
+  .hq-card-back {
+    transform: rotateY(180deg);
+    background: linear-gradient(180deg, rgba(24, 12, 14, 0.98) 0%, rgba(10, 10, 13, 0.99) 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: clamp(0.85rem, 1.4vw, 1.25rem);
+    gap: 0.45rem;
   }
 
-  .hq-card-line {
-    font-size: 0.8rem;
-    line-height: 1.38;
-    color: rgba(240, 240, 240, 0.72);
+  .hq-card-back-title {
+    display: block;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--hq-red-bright);
+    font-weight: 700;
+  }
+
+  .hq-card-back-line {
+    font-size: clamp(0.82rem, 0.92vw, 0.92rem);
+    line-height: 1.48;
+    color: rgba(240, 240, 240, 0.92);
     margin: 0;
+    text-wrap: balance;
+  }
+
+  .hq-card-flip-hint {
+    position: absolute;
+    right: 0.65rem;
+    bottom: 0.65rem;
+    display: inline-flex;
+    color: rgba(255, 255, 255, 0.38);
+    transition: opacity 0.3s ease, color 0.3s ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .hq-card:hover:not(.is-dismissed) .hq-card-flip-hint {
+      color: var(--hq-red-bright);
+      opacity: 1;
+    }
+  }
+
+  .hq-card .flip-card-toggle:focus-visible ~ .hq-card-inner .hq-card-flip-hint,
+  .hq-card.is-flipped .hq-card-flip-hint {
+    color: var(--hq-red-bright);
+    opacity: 1;
   }
 
   /* Standards & Masthead */
@@ -1045,22 +1187,30 @@ const standards = [
     }
 
     .hq-card {
-      flex-direction: row;
-      align-items: stretch;
-      min-height: 0;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
-      border-left: 3px solid var(--hq-red);
-      background: linear-gradient(90deg, rgba(204, 0, 0, 0.08) 0%, rgba(20, 20, 24, 0.9) 18%, rgba(10, 10, 13, 0.98) 100%);
+      min-height: 78px;
+      height: 78px;
     }
 
-    .hq-card:hover {
+    .hq-card-face {
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      border-left: 3px solid var(--hq-red);
+    }
+
+    .hq-card-front {
+      flex-direction: row;
+      align-items: stretch;
+      background: linear-gradient(90deg, rgba(204, 0, 0, 0.08) 0%, rgba(20, 20, 24, 0.92) 18%, rgba(10, 10, 13, 0.98) 100%);
+    }
+
+    .hq-card:hover .hq-card-face,
+    .hq-card.is-flipped .hq-card-face {
       border-left-color: var(--hq-red-bright);
     }
 
     .hq-card-media {
       width: 82px;
       min-width: 82px;
-      height: auto;
+      height: 100%;
       aspect-ratio: auto;
       padding: 0.35rem;
       border-bottom: none;
@@ -1084,24 +1234,40 @@ const standards = [
     }
 
     .hq-card-body {
-      padding: 0.55rem 0.8rem;
+      padding: 0.55rem 0.85rem;
       justify-content: center;
-      gap: 0.15rem;
-    }
-
-    .hq-card-kicker {
-      font-size: 0.58rem;
-      letter-spacing: 0.16em;
+      align-items: flex-start;
+      gap: 0;
     }
 
     .hq-card-title {
-      font-size: 0.96rem;
-      letter-spacing: 0.05em;
+      font-size: 1.02rem;
+      letter-spacing: 0.06em;
+      font-weight: 800;
     }
 
-    .hq-card-line {
-      font-size: 0.76rem;
-      line-height: 1.34;
+    .hq-card-back {
+      background: linear-gradient(90deg, rgba(204, 0, 0, 0.12) 0%, rgba(24, 12, 14, 0.96) 20%, rgba(10, 10, 13, 0.99) 100%);
+      align-items: flex-start;
+      text-align: left;
+      padding: 0.5rem 0.95rem;
+      gap: 0.2rem;
+      justify-content: center;
+    }
+
+    .hq-card-back-title {
+      font-size: 0.58rem;
+      letter-spacing: 0.18em;
+    }
+
+    .hq-card-back-line {
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+
+    .hq-card-flip-hint {
+      right: 0.55rem;
+      bottom: 0.55rem;
     }
   }
 </style>

@@ -419,6 +419,41 @@ test.describe('Global QA', () => {
     const pressBtn = page.locator('#visit .hq-actions a', { hasText: /Press inquiry/i });
     await expect(pressBtn).toHaveAttribute('href', 'https://beunconventionalhq.com/collaborations');
 
+    // Coverage Flip Cards on HQ Hub
+    const coverageCards = page.locator('#coverage .hq-card');
+    await expect(coverageCards).toHaveCount(4);
+    for (let i = 0; i < 4; i++) {
+      const card = coverageCards.nth(i);
+      // Front face: no "Editorial" kicker, contains title
+      await expect(card.locator('.hq-card-front .hq-card-kicker')).toHaveCount(0);
+      await expect(card.locator('.hq-card-front .hq-card-title')).toBeVisible();
+      // Back face contains line text
+      await expect(card.locator('.hq-card-back .hq-card-back-line')).toBeAttached();
+    }
+
+    // Flip interaction on coverage card
+    const firstCoverageCard = coverageCards.first();
+    await firstCoverageCard.scrollIntoViewIfNeeded();
+    await expect(firstCoverageCard).not.toHaveClass(/\bis-flipped\b/);
+    await firstCoverageCard.click();
+    await expect(firstCoverageCard).toHaveClass(/\bis-flipped\b/);
+    await page.waitForTimeout(650);
+
+    // Save visual screenshots
+    await page.screenshot({ path: '/Users/thisisandrew/.gemini/antigravity/brain/d3d268a9-49cf-4122-b8e9-94c199d498fc/coverage-desktop-flip.png' });
+
+    await page.keyboard.press('Escape');
+    await expect(firstCoverageCard).not.toHaveClass(/\bis-flipped\b/);
+    await page.waitForTimeout(650);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await firstCoverageCard.scrollIntoViewIfNeeded();
+    await firstCoverageCard.click();
+    await expect(firstCoverageCard).toHaveClass(/\bis-flipped\b/);
+    await page.waitForTimeout(650);
+    await page.screenshot({ path: '/Users/thisisandrew/.gemini/antigravity/brain/d3d268a9-49cf-4122-b8e9-94c199d498fc/coverage-mobile-flip.png' });
+    await page.setViewportSize({ width: 1440, height: 900 });
+
     // Flip cards on HQ Hub
     const flipCards = page.locator('#pillars .flip-card');
     await expect(flipCards).toHaveCount(4);
