@@ -94,15 +94,66 @@ test.describe('Global QA', () => {
     await expect(page.locator('[data-bacc-trigger]')).toHaveText([/BE Unconventional HQ/i, /Capture Create Caffeinate/i, /Sip the Magic/i]);
     await page.locator('[data-bacc]').scrollIntoViewIfNeeded();
     const viewport = page.locator('[data-bacc-viewport]');
-    for (let i = 0; i < 3; i++) {
-      const panel = panels.nth(i);
-      if (!(await panel.evaluate((e) => e.classList.contains('is-open')))) await panel.locator('[data-bacc-trigger]').click();
-      await expect(panel).toHaveClass(/is-open/);
-      await panel.locator('.bacc-media').click({ force: true });
-      await expect(viewport).toHaveClass(/is-zoomed/);
-      await page.keyboard.press('Escape');
-      await expect(viewport).not.toHaveClass(/is-zoomed/);
-    }
+
+    // Panel 0 (BE): primary button appears on resting panel, other buttons hidden
+    const bePanel = panels.nth(0);
+    await expect(bePanel).toHaveClass(/is-open/);
+    const bePrimaryBtn = bePanel.locator('.bacc-primary-btn');
+    await expect(bePrimaryBtn).toBeVisible();
+    await expect(bePrimaryBtn).toContainText('Enter the HQ');
+    await expect(bePanel.locator('.bacc-actions')).toBeHidden();
+
+    // Clicking the primary button opens brand view with all buttons in even size
+    await bePrimaryBtn.click();
+    await expect(viewport).toHaveClass(/is-zoomed/);
+    const captionActions = viewport.locator('.bacc-caption .bacc-actions .bacc-cta');
+    await expect(captionActions).toHaveCount(3);
+    await expect(captionActions.nth(0)).toContainText('Enter the HQ');
+    await expect(captionActions.nth(1)).toContainText('Visit site');
+    await expect(captionActions.nth(2)).toContainText('YouTube');
+    const beBtnWidths = await captionActions.evaluateAll((btns) =>
+      btns.map((b) => Math.round(b.getBoundingClientRect().width))
+    );
+    expect(Math.abs(beBtnWidths[0] - beBtnWidths[1])).toBeLessThanOrEqual(2);
+    expect(Math.abs(beBtnWidths[1] - beBtnWidths[2])).toBeLessThanOrEqual(2);
+
+    await page.keyboard.press('Escape');
+    await expect(viewport).not.toHaveClass(/is-zoomed/);
+
+    // Clicking the image also opens brand view with even-sized buttons
+    await bePanel.locator('.bacc-media').click({ force: true });
+    await expect(viewport).toHaveClass(/is-zoomed/);
+    await page.keyboard.press('Escape');
+    await expect(viewport).not.toHaveClass(/is-zoomed/);
+
+    // Panel 1 (CCC): primary button appears on resting panel, click opens brand view
+    const cccPanel = panels.nth(1);
+    await cccPanel.locator('[data-bacc-trigger]').click();
+    await expect(cccPanel).toHaveClass(/is-open/);
+    const cccPrimaryBtn = cccPanel.locator('.bacc-primary-btn');
+    await expect(cccPrimaryBtn).toBeVisible();
+    await expect(cccPrimaryBtn).toContainText('See What We Shoot');
+    await cccPrimaryBtn.click();
+    await expect(viewport).toHaveClass(/is-zoomed/);
+    const cccActions = viewport.locator('.bacc-caption .bacc-actions .bacc-cta');
+    await expect(cccActions).toHaveCount(3);
+    const cccBtnWidths = await cccActions.evaluateAll((btns) =>
+      btns.map((b) => Math.round(b.getBoundingClientRect().width))
+    );
+    expect(Math.abs(cccBtnWidths[0] - cccBtnWidths[1])).toBeLessThanOrEqual(2);
+    expect(Math.abs(cccBtnWidths[1] - cccBtnWidths[2])).toBeLessThanOrEqual(2);
+
+    await page.keyboard.press('Escape');
+    await expect(viewport).not.toHaveClass(/is-zoomed/);
+
+    // Panel 2 (Sip the Magic)
+    const stmPanel = panels.nth(2);
+    await stmPanel.locator('[data-bacc-trigger]').click();
+    await expect(stmPanel).toHaveClass(/is-open/);
+    await stmPanel.locator('.bacc-media').click({ force: true });
+    await expect(viewport).toHaveClass(/is-zoomed/);
+    await page.keyboard.press('Escape');
+    await expect(viewport).not.toHaveClass(/is-zoomed/);
   });
 
   test('Latest filters: Video and Writing toggle, equal widths, deep links', async ({ page }) => {
@@ -326,6 +377,27 @@ test.describe('Global QA', () => {
     }
     await page.waitForURL('**/brands/be-unconventional-hq/');
     await expect(page.locator('#hq-hero-title')).toContainText(/Where nerd culture/i);
+
+    // Verify hero title strict 2-line lockup across screen widths (line 1: Where nerd culture, line 2: gets cinematic)
+    for (const w of [320, 390, 768, 1024, 1440, 1920]) {
+      await page.setViewportSize({ width: w, height: 900 });
+      const lines = await page.evaluate(() => {
+        const title = document.querySelector<HTMLElement>('#hq-hero-title')!;
+        const spans = Array.from(title.querySelectorAll<HTMLElement>('.hq-hero-line'));
+        return {
+          count: spans.length,
+          line1Text: spans[0]?.textContent?.trim(),
+          line2Text: spans[1]?.textContent?.trim(),
+          line1Top: spans[0]?.offsetTop,
+          line2Top: spans[1]?.offsetTop,
+        };
+      });
+      expect(lines.count).toBe(2);
+      expect(lines.line1Text?.toLowerCase()).toContain('where nerd culture');
+      expect(lines.line2Text?.toLowerCase()).toContain('gets cinematic');
+      expect(lines.line2Top).toBeGreaterThan(lines.line1Top!);
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
 
     // Current-page semantics: parent Brands link has .active without aria-current="page"; child HQ link has aria-current="page"
     const desktopBrandsLink = page.locator('.desktop-nav .nav-link', { hasText: 'Brands' });

@@ -219,17 +219,18 @@ const linkAttrs = (href?: string) =>
                     </div>
                   )}
 
-                  {!focusOnly && hasCta && !extraLinks.length && (
-                    <a class="bacc-cta" href={brand.url} {...linkAttrs(brand.url)}>
+                  {/* Single primary button for resting panel */}
+                  {hasCta && (
+                    <a class="bacc-cta bacc-primary-btn" href={brand.url} {...linkAttrs(brand.url)}>
                       {brand.cta}
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                         <path d="M2 12L12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
                       </svg>
                     </a>
                   )}
-                  {!focusOnly && hasCta && extraLinks.length > 0 && (
-                    /* One row of small buttons: the CTA first, then the
-                       brand's other doors. Stacks on phones. */
+
+                  {/* Actions row: contains all brand buttons (primary CTA + extraLinks + inquiry) */}
+                  {hasCta && extraLinks.length > 0 && (
                     <div class="bacc-actions">
                       <a class="bacc-cta bacc-cta--sm" href={brand.url} aria-label={`${brand.cta}, ${brand.name}`} {...linkAttrs(brand.url)}>
                         {brand.cta}
@@ -257,7 +258,6 @@ const linkAttrs = (href?: string) =>
                         </a>
                       ))}
                       {brand.inquiry && (
-                        /* In the row, the inquiry is a button like the rest. */
                         <a class="bacc-cta bacc-cta--sm bacc-cta--extra" href={inquiryHref(brand.inquiry)} aria-label={`${brand.inquiry.label}, ${brand.name}`}>
                           {brand.inquiry.label}
                           <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
@@ -267,7 +267,7 @@ const linkAttrs = (href?: string) =>
                       )}
                     </div>
                   )}
-                  {!focusOnly && brand.inquiry && !(hasCta && extraLinks.length > 0) && (
+                  {brand.inquiry && !(hasCta && extraLinks.length > 0) && (
                     <a class="bacc-inquiry" href={inquiryHref(brand.inquiry)}>
                       {brand.inquiry.label} <span aria-hidden="true">→</span>
                     </a>
@@ -801,6 +801,43 @@ const linkAttrs = (href?: string) =>
     margin-top: 0;
     justify-content: center;
   }
+  /* Single primary CTA on resting panel */
+  .bacc-primary-btn {
+    display: inline-flex;
+    margin-top: calc(17.92 * var(--u));
+  }
+  /* On pages not using focused-actions, hide bacc-primary-btn if panel has bacc-actions */
+  .bacc:not([data-focused-actions]) .bacc-panel:has(.bacc-actions) .bacc-primary-btn {
+    display: none;
+  }
+  /* In focused-actions mode (home default), resting panel shows only primary button */
+  [data-focused-actions] .bacc-panel .bacc-actions {
+    display: none;
+  }
+  [data-focused-actions] .bacc-panel .bacc-primary-btn {
+    display: inline-flex;
+  }
+
+  /* Fullscreen brand view (caption): hide single primary button, show all action buttons in even size */
+  .bacc-caption .bacc-primary-btn {
+    display: none !important;
+  }
+  .bacc-caption .bacc-actions {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: clamp(0.5rem, 1.2vw, 0.85rem);
+    width: 100%;
+    max-width: 46rem;
+    margin-top: 1.25rem;
+  }
+  .bacc-caption .bacc-actions .bacc-cta {
+    flex: 1 1 0;
+    min-width: min(100%, 140px);
+    justify-content: center;
+    text-align: center;
+    white-space: nowrap;
+    margin-top: 0;
+  }
   .bacc-cta--sm {
     gap: 0.5rem;
     min-height: var(--btn-h-sm);
@@ -1063,10 +1100,27 @@ const linkAttrs = (href?: string) =>
   /* Phone portrait (HQ: "way too busy"): no button under the copy. The
      brand view (a tap on the panel) carries it. */
   @media (max-width: 767px) and (orientation: portrait) {
-    .bacc-cta,
-    .bacc-inquiry,
-    .bacc-actions {
+    .bacc:not([data-focused-actions]) .bacc-cta,
+    .bacc:not([data-focused-actions]) .bacc-inquiry,
+    .bacc:not([data-focused-actions]) .bacc-actions {
       display: none;
+    }
+    [data-focused-actions] .bacc-panel.is-open .bacc-primary-btn {
+      display: inline-flex;
+      margin-top: 0.75rem;
+    }
+    [data-focused-actions] .bacc-panel:not(.is-open) .bacc-primary-btn {
+      display: none;
+    }
+    .bacc-caption .bacc-actions {
+      display: flex !important;
+      flex-direction: column;
+      gap: 0.6rem;
+      width: 100%;
+    }
+    .bacc-caption .bacc-actions .bacc-cta {
+      width: 100%;
+      min-height: var(--tap-min, 44px);
     }
   }
 

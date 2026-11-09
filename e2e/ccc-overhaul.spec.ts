@@ -457,6 +457,25 @@ test.describe('CCC Page Overhaul & Regression Acceptance (CCC-01 through CCC-07)
     const pricing = page.locator('#pricing');
     await pricing.scrollIntoViewIfNeeded();
 
+    // Verify desktop parallel layout and matching height between photo and cards
+    const pricingLayout = await page.evaluate(() => {
+      const media = document.querySelector<HTMLElement>('.ccc-pricing-media')!.getBoundingClientRect();
+      const list = document.querySelector<HTMLElement>('.ccc-pricing-list')!.getBoundingClientRect();
+      return {
+        mediaW: media.width,
+        mediaH: media.height,
+        listW: list.width,
+        listH: list.height,
+        parallel: Math.abs(media.top - list.top) <= 10,
+        heightMatch: Math.abs(media.height - list.height) <= 3,
+        sideBySide: media.right <= list.left + 5,
+      };
+    });
+    expect(pricingLayout.mediaW).toBeGreaterThan(250);
+    expect(pricingLayout.parallel).toBe(true);
+    expect(pricingLayout.heightMatch).toBe(true);
+    expect(pricingLayout.sideBySide).toBe(true);
+
     const firstCard = pricing.locator('.flip-card').first();
     const firstToggle = firstCard.locator('.flip-card-toggle');
     const firstAction = firstCard.locator('.flip-action-btn');

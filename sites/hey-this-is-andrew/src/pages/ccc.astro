@@ -342,7 +342,7 @@ const packages = [
         <SectionHeader kicker="Packages" title="Pick what you need" id="ccc-pricing" />
         <div class="ccc-pricing">
           <div class="ccc-pricing-list">
-            <div class="ccc-pricing-cards flip-card-grid flip-card-grid--3">
+            <div class="ccc-pricing-cards flip-card-grid">
               {packages.map((pkg, idx) => (
                 <FlipCard
                   value={pkg.value}
@@ -1134,23 +1134,40 @@ const packages = [
   /* Packages / Offerings */
   .ccc-pricing {
     display: grid;
-    grid-template-columns: minmax(0, 480px);
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "packages" "photo";
     justify-content: center;
     gap: clamp(1.5rem, 2.4vw, calc(36 * var(--ccc-u)));
     margin-top: clamp(1.25rem, 2vw, calc(30 * var(--ccc-u)));
-    align-items: start;
+    align-items: stretch;
   }
   .ccc-pricing-media {
     grid-area: photo;
+    width: 100%;
+    max-width: min(480px, 94vw);
+    justify-self: center;
+    border-radius: clamp(4px, 0.5vw, 8px);
+    overflow: hidden;
+    position: relative;
+  }
+  .ccc-pricing-media :global(img) {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    display: block;
+    border-radius: inherit;
   }
   .ccc-pricing-list {
     grid-area: packages;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: space-between;
     gap: calc(12 * var(--ccc-u));
     width: 100%;
+    max-width: min(480px, 94vw);
+    justify-self: center;
   }
   .ccc-pricing-cards {
     display: grid;
@@ -1178,8 +1195,33 @@ const packages = [
   }
   @media (min-width: 900px) {
     .ccc-pricing {
-      grid-template-columns: minmax(0, calc(460 * var(--ccc-media-u))) var(--flip-track-w);
+      grid-template-columns: minmax(320px, calc(460 * var(--ccc-media-u))) var(--flip-track-w);
       grid-template-areas: "photo packages";
+      align-items: stretch;
+      justify-content: center;
+      gap: clamp(2rem, 3.5vw, calc(48 * var(--ccc-u)));
+    }
+    .ccc-pricing-media {
+      max-width: none;
+      width: 100%;
+      height: 100%;
+      min-height: 100%;
+      position: relative;
+      display: block;
+    }
+    .ccc-pricing-media :global(img) {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      aspect-ratio: auto;
+      object-fit: cover;
+    }
+    .ccc-pricing-list {
+      max-width: none;
+      width: var(--flip-track-w);
+      justify-content: space-between;
+      height: 100%;
     }
   }
   @media (max-width: 640px) {
