@@ -790,8 +790,18 @@ const { items = [], heading = 'Contents', selector = 'main h2[id], main [data-pn
       });
     });
     const pinFromHash = () => {
-      const id = decodeURIComponent(location.hash.slice(1));
-      if (!id || !links.some((l) => keyOf(l) === id) || !document.getElementById(id)) return;
+      const rawId = decodeURIComponent(location.hash.slice(1));
+      if (!rawId) return;
+      const hashEl = document.getElementById(rawId);
+      if (!hashEl) return;
+      const matchedLink =
+        links.find((l) => keyOf(l) === rawId) ??
+        links.find((l) => {
+          const k = keyOf(l);
+          return Boolean(k && hashEl.querySelector(`#${CSS.escape(k)}`));
+        });
+      if (!matchedLink) return;
+      const id = keyOf(matchedLink);
       pinnedId = id;
       setActive(id);
       armReleaseWhenSettled();

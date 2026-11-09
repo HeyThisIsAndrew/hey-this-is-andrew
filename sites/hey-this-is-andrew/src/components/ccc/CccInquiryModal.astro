@@ -101,7 +101,7 @@ import { CCC_EMAIL } from '../../data/ccc';
       </div>
 
       <button type="submit" class="btn btn-primary ccc-submit-btn">
-        Send inquiry <span aria-hidden="true">&rarr;</span>
+        Open email draft <span aria-hidden="true">&rarr;</span>
       </button>
     </form>
 
@@ -110,11 +110,11 @@ import { CCC_EMAIL } from '../../data/ccc';
       <div class="ccc-confirm-header">
         <div class="ccc-confirm-icon" aria-hidden="true">&#10003;</div>
         <p id="ccc-confirm-msg" class="ccc-confirm-title" role="status" aria-live="polite">
-          Thanks. We will get back to you to schedule a call.
+          Your inquiry is ready to send
         </p>
       </div>
       <p class="ccc-confirm-desc">
-        If your email client did not launch automatically, copy the composed inquiry below and email it to
+        Send the message from your mail app, or copy the composed inquiry below and email it to
         <a href={`mailto:${CCC_EMAIL}`}>{CCC_EMAIL}</a>.
       </p>
 
@@ -470,6 +470,21 @@ import { CCC_EMAIL } from '../../data/ccc';
     const serviceSelect = document.getElementById('ccc-service') as HTMLSelectElement | null;
 
     let unlockBody: (() => void) | null = null;
+    let lastTriggerEl: HTMLElement | null = null;
+
+    function restoreTriggerFocus() {
+      if (!lastTriggerEl || !document.contains(lastTriggerEl)) return;
+      const parentCard = lastTriggerEl.closest<HTMLElement>('.flip-card');
+      const isHiddenAction =
+        lastTriggerEl.getAttribute('aria-hidden') === 'true' ||
+        lastTriggerEl.getAttribute('tabindex') === '-1' ||
+        (parentCard && !parentCard.classList.contains('is-flipped') && !parentCard.matches(':hover'));
+      const target = isHiddenAction
+        ? parentCard?.querySelector<HTMLElement>('.flip-card-toggle') ?? lastTriggerEl
+        : lastTriggerEl;
+      lastTriggerEl = null;
+      target.focus({ preventScroll: true });
+    }
 
     function selectPackage(pkg: string | undefined | null) {
       if (!pkg || !serviceSelect) return;
@@ -547,8 +562,9 @@ import { CCC_EMAIL } from '../../data/ccc';
       window.visualViewport.addEventListener('scroll', updateVisualViewport);
     }
 
-    function openModal(pkg?: string | null) {
+    function openModal(pkg?: string | null, trigger?: HTMLElement | null) {
       if (!dialog) return;
+      lastTriggerEl = trigger || (document.activeElement as HTMLElement) || null;
       if (form && confirmBox) {
         form.hidden = false;
         confirmBox.hidden = true;
@@ -578,6 +594,7 @@ import { CCC_EMAIL } from '../../data/ccc';
         dialog.style.height = '';
         dialog.style.maxHeight = '';
       }
+      restoreTriggerFocus();
     }
 
     dialog.addEventListener('close', () => {
@@ -590,6 +607,7 @@ import { CCC_EMAIL } from '../../data/ccc';
         dialog.style.height = '';
         dialog.style.maxHeight = '';
       }
+      restoreTriggerFocus();
     });
 
     // Delegated click handler for modal triggers
@@ -611,7 +629,7 @@ import { CCC_EMAIL } from '../../data/ccc';
       }
       e.preventDefault();
       const pkg = trigger.dataset.cccPackage || trigger.closest<HTMLElement>('[data-ccc-package]')?.dataset.cccPackage;
-      openModal(pkg);
+      openModal(pkg, trigger);
     });
 
     // The X rotates 90 degrees on click / tap before closing, matching Be Unconventional HQ

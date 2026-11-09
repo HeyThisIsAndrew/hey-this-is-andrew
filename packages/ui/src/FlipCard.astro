@@ -8,6 +8,12 @@
  * affordance) that flip on hover/focus/tap to reveal longer descriptive copy
  * on the back face.
  *
+ * Keyboard accessibility:
+ * - The card flip toggle button is keyboard-focusable and toggles on Enter/Space.
+ * - When flipped, any back-face action button (e.g. Contact) becomes focusable
+ *   via Tab and can be activated via Enter/Space.
+ * - Escape closes the flipped card and returns focus to the card toggle.
+ *
  * Punctuation hygiene: zero em dashes throughout.
  */
 interface Props {
@@ -41,15 +47,18 @@ const {
 const backId = `${idPrefix}-${index}`;
 ---
 
-<button
-  type="button"
+<div
   class:list={['stat-card', 'flip-card', className]}
   data-delay={delay}
   data-ccc-package={dataCccPackage}
-  aria-label={`${label}: ${value}. ${desc}`}
-  aria-describedby={backId}
-  aria-pressed="false"
 >
+  <button
+    type="button"
+    class="flip-card-toggle"
+    aria-label={`${label}: ${value}. ${desc}`}
+    aria-describedby={backId}
+    aria-pressed="false"
+  ></button>
   <div class="flip-card-inner">
     <div class="flip-card-front">
       <span class:list={['stat-value', longValue && 'stat-value-long']}>
@@ -76,30 +85,56 @@ const backId = `${idPrefix}-${index}`;
     <div class="flip-card-back">
       <p id={backId}>{backText}</p>
       {actionLabel && (
-        <span
+        <button
+          type="button"
           class="btn btn-primary flip-action-btn"
           data-open-ccc-modal
           data-ccc-package={dataCccPackage}
+          tabindex="-1"
+          aria-hidden="true"
         >
           {actionLabel} <span aria-hidden="true">&rarr;</span>
-        </span>
+        </button>
       )}
       <slot name="back-action" />
     </div>
   </div>
-</button>
+</div>
 
 <style>
   .flip-card {
+    position: relative;
     background: transparent;
     border: none;
     padding: 0;
-    cursor: pointer;
     perspective: 1000px;
     width: 100%;
     font-family: inherit;
     color: inherit;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  .flip-card-toggle {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    z-index: 2;
+    padding: 0;
+    margin: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .flip-card.is-flipped .flip-card-toggle {
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .flip-card-toggle:focus-visible {
+    outline: none;
   }
 
   /* Reset outer stat-card hover transform since .flip-card-inner rotates */
@@ -129,7 +164,8 @@ const backId = `${idPrefix}-${index}`;
     }
   }
 
-  .flip-card:focus-visible .flip-card-inner,
+  .flip-card-toggle:focus-visible ~ .flip-card-inner,
+  .flip-card:focus-within .flip-card-inner,
   .flip-card.is-flipped .flip-card-inner {
     transform: rotateY(180deg);
   }
@@ -196,21 +232,25 @@ const backId = `${idPrefix}-${index}`;
     }
   }
 
-  .flip-card:focus-visible .flip-card-front,
-  .flip-card:focus-visible .flip-card-back,
+  .flip-card-toggle:focus-visible ~ .flip-card-inner .flip-card-front,
+  .flip-card-toggle:focus-visible ~ .flip-card-inner .flip-card-back,
+  .flip-card:focus-within .flip-card-front,
+  .flip-card:focus-within .flip-card-back,
   .flip-card.is-flipped .flip-card-front,
   .flip-card.is-flipped .flip-card-back {
     border-color: var(--flip-accent-border, var(--color-accent, #cc0000));
     box-shadow: var(--flip-accent-shadow, 0 8px 30px rgba(204, 0, 0, 0.1));
   }
 
-  .flip-card:focus-visible .flip-card-front,
+  .flip-card-toggle:focus-visible ~ .flip-card-inner .flip-card-front,
+  .flip-card:focus-within .flip-card-front,
   .flip-card.is-flipped .flip-card-front {
     opacity: 0;
     pointer-events: none;
   }
 
-  .flip-card:focus-visible .flip-card-back,
+  .flip-card-toggle:focus-visible ~ .flip-card-inner .flip-card-back,
+  .flip-card:focus-within .flip-card-back,
   .flip-card.is-flipped .flip-card-back {
     opacity: 1;
     pointer-events: auto;
@@ -264,6 +304,8 @@ const backId = `${idPrefix}-${index}`;
   }
 
   .flip-action-btn {
+    position: relative;
+    z-index: 3;
     margin-top: 0.35rem;
     padding: 0.35rem 0.9rem;
     font-size: 0.68rem;
@@ -272,6 +314,11 @@ const backId = `${idPrefix}-${index}`;
     font-family: var(--flip-font-label, inherit);
     cursor: pointer;
     box-sizing: border-box;
+  }
+
+  .flip-action-btn:focus-visible {
+    outline: 2px solid var(--flip-accent-border, #fff);
+    outline-offset: 2px;
   }
 
   .flip-hint {
@@ -291,7 +338,7 @@ const backId = `${idPrefix}-${index}`;
     }
   }
 
-  .flip-card:focus-visible .flip-hint,
+  .flip-card-toggle:focus-visible ~ .flip-card-inner .flip-hint,
   .flip-card.is-flipped .flip-hint {
     color: var(--flip-accent-text, var(--color-accent-text, #ef4444));
     opacity: 1;
@@ -320,14 +367,31 @@ const backId = `${idPrefix}-${index}`;
     if (document.documentElement.dataset.flipDocWired === '1') return;
     document.documentElement.dataset.flipDocWired = '1';
 
+    function updateCardState(card: HTMLElement, isFlipped: boolean) {
+      card.classList.toggle('is-flipped', isFlipped);
+      const toggle = card.querySelector<HTMLButtonElement>('.flip-card-toggle');
+      if (toggle) {
+        toggle.setAttribute('aria-pressed', isFlipped ? 'true' : 'false');
+      }
+      const actionBtn = card.querySelector<HTMLButtonElement>('.flip-action-btn');
+      if (actionBtn) {
+        if (isFlipped) {
+          actionBtn.removeAttribute('tabindex');
+          actionBtn.removeAttribute('aria-hidden');
+        } else {
+          actionBtn.setAttribute('tabindex', '-1');
+          actionBtn.setAttribute('aria-hidden', 'true');
+        }
+      }
+    }
+
     document.addEventListener('click', (e) => {
       const target = e.target as HTMLElement | null;
-      const card = target?.closest<HTMLButtonElement>('.flip-card');
+      const card = target?.closest<HTMLElement>('.flip-card');
 
       if (!card) {
-        document.querySelectorAll<HTMLButtonElement>('.flip-card.is-flipped').forEach((openCard) => {
-          openCard.classList.remove('is-flipped');
-          openCard.setAttribute('aria-pressed', 'false');
+        document.querySelectorAll<HTMLElement>('.flip-card.is-flipped').forEach((openCard) => {
+          updateCardState(openCard, false);
         });
         return;
       }
@@ -336,25 +400,30 @@ const backId = `${idPrefix}-${index}`;
       const isHoverFlipped =
         window.matchMedia('(hover: hover) and (pointer: fine)').matches && card.matches(':hover');
 
-      // If card is already showing its back face and the user tapped the inner Contact button, let the modal trigger handle it
+      // If card is already showing its back face and the user clicked the inner action button, let that action handle it
       if ((wasFlipped || isHoverFlipped) && target?.closest('[data-open-ccc-modal], [data-no-flip]')) {
         return;
       }
 
-      document.querySelectorAll<HTMLButtonElement>('.flip-card.is-flipped').forEach((other) => {
+      document.querySelectorAll<HTMLElement>('.flip-card.is-flipped').forEach((other) => {
         if (other !== card) {
-          other.classList.remove('is-flipped');
-          other.setAttribute('aria-pressed', 'false');
+          updateCardState(other, false);
         }
       });
 
-      if (wasFlipped) {
-        card.classList.remove('is-flipped');
-        card.setAttribute('aria-pressed', 'false');
-        card.blur();
-      } else {
-        card.classList.add('is-flipped');
-        card.setAttribute('aria-pressed', 'true');
+      updateCardState(card, !wasFlipped);
+    });
+
+    document.addEventListener('keydown', (e) => {
+      const target = e.target as HTMLElement | null;
+      const card = target?.closest<HTMLElement>('.flip-card');
+      if (!card) return;
+
+      if (e.key === 'Escape') {
+        if (card.classList.contains('is-flipped')) {
+          updateCardState(card, false);
+          card.querySelector<HTMLButtonElement>('.flip-card-toggle')?.focus();
+        }
       }
     });
   }

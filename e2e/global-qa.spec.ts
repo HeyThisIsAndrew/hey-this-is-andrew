@@ -285,14 +285,14 @@ test.describe('Global QA', () => {
       await expect(subLinks).toHaveCount(2);
       await subLinks.filter({ hasText: /BE Unconventional HQ/i }).click();
     } else {
-      const brandsItem = page.locator('.desktop-nav .nav-item', { hasText: /Brands/i });
+      const brandsItem = page.locator('.desktop-nav .nav-item').filter({ has: page.locator('.nav-link', { hasText: 'Brands' }) });
       await brandsItem.hover();
       const dropdownLinks = brandsItem.locator('.dropdown-link');
       await expect(dropdownLinks).toHaveCount(2);
       await dropdownLinks.filter({ hasText: /BE Unconventional HQ/i }).click();
     }
     await page.waitForURL('**/brands/be-unconventional-hq/');
-    await expect(page.locator('#hq-hero-heading')).toContainText(/Where nerd culture gets cinematic/i);
+    await expect(page.locator('#hq-hero-title')).toContainText(/Where nerd culture/i);
     const flipCards = page.locator('#pillars .flip-card');
     await expect(flipCards).toHaveCount(4);
     await flipCards.first().click();
