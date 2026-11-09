@@ -22,8 +22,7 @@ export default defineConfig({
     '/now': withBase('/#about'),
     '/cafe': withBase('/gear/#brew'),
     '/brands/hey-this-is-andrew': withBase('/#about'),
-    '/brands/be-unconventional-hq': withBase('/#about'),
-    '/brands/capture-create-caffeinate': withBase('/#about'),
+    '/brands/capture-create-caffeinate': withBase('/ccc/'),
   },
   server: {
     host: '0.0.0.0',

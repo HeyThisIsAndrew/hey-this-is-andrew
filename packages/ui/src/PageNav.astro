@@ -655,7 +655,7 @@ const { items = [], heading = 'Contents', selector = 'main h2[id], main [data-pn
     let pinnedId: string | null = null; // a link key ("" is an added Top)
     const zoneTop = () => {
       const navBottom = document.querySelector('.site-nav')?.getBoundingClientRect().bottom ?? 0;
-      const cccDock = document.querySelector<HTMLElement>('#ccc-pinned-stack .ccc-dock-row--hero.is-docked');
+      const cccDock = document.querySelector<HTMLElement>('#ccc-pinned-stack .ccc-dock-row--hero.is-docked, #hq-pinned-stack .hq-dock-row--hero.is-docked');
       const dockBottom = cccDock ? cccDock.getBoundingClientRect().bottom : 0;
       return Math.max(navBottom, dockBottom) + 16;
     };
@@ -773,13 +773,13 @@ const { items = [], heading = 'Contents', selector = 'main h2[id], main [data-pn
         // honoured and a bare header offset parked the heading under.
         const aim = target.matches('[data-sec]')
           ? target.querySelector<HTMLElement>('[data-sec-head], .sec-head') ?? target
-          : target.closest<HTMLElement>('[data-sec-head], .sec-head, .ccc-closer-inner') ?? target;
+          : target.closest<HTMLElement>('[data-sec-head], .sec-head, .ccc-closer-inner, .hq-closer-inner') ?? target;
         const navH = document.querySelector('.site-nav')?.getBoundingClientRect().height ?? 76;
-        const cccStack = document.getElementById('ccc-pinned-stack');
-        const isCloser = id === 'ccc-closer' || Boolean(target.closest('#contact'));
+        const cccStack = document.getElementById('ccc-pinned-stack') ?? document.getElementById('hq-pinned-stack');
+        const isCloser = id === 'ccc-closer' || id === 'hq-closer' || Boolean(target.closest('#contact, #visit'));
         let extraStackH = 0;
         if (cccStack && !isCloser) {
-          const heroRow = cccStack.querySelector<HTMLElement>('.ccc-dock-row--hero');
+          const heroRow = cccStack.querySelector<HTMLElement>('.ccc-dock-row--hero, .hq-dock-row--hero');
           const measured = heroRow?.offsetHeight || 0;
           extraStackH = measured > 10 ? measured : (window.innerWidth <= 640 ? 44 : 48);
         }

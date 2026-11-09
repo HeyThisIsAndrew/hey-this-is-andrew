@@ -71,6 +71,9 @@ export interface NavItem {
       section). The scrollspy lights the link only while one of these is
       current. A preview of a page (Meet The Creator for About) is not one. */
   spy?: string[];
+  /** Render subsection links inside the mobile menu drawer when subsections
+      are standalone destination pages (e.g. Brands -> CCC / BE HQ). */
+  showMobileSubsections?: boolean;
   subsections: NavSubItem[];
 }
 

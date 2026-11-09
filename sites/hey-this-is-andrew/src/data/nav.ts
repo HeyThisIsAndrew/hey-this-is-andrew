@@ -22,6 +22,25 @@ export const NAV_LINKS: NavItem[] = [
     subsections: toSubsections(HOME_SECTIONS, homeUrl),
   },
   {
+    label: 'Brands',
+    href: `${homeUrl}#brands`,
+    section: 'directory',
+    spy: ['directory'],
+    showMobileSubsections: true,
+    subsections: [
+      {
+        label: 'Capture Create Caffeinate',
+        kicker: 'CCC',
+        href: page('ccc'),
+      },
+      {
+        label: 'BE Unconventional HQ',
+        kicker: 'BE',
+        href: page('brands/be-unconventional-hq'),
+      },
+    ],
+  },
+  {
     label: 'Build in Public',
     href: page('build'),
     section: 'build',

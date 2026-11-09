@@ -34,8 +34,23 @@ const isHome = currentPath === homePath;
    there. Home is never lit by this: on the home page the scrollspy decides. */
 const isCurrent = (href: string) => {
   const path = href.split('#')[0].replace(/\/$/, '');
-  if (!path || path === homePath || /^https?:/.test(path)) return false;
-  return currentPath === path || currentPath.startsWith(`${path}/`);
+  if (path && path !== homePath && !/^https?:/.test(path)) {
+    if (currentPath === path || currentPath.startsWith(`${path}/`)) return true;
+  }
+  const item = links.find((l) => l.href === href);
+  if (item?.subsections?.length) {
+    return item.subsections.some((sub) => {
+      if (sub.href.includes('#')) return false;
+      const subPath = sub.href.replace(/\/$/, '');
+      return Boolean(
+        subPath &&
+          subPath !== homePath &&
+          !/^https?:/.test(subPath) &&
+          (currentPath === subPath || currentPath.startsWith(`${subPath}/`))
+      );
+    });
+  }
+  return false;
 };
 ---
 {/* HQ's .safe-area-blackout, kept as HQ has it: env(safe-area-inset-top)
@@ -159,6 +174,22 @@ const isCurrent = (href: string) => {
                 {l.label}
               </a>
             </div>
+            {l.showMobileSubsections && l.subsections.length > 0 && (
+              <ul class="mobile-sub-list">
+                {l.subsections.map((sub) => (
+                  <li>
+                    <a
+                      href={sub.href}
+                      class:list={['mobile-sub-link', { active: isCurrent(sub.href) }]}
+                      aria-current={isCurrent(sub.href) ? 'page' : undefined}
+                    >
+                      <span class="mobile-sub-kicker" aria-hidden="true">{sub.kicker}</span>
+                      <span>{sub.label}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
           </li>
         ))}
       </ul>
@@ -318,7 +349,7 @@ const isCurrent = (href: string) => {
     });
   });
 
-  // Mobile menu: designed open/close — panel slides down, links displayed with subsections.
+  // Mobile menu: designed open/close: panel slides down, links displayed with subsections.
   const menuBtn = document.querySelector('.menu-btn');
   const mobileMenu = document.getElementById('mobile-menu');
   if (menuBtn && mobileMenu) {
@@ -1026,7 +1057,7 @@ const isCurrent = (href: string) => {
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    min-height: 38px;
+    min-height: 44px;
     padding: 0.25rem 0;
     font-family: var(--font-display);
     font-size: 0.72rem;

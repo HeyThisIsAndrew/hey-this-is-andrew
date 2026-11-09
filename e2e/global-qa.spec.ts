@@ -276,6 +276,28 @@ test.describe('Global QA', () => {
       await expect(btn).toHaveAttribute('aria-expanded', 'true');
     }
   });
+
+  test('Brands dropdown & BE Unconventional HQ hub page', async ({ page, isMobile }) => {
+    await page.goto('./');
+    if (isMobile) {
+      await page.locator('.menu-btn').click();
+      const subLinks = page.locator('.mobile-sub-link');
+      await expect(subLinks).toHaveCount(2);
+      await subLinks.filter({ hasText: /BE Unconventional HQ/i }).click();
+    } else {
+      const brandsItem = page.locator('.desktop-nav .nav-item', { hasText: /Brands/i });
+      await brandsItem.hover();
+      const dropdownLinks = brandsItem.locator('.dropdown-link');
+      await expect(dropdownLinks).toHaveCount(2);
+      await dropdownLinks.filter({ hasText: /BE Unconventional HQ/i }).click();
+    }
+    await page.waitForURL('**/brands/be-unconventional-hq/');
+    await expect(page.locator('#hq-hero-heading')).toContainText(/Where nerd culture gets cinematic/i);
+    const flipCards = page.locator('#pillars .flip-card');
+    await expect(flipCards).toHaveCount(4);
+    await flipCards.first().click();
+    await expect(flipCards.first()).toHaveClass(/\bis-flipped\b/);
+  });
 });
 
 test.describe('Phone landscape', () => {
