@@ -15,7 +15,6 @@ import CccPhoto from '../components/ccc/CccPhoto.astro';
 import CccInquiryModal from '../components/ccc/CccInquiryModal.astro';
 import { Image } from 'astro:assets';
 import {
-  CCC_PRICING as P,
   CCC_PORTFOLIO,
   CCC_INQUIRY_HREF,
   CCC_SHOW_VIDEO,
@@ -23,6 +22,7 @@ import {
 } from '../data/ccc';
 
 import logo from '../assets/ccc/s01-logo.png';
+import heroPour from '../assets/hero-media/ccc-pour.jpg';
 import whyCoupe from '../assets/ccc/s02-why-1-coupe.jpg';
 import whyShelves from '../assets/ccc/s03-why-2-bar-shelves.jpg';
 import whereInstagram from '../assets/ccc/s04-where-1-instagram.jpg';
@@ -141,8 +141,19 @@ const packages = [
 
     <!-- 00 Hero -->
     <section id="hero" class="ccc-hero" aria-labelledby="ccc-hero-title">
+      <div class="ccc-hero-media" aria-hidden="true">
+        <CccPhoto src={heroPour} alt="" sizes="100vw" eager />
+      </div>
       <div class="container ccc-hero-inner">
-        <Image src={logo} alt="Capture Create Caffeinate logo" width={520} densities={[1, 2]} class="ccc-hero-logo" loading="eager" fetchpriority="high" />
+        <Image
+          src={logo}
+          alt="Capture Create Caffeinate logo"
+          widths={[150, 260, 300, 350, 520, 700]}
+          sizes="(max-width: 872px) 150px, (max-width: 2015px) 17.2vw, 347px"
+          class="ccc-hero-logo"
+          loading="eager"
+          fetchpriority="high"
+        />
         <h1 id="ccc-hero-title" class="ccc-hero-title">
           <span class="ccc-hero-line">Content that brings people</span><br /><span class="ccc-hero-line">through your door</span>
         </h1>
@@ -160,7 +171,7 @@ const packages = [
         <SectionHeader kicker="Why it matters" title="People decide with their eyes" id="ccc-why" />
         <div class="ccc-why-stage" id="ccc-why-stage">
           <div class="ccc-why-pair ccc-why-pair--top" id="ccc-why-top">
-            <div class="ccc-why-media">
+            <div class="ccc-why-media ccc-crop" data-ccc-crop>
               <CccPhoto src={whyCoupe} alt="A coupe cocktail glass on a dark bar, warm light glowing behind it" sizes="(min-width: 1920px) 810px, (min-width: 900px) 38vw, 94vw" />
             </div>
             <div class="ccc-why-copy">
@@ -172,7 +183,7 @@ const packages = [
               <h3 class="ccc-subtitle">You're busy running the place</h3>
               <p>Nobody behind the bar has time to stop and shoot the pour, the room at 9pm, or the crew in the middle of a rush. That's my job. I come in, stay out of the way, and catch the good stuff your guests already love.</p>
             </div>
-            <div class="ccc-why-media">
+            <div class="ccc-why-media ccc-crop" data-ccc-crop>
               <CccPhoto src={whyShelves} alt="Bar shelves of bottles and records under glowing copper pendant lights, a reel-to-reel deck in front" sizes="(min-width: 1920px) 810px, (min-width: 900px) 38vw, 94vw" />
             </div>
           </div>
@@ -253,7 +264,9 @@ const packages = [
             {desert.map((d) => (
               <li>
                 <figure class="ccc-fig ccc-fig--wide">
-                  <CccPhoto src={d.img} alt={d.alt} sizes="(min-width: 900px) 22vw, 46vw" />
+                  <div class="ccc-crop" data-ccc-crop>
+                    <CccPhoto src={d.img} alt={d.alt} sizes="(min-width: 900px) 22vw, 46vw" />
+                  </div>
                   <figcaption>{d.cap}</figcaption>
                 </figure>
               </li>
@@ -290,7 +303,7 @@ const packages = [
       <div class="container">
         <SectionHeader kicker="How it works" title="Four hours, no disruption" id="ccc-how" />
         <div class="ccc-split">
-          <div class="ccc-split-media">
+          <div class="ccc-split-media ccc-crop" data-ccc-crop>
             <CccPhoto src={howCrew} alt="Kitchen crew at work at the pass of a busy restaurant" sizes="(min-width: 1920px) 735px, (min-width: 900px) 36vw, 94vw" />
           </div>
           <ol class="ccc-steps">
@@ -308,7 +321,7 @@ const packages = [
 
         <h3 class="ccc-subtitle ccc-subtitle--spaced">Easy on your end</h3>
         <div class="ccc-split is-flip">
-          <div class="ccc-split-media">
+          <div class="ccc-split-media ccc-crop" data-ccc-crop>
             <CccPhoto src={howCocktails} alt="A bartender setting two cocktails down on a bar mat" sizes="(min-width: 1920px) 735px, (min-width: 900px) 36vw, 94vw" />
           </div>
           <ul class="ccc-easy">
@@ -328,11 +341,8 @@ const packages = [
       <div class="container">
         <SectionHeader kicker="Packages" title="Pick what you need" id="ccc-pricing" />
         <div class="ccc-pricing">
-          <div class="ccc-pricing-media">
-            <CccPhoto src={pricingCoupe} alt="A coupe cocktail with a green garnish, warm light behind it" sizes="(min-width: 1920px) 735px, (min-width: 900px) 28vw, 94vw" />
-          </div>
           <div class="ccc-pricing-list">
-            <div class="ccc-pricing-cards">
+            <div class="ccc-pricing-cards flip-card-grid flip-card-grid--3">
               {packages.map((pkg, idx) => (
                 <FlipCard
                   value={pkg.value}
@@ -349,6 +359,9 @@ const packages = [
             </div>
             <p class="ccc-price-foot">Rush delivery: full gallery in 48 hours · Events and custom projects quoted by scope</p>
           </div>
+          <div class="ccc-pricing-media ccc-crop" data-ccc-crop>
+            <CccPhoto src={pricingCoupe} alt="A coupe cocktail with a green garnish, warm light behind it" sizes="(min-width: 2117px) 644px, (min-width: 1512px) 30.4vw, (min-width: 900px) 460px, (min-width: 530px) 480px, 94vw" />
+          </div>
         </div>
       </div>
     </section>
@@ -359,10 +372,19 @@ const packages = [
         <CccPhoto src={closerBg} alt="" sizes="100vw" />
       </div>
       <div class="container ccc-closer-inner">
-        <Image src={logo} alt="Capture Create Caffeinate logo" width={300} densities={[1, 2]} class="ccc-closer-logo" />
+        <Image
+          src={logo}
+          alt="Capture Create Caffeinate logo"
+          widths={[100, 150, 200, 300, 400]}
+          sizes="(max-width: 1000px) 100px, (max-width: 2000px) 10vw, 200px"
+          class="ccc-closer-logo"
+        />
         <p class="ccc-closer-eyebrow">Let's get you on the calendar</p>
         <h2 id="ccc-closer" class="ccc-closer-title">Show people what they're missing</h2>
-        <p class="ccc-closer-body">One shoot. Weeks of content. A better reason for people to come see you.</p>
+        <p class="ccc-closer-body">
+          <span class="ccc-closer-line">One shoot. Weeks of content.</span>
+          <span class="ccc-closer-line">A better reason for people to come see you.</span>
+        </p>
         <p class="ccc-closer-price">Photo sessions · Vertical reels · Complete packages</p>
         <div class="ccc-actions btn-group btn-group--row">
           <a class="btn btn-primary" href={CCC_INQUIRY_HREF} data-open-ccc-modal>Contact <span aria-hidden="true">&rarr;</span></a>
@@ -394,22 +416,25 @@ const packages = [
     --ccc-muted: #9e9689;
 
     --ccc-u: 1px;
+    --ccc-logo-u: 1px;
+    --ccc-ctrl-u: 1px;
+    --ccc-media-u: 1px;
     --page-max: min(94vw, 3600px);
     --maxw: var(--page-max);
   }
 
   @media (min-width: 1512px) {
     .ccc-route {
-      --ccc-u: clamp(1px, calc(100vw / 1512), 2.54px);
+      --ccc-u: clamp(1px, calc(100vw / 1512), 1.3333px);
+      --ccc-logo-u: clamp(1px, calc(100vw / 1512), 1.3333px);
+      --ccc-ctrl-u: clamp(1px, calc(100vw / 1512), 1.25px);
+      --ccc-media-u: clamp(1px, calc(100vw / 1512), 1.4px);
     }
   }
 
   /* Fixed nav clearance (same as /about). */
   .page-head { height: clamp(4.5rem, 6vw, calc(76 * var(--ccc-u))); }
 
-  .ccc-hero-body {
-    text-align: center;
-  }
   .ccc-hero-inner {
     display: flex;
     flex-direction: column;
@@ -419,7 +444,7 @@ const packages = [
     will-change: transform, opacity;
   }
   .ccc-hero-logo {
-    width: clamp(150px, 17.2vw, calc(260 * var(--ccc-u)));
+    width: clamp(150px, 17.2vw, calc(260 * var(--ccc-logo-u)));
     height: auto;
     transform-origin: center center;
     will-change: transform, opacity;
@@ -429,7 +454,7 @@ const packages = [
     width: 100%;
     max-width: 100%;
     font-family: var(--ccc-font-display);
-    font-size: clamp(0.88rem, 2.54vw, calc(38.4 * var(--ccc-u)));
+    font-size: clamp(14px, calc(7px + 2.12vw), calc(38.4 * var(--ccc-u)));
     font-weight: 700;
     line-height: 1.15;
     letter-spacing: 0.02em;
@@ -442,11 +467,6 @@ const packages = [
     white-space: nowrap;
     text-align: center;
   }
-  @media (max-width: 480px) {
-    .ccc-hero-title {
-      font-size: clamp(0.82rem, 4.4vw, 1.35rem);
-    }
-  }
   .ccc-hero-sub {
     margin: 0;
     font-family: var(--ccc-font-accent);
@@ -458,21 +478,21 @@ const packages = [
     white-space: nowrap;
   }
   .ccc-actions {
-    --ui-u: var(--ccc-u);
-    --btn-h-md: calc(44 * var(--ccc-u));
-    --btn-px-md: calc(24 * var(--ccc-u));
-    --btn-fs-md: calc(12 * var(--ccc-u));
+    --ui-u: var(--ccc-ctrl-u);
+    --btn-h-md: calc(44 * var(--ccc-ctrl-u));
+    --btn-px-md: calc(24 * var(--ccc-ctrl-u));
+    --btn-fs-md: calc(12 * var(--ccc-ctrl-u));
     margin: calc(9 * var(--ccc-u)) auto 0;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: calc(9 * var(--ccc-u));
+    gap: calc(9 * var(--ccc-ctrl-u));
     width: 100%;
-    max-width: calc(380 * var(--ccc-u));
+    max-width: calc(380 * var(--ccc-ctrl-u));
   }
   .ccc-actions .btn {
     width: 100%;
     min-width: 0;
-    padding-inline: calc(12 * var(--ccc-u));
+    padding-inline: calc(12 * var(--ccc-ctrl-u));
     justify-content: center;
     text-align: center;
     white-space: nowrap;
@@ -482,8 +502,33 @@ const packages = [
   .ccc-hero {
     position: relative;
     z-index: 1;
+    isolation: isolate;
+    overflow: clip;
     padding: clamp(3rem, 5.2vw, calc(72 * var(--ccc-u))) 0 clamp(5rem, 7.5vw, calc(96 * var(--ccc-u)));
     text-align: center;
+  }
+  .ccc-hero-media {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: clip;
+    pointer-events: none;
+  }
+  .ccc-hero-media :global(img) {
+    position: absolute;
+    inset: -100px 0;
+    width: 100%;
+    height: calc(100% + 200px);
+    object-fit: cover;
+    object-position: center 45%;
+  }
+  .ccc-hero-media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, #080808b3, #100d0ae0 75%, #080808),
+      radial-gradient(ellipse at center, #100d0aa6, #08080814 70%);
   }
 
   .ccc-section {
@@ -496,9 +541,8 @@ const packages = [
     box-shadow: 0 -30px 65px -10px rgba(0, 0, 0, 0.98), 0 -12px 28px -5px rgba(0, 0, 0, 0.9);
   }
 
-  .ccc-section > .container {
-    transform-origin: center top;
-    will-change: transform, opacity;
+  .ccc-crop {
+    overflow: clip;
   }
 
   #why { z-index: 2; }
@@ -546,9 +590,6 @@ const packages = [
     pointer-events: none;
     display: flex;
     flex-direction: column;
-    will-change: transform, opacity;
-    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.25, 1),
-                opacity 0.22s ease-out;
   }
 
   .ccc-dock-row {
@@ -669,7 +710,8 @@ const packages = [
     .ccc-dock-row,
     .ccc-hero-inner,
     .ccc-hero-logo,
-    .ccc-section > .container,
+    .ccc-hero-media :global(img),
+    .ccc-crop :global(img),
     .ccc-why-media,
     .ccc-why-copy,
     .ccc-card,
@@ -1088,26 +1130,31 @@ const packages = [
   /* Packages / Offerings */
   .ccc-pricing {
     display: grid;
+    grid-template-columns: minmax(0, 480px);
+    grid-template-areas: "packages" "photo";
+    justify-content: center;
     gap: clamp(1.5rem, 2.4vw, calc(36 * var(--ccc-u)));
-    margin-top: clamp(1.5rem, 2vw, calc(30 * var(--ccc-u)));
-    align-items: center;
+    margin-top: clamp(1.25rem, 2vw, calc(30 * var(--ccc-u)));
+    align-items: start;
   }
-  @media (min-width: 900px) { .ccc-pricing { grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr); } }
   .ccc-pricing-media {
-    max-width: min(735px, calc(420 * var(--ccc-u)));
-    width: 100%;
-    justify-self: center;
+    grid-area: photo;
   }
   .ccc-pricing-list {
+    grid-area: packages;
     display: flex;
     flex-direction: column;
-    gap: calc(10 * var(--ccc-u));
+    align-items: center;
+    gap: calc(12 * var(--ccc-u));
+    width: 100%;
   }
   .ccc-pricing-cards {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: var(--flip-track-w);
     grid-auto-rows: 1fr;
-    gap: calc(10 * var(--ccc-u));
+    gap: calc(1.5 * var(--flip-rem));
+    justify-content: center;
+    width: auto;
     --flip-bg: #111111;
     --flip-bg-back: rgba(20, 20, 20, 0.98);
     --flip-border: rgba(255, 255, 255, 0.08);
@@ -1118,27 +1165,27 @@ const packages = [
     --flip-muted-color: var(--ccc-muted);
     --flip-back-color: var(--ccc-cream-soft);
     --flip-font-label: var(--ccc-font-mono);
-    --flip-padding: calc(20 * var(--ccc-u)) calc(18 * var(--ccc-u));
-    --flip-padding-mobile: 1.05rem 1rem;
-    --flip-back-size: clamp(0.95rem, 0.8vw, calc(12 * var(--ccc-u)));
-    --flip-back-size-mobile: 0.82rem;
   }
-  .ccc-pricing-cards :global(.stat-value) {
-    font-size: clamp(1.25rem, 1.3vw, calc(20 * var(--ccc-u)));
-    letter-spacing: 0.01em;
-    margin-bottom: calc(5 * var(--ccc-u));
+  @media (max-width: 560px) {
+    .ccc-pricing-cards {
+      grid-template-columns: var(--flip-grid-inner);
+      gap: var(--flip-rem);
+    }
   }
-  .ccc-pricing-cards :global(.stat-label) {
-    font-size: clamp(0.68rem, 0.6vw, calc(9 * var(--ccc-u)));
+  @media (min-width: 900px) {
+    .ccc-pricing {
+      grid-template-columns: minmax(0, calc(460 * var(--ccc-media-u))) var(--flip-track-w);
+      grid-template-areas: "photo packages";
+    }
   }
-  .ccc-pricing-cards :global(.pillar-desc) {
-    font-size: clamp(0.8rem, 0.72vw, calc(10.8 * var(--ccc-u)));
-  }
-  .ccc-pricing-cards :global(.flip-action-btn) {
-    --ui-u: var(--ccc-u);
-    font-size: clamp(0.68rem, 0.6vw, calc(9 * var(--ccc-u)));
-    padding: calc(6 * var(--ccc-u)) calc(14 * var(--ccc-u));
-    min-height: max(36px, calc(34 * var(--ccc-u)));
+  @media (max-width: 640px) {
+    #pricing :global(.sec-head) {
+      margin-bottom: 0.75rem;
+    }
+    .ccc-pricing {
+      margin-top: 0.5rem;
+      gap: 1.25rem;
+    }
   }
   .ccc-price-foot {
     margin: calc(5 * var(--ccc-u)) 0 0 !important;
@@ -1173,30 +1220,24 @@ const packages = [
     overflow: hidden;
   }
   .ccc-closer-bg :global(img) {
+    position: absolute;
+    inset: -6% 0;
     width: 100%;
-    height: 100%;
+    height: 112%;
     object-fit: cover;
-    transform-origin: center center;
-    will-change: transform;
-    transition: transform 0.15s ease-out;
   }
   .ccc-closer-bg::after { content: ''; position: absolute; inset: 0; background: rgba(0, 0, 0, 0.72); }
   .ccc-closer-inner {
     display: flex;
     flex-direction: column;
     align-items: center;
+    container-type: inline-size;
     gap: calc(11 * var(--ccc-u));
-    transform-origin: center center;
-    will-change: transform;
-    transition: transform 0.15s ease-out;
   }
   .ccc-closer-logo {
-    width: clamp(100px, 10vw, calc(150 * var(--ccc-u))) !important;
-    max-width: calc(150 * var(--ccc-u));
+    width: clamp(100px, 10vw, calc(150 * var(--ccc-logo-u))) !important;
+    max-width: calc(150 * var(--ccc-logo-u));
     height: auto;
-    transform-origin: center center;
-    will-change: transform;
-    transition: transform 0.15s ease-out;
   }
   .ccc-closer-eyebrow {
     margin: calc(6 * var(--ccc-u)) 0 0;
@@ -1216,16 +1257,19 @@ const packages = [
     letter-spacing: 0.02em;
     text-transform: uppercase;
     color: var(--ccc-cream);
-    transform-origin: center center;
-    will-change: transform;
   }
   .ccc-closer-body {
     margin: 0;
-    max-width: 44ch;
     font-family: var(--ccc-font-serif);
-    font-size: clamp(1.35rem, 1.55vw, calc(23.4 * var(--ccc-u)));
-    line-height: 1.6;
+    font-size: clamp(0.58rem, min(3.4cqw, 3.4vw, 1.45rem), calc(22 * var(--ccc-u)));
+    line-height: 1.45;
     color: var(--ccc-cream-soft);
+    text-align: center;
+  }
+  .ccc-closer-line {
+    display: block;
+    white-space: nowrap;
+    text-align: center;
   }
   .ccc-closer-price {
     margin: 0;
@@ -1239,15 +1283,11 @@ const packages = [
   @media (max-width: 900px) {
     .ccc-closer {
       min-height: 100svh;
-      padding: clamp(3.5rem, 8vw, 5rem) 1.25rem clamp(4rem, 10vw, 6rem);
+      padding: clamp(3.5rem, 8vw, 5rem) 0 clamp(4rem, 10vw, 6rem);
       box-sizing: border-box;
     }
     .ccc-closer-title {
       font-size: clamp(2rem, 7.5vw, 3.2rem);
-    }
-    .ccc-closer-body {
-      font-size: clamp(1.2rem, 4.2vw, 1.55rem);
-      max-width: 32ch;
     }
     .ccc-closer-price {
       font-size: clamp(0.95rem, 3.4vw, 1.2rem);
@@ -1268,10 +1308,6 @@ const packages = [
     .ccc-closer-title {
       font-size: clamp(1.5rem, 4.5vw, 2.2rem);
     }
-    .ccc-closer-body {
-      font-size: clamp(0.95rem, 2.4vw, 1.15rem);
-      max-width: 44ch;
-    }
     .ccc-closer-price {
       font-size: 0.8rem;
     }
@@ -1288,21 +1324,19 @@ const packages = [
   }
 
   function initPinnedScrollStack() {
-    const stack = document.getElementById('ccc-pinned-stack');
-    if (!stack || stack.dataset.cccStackWired === '1') return;
-    stack.dataset.cccStackWired = '1';
+    const stackEl = document.getElementById('ccc-pinned-stack');
+    if (!stackEl || stackEl.dataset.cccStackWired === '1') return;
+    stackEl.dataset.cccStackWired = '1';
+    const stack: HTMLElement = stackEl;
 
     const heroSection = document.getElementById('hero');
-    const heroInner = heroSection?.querySelector<HTMLElement>('.ccc-hero-inner') ?? null;
     const heroBigLogo = heroSection?.querySelector<HTMLElement>('.ccc-hero-logo') ?? null;
+    const heroPhoto = heroSection?.querySelector<HTMLElement>('.ccc-hero-media img') ?? null;
     const heroActions = heroSection?.querySelector<HTMLElement>('.ccc-actions') ?? null;
     const heroDockRow = stack.querySelector<HTMLElement>('.ccc-dock-row[data-target="hero"]');
     const heroBtn = stack.querySelector<HTMLButtonElement>('.ccc-dock-btn--hero');
 
     const closerSection = document.getElementById('contact');
-    const closerInner = closerSection?.querySelector<HTMLElement>('.ccc-closer-inner') ?? null;
-    const closerLogo = closerSection?.querySelector<HTMLElement>('.ccc-closer-logo') ?? null;
-    const closerTitle = closerSection?.querySelector<HTMLElement>('.ccc-closer-title') ?? null;
     const closerBgImg = closerSection?.querySelector<HTMLElement>('.ccc-closer-bg img') ?? null;
 
     // Section 01 elements (independent pair subjects)
@@ -1326,32 +1360,53 @@ const packages = [
     const workRoomWide = document.querySelector<HTMLElement>('#ccc-work-room .ccc-room-wide');
     const workRoomDetail = document.querySelector<HTMLElement>('#ccc-work-room .ccc-room-detail');
 
-    // Consecutive sections for card-stacking overlap parallax (animated on inner .container so section box stays in normal flow)
-    const allSectionIds = ['why', 'where', 'work', 'video', 'how', 'pricing', 'contact'];
-    const allSections = allSectionIds
-      .map((id) => document.getElementById(id))
-      .filter((el): el is HTMLElement => !!el)
-      .map((sec) => ({
-        sec,
-        inner: sec.querySelector<HTMLElement>(':scope > .container'),
-        head: sec.querySelector<HTMLElement>('.sec-head, .ccc-closer-inner'),
-      }));
-
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const cropFrames = Array.from(document.querySelectorAll<HTMLElement>('[data-ccc-crop]'))
+      .flatMap((frame) => {
+        const image = frame.querySelector<HTMLElement>('img');
+        return image ? [{ frame, image }] : [];
+      });
+    const cropState = new WeakMap<HTMLElement, number>();
+    const subjectState = new Map<string, number>();
+    const lifecycle = new AbortController();
+    const { signal } = lifecycle;
+    const html = document.documentElement;
+    const priorScrollPadding = html.style.scrollPaddingTop;
+    let scrollPadding = '';
+    let hadMotion = false;
 
-    function setDockInteractive(interactive: boolean) {
+    function setDockInteractive(interactive: boolean, navBottom = 76) {
       if (!heroDockRow || !heroBtn) return;
+      if (interactive === !heroDockRow.hasAttribute('inert')) return;
       if (interactive) {
         heroDockRow.removeAttribute('inert');
         heroBtn.removeAttribute('tabindex');
       } else {
         // If focus was inside the dock when it hides/dismisses, move focus to a sensible visible destination
         if (stack.contains(document.activeElement)) {
-          const fallback =
-            closerSection && closerSection.getBoundingClientRect().top < window.innerHeight * 0.85
-              ? closerSection.querySelector<HTMLElement>('a, button')
-              : heroSection?.querySelector<HTMLElement>('a, button');
-          (fallback ?? document.querySelector<HTMLElement>('.site-nav a'))?.focus({ preventScroll: true });
+          const isVisible = (el: HTMLElement | null | undefined): el is HTMLElement => {
+            if (!el) return false;
+            const r = el.getBoundingClientRect();
+            return r.width > 0 && r.height > 0 && r.top >= navBottom && r.bottom <= window.innerHeight;
+          };
+          const closerCta = closerSection?.querySelector<HTMLElement>('.ccc-actions a, a, button') ?? null;
+          const heroCta = heroSection?.querySelector<HTMLElement>('.ccc-actions a, a, button') ?? null;
+          let fallback: HTMLElement | null = null;
+          if (isVisible(closerCta)) {
+            fallback = closerCta;
+          } else if (isVisible(heroCta)) {
+            fallback = heroCta;
+          } else {
+            const navControls = Array.from(
+              document.querySelectorAll<HTMLElement>('.site-nav .wordmark, .site-nav .nav-link, .site-nav .menu-btn')
+            );
+            fallback =
+              navControls.find((el) => {
+                const r = el.getBoundingClientRect();
+                return r.width > 0 && r.height > 0;
+              }) ?? null;
+          }
+          fallback?.focus({ preventScroll: true });
         }
         heroDockRow.setAttribute('inert', '');
         heroBtn.setAttribute('tabindex', '-1');
@@ -1361,7 +1416,6 @@ const packages = [
     if (heroBtn) {
       heroBtn.addEventListener('click', () => {
         if (motionQuery.matches) {
-          const html = document.documentElement;
           const prev = html.style.scrollBehavior;
           html.style.scrollBehavior = 'auto';
           window.scrollTo(0, 0);
@@ -1369,27 +1423,16 @@ const packages = [
         } else {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-      });
+      }, { signal });
     }
 
     function clearVisualStyles() {
-      if (heroBigLogo) {
-        heroBigLogo.style.opacity = '';
-        heroBigLogo.style.transform = '';
-      }
-      if (heroInner) {
-        heroInner.style.opacity = '';
-        heroInner.style.transform = '';
-      }
-      allSections.forEach(({ sec, inner }) => {
-        sec.style.transform = '';
-        sec.style.opacity = '';
-        if (inner) {
-          inner.style.transform = '';
-          inner.style.opacity = '';
-        }
+      subjectState.clear();
+      cropFrames.forEach(({ image }) => {
+        cropState.delete(image);
+        image.style.transform = '';
       });
-      [whyTopMedia, whyTopCopy, whyBottomMedia, whyBottomCopy, workRoomWide, workRoomDetail, closerLogo, closerTitle, closerInner, closerBgImg].forEach((el) => {
+      [heroBigLogo, heroPhoto, whyTopMedia, whyTopCopy, whyBottomMedia, whyBottomCopy, workRoomWide, workRoomDetail, closerBgImg].forEach((el) => {
         if (el) {
           el.style.transform = '';
           el.style.opacity = '';
@@ -1407,10 +1450,10 @@ const packages = [
       });
     }
 
-    let ticking = false;
+    let frameRequest = 0;
 
     function updateFrame() {
-      ticking = false;
+      frameRequest = 0;
       const scrollY = window.scrollY;
       const winW = window.innerWidth;
       const winH = window.innerHeight;
@@ -1422,31 +1465,27 @@ const packages = [
 
       // Stable dock bar target height without reading mid-transition offsetHeight
       const isLandscapeShort = winH <= 560 || (winW > winH && winH <= 620);
-      const scaleU = winW >= 1512 ? Math.min(2.54, winW / 1512) : 1;
-      const targetDockH = isLandscapeShort ? 38 : (winW <= 640 ? 46 : Math.round(52 * scaleU));
-
+      const scaleU = winW >= 1512 ? Math.min(1.3333, winW / 1512) : 1;
+      const measuredDockBtnH = heroBtn ? heroBtn.offsetHeight : 0;
+      const targetDockH =
+        measuredDockBtnH > 10
+          ? measuredDockBtnH + 1
+          : isLandscapeShort
+            ? 38
+            : winW <= 640
+              ? 46
+              : Math.round(52 * scaleU);
       // Hero handoff geometry: compute from stable layout offset of hero actions / hero bottom
       const heroTopDoc = heroSection ? pageTop(heroSection) : 0;
       const heroH = heroSection ? heroSection.offsetHeight : 600;
       const actionsBottomDoc = heroActions ? pageTop(heroActions) + heroActions.offsetHeight : heroTopDoc + heroH * 0.78;
-      // Keep copy & actions 100% readable while in view; fade only as the action row approaches the header
-      const fadeStartScroll = Math.max(40, actionsBottomDoc - navH - Math.min(winH * 0.32, 260));
-      const handoffScroll = Math.max(fadeStartScroll + 80, actionsBottomDoc - navH - 24);
+      const handoffScroll = Math.max(0, actionsBottomDoc - navH);
 
       const isDocked = scrollY >= handoffScroll;
       const activeDockH = isDocked ? targetDockH : 0;
       const dockBottom = navH + activeDockH;
 
-      // Read normal-flow section positions
-      const sectionGeometries = allSections.map(({ sec, inner, head }) => {
-        const secTop = pageTop(sec) - scrollY;
-        const secBottom = secTop + sec.offsetHeight;
-        const headTop = head ? pageTop(head) - scrollY : secTop;
-        return { sec, inner, secTop, secBottom, headTop };
-      });
-
-      const closerGeo = sectionGeometries[sectionGeometries.length - 1];
-      const closerTop = closerGeo ? closerGeo.secTop : winH * 2;
+      const closerTop = closerSection ? pageTop(closerSection) - scrollY : winH * 2;
 
       // Subject top positions (in viewport coordinates from normal flow)
       const whyTopY = whyTop ? pageTop(whyTop) - scrollY : winH * 2;
@@ -1455,6 +1494,11 @@ const packages = [
       const workTrioY = workTrio ? pageTop(workTrio) - scrollY : winH * 2;
       const workNightY = workNight ? pageTop(workNight) - scrollY : winH * 2;
       const workRoomY = workRoom ? pageTop(workRoom) - scrollY : winH * 2;
+      const cropPositions = prefersReducedMotion ? [] : cropFrames.map(({ frame, image }) => ({
+        image,
+        top: pageTop(frame) - scrollY,
+        height: frame.offsetHeight,
+      }));
 
       // Helper for bounded reversible progress: starts when subject enters bottom of viewport (winH * 0.92),
       // settles when subject reaches comfortable reading zone (Math.max(dockBottom + 48, winH * 0.38))
@@ -1466,45 +1510,49 @@ const packages = [
       };
 
       // ─── PHASE 2: VISUAL WRITES ─────────────────────────────────────────────
+      const nextPadding = `${Math.round(navH + targetDockH + 28)}px`;
+      if (nextPadding !== scrollPadding) {
+        html.style.scrollPaddingTop = nextPadding;
+        scrollPadding = nextPadding;
+      }
       // Dock state & closer push-up
       const closerStartTrigger = winH * 0.85;
       const closerPushRange = Math.max(1, winH * 0.45);
       const closerPushRaw = closerTop < closerStartTrigger ? (closerStartTrigger - closerTop) / closerPushRange : 0;
       const closerPushProgress = Math.min(1, Math.max(0, closerPushRaw));
-      const isDockDismissed = closerPushProgress > 0.15;
+      const easedPush = 1 - Math.pow(1 - closerPushProgress, 3);
+      const pushY = easedPush * (activeDockH + navH + 20);
+      const isDockDismissed = pushY > 4 || closerPushProgress > 0.04;
 
       if (heroDockRow) {
         heroDockRow.classList.toggle('is-docked', isDocked);
       }
       stack.classList.toggle('is-dismissed', isDockDismissed);
-      setDockInteractive(isDocked && !isDockDismissed);
+      setDockInteractive(isDocked && !isDockDismissed, navH);
 
       if (prefersReducedMotion) {
-        clearVisualStyles();
+        if (hadMotion) clearVisualStyles();
+        hadMotion = false;
         // Discrete dock visibility in reduced motion
         stack.style.transform = '';
         stack.style.opacity = isDocked && !isDockDismissed ? '1' : '0';
         stack.style.pointerEvents = isDocked && !isDockDismissed ? '' : 'none';
         return;
       }
+      hadMotion = true;
 
-      // 1. Hero exit animation (starts at fadeStartScroll, completes at handoffScroll)
-      const heroProgress = Math.min(
-        1,
-        Math.max(0, (scrollY - fadeStartScroll) / Math.max(1, handoffScroll - fadeStartScroll))
-      );
-      if (heroBigLogo) {
-        heroBigLogo.style.opacity = (1 - heroProgress).toFixed(3);
-        heroBigLogo.style.transform = `translate3d(0, -${(heroProgress * 32).toFixed(1)}px, 0) scale(${(1 - heroProgress * 0.18).toFixed(3)})`;
-      }
-      if (heroInner) {
-        heroInner.style.opacity = (1 - heroProgress * 0.82).toFixed(3);
+      // The image and mark move independently while the heading and actions stay in normal flow.
+      const motionScale = isLandscapeShort ? 0.35 : winW < 900 ? 0.5 : Math.min(1.4, winW / 1512);
+      const heroProgress = Math.min(1, Math.max(0, (scrollY - heroTopDoc + navH) / heroH));
+      const heroTravel = Math.round(heroProgress * 66 * motionScale * 10) / 10;
+      if (subjectState.get('hero') !== heroTravel) {
+        subjectState.set('hero', heroTravel);
+        if (heroPhoto) heroPhoto.style.transform = `translate3d(0, ${heroTravel}px, 0)`;
+        if (heroBigLogo) heroBigLogo.style.transform = `translate3d(0, ${(heroTravel * 0.2).toFixed(1)}px, 0)`;
       }
 
       // 2. Closer push-up on the pinned dock bar
       if (closerPushProgress > 0) {
-        const eased = 1 - Math.pow(1 - closerPushProgress, 3);
-        const pushY = eased * (activeDockH + navH + 20);
         stack.style.transform = `translate3d(0, -${pushY.toFixed(1)}px, 0)`;
         const fadeProgress = Math.min(1, Math.max(0, closerPushProgress / 0.85));
         const opacity = 1 - Math.pow(fadeProgress, 1.4);
@@ -1516,151 +1564,139 @@ const packages = [
         stack.style.pointerEvents = '';
       }
 
-      // 3. Consecutive section card-stacking overlap (applied to inner .container so section box never shifts)
-      for (let i = 0; i < sectionGeometries.length - 1; i++) {
-        const curr = sectionGeometries[i];
-        const next = sectionGeometries[i + 1];
-        if (!curr.inner) continue;
-
-        if (curr.headTop >= dockBottom - 4) {
-          curr.inner.style.transform = '';
-          curr.inner.style.opacity = '1';
-          continue;
-        }
-
-        const overlapStart = winH * 0.85;
-        const overlapRange = Math.max(1, overlapStart - dockBottom);
-        if (next.secTop < overlapStart && next.secBottom > dockBottom) {
-          const progress = Math.min(1, Math.max(0, (overlapStart - next.secTop) / overlapRange));
-          const scale = 1 - progress * 0.04;
-          const opacity = 1 - progress * 0.55;
-          const driftY = progress * 20;
-          curr.inner.style.transform = `translate3d(0, -${driftY.toFixed(1)}px, 0) scale(${scale.toFixed(3)})`;
-          curr.inner.style.opacity = Math.max(0.35, opacity).toFixed(3);
-        } else if (next.secTop >= overlapStart) {
-          curr.inner.style.transform = '';
-          curr.inner.style.opacity = '1';
-        } else {
-          curr.inner.style.transform = 'translate3d(0, -20px, 0) scale(0.96)';
-          curr.inner.style.opacity = '0.45';
-        }
+      // Images scrub inside reserved crop windows. Text, captions and focus rings stay put.
+      for (const { image, top, height } of cropPositions) {
+        const limit = Math.min(height * 0.06, 24 * motionScale);
+        const offset = Math.round((subjectProgress(top) - 0.5) * 2 * limit * 10) / 10;
+        if (cropState.get(image) === offset) continue;
+        cropState.set(image, offset);
+        image.style.transform = `translate3d(0, ${offset}px, 0) scale(1.13)`;
       }
 
       // 4. Section 01 (Why it matters): Independent progress per pair
       const pWhyTop = subjectProgress(whyTopY);
-      if (whyTopMedia) {
-        const imgScale = 0.92 + pWhyTop * 0.08;
-        const imgShiftX = (1 - pWhyTop) * 32;
-        whyTopMedia.style.transform = `translate3d(-${imgShiftX.toFixed(1)}px, 0, 0) scale(${imgScale.toFixed(3)})`;
-      }
-      if (whyTopCopy) {
-        const textScale = 0.96 + pWhyTop * 0.04;
-        const textShiftX = (1 - pWhyTop) * 24;
-        const textOpacity = 0.45 + pWhyTop * 0.55;
-        whyTopCopy.style.opacity = textOpacity.toFixed(3);
-        whyTopCopy.style.transform = `translate3d(${textShiftX.toFixed(1)}px, 0, 0) scale(${textScale.toFixed(3)})`;
+      if (subjectState.get('whyTop') !== pWhyTop) {
+        subjectState.set('whyTop', pWhyTop);
+        if (whyTopMedia) {
+          const imgScale = 0.92 + pWhyTop * 0.08;
+          const imgShiftX = (1 - pWhyTop) * 32;
+          whyTopMedia.style.transform = `translate3d(-${imgShiftX.toFixed(1)}px, 0, 0) scale(${imgScale.toFixed(3)})`;
+        }
+        if (whyTopCopy) {
+          const textShiftX = (1 - pWhyTop) * 12 * motionScale;
+          whyTopCopy.style.transform = `translate3d(${textShiftX.toFixed(1)}px, 0, 0)`;
+        }
       }
 
       const pWhyBottom = subjectProgress(whyBottomY);
-      if (whyBottomMedia) {
-        const imgScale = 0.92 + pWhyBottom * 0.08;
-        const imgShiftX = (1 - pWhyBottom) * 32;
-        whyBottomMedia.style.transform = `translate3d(${imgShiftX.toFixed(1)}px, 0, 0) scale(${imgScale.toFixed(3)})`;
-      }
-      if (whyBottomCopy) {
-        const textScale = 0.96 + pWhyBottom * 0.04;
-        const textShiftX = (1 - pWhyBottom) * 24;
-        const textOpacity = 0.45 + pWhyBottom * 0.55;
-        whyBottomCopy.style.opacity = textOpacity.toFixed(3);
-        whyBottomCopy.style.transform = `translate3d(-${textShiftX.toFixed(1)}px, 0, 0) scale(${textScale.toFixed(3)})`;
+      if (subjectState.get('whyBottom') !== pWhyBottom) {
+        subjectState.set('whyBottom', pWhyBottom);
+        if (whyBottomMedia) {
+          const imgScale = 0.92 + pWhyBottom * 0.08;
+          const imgShiftX = (1 - pWhyBottom) * 32;
+          whyBottomMedia.style.transform = `translate3d(${imgShiftX.toFixed(1)}px, 0, 0) scale(${imgScale.toFixed(3)})`;
+        }
+        if (whyBottomCopy) {
+          const textShiftX = (1 - pWhyBottom) * 12 * motionScale;
+          whyBottomCopy.style.transform = `translate3d(-${textShiftX.toFixed(1)}px, 0, 0)`;
+        }
       }
 
       // 5. Section 02 (Where it goes): Fold-out tied to #ccc-where-grid
       if (whereCards.length === 4) {
         const pWhere = subjectProgress(whereGridY);
-        const isNarrow = winW < 900;
-        const offsets = isNarrow ? [32, -32, 32, -32] : [96, 32, -32, -96];
-        const rotations = isNarrow ? [-1.5, 1.5, -1.5, 1.5] : [-2.2, -0.9, 0.9, 2.2];
-        const cardScale = 0.90 + pWhere * 0.10;
-        const cardOpacity = 0.45 + pWhere * 0.55;
+        const isNarrow = winW < 900 ? 1 : 0;
+        const whereState = pWhere + isNarrow * 10;
+        if (subjectState.get('where') !== whereState) {
+          subjectState.set('where', whereState);
+          const offsets = isNarrow ? [14, -14, 14, -14] : [28, 12, -12, -28];
+          const rotations = isNarrow ? [-1.5, 1.5, -1.5, 1.5] : [-2.2, -0.9, 0.9, 2.2];
+          const cardScale = 0.90 + pWhere * 0.10;
 
-        whereCards.forEach((card, idx) => {
-          const currX = (1 - pWhere) * (offsets[idx] || 0);
-          const currRot = (1 - pWhere) * (rotations[idx] || 0);
-          card.style.transform = `translate3d(${currX.toFixed(1)}px, 0, 0) rotate(${currRot.toFixed(2)}deg) scale(${cardScale.toFixed(3)})`;
-          card.style.opacity = cardOpacity.toFixed(3);
-        });
+          whereCards.forEach((card, idx) => {
+            const currX = (1 - pWhere) * (offsets[idx] || 0);
+            const currRot = (1 - pWhere) * (rotations[idx] || 0);
+            card.style.transform = `translate3d(${currX.toFixed(1)}px, 0, 0) rotate(${currRot.toFixed(2)}deg) scale(${cardScale.toFixed(3)})`;
+          });
+        }
       }
 
       // 6. Section 03 (The work): Independent progress for Trio, Night Mosaic, and Room
       if (workItems.length > 0) {
         const pTrio = subjectProgress(workTrioY);
-        const floatOffsets = [24, 44, 18];
-        workItems.forEach((item, idx) => {
-          const yOffset = (1 - pTrio) * (floatOffsets[idx] || 24);
-          item.style.transform = `translate3d(0, ${yOffset.toFixed(1)}px, 0)`;
-        });
+        if (subjectState.get('workTrio') !== pTrio) {
+          subjectState.set('workTrio', pTrio);
+          const floatOffsets = [24, 44, 18];
+          workItems.forEach((item, idx) => {
+            const yOffset = (1 - pTrio) * (floatOffsets[idx] || 24);
+            item.style.transform = `translate3d(0, ${yOffset.toFixed(1)}px, 0)`;
+          });
+        }
       }
 
       if (workTiles.length > 0) {
         const pNight = subjectProgress(workNightY);
-        const tileFloats = [18, 32, 14, 28];
-        workTiles.forEach((tile, idx) => {
-          const yOffset = (1 - pNight) * (tileFloats[idx] || 20);
-          tile.style.transform = `translate3d(0, ${yOffset.toFixed(1)}px, 0)`;
-        });
+        if (subjectState.get('workNight') !== pNight) {
+          subjectState.set('workNight', pNight);
+          const tileFloats = [18, 32, 14, 28];
+          workTiles.forEach((tile, idx) => {
+            const yOffset = (1 - pNight) * (tileFloats[idx] || 20);
+            tile.style.transform = `translate3d(0, ${yOffset.toFixed(1)}px, 0)`;
+          });
+        }
       }
 
       if (workRoomWide || workRoomDetail) {
         const pRoom = subjectProgress(workRoomY);
-        if (workRoomWide) {
-          const roomScale = 0.95 + pRoom * 0.05;
-          workRoomWide.style.transform = `scale(${roomScale.toFixed(3)})`;
-        }
-        if (workRoomDetail) {
-          const detailY = (1 - pRoom) * -20;
-          workRoomDetail.style.transform = `translate3d(0, ${detailY.toFixed(1)}px, 0)`;
+        if (subjectState.get('workRoom') !== pRoom) {
+          subjectState.set('workRoom', pRoom);
+          if (workRoomWide) {
+            const roomScale = 0.95 + pRoom * 0.05;
+            workRoomWide.style.transform = `scale(${roomScale.toFixed(3)})`;
+          }
+          if (workRoomDetail) {
+            const detailY = (1 - pRoom) * -20;
+            workRoomDetail.style.transform = `translate3d(0, ${detailY.toFixed(1)}px, 0)`;
+          }
         }
       }
 
-      // 7. Closer reveal & background crop
-      if (closerSection) {
+      // Only the closing photograph moves as the dock clears.
+      if (closerSection && closerBgImg) {
         const enterY = winH;
         const finishY = Math.max(navH + 40, winH * 0.22);
         const closerProgress = Math.min(1, Math.max(0, (enterY - closerTop) / Math.max(1, enterY - finishY)));
-
-        if (closerLogo) {
-          const logoScale = 0.88 + closerProgress * 0.16;
-          closerLogo.style.transform = `scale(${logoScale.toFixed(3)})`;
-        }
-        if (closerTitle) {
-          const titleScale = 0.92 + closerProgress * 0.08;
-          closerTitle.style.transform = `scale(${titleScale.toFixed(3)})`;
-        }
-        if (closerInner) {
-          const translateY = (1 - closerProgress) * 32;
-          closerInner.style.transform = `translate3d(0, ${translateY.toFixed(1)}px, 0)`;
-        }
-        if (closerBgImg) {
-          const bgScale = 1.0 + closerProgress * 0.12;
-          closerBgImg.style.transform = `scale(${bgScale.toFixed(3)})`;
+        const travel = Math.min(42 * motionScale, closerSection.offsetHeight * 0.05);
+        const y = Math.round((1 - closerProgress) * travel * 10) / 10;
+        if (subjectState.get('closer') !== y) {
+          subjectState.set('closer', y);
+          closerBgImg.style.transform = `translate3d(0, ${y}px, 0) scale(${(1.04 + closerProgress * 0.04).toFixed(3)})`;
         }
       }
     }
 
     const requestUpdate = () => {
-      if (!ticking) {
-        requestAnimationFrame(updateFrame);
-        ticking = true;
-      }
+      if (!frameRequest && !signal.aborted) frameRequest = requestAnimationFrame(updateFrame);
     };
 
-    window.addEventListener('scroll', requestUpdate, { passive: true });
-    window.addEventListener('resize', requestUpdate, { passive: true });
-    window.addEventListener('orientationchange', () => {
-      setTimeout(updateFrame, 120);
-    }, { passive: true });
-    motionQuery.addEventListener('change', updateFrame);
+    window.addEventListener('scroll', requestUpdate, { passive: true, signal });
+    window.addEventListener('resize', requestUpdate, { passive: true, signal });
+    window.addEventListener('orientationchange', requestUpdate, { passive: true, signal });
+    motionQuery.addEventListener('change', requestUpdate, { signal });
+    document.fonts?.ready.then(requestUpdate).catch(() => {});
+
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(requestUpdate) : null;
+    const navEl = document.querySelector<HTMLElement>('.site-nav');
+    const route = stack.closest('.ccc-route');
+    if (navEl) observer?.observe(navEl);
+    if (route) observer?.observe(route);
+
+    document.addEventListener('astro:before-swap', () => {
+      lifecycle.abort();
+      observer?.disconnect();
+      cancelAnimationFrame(frameRequest);
+      if (html.style.scrollPaddingTop === scrollPadding) html.style.scrollPaddingTop = priorScrollPadding;
+    }, { once: true });
 
     updateFrame();
   }

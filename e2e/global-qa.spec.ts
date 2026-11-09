@@ -285,18 +285,90 @@ test.describe('Global QA', () => {
       await expect(subLinks).toHaveCount(2);
       await subLinks.filter({ hasText: /BE Unconventional HQ/i }).click();
     } else {
+      // Verify 861px and 899px viewports keep "Build in Public" single-line and .site-nav at 76px height
+      for (const vw of [861, 899]) {
+        await page.setViewportSize({ width: vw, height: 844 });
+        const navMetrics = await page.evaluate(() => {
+          const nav = document.querySelector<HTMLElement>('.site-nav')!;
+          const bip = Array.from(document.querySelectorAll<HTMLElement>('.desktop-nav .nav-link')).find((el) =>
+            el.textContent?.includes('Build in Public')
+          )!;
+          return {
+            navH: Math.round(nav.getBoundingClientRect().height),
+            bipH: Math.round(bip.getBoundingClientRect().height),
+          };
+        });
+        expect(navMetrics.navH).toBe(76);
+        expect(navMetrics.bipH).toBeLessThanOrEqual(45);
+      }
+
+      await page.setViewportSize({ width: 1440, height: 900 });
       const brandsItem = page.locator('.desktop-nav .nav-item').filter({ has: page.locator('.nav-link', { hasText: 'Brands' }) });
-      await brandsItem.hover();
+      const brandsMainLink = brandsItem.locator('.nav-link', { hasText: 'Brands' });
+
+      // Keyboard ArrowDown opens dropdown; Escape closes it without reopening on focus return; ArrowDown reopens
+      await brandsMainLink.focus();
+      await page.keyboard.press('ArrowDown');
+      await expect(brandsMainLink).toHaveAttribute('aria-expanded', 'true');
+      await expect(brandsItem).toHaveClass(/\bis-open\b/);
+
+      await page.keyboard.press('Escape');
+      await expect(brandsMainLink).toHaveAttribute('aria-expanded', 'false');
+      await expect(brandsItem).not.toHaveClass(/\bis-open\b/);
+      await expect(brandsMainLink).toBeFocused();
+
+      await page.keyboard.press('ArrowDown');
+      await expect(brandsMainLink).toHaveAttribute('aria-expanded', 'true');
+
       const dropdownLinks = brandsItem.locator('.dropdown-link');
       await expect(dropdownLinks).toHaveCount(2);
       await dropdownLinks.filter({ hasText: /BE Unconventional HQ/i }).click();
     }
     await page.waitForURL('**/brands/be-unconventional-hq/');
     await expect(page.locator('#hq-hero-title')).toContainText(/Where nerd culture/i);
+
+    // Current-page semantics: parent Brands link has .active without aria-current="page"; child HQ link has aria-current="page"
+    const desktopBrandsLink = page.locator('.desktop-nav .nav-link', { hasText: 'Brands' });
+    await expect(desktopBrandsLink).toHaveClass(/\bactive\b/);
+    expect(await desktopBrandsLink.getAttribute('aria-current')).toBeNull();
+    const desktopHqSubLink = page
+      .locator('.desktop-nav .nav-item')
+      .filter({ has: page.locator('.nav-link', { hasText: 'Brands' }) })
+      .locator('.dropdown-link')
+      .filter({ hasText: /BE Unconventional HQ/i });
+    await expect(desktopHqSubLink).toHaveAttribute('aria-current', 'page');
+    const mobileHqSubLink = page.locator('.mobile-sub-link').filter({ hasText: /BE Unconventional HQ/i });
+    await expect(mobileHqSubLink).toHaveAttribute('aria-current', 'page');
+
+    // Closer Press inquiry button routes to Collaborations
+    const pressBtn = page.locator('#visit .hq-actions a', { hasText: /Press inquiry/i });
+    await expect(pressBtn).toHaveAttribute('href', 'https://beunconventionalhq.com/collaborations');
+
+    // Flip cards on HQ Hub
     const flipCards = page.locator('#pillars .flip-card');
     await expect(flipCards).toHaveCount(4);
     await flipCards.first().click();
     await expect(flipCards.first()).toHaveClass(/\bis-flipped\b/);
+
+    // Reduced motion and inert dock at page top on HQ Hub
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(80);
+    await expect(page.locator('.hq-dock-row--hero')).toHaveAttribute('inert', '');
+    await page.evaluate(() => window.scrollTo(0, 140));
+    await page.waitForTimeout(80);
+    const hqHeroReduced = await page.evaluate(() => {
+      const logo = document.querySelector<HTMLElement>('.hq-hero-logo')!;
+      const inner = document.querySelector<HTMLElement>('.hq-hero-inner')!;
+      return {
+        logoOpacity: getComputedStyle(logo).opacity,
+        logoTransform: getComputedStyle(logo).transform,
+        innerOpacity: getComputedStyle(inner).opacity,
+      };
+    });
+    expect(hqHeroReduced.logoOpacity).toBe('1');
+    expect(hqHeroReduced.logoTransform).toBe('none');
+    expect(hqHeroReduced.innerOpacity).toBe('1');
   });
 });
 

@@ -163,7 +163,28 @@ test.describe('CCC Page Overhaul & Regression Acceptance (CCC-01 through CCC-07)
       }
     }
 
-    // Also verify two-line hero at 320px portrait and 844x390 short landscape
+    // Verify 4K calibration (headline ~51.2px, logo ~347px, CTA row ~475px)
+    const m4k = metrics[metrics.length - 1];
+    expect(m4k.heroTitleFs).toBeGreaterThanOrEqual(48);
+    expect(m4k.heroTitleFs).toBeLessThanOrEqual(55);
+    expect(m4k.heroLogoW).toBeGreaterThanOrEqual(330);
+    expect(m4k.heroLogoW).toBeLessThanOrEqual(365);
+    expect(m4k.heroActionsW).toBeGreaterThanOrEqual(450);
+    expect(m4k.heroActionsW).toBeLessThanOrEqual(500);
+
+    // Verify continuous hero title growth across 320 -> 390 -> 480 -> 481 (no drop at 481px)
+    const mobileFs: number[] = [];
+    for (const vw of [320, 390, 480, 481]) {
+      await page.setViewportSize({ width: vw, height: 844 });
+      await page.goto('./ccc/');
+      const fs = await page.locator('#ccc-hero-title').evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+      mobileFs.push(fs);
+    }
+    expect(mobileFs[1]).toBeGreaterThanOrEqual(mobileFs[0]);
+    expect(mobileFs[2]).toBeGreaterThanOrEqual(mobileFs[1]);
+    expect(mobileFs[3]).toBeGreaterThanOrEqual(mobileFs[2] - 0.1);
+
+    // Also verify two-line hero at 320px portrait and 844x390 short landscape, plus width-descriptor logo srcset
     for (const [vw, vh] of [
       [320, 640],
       [844, 390],
@@ -173,15 +194,28 @@ test.describe('CCC Page Overhaul & Regression Acceptance (CCC-01 through CCC-07)
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
       expect(overflow).toBe(false);
     }
+    const logoSrcset = await page.locator('.ccc-hero-logo').getAttribute('srcset');
+    expect(logoSrcset).toContain('150w');
+    expect(logoSrcset).toContain('700w');
   });
 
-  test('CCC-03: Scroll timing, hero readability at 140px, independent subject progress, and reversible states', async ({ page }) => {
+  test('CCC-03: Scroll timing, hero readability at 140px, independent subject progress, 4K anchor clearance, and reversible states', async ({ page }) => {
+    const scrollInstant = async (y: number) => {
+      await page.evaluate(async (targetY) => {
+        const html = document.documentElement;
+        const prev = html.style.scrollBehavior;
+        html.style.scrollBehavior = 'auto';
+        window.scrollTo(0, targetY);
+        html.style.scrollBehavior = prev;
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      }, y);
+    };
+
     await page.setViewportSize({ width: 3840, height: 2160 });
     await page.goto('./ccc/');
 
     // At 3840x2160, scrolling 140px keeps hero logo and content 100% opaque because actions are still well in view
-    await page.evaluate(() => window.scrollTo(0, 140));
-    await page.waitForTimeout(80);
+    await scrollInstant(140);
     const heroAt140 = await page.evaluate(() => {
       const logo = document.querySelector<HTMLElement>('.ccc-hero-logo')!;
       const inner = document.querySelector<HTMLElement>('.ccc-hero-inner')!;
@@ -193,10 +227,31 @@ test.describe('CCC Page Overhaul & Regression Acceptance (CCC-01 through CCC-07)
     expect(heroAt140.logoOpacity).toBeGreaterThan(0.95);
     expect(heroAt140.innerOpacity).toBeGreaterThan(0.95);
 
-    // Independent progress: when Why top pair is near reading position and Why bottom pair is lower,
-    // their progress transforms differ, and when #ccc-work-room enters view it has not already finished before entering
+    // Independent progress: when Why top pair is settled and Why bottom pair is lower in the viewport,
+    // their numeric DOMMatrixReadOnly scale/translate values differ
     await page.setViewportSize({ width: 1512, height: 982 });
     await page.goto('./ccc/');
+
+    const whyTopDoc = await page.evaluate(() => {
+      const el = document.getElementById('ccc-why-top')!;
+      let y = 0;
+      for (let n: HTMLElement | null = el; n; n = n.offsetParent as HTMLElement | null) y += n.offsetTop;
+      return y;
+    });
+    await scrollInstant(Math.round(whyTopDoc - 420));
+    const whyPairMatrices = await page.evaluate(() => {
+      const topMedia = document.querySelector<HTMLElement>('#ccc-why-top .ccc-why-media')!;
+      const bottomMedia = document.querySelector<HTMLElement>('#ccc-why-bottom .ccc-why-media')!;
+      const mTop = new DOMMatrixReadOnly(getComputedStyle(topMedia).transform);
+      const mBottom = new DOMMatrixReadOnly(getComputedStyle(bottomMedia).transform);
+      return {
+        topScale: mTop.a,
+        bottomScale: mBottom.a,
+        topX: mTop.m41,
+        bottomX: mBottom.m41,
+      };
+    });
+    expect(whyPairMatrices.topScale).toBeGreaterThan(whyPairMatrices.bottomScale);
 
     const roomTopDoc = await page.evaluate(() => {
       const el = document.getElementById('ccc-work-room')!;
@@ -207,34 +262,61 @@ test.describe('CCC Page Overhaul & Regression Acceptance (CCC-01 through CCC-07)
 
     // Scroll so #ccc-work-room is just entering the bottom of the viewport (top = 982 * 0.88)
     const entryScrollY = Math.round(roomTopDoc - 982 * 0.88);
-    await page.evaluate((y) => window.scrollTo(0, y), entryScrollY);
-    await page.waitForTimeout(80);
-    const roomTransformEntry = await page.locator('#ccc-work-room .ccc-room-wide').evaluate((el) => el.style.transform);
+    await scrollInstant(entryScrollY);
+    const roomScaleEntry = await page
+      .locator('#ccc-work-room .ccc-room-wide')
+      .evaluate((el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).a);
 
     // Scroll so #ccc-work-room settles in reading zone (top = 350)
     const settledScrollY = Math.round(roomTopDoc - 350);
-    await page.evaluate((y) => window.scrollTo(0, y), settledScrollY);
-    await page.waitForTimeout(80);
-    const roomTransformSettled = await page.locator('#ccc-work-room .ccc-room-wide').evaluate((el) => el.style.transform);
+    await scrollInstant(settledScrollY);
+    const roomScaleSettled = await page
+      .locator('#ccc-work-room .ccc-room-wide')
+      .evaluate((el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).a);
 
-    expect(roomTransformEntry).not.toBe(roomTransformSettled);
-    expect(roomTransformSettled).toMatch(/scale\((1\.000|1)\)/);
+    expect(roomScaleEntry).toBeLessThan(0.99);
+    expect(roomScaleSettled).toBeCloseTo(1, 2);
 
-    // Reversibility: scrolling back to entryScrollY from below produces the exact same transform
-    await page.evaluate((y) => window.scrollTo(0, y), entryScrollY);
-    await page.waitForTimeout(80);
-    const roomTransformReversed = await page.locator('#ccc-work-room .ccc-room-wide').evaluate((el) => el.style.transform);
-    expect(roomTransformReversed).toBe(roomTransformEntry);
+    // Reversibility: scrolling back to entryScrollY from below produces the exact same numeric scale
+    await scrollInstant(entryScrollY);
+    const roomScaleReversed = await page
+      .locator('#ccc-work-room .ccc-room-wide')
+      .evaluate((el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).a);
+    expect(roomScaleReversed).toBeCloseTo(roomScaleEntry, 3);
+
+    // 4K same-document location.hash jumps (#why, #how) and PageNav jumps clear the painted dock
+    await page.setViewportSize({ width: 3840, height: 2160 });
+    await page.goto('./ccc/');
+    for (const hash of ['#why', '#how']) {
+      await page.evaluate((h) => {
+        location.hash = h;
+      }, hash);
+      await page.waitForTimeout(150);
+      const clearance = await page.evaluate((h) => {
+        const sec = document.querySelector(h)!;
+        const head = sec.querySelector<HTMLElement>('.sec-head')!;
+        const dock = document.querySelector<HTMLElement>('.ccc-dock-row--hero')!;
+        const headRect = head.getBoundingClientRect();
+        const dockRect = dock.getBoundingClientRect();
+        const hit = document.elementFromPoint(headRect.left + 20, headRect.top + 10);
+        return {
+          headTop: headRect.top,
+          dockBottom: dockRect.bottom,
+          hitInDock: Boolean(hit?.closest('#ccc-pinned-stack')),
+        };
+      }, hash);
+      expect(clearance.headTop).toBeGreaterThanOrEqual(clearance.dockBottom);
+      expect(clearance.hitInDock).toBe(false);
+    }
 
     // 4K deep link to #contact: #ccc-closer is in viewport and Contact PageNav item is active
-    await page.setViewportSize({ width: 3840, height: 2160 });
     await page.goto('./ccc/#contact');
     await page.waitForTimeout(200);
     await expect(page.locator('#ccc-closer')).toBeInViewport();
     await expect(page.locator('#page-nav [data-pn-link="ccc-closer"]')).toHaveClass(/\bactive\b/);
   });
 
-  test('CCC-04: Reduced motion respected on initial load and live toggle, and dock inert when hidden or dismissed', async ({ page }) => {
+  test('CCC-04: Reduced motion respected on initial load and live toggle, and dock focus fallback stays visible', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.setViewportSize({ width: 3840, height: 2160 });
     await page.goto('./ccc/');
@@ -258,29 +340,90 @@ test.describe('CCC Page Overhaul & Regression Acceptance (CCC-01 through CCC-07)
     expect(heroReduced.logoTransform).toBe('none');
     expect(heroReduced.innerOpacity).toBe('1');
 
-    // Scroll to mid-page so dock becomes visible and operable
-    await page.evaluate(() => window.scrollTo(0, 2200));
+    // Live toggle to no-preference while scrolled into Why section, then back to reduce
+    await page.evaluate(() => window.scrollTo(0, 1600));
+    await page.waitForTimeout(80);
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.waitForTimeout(80);
     await expect(page.locator('.ccc-dock-row--hero')).toHaveClass(/is-docked/);
     expect(await page.locator('.ccc-dock-row--hero').getAttribute('inert')).toBeNull();
 
-    // Scroll to closer at bottom: closer title and bg do not scale in reduced motion, and dock is dismissed + inert
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    await page.waitForTimeout(80);
-    const closerReduced = await page.evaluate(() => {
-      const title = document.querySelector<HTMLElement>('.ccc-closer-title')!;
-      const bg = document.querySelector<HTMLElement>('.ccc-closer-bg img')!;
-      return {
-        titleTransform: getComputedStyle(title).transform,
-        bgTransform: getComputedStyle(bg).transform,
-      };
+    // Focus dock button, then scroll to where closer begins dismissing the dock while closer CTA is still below viewport
+    const dockBtn = page.locator('.ccc-dock-btn--hero');
+    await dockBtn.focus();
+    await expect(dockBtn).toBeFocused();
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.evaluate(() => {
+      const closer = document.getElementById('contact')!;
+      let y = 0;
+      for (let n: HTMLElement | null = closer; n; n = n.offsetParent as HTMLElement | null) y += n.offsetTop;
+      // Put closer top at 0.75 * innerHeight so dock dismisses while closer CTA is still offscreen
+      window.scrollTo(0, Math.round(y - window.innerHeight * 0.75));
     });
-    expect(closerReduced.titleTransform).toBe('none');
-    expect(closerReduced.bgTransform).toBe('none');
+    await page.waitForTimeout(100);
     await expect(page.locator('.ccc-dock-row--hero')).toHaveAttribute('inert', '');
+    const activeInViewport = await page.evaluate(() => {
+      const active = document.activeElement as HTMLElement | null;
+      if (!active || active === document.body) return false;
+      const r = active.getBoundingClientRect();
+      return r.top >= 0 && r.bottom <= window.innerHeight;
+    });
+    expect(activeInViewport).toBe(true);
   });
 
-  test('CCC-06: Package flip cards and back-face Contact buttons are keyboard accessible and restore focus', async ({ page }) => {
+  test('CCC-05 & CCC-06: Rotating tile reference parity (390, 1440, 3840), hover Contact hit-testing, Escape dismissal, and keyboard accessibility', async ({ page }, testInfo) => {
+    const viewports = [
+      { width: 390, height: 844, expectedW: 326, expectedH: 180, expectedGap: 16 },
+      { width: 1440, height: 900, expectedW: 333, expectedH: 155, expectedGap: 19.2 },
+      { width: 3840, height: 2160, expectedW: 611, expectedH: 221, expectedGap: 27.6 },
+    ];
+
+    for (const vp of viewports) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      for (const route of ['./brands/be-unconventional-hq/', './ccc/']) {
+        await page.goto(route);
+        await page.evaluate(() => document.fonts?.ready);
+        const m = await page.evaluate(() => {
+          const grid = document.querySelector<HTMLElement>('.flip-card-grid')!;
+          const card = grid.querySelector<HTMLElement>('.flip-card')!;
+          return {
+            w: Math.round(card.offsetWidth),
+            h: Math.round(card.offsetHeight),
+            gap: parseFloat(getComputedStyle(grid).columnGap || getComputedStyle(grid).gap),
+          };
+        });
+        expect(Math.abs(m.w - vp.expectedW)).toBeLessThanOrEqual(2);
+        if (route.includes('ccc')) {
+          expect(m.h).toBeGreaterThanOrEqual(vp.expectedH - 2);
+          expect(m.h).toBeLessThanOrEqual(vp.expectedH + 75);
+        } else {
+          expect(Math.abs(m.h - vp.expectedH)).toBeLessThanOrEqual(2);
+        }
+        expect(Math.abs(m.gap - vp.expectedGap)).toBeLessThanOrEqual(1);
+      }
+    }
+
+    // Mobile (#pricing at 390x844): cards precede photo and fit in viewport on #pricing jump
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('./ccc/#pricing');
+    await page.locator('.ccc-pricing-cards').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(150);
+    const mobilePricingOrder = await page.evaluate(() => {
+      const cards = document.querySelector<HTMLElement>('.ccc-pricing-cards')!.getBoundingClientRect();
+      const media = document.querySelector<HTMLElement>('.ccc-pricing-media')!.getBoundingClientRect();
+      return {
+        cardsBeforeMedia: cards.top < media.top,
+        cardsTop: cards.top,
+        cardsBottom: cards.bottom,
+        vh: window.innerHeight,
+      };
+    });
+    expect(mobilePricingOrder.cardsBeforeMedia).toBe(true);
+    expect(mobilePricingOrder.cardsTop).toBeGreaterThanOrEqual(0);
+
+    // Desktop (1440x900): fine-pointer hover directly clicks Contact, Escape dismisses card without reopening
+    await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('./ccc/');
     const pricing = page.locator('#pricing');
     await pricing.scrollIntoViewIfNeeded();
@@ -288,8 +431,22 @@ test.describe('CCC Page Overhaul & Regression Acceptance (CCC-01 through CCC-07)
     const firstCard = pricing.locator('.flip-card').first();
     const firstToggle = firstCard.locator('.flip-card-toggle');
     const firstAction = firstCard.locator('.flip-action-btn');
+    const modal = page.locator('#ccc-inquiry-modal');
 
-    // Before flipping, Contact action button is excluded from tab order
+    if (!testInfo.project.name.includes('mobile')) {
+      // Fine-pointer hover reveals back face and allows clicking Contact directly
+      await firstCard.hover();
+      await firstAction.click();
+      await expect(modal).toBeVisible();
+      await expect(modal.locator('#ccc-service')).toHaveValue('Half-day photo session');
+      await modal.locator('#ccc-modal-close').click();
+      await expect(modal).toBeHidden();
+
+      // Move mouse away to reset hover
+      await page.mouse.move(10, 10);
+    }
+
+    // Before explicit flip, Contact action button is excluded from tab order
     await expect(firstAction).toHaveAttribute('tabindex', '-1');
     await expect(firstAction).toHaveAttribute('aria-hidden', 'true');
 
@@ -299,23 +456,23 @@ test.describe('CCC Page Overhaul & Regression Acceptance (CCC-01 through CCC-07)
     await expect(firstCard).toHaveClass(/\bis-flipped\b/);
     await expect(firstToggle).toHaveAttribute('aria-pressed', 'true');
 
-    // Now back-face Contact button is exposed to focus order
-    expect(await firstAction.getAttribute('tabindex')).toBeNull();
-    expect(await firstAction.getAttribute('aria-hidden')).toBeNull();
+    // Escape visually closes the card, sets is-dismissed, and keeps focus on the toggle without reopening
+    await page.keyboard.press('Escape');
+    await expect(firstCard).not.toHaveClass(/\bis-flipped\b/);
+    await expect(firstCard).toHaveClass(/\bis-dismissed\b/);
+    await expect(firstToggle).toHaveAttribute('aria-pressed', 'false');
+    await expect(firstToggle).toBeFocused();
 
-    // Tab moves directly from card toggle to Contact button
+    // Press Enter again to re-open, Tab to Contact, Enter to open modal, Escape to close modal without collapsing the card
+    await page.keyboard.press('Enter');
+    await expect(firstCard).toHaveClass(/\bis-flipped\b/);
     await page.keyboard.press('Tab');
     await expect(firstAction).toBeFocused();
-
-    // Press Enter on Contact button to open modal with matching service pre-selected
     await page.keyboard.press('Enter');
-    const modal = page.locator('#ccc-inquiry-modal');
     await expect(modal).toBeVisible();
-    await expect(modal.locator('#ccc-service')).toHaveValue('Half-day photo session');
-
-    // Escape closes dialog and restores focus to the activating control
     await page.keyboard.press('Escape');
     await expect(modal).toBeHidden();
+    await expect(firstCard).toHaveClass(/\bis-flipped\b/);
     await expect(firstAction).toBeFocused();
   });
 

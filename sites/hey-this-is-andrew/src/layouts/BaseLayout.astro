@@ -224,26 +224,38 @@ const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href
           return y;
         }
 
-        function scrollToTarget(target: Element, pushHash = false, hash = '') {
+        function scrollToTarget(target: Element, pushHash = false, hash = '', forceInstant = false) {
           if (!target) return;
           const isTop = hash === '#top' || hash === '#overview' || target.id === 'overview' || target.id === 'top';
-          const aim = target.closest('[data-sec-head], .sec-head, .ccc-closer-inner') ?? target;
+          const aim =
+            target.closest<HTMLElement>('[data-sec-head], .sec-head, .ccc-closer-inner, .hq-closer-inner') ??
+            target.querySelector<HTMLElement>('[data-sec-head], .sec-head, .ccc-closer-inner, .hq-closer-inner') ??
+            target;
           const navH = getNavHeight();
-          const cccStack = document.getElementById('ccc-pinned-stack');
-          const isCloser = target.id === 'ccc-closer' || Boolean(target.closest('#contact'));
+          const cccStack = document.getElementById('ccc-pinned-stack') ?? document.getElementById('hq-pinned-stack');
+          const isCloser =
+            target.id === 'ccc-closer' ||
+            target.id === 'hq-closer' ||
+            target.id === 'contact' ||
+            target.id === 'visit' ||
+            Boolean(target.closest('#contact, #visit'));
           let extraStackH = 0;
           if (cccStack && !isCloser) {
-            const heroRow = cccStack.querySelector<HTMLElement>('.ccc-dock-row--hero');
-            const measured = heroRow?.offsetHeight || 0;
-            extraStackH = measured > 10 ? measured : (window.innerWidth <= 640 ? 44 : 48);
+            const heroBtn = cccStack.querySelector<HTMLElement>('.ccc-dock-btn, .hq-dock-btn');
+            const heroRow = cccStack.querySelector<HTMLElement>('.ccc-dock-row--hero, .hq-dock-row--hero');
+            const measured = (heroBtn?.offsetHeight || heroRow?.offsetHeight || 0) + 1;
+            extraStackH = measured > 10 ? measured : (window.innerWidth <= 640 ? 37 : 48);
           }
-          const targetTop = isTop ? 0 : Math.max(0, pageTop(aim) - (navH + extraStackH + 28));
+          const padding = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+          const clearance = isCloser ? navH + 28 : Math.max(navH + extraStackH + 28, padding);
+          const targetTop = isTop ? 0 : Math.max(0, pageTop(aim) - clearance);
           if (pushHash && hash) {
             history.pushState(null, '', hash);
           }
+          const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
           window.scrollTo({
             top: targetTop,
-            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+            behavior: forceInstant || reduced ? 'auto' : 'smooth',
           });
         }
 
@@ -304,9 +316,19 @@ const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href
           if (navEntry?.type === 'reload') {
             if (!target?.closest('expand-section')) history.replaceState(null, '', location.pathname + location.search);
           } else if (target) {
-            setTimeout(() => scrollToTarget(target, false), 150);
+            scrollToTarget(target, false, window.location.hash, true);
+            setTimeout(() => scrollToTarget(target, false, window.location.hash, true), 150);
           }
         }
+
+        // Same-document hash changes (e.g. location.hash = '#why' or address-bar fragment edits)
+        window.addEventListener('hashchange', () => {
+          if (document.documentElement.dataset.viewPop) return;
+          if (window.location.hash) {
+            const target = getTargetElement(window.location.hash);
+            if (target) scrollToTarget(target, false, window.location.hash, true);
+          }
+        });
 
         // Browser back / forward
         window.addEventListener('popstate', () => {
@@ -315,9 +337,10 @@ const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href
           if (document.documentElement.dataset.viewPop) return;
           if (window.location.hash) {
             const target = getTargetElement(window.location.hash);
-            if (target) scrollToTarget(target, false);
+            if (target) scrollToTarget(target, false, window.location.hash, true);
           } else if (window.location.pathname === '/' || window.location.pathname === '') {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
           }
         });
       })();

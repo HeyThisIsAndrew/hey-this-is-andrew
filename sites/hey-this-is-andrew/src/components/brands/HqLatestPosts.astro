@@ -1,0 +1,173 @@
+---
+/**
+ * HqLatestPosts.astro
+ *
+ * Pulls and displays the two latest posts from BE Unconventional HQ.
+ * Uses durable fallback data with support for live feed integration.
+ */
+interface Post {
+  title: string;
+  href: string;
+  date: string;
+  category: string;
+  excerpt: string;
+  image: string;
+}
+
+const fallbackPosts: Post[] = [
+  {
+    title: 'L.A. Comic Con 2026',
+    href: 'https://beunconventionalhq.com/events/la-comic-con-2026/coverage',
+    date: 'September 15, 2026',
+    category: 'Events',
+    excerpt: 'Why Downtown Los Angeles Holds the Blueprint for Convention Culture.',
+    image: 'https://substackcdn.com/image/fetch/$s_!4Lxl!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F1d6c8138-099e-4365-86ef-f4fb7128201b_1200x630.jpeg',
+  },
+  {
+    title: 'Lanterns | The Grounded Blueprint for James Gunn’s DCU',
+    href: 'https://beunconventionalhq.com/intel/lanterns-the-grounded-blueprint-for',
+    date: 'September 8, 2026',
+    category: 'TV',
+    excerpt: 'Halfway through its first season, this detective-driven series proves that restrained power scaling and character-focused storytelling are exactly what the new cinematic universe needs.',
+    image: 'https://substackcdn.com/image/fetch/$s_!R8n8!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F3522dea4-798d-4be3-a8fe-d751f4d1c0e6_1672x941.png',
+  },
+];
+
+let posts: Post[] = fallbackPosts;
+---
+
+<div class="hq-latest-spread">
+  <div class="hq-latest-grid">
+    {posts.map((post) => (
+      <article class="hq-post-card">
+        <a href={post.href} class="hq-post-link" target="_blank" rel="noopener">
+          <div class="hq-post-media">
+            <img src={post.image} alt="" loading="lazy" class="hq-post-img" />
+            <span class="hq-post-tag font-mono">{post.category}</span>
+          </div>
+          <div class="hq-post-body">
+            <span class="hq-post-date font-mono">{post.date}</span>
+            <h3 class="hq-post-title">{post.title} <span class="hq-post-arrow" aria-hidden="true">&#8599;</span></h3>
+            <p class="hq-post-excerpt">{post.excerpt}</p>
+          </div>
+        </a>
+      </article>
+    ))}
+  </div>
+  <div class="hq-latest-action">
+    <a href="https://beunconventionalhq.com/feed" class="btn btn-secondary hq-feed-btn" target="_blank" rel="noopener">
+      Explore the full feed <span aria-hidden="true">&#8599;</span>
+    </a>
+  </div>
+</div>
+
+<style>
+  .hq-latest-spread {
+    margin-top: clamp(2rem, 3.2vw, 3rem);
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+  .hq-latest-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: clamp(1.5rem, 2.5vw, 2.5rem);
+  }
+  @media (min-width: 768px) {
+    .hq-latest-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .hq-post-card {
+    background: rgba(18, 18, 18, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+    overflow: hidden;
+  }
+  .hq-post-card:hover {
+    border-color: rgba(239, 68, 68, 0.5);
+    box-shadow: 0 12px 35px rgba(204, 0, 0, 0.12);
+    transform: translateY(-2px);
+  }
+  .hq-post-link {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    color: inherit;
+    text-decoration: none;
+  }
+  .hq-post-media {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: #0a0a0a;
+  }
+  .hq-post-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.35s ease;
+  }
+  .hq-post-card:hover .hq-post-img {
+    transform: scale(1.03);
+  }
+  .hq-post-tag {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #ef4444;
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.55rem;
+  }
+  .hq-post-body {
+    padding: clamp(1.1rem, 1.6vw, 1.5rem);
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: 0.5rem;
+  }
+  .hq-post-date {
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #9a9a95;
+  }
+  .hq-post-title {
+    margin: 0;
+    font-family: var(--font-display, inherit);
+    font-size: clamp(1.05rem, 1.25vw, 1.35rem);
+    font-weight: 700;
+    line-height: 1.25;
+    color: #ffffff;
+    transition: color 0.2s ease;
+  }
+  .hq-post-card:hover .hq-post-title {
+    color: #ef4444;
+  }
+  .hq-post-arrow {
+    display: inline-block;
+    transition: transform 0.2s ease;
+  }
+  .hq-post-card:hover .hq-post-arrow {
+    transform: translate(2px, -2px);
+  }
+  .hq-post-excerpt {
+    margin: 0.25rem 0 0;
+    font-family: var(--font-serif, serif);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  .hq-latest-action {
+    display: flex;
+    justify-content: center;
+  }
+  .hq-feed-btn {
+    align-self: center;
+  }
+</style>
