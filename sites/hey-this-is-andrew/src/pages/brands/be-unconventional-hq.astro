@@ -221,9 +221,13 @@ const standards = [
           <li class="hq-card" data-card-index={idx}>
             <div class="hq-card-media" data-hq-motion="coverage">
               <Image src={lane.img} alt={lane.alt} widths={[320, 640]} sizes="(min-width: 900px) 22vw, 46vw" class="hq-card-img" data-hq-motion-layer />
+              <div class="hq-card-media-fade" aria-hidden="true" />
             </div>
-            <h3 class="hq-card-title">{lane.title}</h3>
-            <p class="hq-card-line">{lane.line}</p>
+            <div class="hq-card-body">
+              <span class="hq-card-kicker font-mono">0{idx + 1} &middot; Editorial</span>
+              <h3 class="hq-card-title">{lane.title}</h3>
+              <p class="hq-card-line">{lane.line}</p>
+            </div>
           </li>
         ))}
       </ul>
@@ -604,58 +608,93 @@ const standards = [
     padding-top: 0.4rem;
   }
 
-  /* Section 02: Coverage 4-column grid */
+  /* Section 02: Coverage 4-column grid (Cinematic Widescreen Framing) */
   .hq-cards4 {
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: clamp(1rem, 2vw, 1.5rem);
+    gap: clamp(0.85rem, 1.8vw, 1.35rem);
   }
 
   .hq-card {
-    background: var(--hq-surface);
+    background: linear-gradient(180deg, rgba(22, 22, 26, 0.72) 0%, rgba(12, 12, 15, 0.94) 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    padding: clamp(1.1rem, 2vw, 1.5rem);
+    border-radius: 4px;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.7rem;
     min-height: 100%;
+    overflow: hidden;
     color: inherit;
-    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
   }
 
   .hq-card:hover {
-    border-color: var(--hq-red);
-    box-shadow: 0 12px 32px rgba(204, 0, 0, 0.14);
+    border-color: rgba(204, 0, 0, 0.55);
+    box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.75), 0 0 24px -4px rgba(204, 0, 0, 0.22);
+    transform: translateY(-2px);
   }
 
   .hq-card-media {
-    aspect-ratio: 4 / 3;
+    position: relative;
+    aspect-ratio: 16 / 10;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(circle, rgba(204, 0, 0, 0.12) 0%, rgba(15, 15, 16, 0.95) 75%);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: radial-gradient(ellipse at 50% 55%, rgba(204, 0, 0, 0.16) 0%, rgba(10, 10, 12, 0.98) 78%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     overflow: hidden;
-    padding: 0.75rem;
+    padding: 1.15rem 1rem;
+  }
+
+  .hq-card-media-fade {
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 42%;
+    background: linear-gradient(to top, rgba(12, 12, 15, 0.95) 0%, transparent 100%);
+    pointer-events: none;
   }
 
   .hq-card-img {
-    width: 100%;
+    width: auto;
+    max-width: 82%;
     height: calc(100% - 2 * var(--hq-travel));
+    max-height: 82%;
     object-fit: contain;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .hq-card:hover .hq-card-img {
+    transform: scale(1.05);
+  }
+
+  .hq-card-body {
+    padding: clamp(0.75rem, 1.2vw, 0.95rem) clamp(0.85rem, 1.4vw, 1.15rem) clamp(0.95rem, 1.5vw, 1.25rem);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    flex-grow: 1;
+  }
+
+  .hq-card-kicker {
+    font-size: 0.65rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--hq-red-bright);
+    font-weight: 600;
   }
 
   .hq-card-title {
     font-family: var(--font-display);
-    font-size: clamp(1rem, 1.3vw, 1.2rem);
+    font-size: clamp(0.92rem, 1.15vw, 1.1rem);
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.07em;
     color: #ffffff;
-    margin: 0.25rem 0 0;
+    margin: 0;
   }
 
   .hq-card-title span {
@@ -664,9 +703,9 @@ const standards = [
   }
 
   .hq-card-line {
-    font-size: 0.88rem;
-    line-height: 1.5;
-    color: var(--hq-muted);
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: rgba(240, 240, 240, 0.68);
     margin: 0;
   }
 
