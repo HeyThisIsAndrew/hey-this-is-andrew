@@ -8,7 +8,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
 import FlipCard from '@andrew/ui/FlipCard.astro';
 import { Image } from 'astro:assets';
-import HqLatestPosts from '../../components/brands/HqLatestPosts.astro';
 
 import logoMark from '../../assets/brands/hq/logo-mark.webp';
 import heroStill from '../../assets/hero-media/be-hq-still.jpg';
@@ -30,25 +29,25 @@ const coverageLanes = [
     title: 'Film',
     line: 'Reviews, cinematography breakdowns, and festival dispatches',
     img: filmImg,
-    href: new URL('/category/film', HQ_SITE_URL).href,
+    alt: 'Illustrated cinema camera and film reels for BE Unconventional HQ Film coverage',
   },
   {
     title: 'Television',
     line: 'Season coverage, streaming analysis, and showrunner craft',
     img: tvImg,
-    href: new URL('/category/tv', HQ_SITE_URL).href,
+    alt: 'Illustrated television screen and broadcast visual for BE Unconventional HQ TV coverage',
   },
   {
     title: 'Games',
     line: 'Narrative design, technical performance, and industry analysis',
     img: gamesImg,
-    href: new URL('/category/games', HQ_SITE_URL).href,
+    alt: 'Illustrated controller and gaming emblem for BE Unconventional HQ Games coverage',
   },
   {
     title: 'Events',
     line: 'On-location reporting from premieres, showcases, and conventions',
     img: eventsImg,
-    href: new URL('/events', HQ_SITE_URL).href,
+    alt: 'Illustrated press credential and spotlight for BE Unconventional HQ Events coverage',
   },
 ];
 
@@ -171,10 +170,45 @@ const standards = [
   <section id="mission" class="hq-section" aria-labelledby="hq-mission">
     <div class="container">
       <SectionHeader kicker="The publication" title="If we talk cinema, it should look like cinema" id="hq-mission" />
-      <p class="hq-publication-intro">
-        BE Unconventional HQ is an independent publication covering film, television, games, and live events. From cinematography to game design, we slow down to look at the craft behind the stories.
-      </p>
-      <HqLatestPosts />
+      <div class="hq-why-stage" id="hq-why-stage">
+        <div class="hq-why-pair hq-why-pair--top" id="hq-why-top">
+          <div class="hq-why-media">
+            <Image
+              src={heroStill}
+              alt="Andrew Baxter in the studio recording for BE Unconventional HQ"
+              widths={[640, 960, 1280]}
+              sizes="(min-width: 900px) 48vw, 100vw"
+              class="hq-photo"
+            />
+          </div>
+          <div class="hq-why-copy">
+            <h3 class="hq-subtitle">Built for the craft behind the stories</h3>
+            <p>
+              <strong>BE Unconventional HQ</strong> is an independent small press outlet covering film, television, games, and live events. From breaking down the cinematography of a new release to exploring game design and reporting on location, our goal is to slow down, appreciate the details, and have genuine conversations.
+            </p>
+          </div>
+        </div>
+        <div class="hq-why-pair hq-why-pair--bottom" id="hq-why-bottom">
+          <div class="hq-why-copy">
+            <h3 class="hq-subtitle">No clickbait, no artificial outrage</h3>
+            <p>
+              We operate without a parent network or publisher mandate. That means unfiltered honesty, expertise-driven analysis, and coverage that treats creative work with the seriousness it deserves.
+            </p>
+            <p class="hq-motto font-mono">
+              BE YOURSELF &middot; BE PASSIONATE &middot; BE UNCONVENTIONAL
+            </p>
+          </div>
+          <div class="hq-why-media">
+            <Image
+              src={lanternsArt}
+              alt="Featured editorial key art from BE Unconventional HQ coverage"
+              widths={[640, 960, 1280]}
+              sizes="(min-width: 900px) 48vw, 100vw"
+              class="hq-photo"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -183,15 +217,13 @@ const standards = [
     <div class="container">
       <SectionHeader kicker="What we cover" title="Four lanes, one editorial standard" id="hq-coverage" />
       <ul class="hq-cards4" id="hq-coverage-grid">
-        {coverageLanes.map((lane) => (
-          <li>
-            <a class="hq-card" href={lane.href}>
-              <div class="hq-card-media" data-hq-motion="coverage">
-                <Image src={lane.img} alt="" widths={[320, 640]} sizes="(min-width: 900px) 22vw, 46vw" class="hq-card-img" data-hq-motion-layer />
-              </div>
-              <h3 class="hq-card-title">{lane.title} <span aria-hidden="true">&#8599;</span></h3>
-              <p class="hq-card-line">{lane.line}</p>
-            </a>
+        {coverageLanes.map((lane, idx) => (
+          <li class="hq-card" data-card-index={idx}>
+            <div class="hq-card-media" data-hq-motion="coverage">
+              <Image src={lane.img} alt={lane.alt} widths={[320, 640]} sizes="(min-width: 900px) 22vw, 46vw" class="hq-card-img" data-hq-motion-layer />
+            </div>
+            <h3 class="hq-card-title">{lane.title}</h3>
+            <p class="hq-card-line">{lane.line}</p>
           </li>
         ))}
       </ul>
@@ -502,12 +534,67 @@ const standards = [
     color: var(--hq-red-bright);
   }
 
-  .hq-publication-intro {
+  .hq-why-stage {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(2.5rem, 5vw, 4.5rem);
+  }
+
+  .hq-why-pair {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    gap: clamp(1.5rem, 3.5vw, 3rem);
+    align-items: center;
+  }
+
+  .hq-why-pair--bottom {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  }
+
+  .hq-why-media {
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #111;
+  }
+
+  .hq-photo {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+  }
+
+  .hq-why-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  .hq-subtitle {
+    font-family: var(--font-display);
+    font-size: clamp(1.2rem, 2vw, 1.6rem);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #ffffff;
+    margin: 0;
+  }
+
+  .hq-why-copy p {
     font-size: clamp(0.98rem, 1.15vw, 1.12rem);
     line-height: 1.65;
     color: rgba(240, 240, 240, 0.86);
-    max-width: 62ch;
-    margin: 0 0 clamp(1.5rem, 3vw, 2.6rem);
+    margin: 0;
+  }
+
+  .hq-motto {
+    font-size: 0.76rem !important;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--hq-red-bright) !important;
+    font-weight: 700;
+    padding-top: 0.4rem;
   }
 
   /* Section 02: Coverage 4-column grid */
@@ -529,12 +616,10 @@ const standards = [
     gap: 0.7rem;
     min-height: 100%;
     color: inherit;
-    text-decoration: none;
     transition: border-color 0.25s ease, box-shadow 0.25s ease;
   }
 
-  .hq-card:hover,
-  .hq-card:focus-visible {
+  .hq-card:hover {
     border-color: var(--hq-red);
     box-shadow: 0 12px 32px rgba(204, 0, 0, 0.14);
   }
@@ -887,8 +972,14 @@ const standards = [
   }
 
   @media (max-width: 899px) {
+    .hq-why-pair,
+    .hq-why-pair--bottom,
     .hq-split {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hq-why-pair--bottom .hq-why-media {
+      order: -1;
     }
 
     .hq-cards4 {
