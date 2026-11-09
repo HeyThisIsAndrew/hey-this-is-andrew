@@ -29,16 +29,16 @@ export const NAV_LINKS: NavItem[] = [
     showMobileSubsections: true,
     subsections: [
       {
-        label: 'Capture Create Caffeinate',
-        kicker: 'CCC',
-        href: page('ccc'),
-      },
-      {
         label: 'BE Unconventional HQ',
         kicker: 'BE',
         href: page('brands/be-unconventional-hq'),
       },
-    ],
+      {
+        label: 'Capture Create Caffeinate',
+        kicker: 'CCC',
+        href: page('ccc'),
+      },
+    ].sort((a, b) => a.label.localeCompare(b.label, 'en')),
   },
   {
     label: 'Build in Public',

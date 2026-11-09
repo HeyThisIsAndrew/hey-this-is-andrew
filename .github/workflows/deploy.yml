@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -36,15 +36,19 @@ jobs:
           CCC_INSTAGRAM_USER_ID: ${{ secrets.CCC_INSTAGRAM_USER_ID }}
       - name: Workspace checks
         run: pnpm --filter hey-this-is-andrew check
-      # Reelay's `test` audits its built site (compliance pages, permissions,
-      # forbidden wording), so it has to be built before the unit tests run.
-      # The copy that is deployed is built later, for its subpath.
-      - name: Build Reelay
+      # Reelay's marketing site is built once directly for its preview subpath
+      # (/hey-this-is-andrew/reelay/) so both unit audit and deployment use the single build.
+      - name: Build Reelay preview
         run: pnpm --filter reelay build
         env:
+          BASE_PATH: /hey-this-is-andrew/reelay/
+          SITE_URL: https://heythisisandrew.github.io
+          REELAY_NOINDEX: '1'
           ASTRO_TELEMETRY_DISABLED: '1'
       - name: Unit tests
         run: pnpm -r --if-present test
+        env:
+          BASE_PATH: /hey-this-is-andrew/reelay/
       - name: Build site
         run: pnpm --filter hey-this-is-andrew build
         env:
@@ -56,24 +60,20 @@ jobs:
         run: pnpm --filter hey-this-is-andrew exec node scripts/audit-dist.mjs
         env:
           ASTRO_BASE: /hey-this-is-andrew/
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
       - name: Install Playwright Browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm exec playwright install --with-deps chromium
+      - name: Install Playwright OS Dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
       - name: Run Playwright E2E tests
         run: pnpm exec playwright test
-      # Reelay's marketing site rides along as a preview at /hey-this-is-andrew/reelay/,
-      # built for that path, marked noindex (it still carries {{PLACEHOLDERS}}),
-      # audited as built, then copied in after the personal site's own checks.
-      - name: Build Reelay preview
-        run: pnpm --filter reelay build
-        env:
-          BASE_PATH: /hey-this-is-andrew/reelay/
-          SITE_URL: https://heythisisandrew.github.io
-          REELAY_NOINDEX: '1'
-          ASTRO_TELEMETRY_DISABLED: '1'
-      - name: Check the Reelay preview
-        run: pnpm --filter reelay test
-        env:
-          BASE_PATH: /hey-this-is-andrew/reelay/
       - name: Add the Reelay preview to the site
         run: cp -R sites/reelay/dist sites/hey-this-is-andrew/dist/reelay
       - name: Upload artifact

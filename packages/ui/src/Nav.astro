@@ -34,24 +34,12 @@ const isHome = currentPath === homePath;
    there. Home is never lit by this: on the home page the scrollspy decides. */
 const isCurrent = (href: string) => {
   const path = href.split('#')[0].replace(/\/$/, '');
-  if (path && path !== homePath && !/^https?:/.test(path)) {
-    if (currentPath === path || currentPath.startsWith(`${path}/`)) return true;
-  }
-  const item = links.find((l) => l.href === href);
-  if (item?.subsections?.length) {
-    return item.subsections.some((sub) => {
-      if (sub.href.includes('#')) return false;
-      const subPath = sub.href.replace(/\/$/, '');
-      return Boolean(
-        subPath &&
-          subPath !== homePath &&
-          !/^https?:/.test(subPath) &&
-          (currentPath === subPath || currentPath.startsWith(`${subPath}/`))
-      );
-    });
-  }
-  return false;
+  if (!path || path === homePath || /^https?:/.test(path)) return false;
+  return currentPath === path || currentPath.startsWith(`${path}/`);
 };
+
+const hasCurrentSub = (item: NavItem) =>
+  Boolean(item.subsections?.some((sub) => isCurrent(sub.href)));
 ---
 {/* HQ's .safe-area-blackout, kept as HQ has it: env(safe-area-inset-top)
     tall, which is 0 under HQ's viewport (no viewport-fit=cover). The black
@@ -78,7 +66,7 @@ const isCurrent = (href: string) => {
                 aria-haspopup={l.subsections.length > 0 ? "true" : undefined}
                 aria-expanded={l.subsections.length > 0 ? "false" : undefined}
                 aria-current={isCurrent(l.href) ? 'page' : undefined}
-                class:list={['nav-link', { active: isCurrent(l.href) }]}
+                class:list={['nav-link', { active: isCurrent(l.href) || hasCurrentSub(l) }]}
               >
                 <span>{l.label}</span>
                 {l.subsections.length > 0 && (
@@ -96,7 +84,8 @@ const isCurrent = (href: string) => {
                       <li role="none">
                         <a
                           href={sub.href}
-                          class="dropdown-link"
+                          class:list={['dropdown-link', { active: isCurrent(sub.href) }]}
+                          aria-current={isCurrent(sub.href) ? 'page' : undefined}
                           role="menuitem"
                         >
                           <span class="dropdown-kicker" aria-hidden="true">{sub.kicker}</span>
@@ -168,7 +157,7 @@ const isCurrent = (href: string) => {
             <div class="mobile-section-header">
               <a
                 href={l.href}
-                class:list={['mobile-main-link', { active: isCurrent(l.href) }]}
+                class:list={['mobile-main-link', { active: isCurrent(l.href) || hasCurrentSub(l) }]}
                 aria-current={isCurrent(l.href) ? 'page' : undefined}
               >
                 {l.label}
@@ -285,21 +274,34 @@ const isCurrent = (href: string) => {
 
     const subLinks = Array.from(dropdown.querySelectorAll<HTMLAnchorElement>('.dropdown-link'));
 
+    let suppressFocusOpen = false;
     const setExpanded = (expanded: boolean) => {
       mainLink.setAttribute('aria-expanded', String(expanded));
       if (expanded) {
+        item.classList.remove('is-dismissed');
         item.classList.add('is-open');
       } else {
         item.classList.remove('is-open');
       }
     };
 
-    item.addEventListener('mouseenter', () => setExpanded(true));
-    item.addEventListener('mouseleave', () => setExpanded(false));
-    item.addEventListener('focusin', () => setExpanded(true));
+    item.addEventListener('mouseenter', () => {
+      item.classList.remove('is-dismissed');
+      setExpanded(true);
+    });
+    item.addEventListener('mouseleave', () => {
+      item.classList.remove('is-dismissed');
+      setExpanded(false);
+    });
+    item.addEventListener('focusin', () => {
+      if (!suppressFocusOpen) {
+        setExpanded(true);
+      }
+    });
     item.addEventListener('focusout', () => {
       setTimeout(() => {
         if (!item.contains(document.activeElement)) {
+          item.classList.remove('is-dismissed');
           setExpanded(false);
         }
       }, 20);
@@ -309,10 +311,17 @@ const isCurrent = (href: string) => {
     mainLink.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
+        item.classList.remove('is-dismissed');
         setExpanded(true);
         if (subLinks.length) subLinks[0].focus();
       } else if (e.key === 'Escape') {
+        e.preventDefault();
+        suppressFocusOpen = true;
+        item.classList.add('is-dismissed');
         setExpanded(false);
+        window.setTimeout(() => {
+          suppressFocusOpen = false;
+        }, 50);
       }
     });
 
@@ -337,8 +346,13 @@ const isCurrent = (href: string) => {
           subLinks[subLinks.length - 1]?.focus();
         } else if (e.key === 'Escape') {
           e.preventDefault();
+          suppressFocusOpen = true;
+          item.classList.add('is-dismissed');
           setExpanded(false);
           mainLink.focus();
+          window.setTimeout(() => {
+            suppressFocusOpen = false;
+          }, 50);
         }
       });
 
@@ -678,10 +692,21 @@ const isCurrent = (href: string) => {
     font-weight: 700;
     letter-spacing: 0.2em;
     text-transform: uppercase;
+    white-space: nowrap;
     color: rgba(245, 245, 245, 0.8);
     text-decoration: none;
     padding: 0.75rem 0.35rem;
     transition: color 0.25s ease, text-shadow 0.25s ease, transform 0.18s cubic-bezier(0.2, 0.9, 0.25, 1);
+  }
+  @media (max-width: 1099px) {
+    .nav-links {
+      gap: clamp(0.65rem, 1.3vw, 1.4rem);
+    }
+    .nav-link {
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      padding: 0.75rem 0.25rem;
+    }
   }
   .nav-link::after {
     content: '';
@@ -762,8 +787,7 @@ const isCurrent = (href: string) => {
     right: 0;
     height: 10px;
   }
-  .nav-item:hover .dropdown-menu,
-  .nav-item:focus-within .dropdown-menu,
+  .nav-item:hover:not(.is-dismissed) .dropdown-menu,
   .nav-item.is-open .dropdown-menu {
     opacity: 1;
     visibility: visible;

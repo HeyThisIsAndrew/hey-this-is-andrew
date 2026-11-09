@@ -771,20 +771,28 @@ const { items = [], heading = 'Contents', selector = 'main h2[id], main [data-pn
         // clearance in html's scroll-padding-top keeps it: Reelay's covers
         // the section bar it pins under the header, which scrollIntoView
         // honoured and a bare header offset parked the heading under.
-        const aim = target.matches('[data-sec]')
-          ? target.querySelector<HTMLElement>('[data-sec-head], .sec-head') ?? target
-          : target.closest<HTMLElement>('[data-sec-head], .sec-head, .ccc-closer-inner, .hq-closer-inner') ?? target;
+        const aim =
+          target.closest<HTMLElement>('[data-sec-head], .sec-head, .ccc-closer-inner, .hq-closer-inner') ??
+          target.querySelector<HTMLElement>('[data-sec-head], .sec-head, .ccc-closer-inner, .hq-closer-inner') ??
+          target;
         const navH = document.querySelector('.site-nav')?.getBoundingClientRect().height ?? 76;
         const cccStack = document.getElementById('ccc-pinned-stack') ?? document.getElementById('hq-pinned-stack');
-        const isCloser = id === 'ccc-closer' || id === 'hq-closer' || Boolean(target.closest('#contact, #visit'));
+        const isCloser =
+          id === 'ccc-closer' ||
+          id === 'hq-closer' ||
+          id === 'contact' ||
+          id === 'visit' ||
+          Boolean(target.closest('#contact, #visit'));
         let extraStackH = 0;
         if (cccStack && !isCloser) {
+          const heroBtn = cccStack.querySelector<HTMLElement>('.ccc-dock-btn, .hq-dock-btn');
           const heroRow = cccStack.querySelector<HTMLElement>('.ccc-dock-row--hero, .hq-dock-row--hero');
-          const measured = heroRow?.offsetHeight || 0;
-          extraStackH = measured > 10 ? measured : (window.innerWidth <= 640 ? 44 : 48);
+          const measured = (heroBtn?.offsetHeight || heroRow?.offsetHeight || 0) + 1;
+          extraStackH = measured > 10 ? measured : (window.innerWidth <= 640 ? 37 : 48);
         }
         const padding = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
-        const top = pageTop(aim) - Math.max(navH + extraStackH + 28, padding);
+        const clearance = isCloser ? navH + 28 : Math.max(navH + extraStackH + 28, padding);
+        const top = pageTop(aim) - clearance;
         window.scrollTo({ top: Math.max(0, top), behavior });
         history.replaceState(null, '', `#${id}`);
       });

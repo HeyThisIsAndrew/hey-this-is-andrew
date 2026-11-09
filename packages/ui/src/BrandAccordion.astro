@@ -57,6 +57,8 @@ interface Props {
   panels: AccordionPanel[];
   /** Enables the fullscreen brand view (a tap on any brand), all widths. */
   fullscreen?: boolean;
+  /** Show only the primary link, inside the focused view. */
+  focusedActionsOnly?: boolean;
   /** Brand view framing on desktop: 'fill' (default; the art fills the
    *  screen, the copy over it) or 'fit' (the panel whole, the copy under).
    *  Phones always fill. */
@@ -66,7 +68,15 @@ interface Props {
   labels?: Partial<AccordionLabels>;
 }
 
-const { panels, fullscreen = false, view = 'fill', interval = 8000, labels: labelProp = {} } = Astro.props;
+const {
+  panels,
+  fullscreen = false,
+  focusedActionsOnly = false,
+  view = 'fill',
+  interval = 8000,
+  labels: labelProp = {},
+} = Astro.props;
+const focusOnly = fullscreen && focusedActionsOnly;
 const labels: AccordionLabels = {
   play: 'Play auto-rotation',
   pause: 'Pause auto-rotation',
@@ -81,7 +91,7 @@ const inquiryHref = (q: { email: string; subject: string; body?: string; href?: 
 const linkAttrs = (href?: string) =>
   href && /^https?:\/\//.test(href) ? { target: '_blank', rel: 'noopener' } : {};
 ---
-<div class="bacc" data-bacc data-avoid-fab data-interval={interval} data-fullscreen={fullscreen ? '' : undefined} data-view={view} style={`--acc-n: ${panels.length}; --acc-rows: ${Math.max(1, panels.length - 1)}`}>
+<div class="bacc" data-bacc data-avoid-fab data-interval={interval} data-fullscreen={fullscreen ? '' : undefined} data-focused-actions={focusOnly ? '' : undefined} data-view={view} style={`--acc-n: ${panels.length}; --acc-rows: ${Math.max(1, panels.length - 1)}`}>
     <div class="bacc-viewport" data-bacc-viewport>
       <button type="button" class="bacc-close" data-bacc-close hidden aria-label={labels.closeAria}>
         <span aria-hidden="true">{labels.close}</span>
@@ -159,8 +169,11 @@ const linkAttrs = (href?: string) =>
                 <p class="bacc-chips" aria-hidden="true">
                   <span class="bacc-chip bacc-chip--brand">{brand.name}</span>
                   {brand.kicker && <span class="bacc-chip">{brand.kicker}</span>}
-                  {brand.comingSoon && brand.teaserTag && <span class="bacc-chip">{brand.teaserTag}</span>}
+                  {!focusOnly && brand.comingSoon && brand.teaserTag && <span class="bacc-chip">{brand.teaserTag}</span>}
                 </p>
+                {focusOnly && brand.comingSoon && brand.teaserTag && (
+                  <span class="bacc-preview-status">{brand.teaserTag}</span>
+                )}
 
                 <div class="bacc-content" id={contentId} role="region" aria-labelledby={triggerId}>
                   {/* The headline is the panel's link (HQ). On a phone it
@@ -206,17 +219,18 @@ const linkAttrs = (href?: string) =>
                     </div>
                   )}
 
-                  {hasCta && !extraLinks.length && (
-                    <a class="bacc-cta" href={brand.url} {...linkAttrs(brand.url)}>
+                  {/* Single primary button for resting panel */}
+                  {hasCta && (
+                    <a class="bacc-cta bacc-primary-btn" href={brand.url} {...linkAttrs(brand.url)}>
                       {brand.cta}
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                         <path d="M2 12L12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
                       </svg>
                     </a>
                   )}
+
+                  {/* Actions row: contains all brand buttons (primary CTA + extraLinks + inquiry) */}
                   {hasCta && extraLinks.length > 0 && (
-                    /* One row of small buttons: the CTA first, then the
-                       brand's other doors. Stacks on phones. */
                     <div class="bacc-actions">
                       <a class="bacc-cta bacc-cta--sm" href={brand.url} aria-label={`${brand.cta}, ${brand.name}`} {...linkAttrs(brand.url)}>
                         {brand.cta}
@@ -244,7 +258,6 @@ const linkAttrs = (href?: string) =>
                         </a>
                       ))}
                       {brand.inquiry && (
-                        /* In the row, the inquiry is a button like the rest. */
                         <a class="bacc-cta bacc-cta--sm bacc-cta--extra" href={inquiryHref(brand.inquiry)} aria-label={`${brand.inquiry.label}, ${brand.name}`}>
                           {brand.inquiry.label}
                           <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
@@ -260,6 +273,13 @@ const linkAttrs = (href?: string) =>
                     </a>
                   )}
                 </div>
+                {focusOnly && hasCta && (
+                  <template data-bacc-focused-action>
+                    <a class="bacc-cta" href={brand.url}>
+                      {brand.cta} <span aria-hidden="true">→</span>
+                    </a>
+                  </template>
+                )}
 
                 <div class="bacc-progress" aria-hidden="true"><span class="bacc-progress-fill"></span></div>
               </article>
@@ -633,6 +653,29 @@ const linkAttrs = (href?: string) =>
     border-left: 2px solid var(--accordion-edge);
     color: rgba(255, 255, 255, 0.9);
   }
+  .bacc-preview-status {
+    position: absolute;
+    inset-block-start: 0.75rem;
+    inset-inline-start: 50%;
+    transform: translateX(-50%);
+    z-index: 6;
+    padding: 0.32rem 0.4rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(10, 10, 10, 0.85);
+    color: #f5f5f5;
+    font: 600 0.625rem / 1.2 var(--font-body);
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .bacc-panel.is-open .bacc-preview-status {
+    inset-block-start: var(--pad);
+    inset-inline: auto calc(var(--pad) + 44px);
+    transform: none;
+  }
+  .bacc-viewport.is-zoomed .bacc-preview-status {
+    visibility: hidden;
+  }
 
   /* ─── OPEN CONTENT ──────────────────────────────────────────────────── */
   /* Laid out at a fixed width (never the panel's animating width), so the
@@ -757,6 +800,43 @@ const linkAttrs = (href?: string) =>
   .bacc-actions .bacc-cta {
     margin-top: 0;
     justify-content: center;
+  }
+  /* Single primary CTA on resting panel */
+  .bacc-primary-btn {
+    display: inline-flex;
+    margin-top: calc(17.92 * var(--u));
+  }
+  /* On pages not using focused-actions, hide bacc-primary-btn if panel has bacc-actions */
+  .bacc:not([data-focused-actions]) .bacc-panel:has(.bacc-actions) .bacc-primary-btn {
+    display: none;
+  }
+  /* In focused-actions mode (home default), resting panel shows only primary button */
+  [data-focused-actions] .bacc-panel .bacc-actions {
+    display: none;
+  }
+  [data-focused-actions] .bacc-panel .bacc-primary-btn {
+    display: inline-flex;
+  }
+
+  /* Fullscreen brand view (caption): hide single primary button, show all action buttons in even size */
+  .bacc-caption .bacc-primary-btn {
+    display: none !important;
+  }
+  .bacc-caption .bacc-actions {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: clamp(0.5rem, 1.2vw, 0.85rem);
+    width: 100%;
+    max-width: 46rem;
+    margin-top: 1.25rem;
+  }
+  .bacc-caption .bacc-actions .bacc-cta {
+    flex: 1 1 0;
+    min-width: min(100%, 140px);
+    justify-content: center;
+    text-align: center;
+    white-space: nowrap;
+    margin-top: 0;
   }
   .bacc-cta--sm {
     gap: 0.5rem;
@@ -905,6 +985,17 @@ const linkAttrs = (href?: string) =>
       background: #0d0d0d;
       z-index: 2;
     }
+    [data-focused-actions] .bacc-panel.is-open {
+      order: 0;
+    }
+    .bacc-panel:not(.is-open) .bacc-preview-status {
+      inset-block: auto 0.25rem;
+      inset-inline-start: calc(50% + 44px);
+    }
+    .bacc-panel.is-open .bacc-preview-status {
+      inset-block-start: 0.75rem;
+      inset-inline: 1rem auto;
+    }
     .bacc-panel.is-open .bacc-media {
       position: relative;
       inset: auto;
@@ -1009,10 +1100,27 @@ const linkAttrs = (href?: string) =>
   /* Phone portrait (HQ: "way too busy"): no button under the copy. The
      brand view (a tap on the panel) carries it. */
   @media (max-width: 767px) and (orientation: portrait) {
-    .bacc-cta,
-    .bacc-inquiry,
-    .bacc-actions {
+    .bacc:not([data-focused-actions]) .bacc-cta,
+    .bacc:not([data-focused-actions]) .bacc-inquiry,
+    .bacc:not([data-focused-actions]) .bacc-actions {
       display: none;
+    }
+    [data-focused-actions] .bacc-panel.is-open .bacc-primary-btn {
+      display: inline-flex;
+      margin-top: 0.75rem;
+    }
+    [data-focused-actions] .bacc-panel:not(.is-open) .bacc-primary-btn {
+      display: none;
+    }
+    .bacc-caption .bacc-actions {
+      display: flex !important;
+      flex-direction: column;
+      gap: 0.6rem;
+      width: 100%;
+    }
+    .bacc-caption .bacc-actions .bacc-cta {
+      width: 100%;
+      min-height: var(--tap-min, 44px);
     }
   }
 
@@ -1552,6 +1660,7 @@ const linkAttrs = (href?: string) =>
     const closeBtn = root.querySelector<HTMLButtonElement>('[data-bacc-close]');
     const caption = root.querySelector<HTMLElement>('[data-bacc-caption]');
     const fullscreen = root.hasAttribute('data-fullscreen');
+    const focusOnly = root.hasAttribute('data-focused-actions');
     const DURATION = Number(root.dataset.interval) || 8000;
     if (!panels.length || triggers.some((t) => !t)) return;
 
@@ -1753,6 +1862,8 @@ const linkAttrs = (href?: string) =>
         clone.removeAttribute('id');
         clone.removeAttribute('role');
         clone.removeAttribute('aria-labelledby');
+        const action = panel.querySelector<HTMLTemplateElement>('[data-bacc-focused-action]');
+        if (action) clone.appendChild(action.content.cloneNode(true));
         caption.appendChild(clone);
         if (panel.dataset.accent) caption.dataset.accent = panel.dataset.accent;
         else delete caption.dataset.accent;
@@ -1885,6 +1996,7 @@ const linkAttrs = (href?: string) =>
         if (gutter > 0) document.body.style.paddingRight = `${gutter}px`;
         viewport.classList.remove('is-closing');
         viewport.classList.add('is-zoomed');
+        if (focusOnly) stage.inert = true;
         document.body.style.overflow = 'hidden';
         closeBtn?.focus({ preventScroll: true });
         stage.style.transition = 'none';
@@ -1922,6 +2034,7 @@ const linkAttrs = (href?: string) =>
       close(fromHistory = false) {
         if (!this.isZoomed || this.isClosing) return;
         this.isClosing = true;
+        if (focusOnly && caption) caption.inert = true;
         /* Take the view's history entry back off, so Back after a close
            leaves the page as it would have. */
         if (!fromHistory && history.state?.baccView) {
@@ -1958,8 +2071,10 @@ const linkAttrs = (href?: string) =>
         if (closeBtn) closeBtn.hidden = true;
         if (caption) {
           caption.hidden = true;
+          caption.inert = false;
           caption.replaceChildren();
         }
+        if (focusOnly) stage.inert = false;
         const panel = this.panel;
         this.isZoomed = false;
         this.isClosing = false;
