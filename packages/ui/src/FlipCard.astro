@@ -20,6 +20,8 @@ interface Props {
   longValue?: boolean;
   class?: string;
   delay?: number;
+  dataCccPackage?: string;
+  actionLabel?: string;
 }
 
 const {
@@ -32,6 +34,8 @@ const {
   longValue = false,
   class: className = '',
   delay,
+  dataCccPackage,
+  actionLabel,
 } = Astro.props;
 
 const backId = `${idPrefix}-${index}`;
@@ -41,6 +45,7 @@ const backId = `${idPrefix}-${index}`;
   type="button"
   class:list={['stat-card', 'flip-card', className]}
   data-delay={delay}
+  data-ccc-package={dataCccPackage}
   aria-label={`${label}: ${value}. ${desc}`}
   aria-describedby={backId}
   aria-pressed="false"
@@ -70,6 +75,16 @@ const backId = `${idPrefix}-${index}`;
     </div>
     <div class="flip-card-back">
       <p id={backId}>{backText}</p>
+      {actionLabel && (
+        <span
+          class="btn btn-primary flip-action-btn"
+          data-open-ccc-modal
+          data-ccc-package={dataCccPackage}
+        >
+          {actionLabel} <span aria-hidden="true">&rarr;</span>
+        </span>
+      )}
+      <slot name="back-action" />
     </div>
   </div>
 </button>
@@ -158,6 +173,7 @@ const backId = `${idPrefix}-${index}`;
     transform: rotateY(180deg) translateZ(1px);
     background: var(--flip-bg-back, rgba(25, 25, 25, 0.96));
     text-align: center;
+    gap: 0.45rem;
     opacity: 0;
     pointer-events: none;
   }
@@ -241,10 +257,21 @@ const backId = `${idPrefix}-${index}`;
     font-family: var(--flip-font-back, inherit);
     color: var(--flip-back-color, var(--color-white, var(--ink, #ffffff)));
     font-size: var(--flip-back-size, 1rem);
-    line-height: 1.5;
+    line-height: 1.45;
     margin: 0;
     width: 100%;
     text-wrap: balance;
+  }
+
+  .flip-action-btn {
+    margin-top: 0.35rem;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-family: var(--flip-font-label, inherit);
+    cursor: pointer;
+    box-sizing: border-box;
   }
 
   .flip-hint {
@@ -306,6 +333,14 @@ const backId = `${idPrefix}-${index}`;
       }
 
       const wasFlipped = card.classList.contains('is-flipped');
+      const isHoverFlipped =
+        window.matchMedia('(hover: hover) and (pointer: fine)').matches && card.matches(':hover');
+
+      // If card is already showing its back face and the user tapped the inner Contact button, let the modal trigger handle it
+      if ((wasFlipped || isHoverFlipped) && target?.closest('[data-open-ccc-modal], [data-no-flip]')) {
+        return;
+      }
+
       document.querySelectorAll<HTMLButtonElement>('.flip-card.is-flipped').forEach((other) => {
         if (other !== card) {
           other.classList.remove('is-flipped');
