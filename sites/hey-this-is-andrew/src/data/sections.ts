@@ -35,3 +35,13 @@ export const ABOUT_SECTIONS: PageSection[] = [
   { id: 'press', label: 'Press kit' },
   { id: 'contact', label: 'Contact' }
 ];
+
+export const GEAR_SECTIONS: PageSection[] = [
+  { id: 'gear-bodies', label: 'Cameras', kicker: 'Bodies' },
+  { id: 'gear-lenses', label: 'Lenses', kicker: 'Glass' },
+  { id: 'gear-lighting', label: 'Lighting', kicker: 'Lights' },
+  { id: 'gear-tools', label: 'Support & Power', kicker: 'Tools' },
+  { id: 'gear-audio', label: 'Audio', kicker: 'Sound' },
+  { id: 'brew', label: 'The Cafe', kicker: 'Coffee' },
+  { id: 'gear-gaming', label: 'Gaming', kicker: 'Desk' }
+];

@@ -195,7 +195,8 @@ const stateOf = (i: number, n: number) =>
                   <div
                     class={`deck-glow-layer ${i === 0 ? 'active' : ''}`}
                     data-glow-index={i}
-                    style={`--glow: ${it.accent};${it.src ? ` --glow-img: url('${it.src}');` : ''}`}
+                    data-glow-src={it.src || undefined}
+                    style={`--glow: ${it.accent};${i === 0 && it.src ? ` --glow-img: url('${it.src}');` : ''}`}
                   ></div>
                 ))}
               </div>
@@ -1552,7 +1553,13 @@ const stateOf = (i: number, n: number) =>
             t.tabIndex = isActive ? 0 : -1;
           });
           gridCards.forEach((g, i) => g.classList.toggle('is-filtered-out', !visible.includes(i)));
-          glows.forEach((g, i) => g.classList.toggle('active', i === active));
+          glows.forEach((g, i) => {
+            const isActive = i === active;
+            g.classList.toggle('active', isActive);
+            if (isActive && g.dataset.glowSrc && !g.style.getPropertyValue('--glow-img')) {
+              g.style.setProperty('--glow-img', `url('${g.dataset.glowSrc}')`);
+            }
+          });
 
           const accent = cards[active]?.dataset.accent;
           if (accent) section.style.setProperty('--accent', accent);

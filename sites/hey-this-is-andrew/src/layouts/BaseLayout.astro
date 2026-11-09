@@ -57,6 +57,7 @@ const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_UR
 // Canonical: the production origin plus this page's path (which already
 // carries the base path on the production build).
 const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href;
+const isCcc = Astro.url.pathname.includes('/ccc');
 ---
 <!doctype html>
 <html lang="en" data-theme="dark">
@@ -78,6 +79,32 @@ const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
     <title>{title}</title>
+    <script type="application/ld+json" set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Person',
+          '@id': `${siteUrl}/#andrew`,
+          'name': 'Andrew Baxter',
+          'url': siteUrl,
+          'jobTitle': 'Creator & Photographer',
+          'email': 'heythisisandrewb@gmail.com',
+          'sameAs': [
+            'https://youtube.com/@hey_thisisandrew',
+            'https://instagram.com/hey_thisisandrew',
+            'https://thisiscoffeetalk.substack.com',
+            'https://linkedin.com/in/andrewlwyrbaxter'
+          ]
+        },
+        {
+          '@type': 'WebSite',
+          '@id': `${siteUrl}/#website`,
+          'url': siteUrl,
+          'name': 'HEY_THISISANDREW',
+          'publisher': { '@id': `${siteUrl}/#andrew` }
+        }
+      ]
+    })} />
     <!-- Dark-mode only (decision 6). The theme toggle is hidden, so the
          stored/OS preference is no longer read; <html> ships data-theme="dark".
          To bring the light theme back, restore this script and the toggle in
@@ -129,9 +156,15 @@ const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,600;0,6..96,700;1,6..96,600;1,6..96,700&family=Cinzel:wght@600;700;800;900&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Syne:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    {isCcc && (
+      <link
+        href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,600;0,6..96,700;1,6..96,600;1,6..96,700&family=Cinzel:wght@600;700;800;900&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&display=swap"
+        rel="stylesheet"
+      />
+    )}
     <script is:inline>
       // A reload starts at the top: not wherever the reader had scrolled,
       // and not dragged back down to a #section left in the address bar (a

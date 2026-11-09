@@ -1,6 +1,6 @@
 import type { FooterLink, NavItem, SocialLink } from '@andrew/ui/types';
 import { SOCIAL_LINE_ICONS } from '@andrew/ui/icons';
-import { HOME_SECTIONS, BUILD_SECTIONS, ABOUT_SECTIONS } from './sections';
+import { HOME_SECTIONS, BUILD_SECTIONS, ABOUT_SECTIONS, GEAR_SECTIONS } from './sections';
 
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
@@ -50,7 +50,7 @@ export const NAV_LINKS: NavItem[] = [
     label: 'Gear',
     href: page('gear'),
     section: 'gear',
-    subsections: [],
+    subsections: toSubsections(GEAR_SECTIONS, page('gear')),
   },
   {
     label: 'About',

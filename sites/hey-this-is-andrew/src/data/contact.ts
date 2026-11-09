@@ -6,9 +6,7 @@
  *             src/data/press.json, so it is read from there).
  * - personal: the general address (Links page, Privacy page).
  *
- * Pending Andrew: which press address is right. The About page uses
- * heythisisandrew@gmail.com, the Links and Privacy pages use
- * heythisisandrewb@gmail.com. Neither has been changed.
+ * Unified to heythisisandrewb@gmail.com across all pages.
  */
 import pressData from './press.json';
 
