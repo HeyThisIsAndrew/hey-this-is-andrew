@@ -1,104 +1,248 @@
 ---
 /**
  * /events: event coverage and appearances.
- * Upcoming events are added as data below; each entry renders a card.
- * Past coverage links out to the full breakdowns.
+ * Upcoming events, CCC hospitality coverage, and past convention archive.
  */
+import type { ImageMetadata } from 'astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
-import eventsData from '../data/events.json';
+import { getEventsForBuild, type EventItem } from '../lib/hq-events';
 
-interface EventItem {
-  name: string;
-  location: string;
-  dates: string;
-  blurb: string;
-  url?: string;
+const { upcoming, cccCoverage, past } = await getEventsForBuild();
+
+const rawBase = import.meta.env.BASE_URL;
+const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
+
+const ASSET_IMAGES = import.meta.glob<{ default: ImageMetadata }>(
+  '../assets/**/*.{webp,jpg,jpeg,png}',
+  { eager: true }
+);
+
+function resolveUrl(url?: string): string {
+  if (!url) return '#';
+  if (url.startsWith('http')) return url;
+  if (url.startsWith('/hey-this-is-andrew')) {
+    return url.replace(/^\/hey-this-is-andrew/, base);
+  }
+  return url.startsWith('/') ? `${base}${url}` : `${base}/${url}`;
 }
 
-// Upcoming events: add entries here as they are confirmed. The section
-// renders an honest empty state when the list is empty.
-const UPCOMING: EventItem[] = eventsData.upcoming;
-const PAST: EventItem[] = eventsData.past;
+function resolveImage(img?: string): string {
+  if (!img) return '';
+  if (img.startsWith('http')) return img;
+  const filename = img.split('/').pop()?.split('?')[0] ?? '';
+  if (filename) {
+    const hit = Object.entries(ASSET_IMAGES).find(([k]) => k.endsWith(`/${filename}`));
+    if (hit) {
+      return hit[1].default.src;
+    }
+  }
+  if (img.startsWith('/hey-this-is-andrew')) {
+    return img.replace(/^\/hey-this-is-andrew/, base);
+  }
+  return img.startsWith('/') ? `${base}${img}` : `${base}/${img}`;
+}
+
+function getInitials(name: string): string {
+  const words = name.replace(/[^a-zA-Z0-9\s]/g, '').trim().split(/\s+/);
+  if (words.length === 0 || !words[0]) return 'EV';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
 ---
 
 <BaseLayout
   title="Events · HEY_THISISANDREW"
   description="Event coverage and appearances from Hey This Is Andrew: conventions, premieres, and creator meetups."
 >
-  <h1 class="vh">Events from HEY_THISISANDREW</h1>
-  <div class="container">
-    <section class="events-head" aria-labelledby="events-heading">
-      <SectionHeader
-        id="events-heading"
-        kicker="Out in the field"
-        title="Events"
-        lede="Conventions, film premieres, and creator showcases. On-location reporting and dispatches."
-      />
+  <div class="container events-page">
+    <header class="events-head">
+      <span class="mono-tag">Out in the field</span>
+      <h1 class="events-title">Events</h1>
+      <p class="events-lede">
+        Conventions, film premieres, and creator showcases. On-location reporting and dispatches.
+      </p>
       <div class="events-status-strip">
-        <span class="events-status-badge font-mono">CALENDAR · COMING SOON</span>
         <a class="btn btn-secondary events-inquiry-btn" href="mailto:heythisisandrewb@gmail.com?subject=Event%20Coverage%20Inquiry">
-          Press & event inquiries &rarr;
+          Press &amp; event inquiries &rarr;
         </a>
       </div>
-    </section>
+    </header>
 
+    <!-- Section 1: Upcoming -->
     <section class="events-section" aria-labelledby="upcoming-heading">
-      <h2 class="events-subhead" id="upcoming-heading">Upcoming</h2>
-      {UPCOMING.length === 0 ? (
-        <div class="events-empty">
-          <p class="events-empty-title">No upcoming events scheduled</p>
-          <p class="events-empty-desc">
-            Nothing on the calendar right now. When the next convention,
-            premiere, or meetup is locked in, it will be listed here.
-          </p>
-        </div>
+      <SectionHeader
+        id="upcoming-heading"
+        kicker="Calendar"
+        title="Upcoming"
+        lede="Conventions, industry summits, and showcases on the radar."
+      />
+      {upcoming.length === 0 ? (
+        <p class="events-empty-desc">
+          Nothing on the calendar right now. When the next convention, premiere, or meetup is locked in, it will be listed here.
+        </p>
       ) : (
         <ul class="events-list">
-          {UPCOMING.map((e) => (
+          {upcoming.map((e: EventItem) => (
             <li class="event-card">
-              <p class="event-meta">{e.dates} · {e.location}</p>
-              <h3 class="event-name">{e.name}</h3>
-              <p class="event-blurb">{e.blurb}</p>
-              {e.url && (
-                <a class="event-link" href={e.url} target="_blank" rel="noopener">
-                  Details
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                    <path d="M1 11L11 1M11 1H3M11 1V9" stroke="currentColor" stroke-width="1.5" />
-                  </svg>
-                </a>
-              )}
+              <div class="event-thumb">
+                {e.image ? (
+                  <img
+                    src={resolveImage(e.image)}
+                    alt={e.name}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <div class="event-thumb-fallback font-mono" aria-hidden="true">
+                    <span class="event-monogram">{getInitials(e.name)}</span>
+                  </div>
+                )}
+              </div>
+              <div class="event-card-content">
+                <div class="event-badge-wrap">
+                  <span class:list={['event-badge', 'font-mono', { 'badge-hq': e.source === 'BE Unconventional HQ' }]}>
+                    {e.source}
+                  </span>
+                </div>
+                <p class="event-meta font-mono">
+                  {[e.dates, e.location].filter(Boolean).join(' · ')}
+                </p>
+                <h3 class="event-name">{e.name}</h3>
+                <p class="event-blurb">{e.blurb}</p>
+                {e.url && (
+                  <div class="event-action">
+                    <a
+                      class="event-link font-mono"
+                      href={resolveUrl(e.url)}
+                      target={e.url.startsWith('http') ? '_blank' : undefined}
+                      rel={e.url.startsWith('http') ? 'noopener' : undefined}
+                    >
+                      Details &rarr;
+                    </a>
+                  </div>
+                )}
+              </div>
             </li>
           ))}
         </ul>
       )}
     </section>
 
-    <section class="events-section" aria-labelledby="past-heading">
-      <h2 class="events-subhead" id="past-heading">Past coverage</h2>
-      {PAST.length === 0 ? (
-        <div class="events-empty">
-          <p class="events-empty-title">Coverage archive coming soon</p>
-          <p class="events-empty-desc">
-            Breakdowns and recaps from past events will live here once the
-            first one ships.
-          </p>
-        </div>
+    <!-- Section 2: Capture Create Caffeinate coverage -->
+    <section class="events-section" aria-labelledby="ccc-heading">
+      <SectionHeader
+        id="ccc-heading"
+        kicker="Hospitality & events"
+        title="Capture Create Caffeinate"
+        lede="On-location beverage photography, vertical video, and social reels produced for hospitality brands and launches."
+      />
+      {cccCoverage.length === 0 ? (
+        <p class="events-empty-desc">
+          Hospitality and event productions will be highlighted here as new campaigns wrap.
+        </p>
       ) : (
         <ul class="events-list">
-          {PAST.map((e) => (
+          {cccCoverage.map((e: EventItem) => (
             <li class="event-card">
-              <p class="event-meta">{e.dates} · {e.location}</p>
-              <h3 class="event-name">{e.name}</h3>
-              <p class="event-blurb">{e.blurb}</p>
-              {e.url && (
-                <a class="event-link" href={e.url} target="_blank" rel="noopener">
-                  Read the breakdown
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                    <path d="M1 11L11 1M11 1H3M11 1V9" stroke="currentColor" stroke-width="1.5" />
-                  </svg>
-                </a>
-              )}
+              <div class="event-thumb">
+                {e.image ? (
+                  <img
+                    src={resolveImage(e.image)}
+                    alt={e.name}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <div class="event-thumb-fallback font-mono" aria-hidden="true">
+                    <span class="event-monogram">{getInitials(e.name)}</span>
+                  </div>
+                )}
+              </div>
+              <div class="event-card-content">
+                <div class="event-badge-wrap">
+                  <span class:list={['event-badge', 'font-mono', { 'badge-hq': e.source === 'BE Unconventional HQ' }]}>
+                    {e.source}
+                  </span>
+                </div>
+                <p class="event-meta font-mono">
+                  {[e.dates, e.location].filter(Boolean).join(' · ')}
+                </p>
+                <h3 class="event-name">{e.name}</h3>
+                <p class="event-blurb">{e.blurb}</p>
+                {e.url && (
+                  <div class="event-action">
+                    <a
+                      class="event-link font-mono"
+                      href={resolveUrl(e.url)}
+                      target={e.url.startsWith('http') ? '_blank' : undefined}
+                      rel={e.url.startsWith('http') ? 'noopener' : undefined}
+                    >
+                      View project &rarr;
+                    </a>
+                  </div>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+
+    <!-- Section 3: Past coverage -->
+    <section class="events-section" aria-labelledby="past-heading">
+      <SectionHeader
+        id="past-heading"
+        kicker="Archive"
+        title="Past coverage"
+        lede="Breakdowns and recaps from past convention and festival floors."
+      />
+      {past.length === 0 ? (
+        <p class="events-empty-desc">
+          Breakdowns and recaps from past events will live here once the first one ships.
+        </p>
+      ) : (
+        <ul class="events-list">
+          {past.map((e: EventItem) => (
+            <li class="event-card">
+              <div class="event-thumb">
+                {e.image ? (
+                  <img
+                    src={resolveImage(e.image)}
+                    alt={e.name}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <div class="event-thumb-fallback font-mono" aria-hidden="true">
+                    <span class="event-monogram">{getInitials(e.name)}</span>
+                  </div>
+                )}
+              </div>
+              <div class="event-card-content">
+                <div class="event-badge-wrap">
+                  <span class:list={['event-badge', 'font-mono', { 'badge-hq': e.source === 'BE Unconventional HQ' }]}>
+                    {e.source}
+                  </span>
+                </div>
+                <p class="event-meta font-mono">
+                  {[e.dates, e.location].filter(Boolean).join(' · ')}
+                </p>
+                <h3 class="event-name">{e.name}</h3>
+                <p class="event-blurb">{e.blurb}</p>
+                {e.url && (
+                  <div class="event-action">
+                    <a
+                      class="event-link font-mono"
+                      href={resolveUrl(e.url)}
+                      target={e.url.startsWith('http') ? '_blank' : undefined}
+                      rel={e.url.startsWith('http') ? 'noopener' : undefined}
+                    >
+                      Read the breakdown &rarr;
+                    </a>
+                  </div>
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -108,8 +252,50 @@ const PAST: EventItem[] = eventsData.past;
 </BaseLayout>
 
 <style>
+  .events-page {
+    width: 100%;
+    padding-bottom: clamp(4rem, 8vw, 7rem);
+  }
+
   .events-head {
-    padding-top: clamp(3rem, 6vw, 5rem);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.9rem;
+    padding-top: clamp(2.5rem, 5vw, 4.5rem);
+    margin-bottom: clamp(2.5rem, 5vw, 4rem);
+  }
+
+  .mono-tag {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    padding: 0.3rem 0.65rem;
+    display: inline-block;
+  }
+
+  .events-title {
+    font-family: var(--font-display);
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+    margin: 0;
+    line-height: 1.05;
+  }
+
+  .events-lede {
+    font-size: 1.05rem;
+    color: var(--muted);
+    max-width: 65ch;
+    line-height: 1.7;
+    margin: 0;
   }
 
   .events-status-strip {
@@ -117,19 +303,7 @@ const PAST: EventItem[] = eventsData.past;
     flex-wrap: wrap;
     align-items: center;
     gap: 1.25rem;
-    margin: 1.5rem 0 2.5rem;
-  }
-
-  .events-status-badge {
-    display: inline-block;
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    color: var(--muted);
-    padding: 0.4rem 0.85rem;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    text-transform: uppercase;
+    margin-top: 0.5rem;
   }
 
   .events-inquiry-btn {
@@ -137,37 +311,17 @@ const PAST: EventItem[] = eventsData.past;
   }
 
   .events-section {
-    margin-bottom: clamp(3rem, 6vw, 5rem);
-  }
-
-  .events-subhead {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.5rem;
-    margin: 0 0 1.5rem;
-  }
-
-  .events-empty {
-    border: 1px solid var(--line);
-    background: var(--surface);
-    padding: 2.5rem 2rem;
-    text-align: left;
-    max-width: 42rem;
-  }
-
-  .events-empty-title {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.15rem;
-    margin: 0 0 0.6rem;
+    width: 100%;
+    margin-bottom: clamp(3.5rem, 7vw, 6rem);
   }
 
   .events-empty-desc {
     font-family: var(--font-body);
-    font-size: 0.92rem;
+    font-size: 0.95rem;
     line-height: 1.65;
     color: var(--muted);
     margin: 0;
+    max-width: 48rem;
   }
 
   .events-list {
@@ -176,7 +330,8 @@ const PAST: EventItem[] = eventsData.past;
     padding: 0;
     display: grid;
     grid-template-columns: 1fr;
-    gap: 1.25rem;
+    gap: 1.5rem;
+    width: 100%;
   }
 
   @media (min-width: 720px) {
@@ -188,23 +343,124 @@ const PAST: EventItem[] = eventsData.past;
   .event-card {
     background: var(--surface);
     border: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: clip;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .event-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--key-dim);
+  }
+
+  .event-thumb {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: clip;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .event-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .event-card:hover .event-thumb img {
+    transform: scale(1.03);
+  }
+
+  .event-thumb-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 70%), var(--surface-2);
+  }
+
+  .event-monogram {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    padding: 0.45rem 0.9rem;
+    background: var(--surface);
+    text-transform: uppercase;
+  }
+
+  .event-card-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
     padding: 1.5rem;
+  }
+
+  .event-badge-wrap {
+    margin-bottom: 0.75rem;
+  }
+
+  .event-badge {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.75rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--line);
+    color: var(--muted);
+    width: fit-content;
+    transition: border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .event-card:hover .event-badge:not(.badge-hq) {
+    color: var(--ink);
+    border-color: var(--hairline-strong);
+  }
+
+  .event-badge.badge-hq {
+    background: rgba(204, 0, 0, 0.12);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #ef4444;
+  }
+
+  .event-card:hover .event-badge.badge-hq {
+    border-color: rgba(239, 68, 68, 0.6);
   }
 
   .event-meta {
     font-family: var(--font-mono);
-    font-size: 0.7rem;
-    letter-spacing: 0.14em;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--muted);
-    margin: 0 0 0.75rem;
+    margin: 0 0 0.5rem;
   }
 
   .event-name {
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: 1.3rem;
-    margin: 0 0 0.6rem;
+    font-size: 1.35rem;
+    line-height: 1.25;
+    color: var(--ink);
+    margin: 0 0 0.75rem;
   }
 
   .event-blurb {
@@ -212,7 +468,12 @@ const PAST: EventItem[] = eventsData.past;
     font-size: 0.92rem;
     line-height: 1.65;
     color: var(--muted);
-    margin: 0 0 1rem;
+    margin: 0;
+  }
+
+  .event-action {
+    margin-top: auto;
+    padding-top: 1.25rem;
   }
 
   .event-link {
@@ -227,9 +488,14 @@ const PAST: EventItem[] = eventsData.past;
     text-decoration: none;
     border-bottom: 1px solid var(--key-dim);
     padding-bottom: 0.25rem;
+    transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .event-link:hover {
+    color: var(--ink);
     border-color: var(--ink);
+    transform: translateX(2px);
   }
 </style>
