@@ -1,6 +1,16 @@
 import { cleanFeedText } from './feed-text.ts';
 
-export const HQ_LATEST_URL = 'https://beunconventionalhq.com/api/latest-posts.json';
+export const HQ_LATEST_DEV_URL =
+  'https://feat-latest-posts-endpoint-beunconventionalhq.heythisisandrewb.workers.dev/api/latest-posts.json';
+
+const rawLatestUrl =
+  (typeof process !== 'undefined' && process.env?.HQ_LATEST_URL) ||
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.PUBLIC_HQ_LATEST_URL);
+
+export const HQ_LATEST_URL =
+  typeof rawLatestUrl === 'string' && rawLatestUrl.trim()
+    ? rawLatestUrl.trim()
+    : 'https://beunconventionalhq.com/api/latest-posts.json';
 export const HQ_FEED_URL = 'https://beunconventionalhq.com/feed#latest';
 export const HQ_SEED_MAX_AGE = 24 * 60 * 60 * 1000;
 const HQ_INDEX_URL = 'https://beunconventionalhq.com/api/search-index.json';
@@ -62,7 +72,7 @@ function postFrom(value: unknown, now: number): LatestPost | null {
   if (!url || typeof post.id !== 'string' || !post.id.trim() || typeof post.title !== 'string') return null;
   const date = typeof post.publishedAt === 'string' ? post.publishedAt : '';
   const publishedTime = Date.parse(date);
-  if (!Number.isFinite(publishedTime) || publishedTime > now) return null;
+  if (!Number.isFinite(publishedTime) || publishedTime > now + 60_000) return null;
   let title: string;
   try {
     title = cleanFeedText(post.title);
@@ -91,7 +101,7 @@ function newestPosts(posts: LatestPost[]): LatestPost[] {
 /** A valid empty response is authoritative; malformed responses leave the seed intact. */
 export function parseLatestPosts(payload: unknown, now = Date.now()): LatestPost[] | null {
   const manifest = record(payload);
-  if (manifest?.version !== 1 || !Array.isArray(manifest.items) || manifest.items.length > 2) return null;
+  if (manifest?.version !== 1 || !Array.isArray(manifest.items)) return null;
   const posts = manifest.items.map((item) => postFrom(item, now));
   if (posts.some((post) => post === null)) return null;
   return newestPosts(posts.filter((post) => post !== null));
@@ -133,8 +143,13 @@ async function fetchJson(url: string, timeout: number): Promise<unknown> {
   }
 }
 
-export async function fetchLiveLatestPosts(): Promise<LatestPost[] | null> {
-  return parseLatestPosts(await fetchJson(HQ_LATEST_URL, 4000));
+export async function fetchLiveLatestPosts(url = HQ_LATEST_URL): Promise<LatestPost[] | null> {
+  const primary = parseLatestPosts(await fetchJson(url, 4000));
+  if (primary) return primary;
+  if (url !== HQ_LATEST_DEV_URL) {
+    return parseLatestPosts(await fetchJson(HQ_LATEST_DEV_URL, 4000));
+  }
+  return null;
 }
 
 /** The live search index bridges builds until the publisher's compact endpoint is deployed. */
