@@ -426,11 +426,9 @@ test.describe('Global QA', () => {
     }
     const missionSec = page.locator('#mission');
     await missionSec.scrollIntoViewIfNeeded();
-    await page.screenshot({ path: '/Users/thisisandrew/.gemini/antigravity/brain/d3d268a9-49cf-4122-b8e9-94c199d498fc/publication-latest-desktop.png' });
 
     await page.setViewportSize({ width: 390, height: 844 });
     await missionSec.scrollIntoViewIfNeeded();
-    await page.screenshot({ path: '/Users/thisisandrew/.gemini/antigravity/brain/d3d268a9-49cf-4122-b8e9-94c199d498fc/publication-latest-mobile.png' });
     await page.setViewportSize({ width: 1440, height: 900 });
 
     // Closer Press inquiry button routes to Collaborations
@@ -457,9 +455,6 @@ test.describe('Global QA', () => {
     await expect(firstCoverageCard).toHaveClass(/\bis-flipped\b/);
     await page.waitForTimeout(650);
 
-    // Save visual screenshots
-    await page.screenshot({ path: '/Users/thisisandrew/.gemini/antigravity/brain/d3d268a9-49cf-4122-b8e9-94c199d498fc/coverage-desktop-flip.png' });
-
     await page.keyboard.press('Escape');
     await expect(firstCoverageCard).not.toHaveClass(/\bis-flipped\b/);
     await page.waitForTimeout(650);
@@ -469,7 +464,6 @@ test.describe('Global QA', () => {
     await firstCoverageCard.click();
     await expect(firstCoverageCard).toHaveClass(/\bis-flipped\b/);
     await page.waitForTimeout(650);
-    await page.screenshot({ path: '/Users/thisisandrew/.gemini/antigravity/brain/d3d268a9-49cf-4122-b8e9-94c199d498fc/coverage-mobile-flip.png' });
     await page.setViewportSize({ width: 1440, height: 900 });
 
     // Flip cards on HQ Hub
