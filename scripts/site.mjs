@@ -45,7 +45,12 @@ function run(cmd, args, opts = {}) {
 
 function pnpm(args, opts) {
   const exec = process.env.npm_execpath;
-  if (exec && /pnpm/.test(exec)) return run(process.execPath, [exec, ...args], opts);
+  if (exec && /pnpm/.test(exec)) {
+    if (exec.endsWith('.js') || exec.endsWith('.cjs') || exec.endsWith('.mjs')) {
+      return run(process.execPath, [exec, ...args], opts);
+    }
+    return run(exec, args, opts);
+  }
   if (spawnSync('corepack', ['--version'], { stdio: 'ignore' }).status === 0) return run('corepack', ['pnpm', ...args], opts);
   return run('pnpm', args, opts);
 }

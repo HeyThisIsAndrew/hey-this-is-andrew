@@ -34,3 +34,20 @@ set, or before the cached URLs expire), or save the image yourself as
 | 18081353437750409 | https://www.instagram.com/p/DKC3ff3Jgzq/ | Hibiscus Margarita |
 | 17888062341220268 | https://www.instagram.com/reel/DHdzrLyp7V5/ | Are you a morning person? |
 | 18049094354033387 | https://www.instagram.com/p/DHG9cMHyi7P/ | Disco Nap - Espresso Martini With A Blueberry Twist |
+
+## Reels without a self-hosted file
+
+| post | state |
+| --- | --- |
+| https://www.instagram.com/reel/DdkhcU4porf/ | not downloaded (no token, or the download failed): embed only |
+| https://www.instagram.com/reel/DaLPStlSEmy/ | not downloaded (no token, or the download failed): embed only |
+| https://www.instagram.com/reel/DXcH_cmEn4Z/ | not downloaded (no token, or the download failed): embed only |
+| https://www.instagram.com/reel/DXZiXYOErQ_/ | not downloaded (no token, or the download failed): embed only |
+| https://www.instagram.com/reel/DXZe-okklnE/ | not downloaded (no token, or the download failed): embed only |
+| https://www.instagram.com/reel/DXWyYGnkqft/ | not downloaded (no token, or the download failed): embed only |
+| https://www.instagram.com/reel/DXWvgpTkuIy/ | not downloaded (no token, or the download failed): embed only |
+| https://www.instagram.com/reel/DXVUNbSCbVw/ | not downloaded (no token, or the download failed): embed only |
+| https://www.instagram.com/reel/DXVTG9uCfGF/ | not downloaded (no token, or the download failed): embed only |
+| https://www.instagram.com/reel/DXPvRpwklRF/ | not downloaded (no token, or the download failed): embed only |
+| https://www.instagram.com/reel/DXPrgi3gTS_/ | not downloaded (no token, or the download failed): embed only |
+| https://www.instagram.com/reel/DHdzrLyp7V5/ | not downloaded (no token, or the download failed): embed only |

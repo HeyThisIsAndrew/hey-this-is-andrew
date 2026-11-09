@@ -3,16 +3,16 @@ import goals from './goals.json';
 export type PageSection = { id: string; label: string; kicker?: string };
 
 export const HOME_SECTIONS: PageSection[] = [
-  { id: 'overview', label: 'Overview', kicker: '01' },
-  { id: 'directory', label: 'Brands', kicker: '02' },
-  { id: 'about', label: 'Meet The Creator', kicker: '03' },
-  { id: 'photos', label: 'Shot on the job.', kicker: '04' },
-  { id: 'work', label: 'Work', kicker: '05' },
-  { id: 'latest', label: 'Latest', kicker: '06' },
-  { id: 'services', label: 'What I do', kicker: '07' },
-  { id: 'goals', label: 'Goals', kicker: '08' },
-  { id: 'gear', label: 'Gear', kicker: '09' },
-  { id: 'newsletter', label: 'Newsletter', kicker: '10' }
+  { id: 'overview', label: 'Overview' },
+  { id: 'directory', label: 'Brands' },
+  { id: 'about', label: 'Meet The Creator' },
+  { id: 'photos', label: 'Shot on the job.' },
+  { id: 'work', label: 'Work' },
+  { id: 'latest', label: 'Latest' },
+  { id: 'services', label: 'What I do' },
+  { id: 'goals', label: 'Goals' },
+  { id: 'gear', label: 'Gear' },
+  { id: 'newsletter', label: 'Newsletter' }
 ];
 
 /* /build is one accordion: a row per goal group (goals.json, in its own
@@ -27,11 +27,11 @@ export const BUILD_SECTIONS: PageSection[] = [
   { id: 'core-engine', label: 'Core engine' },
   { id: 'be', label: 'BE Unconventional HQ', kicker: 'BE' },
   { id: 'ccc', label: 'Capture Create Caffeinate', kicker: 'CCC' },
-].map((s, i) => ({ ...s, kicker: s.kicker ?? String(i + 1).padStart(2, '0') }));
+];
 
 export const ABOUT_SECTIONS: PageSection[] = [
-  { id: 'story', label: 'Story', kicker: '01' },
-  { id: 'writing', label: 'Writing', kicker: '02' },
-  { id: 'press', label: 'Press kit', kicker: '03' },
-  { id: 'contact', label: 'Contact', kicker: '04' }
+  { id: 'story', label: 'Story' },
+  { id: 'writing', label: 'Writing' },
+  { id: 'press', label: 'Press kit' },
+  { id: 'contact', label: 'Contact' }
 ];
