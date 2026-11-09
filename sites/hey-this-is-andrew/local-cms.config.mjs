@@ -43,7 +43,7 @@ export default {
         { key: 'wordmark', label: 'Wordmark (shown when there is no logo)', type: 'text', required: true },
         { key: 'media', label: 'Photo', type: 'asset', help: 'Empty: the teaser card shows.' },
         { key: 'teaserArt', label: 'Teaser art (no photo yet)', type: 'select', options: [{ value: '', label: '(none)' }, { value: 'cup', label: 'Cup (Sip the Magic)' }] },
-        { key: 'accent', label: 'Accent', type: 'select', options: [{ value: '', label: 'Monochrome (default)' }, { value: 'be-red', label: 'BE red (BE Unconventional HQ only)' }] },
+        { key: 'accent', label: 'Accent', type: 'select', options: [{ value: '', label: 'Monochrome (default)' }, { value: 'be-red', label: 'BE red (BE Unconventional HQ only)' }, { value: 'ccc-gold', label: 'CCC gold (Capture Create Caffeinate)' }] },
         { key: 'ctaFillOnPanelHover', label: 'CTA fills when the panel is hovered (HQ behaviour)', type: 'boolean' },
         {
           key: 'inquiry',

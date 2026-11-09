@@ -25,8 +25,8 @@ const GOAL_ROWS: PageSection[] = [...goals]
 export const BUILD_SECTIONS: PageSection[] = [
   ...GOAL_ROWS,
   { id: 'core-engine', label: 'Core engine' },
-  { id: 'be', label: 'BE Unconventional HQ', kicker: 'BE' },
-  { id: 'ccc', label: 'Capture Create Caffeinate', kicker: 'CCC' },
+  { id: 'be', label: 'Press Outlet', kicker: 'BE' },
+  { id: 'ccc', label: 'Cocktail Photography', kicker: 'CCC' },
 ];
 
 export const ABOUT_SECTIONS: PageSection[] = [
