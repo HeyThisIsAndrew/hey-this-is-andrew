@@ -1,0 +1,333 @@
+---
+/**
+ * Shared 3D Flip Card component (@andrew/ui/FlipCard.astro).
+ *
+ * Used across the monorepo (e.g. BE Unconventional HQ /about and
+ * hey-this-is-andrew /ccc/) to present compact summary tiles on the front
+ * face (display value, accent label, short one-line summary, and corner flip
+ * affordance) that flip on hover/focus/tap to reveal longer descriptive copy
+ * on the back face.
+ *
+ * Punctuation hygiene: zero em dashes throughout.
+ */
+interface Props {
+  value: string;
+  label: string;
+  desc: string;
+  backText: string;
+  idPrefix?: string;
+  index?: number;
+  longValue?: boolean;
+  class?: string;
+  delay?: number;
+  dataCccPackage?: string;
+  sendActionLabel?: string;
+}
+
+const {
+  value,
+  label,
+  desc,
+  backText,
+  idPrefix = 'pillar-back',
+  index = 0,
+  longValue = false,
+  class: className = '',
+  delay,
+  dataCccPackage,
+  sendActionLabel,
+} = Astro.props;
+
+const backId = `${idPrefix}-${index}`;
+---
+
+<button
+  type="button"
+  class:list={['stat-card', 'flip-card', className]}
+  data-delay={delay}
+  data-ccc-package={dataCccPackage}
+  aria-label={`${label}: ${value}. ${desc}`}
+  aria-describedby={backId}
+  aria-pressed="false"
+>
+  <div class="flip-card-inner">
+    <div class="flip-card-front">
+      <span class:list={['stat-value', longValue && 'stat-value-long']}>
+        {value}
+      </span>
+      <span class="stat-label">{label}</span>
+      <p class="pillar-desc">{desc}</p>
+      <span class="flip-hint" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          width="14"
+          height="14"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M2 12a10 10 0 0 1 17-7.1L22 8" />
+          <path d="M22 3v5h-5" />
+        </svg>
+      </span>
+    </div>
+    <div class="flip-card-back">
+      <p id={backId}>{backText}</p>
+      {sendActionLabel && (
+        <span
+          class="btn btn-primary flip-action-btn"
+          data-open-ccc-modal
+          data-ccc-package={dataCccPackage}
+        >
+          {sendActionLabel} <span aria-hidden="true">&rarr;</span>
+        </span>
+      )}
+      <slot name="back-action" />
+    </div>
+  </div>
+</button>
+
+<style>
+  .flip-card {
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    perspective: 1000px;
+    width: 100%;
+    font-family: inherit;
+    color: inherit;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Reset outer stat-card hover transform since .flip-card-inner rotates */
+  .stat-card.flip-card,
+  .stat-card.flip-card:hover {
+    background: transparent;
+    border: none;
+    padding: 0;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .flip-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    text-align: center;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-style: preserve-3d;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .flip-card:hover .flip-card-inner {
+      transform: rotateY(180deg);
+    }
+  }
+
+  .flip-card:focus-visible .flip-card-inner,
+  .flip-card.is-flipped .flip-card-inner {
+    transform: rotateY(180deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flip-card-inner {
+      transition: none;
+    }
+  }
+
+  .flip-card-front,
+  .flip-card-back {
+    grid-area: 1 / 1;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    border-radius: 0;
+    padding: var(--flip-padding, 2.25rem 1.5rem);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: var(--flip-bg, var(--color-surface, #111111));
+    border: 1px solid var(--flip-border, rgba(255, 255, 255, 0.06));
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .flip-card:hover .flip-card-front,
+    .flip-card:hover .flip-card-back {
+      border-color: var(--flip-accent-border, var(--color-accent, #cc0000));
+      box-shadow: var(--flip-accent-shadow, 0 8px 30px rgba(204, 0, 0, 0.1));
+    }
+  }
+
+  .flip-card:focus-visible .flip-card-front,
+  .flip-card:focus-visible .flip-card-back,
+  .flip-card.is-flipped .flip-card-front,
+  .flip-card.is-flipped .flip-card-back {
+    border-color: var(--flip-accent-border, var(--color-accent, #cc0000));
+    box-shadow: var(--flip-accent-shadow, 0 8px 30px rgba(204, 0, 0, 0.1));
+  }
+
+  .flip-card-back {
+    transform: rotateY(180deg);
+    background: var(--flip-bg-back, rgba(25, 25, 25, 0.96));
+    text-align: center;
+    gap: 0.5rem;
+  }
+
+  .stat-value {
+    display: block;
+    font-family: var(--flip-font-value, var(--font-display));
+    font-size: clamp(1.75rem, 1.4rem + 1.8vw, 2.4rem);
+    font-weight: 800;
+    color: var(--flip-value-color, var(--color-white, var(--ink, #ffffff)));
+    margin-bottom: 0.45rem;
+    line-height: 1.15;
+    text-transform: uppercase;
+  }
+
+  .stat-value-long {
+    font-size: var(--flip-value-long-size, clamp(1.05rem, calc(0.75rem + 0.9vw), 1.35rem));
+    letter-spacing: 0.06em;
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+
+  .stat-label {
+    display: block;
+    font-family: var(--flip-font-label, inherit);
+    color: var(--flip-accent-text, var(--color-accent-text, #ef4444));
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .pillar-desc {
+    font-family: var(--flip-font-desc, inherit);
+    font-size: 0.82rem;
+    color: var(--flip-muted-color, var(--color-white-muted, var(--muted, #9a9a95)));
+    margin: 0.5rem 0 0;
+    line-height: 1.4;
+    text-wrap: balance;
+  }
+
+  .flip-card-back p {
+    font-family: var(--flip-font-back, inherit);
+    color: var(--flip-back-color, var(--color-white, var(--ink, #ffffff)));
+    font-size: var(--flip-back-size, 1rem);
+    line-height: 1.5;
+    margin: 0;
+    width: 100%;
+    text-wrap: balance;
+  }
+
+  .flip-action-btn {
+    margin-top: 0.5rem;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-family: var(--flip-font-label, inherit);
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+
+  .flip-hint {
+    position: absolute;
+    right: 0.85rem;
+    bottom: 0.85rem;
+    display: inline-flex;
+    color: var(--flip-muted-color, var(--color-white-muted, var(--muted, #9a9a95)));
+    opacity: 0.45;
+    transition: opacity 0.3s ease, color 0.3s ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .flip-card:hover .flip-hint {
+      color: var(--flip-accent-text, var(--color-accent-text, #ef4444));
+      opacity: 1;
+    }
+  }
+
+  .flip-card:focus-visible .flip-hint,
+  .flip-card.is-flipped .flip-hint {
+    color: var(--flip-accent-text, var(--color-accent-text, #ef4444));
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flip-hint {
+      opacity: 0.6;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .flip-card-front,
+    .flip-card-back {
+      padding: var(--flip-padding-mobile, 1.5rem 1.25rem);
+    }
+    .flip-card-back p {
+      font-size: var(--flip-back-size-mobile, 0.88rem);
+      line-height: 1.45;
+    }
+  }
+</style>
+
+<script>
+  function initFlipCards() {
+    const cards = document.querySelectorAll<HTMLButtonElement>('.flip-card');
+    cards.forEach((card) => {
+      if (card.dataset.flipWired === '1') return;
+      card.dataset.flipWired = '1';
+
+      card.addEventListener('click', (e) => {
+        // If clicking an inner action button (like Send inquiry), do not toggle card flip
+        const target = e.target as HTMLElement | null;
+        if (target && target.closest('[data-open-ccc-modal], [data-no-flip]')) {
+          return;
+        }
+
+        const wasFlipped = card.classList.contains('is-flipped');
+        document.querySelectorAll<HTMLButtonElement>('.flip-card.is-flipped').forEach((other) => {
+          if (other !== card) {
+            other.classList.remove('is-flipped');
+            other.setAttribute('aria-pressed', 'false');
+          }
+        });
+
+        if (wasFlipped) {
+          card.classList.remove('is-flipped');
+          card.setAttribute('aria-pressed', 'false');
+          card.blur();
+        } else {
+          card.classList.add('is-flipped');
+          card.setAttribute('aria-pressed', 'true');
+        }
+      });
+    });
+
+    if (document.documentElement.dataset.flipDocWired !== '1') {
+      document.documentElement.dataset.flipDocWired = '1';
+      document.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement | null;
+        if (target && target.closest('.flip-card')) return;
+        document.querySelectorAll<HTMLButtonElement>('.flip-card.is-flipped').forEach((card) => {
+          card.classList.remove('is-flipped');
+          card.setAttribute('aria-pressed', 'false');
+        });
+      });
+    }
+  }
+
+  initFlipCards();
+  document.addEventListener('astro:page-load', initFlipCards);
+</script>

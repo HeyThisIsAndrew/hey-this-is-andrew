@@ -10,6 +10,7 @@
  */
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
+import FlipCard from '@andrew/ui/FlipCard.astro';
 import CccPhoto from '../components/ccc/CccPhoto.astro';
 import CccInquiryModal from '../components/ccc/CccInquiryModal.astro';
 import { Image } from 'astro:assets';
@@ -90,6 +91,32 @@ const easy = [
   { title: 'Every good shot', body: "No cap on photos. If it's a keeper, it gets edited and it's yours." },
   { title: 'Sized to post', body: 'Delivered ready for your feed, stories, website, and Google listing.' },
   { title: 'Next-day selects', body: '15 selects the next day, so you can post while the night is fresh. The full gallery within a week.' },
+];
+const packages = [
+  {
+    id: 'photo',
+    value: 'PHOTO SESSION',
+    label: 'Half-Day Coverage',
+    desc: '4 hrs on site \u00b7 15 next-day selects \u00b7 No photo cap',
+    backText:
+      'Four hours on site capturing your signature drinks, the room, and service as it happens. Every keeper edited with no cap on photos. 15 selects delivered the next day so you can post immediately, with your full high-res gallery within a week.',
+  },
+  {
+    id: 'reel',
+    value: 'REEL ADD-ON',
+    label: 'Vertical Video',
+    desc: 'Native 9:16 vertical \u00b7 Sound & color graded',
+    backText:
+      'Add vertical video shot natively for Instagram Reels and TikTok. Captures the movement, ambient sound, and raw energy of a real night without staged disruptions, edited and color-matched to your venue with revisions included.',
+  },
+  {
+    id: 'bundle',
+    value: 'PHOTO + REEL',
+    label: 'Complete Package',
+    desc: 'Photo + vertical video \u00b7 Weeks of content',
+    backText:
+      'The all-in-one package for venues that want complete coverage. Both photography and vertical video captured together in a single shoot with matched tone and color, delivering weeks of ready-to-post content across your feed, stories, and website.',
+  },
 ];
 ---
 
@@ -304,50 +331,20 @@ const easy = [
           <CccPhoto src={pricingCoupe} alt="A coupe cocktail with a green garnish, warm light behind it" sizes="(min-width: 900px) 30vw, 100vw" />
         </div>
         <div class="ccc-pricing-list">
-          <div class="ccc-price">
-            <div class="ccc-price-lead">
-              <h3 class="ccc-price-title">Photo session</h3>
-              <span class="ccc-price-scope font-mono">Half-day coverage</span>
-            </div>
-            <div class="ccc-price-body">
-              <p>Four hours on site capturing your signature drinks, the room, and service as it happens. Every keeper edited with no cap on photos. 15 selects delivered the next day so you can post immediately, with your full high-res gallery within a week.</p>
-              <div class="ccc-price-pills font-mono">
-                <span>4 hrs on site</span>
-                <span>No photo cap</span>
-                <span>15 next-day selects</span>
-                <span>Gallery in 1 week</span>
-              </div>
-            </div>
-          </div>
-          <div class="ccc-price">
-            <div class="ccc-price-lead">
-              <h3 class="ccc-price-title">Reel add-on</h3>
-              <span class="ccc-price-scope font-mono">Vertical video</span>
-            </div>
-            <div class="ccc-price-body">
-              <p>Add vertical video shot natively for Instagram Reels and TikTok. Captures the movement, ambient sound, and raw energy of a real night without staged disruptions, edited and color-matched to your venue with revisions included.</p>
-              <div class="ccc-price-pills font-mono">
-                <span>Native 9:16 vertical</span>
-                <span>Sound & color graded</span>
-                <span>Real service pacing</span>
-                <span>Revisions included</span>
-              </div>
-            </div>
-          </div>
-          <div class="ccc-price is-featured">
-            <div class="ccc-price-lead">
-              <h3 class="ccc-price-title">Photo + reel</h3>
-              <span class="ccc-price-scope font-mono">Complete package</span>
-            </div>
-            <div class="ccc-price-body">
-              <p>The all-in-one package for venues that want complete coverage. Both photography and vertical video captured together in a single shoot with matched tone and color, delivering weeks of ready-to-post content across your feed, stories, and website.</p>
-              <div class="ccc-price-pills font-mono">
-                <span>Photo + vertical video</span>
-                <span>Matched tone & color</span>
-                <span>Next-day selects</span>
-                <span>Weeks of content</span>
-              </div>
-            </div>
+          <div class="ccc-pricing-cards">
+            {packages.map((pkg, idx) => (
+              <FlipCard
+                value={pkg.value}
+                label={pkg.label}
+                desc={pkg.desc}
+                backText={pkg.backText}
+                idPrefix="ccc-pkg-back"
+                index={idx}
+                dataCccPackage={pkg.id}
+                sendActionLabel="Send"
+                class="ccc-pkg-card"
+              />
+            ))}
           </div>
           <p class="ccc-price-foot">Rush delivery: full gallery in 48 hours · Events and custom projects quoted by scope</p>
         </div>
@@ -1016,85 +1013,44 @@ const easy = [
   }
   @media (min-width: 900px) { .ccc-pricing { grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr); } }
   .ccc-pricing-media { max-width: 420px; width: 100%; justify-self: center; }
-  .ccc-pricing-list { display: grid; gap: 1.1rem; }
-  .ccc-price {
-    display: grid;
-    gap: 1rem 1.75rem;
-    padding: clamp(1.35rem, 2.2vw, 1.85rem) clamp(1.4rem, 2.5vw, 2rem);
-    border: 1px solid var(--line);
-    background: rgba(255, 255, 255, 0.02);
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-  }
-  @media (min-width: 640px) {
-    .ccc-price {
-      grid-template-columns: minmax(140px, 190px) minmax(0, 1fr);
-      align-items: start;
-    }
-  }
-  .ccc-price:hover {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.22);
-  }
-  .ccc-price.is-featured {
-    border: 1px solid var(--ink);
-    background: rgba(255, 255, 255, 0.04);
-  }
-  .ccc-price-lead {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-  }
-  .ccc-price-title {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: clamp(1.15rem, 2vw, 1.45rem);
-    font-weight: 800;
-    line-height: 1.15;
-    text-transform: uppercase;
-    letter-spacing: -0.01em;
-    color: var(--ink);
-  }
-  .ccc-price-scope {
-    font-size: 0.68rem;
-    font-weight: 500;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .ccc-price-body {
+  .ccc-pricing-list {
     display: flex;
     flex-direction: column;
     gap: 0.85rem;
   }
-  .ccc-price-body p {
-    margin: 0;
-    font-size: clamp(0.92rem, 1.3vw, 1rem);
-    line-height: 1.6;
-    color: var(--text, #d6d6d6);
+  .ccc-pricing-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: 1fr;
+    gap: 0.85rem;
+    --flip-bg: #111111;
+    --flip-bg-back: rgba(20, 20, 20, 0.98);
+    --flip-border: rgba(255, 255, 255, 0.08);
+    --flip-accent-border: var(--ccc-gold);
+    --flip-accent-shadow: 0 8px 30px rgba(201, 169, 110, 0.14);
+    --flip-accent-text: var(--ccc-gold);
+    --flip-value-color: var(--ccc-cream);
+    --flip-muted-color: var(--ccc-muted);
+    --flip-back-color: var(--ccc-cream-soft);
+    --flip-font-label: var(--ccc-font-mono);
+    --flip-padding: 1.65rem 1.5rem;
+    --flip-padding-mobile: 1.2rem 1.15rem;
+    --flip-back-size: 0.96rem;
+    --flip-back-size-mobile: 0.84rem;
   }
-  .ccc-price-pills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem 0.65rem;
-  }
-  .ccc-price-pills span {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.25rem 0.55rem;
-    font-size: 0.65rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ink, #fff);
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+  .ccc-pricing-cards :global(.stat-value) {
+    font-size: clamp(1.25rem, 1rem + 1.1vw, 1.65rem);
+    letter-spacing: 0.01em;
+    margin-bottom: 0.4rem;
   }
   .ccc-price-foot {
-    margin: 0.5rem 0 0 !important;
+    margin: 0.35rem 0 0 !important;
     font-family: var(--font-mono);
     font-size: 0.72rem !important;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--muted) !important;
+    text-align: center;
   }
 
   /* Closer */
