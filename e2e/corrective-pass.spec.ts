@@ -137,4 +137,101 @@ test.describe('Corrective Pass Verification', () => {
       message: 'Contact endpoint is not live yet.',
     });
   });
+
+  test('Gate 9: Tiles global single-line text and zero box-boundary overflow', async ({ page }) => {
+    const viewports = [
+      { width: 390, height: 844 },
+      { width: 820, height: 1180 },
+      { width: 1440, height: 900 },
+    ];
+
+    for (const vp of viewports) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.goto('./ccc/');
+      await page.evaluate(() => document.fonts?.ready);
+
+      const tileStats = await page.evaluate(() => {
+        const cards = Array.from(document.querySelectorAll('.ccc-pricing-cards .flip-card'));
+        return cards.map((card) => {
+          const val = card.querySelector<HTMLElement>('.stat-value');
+          const front = card.querySelector<HTMLElement>('.flip-card-front');
+          const valRect = val?.getBoundingClientRect();
+          const frontRect = front?.getBoundingClientRect();
+          const computed = val ? getComputedStyle(val) : null;
+          return {
+            text: val?.textContent?.trim(),
+            whiteSpace: computed?.whiteSpace,
+            scrollWidth: val?.scrollWidth ?? 0,
+            clientWidth: val?.clientWidth ?? 0,
+            overflowsCard: Boolean(
+              valRect && frontRect && (valRect.left < frontRect.left - 1 || valRect.right > frontRect.right + 1)
+            ),
+          };
+        });
+      });
+
+      expect(tileStats.length).toBe(3);
+      for (const stat of tileStats) {
+        expect(stat.whiteSpace).toBe('nowrap');
+        expect(stat.scrollWidth).toBeLessThanOrEqual(stat.clientWidth + 1);
+        expect(stat.overflowsCard).toBe(false);
+      }
+    }
+  });
+
+  test('Gate 10: BeUnconventionalHQ coverage cards icon sizing and flip text legibility', async ({ page }) => {
+    // 1. Mobile viewport (390x844)
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('./brands/be-unconventional-hq/');
+    await page.evaluate(() => document.fonts?.ready);
+
+    const mobileCards = await page.evaluate(() => {
+      const cards = Array.from(document.querySelectorAll('#coverage .hq-card'));
+      return cards.map((c) => {
+        const cardEl = c as HTMLElement;
+        const media = c.querySelector<HTMLElement>('.hq-card-media');
+        const img = c.querySelector<HTMLElement>('.hq-card-img');
+        const backTitle = c.querySelector<HTMLElement>('.hq-card-back-title');
+        const backLine = c.querySelector<HTMLElement>('.hq-card-back-line');
+        return {
+          cardH: cardEl.offsetHeight,
+          mediaW: media?.offsetWidth ?? 0,
+          imgH: img?.getBoundingClientRect().height ?? 0,
+          backTitleFontSize: backTitle ? parseFloat(getComputedStyle(backTitle).fontSize) : 0,
+          backLineFontSize: backLine ? parseFloat(getComputedStyle(backLine).fontSize) : 0,
+        };
+      });
+    });
+
+    expect(mobileCards.length).toBe(4);
+    for (const card of mobileCards) {
+      expect(card.cardH).toBeGreaterThanOrEqual(90);
+      expect(card.mediaW).toBeGreaterThanOrEqual(95);
+      expect(card.imgH).toBeGreaterThanOrEqual(60);
+      expect(card.backTitleFontSize).toBeGreaterThanOrEqual(13);
+    }
+
+    // 2. Desktop viewport (1440x900)
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('./brands/be-unconventional-hq/');
+    await page.evaluate(() => document.fonts?.ready);
+
+    const desktopCards = await page.evaluate(() => {
+      const cards = Array.from(document.querySelectorAll('#coverage .hq-card'));
+      return cards.map((c) => {
+        const img = c.querySelector<HTMLElement>('.hq-card-img');
+        const backTitle = c.querySelector<HTMLElement>('.hq-card-back-title');
+        return {
+          imgH: img?.getBoundingClientRect().height ?? 0,
+          backTitleFontSize: backTitle ? parseFloat(getComputedStyle(backTitle).fontSize) : 0,
+        };
+      });
+    });
+
+    expect(desktopCards.length).toBe(4);
+    for (const card of desktopCards) {
+      expect(card.imgH).toBeGreaterThanOrEqual(80);
+      expect(card.backTitleFontSize).toBeGreaterThanOrEqual(13);
+    }
+  });
 });
