@@ -18,9 +18,8 @@ const recent: LatestItem[] = [
 ---
 <BaseLayout title="Links · HEY_THISISANDREW" description="Videos, writing, gear, and everywhere to find Andrew Baxter." minimal>
   <div class="links-hub">
-    <section class="links-profile" aria-labelledby="links-name">
+    <section class="links-profile" aria-label="Profile">
       <Image src={headshot} alt="" width={160} height={160} class="links-avatar" loading="eager" />
-      <h1 id="links-name">Andrew Baxter</h1>
       <button type="button" class="links-logo-trigger" data-qr-open="andrew-links-qr" aria-haspopup="dialog" aria-controls="andrew-links-qr" aria-label="Open my links QR code">
         <Image src={PERSONAL_BRAND.logo} alt={PERSONAL_BRAND.name} widths={[280, 560]} sizes="280px" format="png" loading="eager" />
       </button>
@@ -33,12 +32,8 @@ const recent: LatestItem[] = [
       ))}
     </nav>
 
-    <nav class="links-actions" aria-label="Explore and contact">
-      <a class="links-home" href={homeUrl} aria-label="Explore the full site">
-        <Image src={PERSONAL_BRAND.logo} alt={PERSONAL_BRAND.name} width={180} format="png" />
-        <span aria-hidden="true">↗</span>
-      </a>
-      <a class="links-contact" href={`mailto:${CONTACT.personal}`}>Contact <span aria-hidden="true">↗</span></a>
+    <nav class="links-actions" aria-label="Explore">
+      <a class="links-home" href={homeUrl}>Explore the full site <span aria-hidden="true">↗</span></a>
     </nav>
 
     <section class="links-recent" aria-labelledby="links-recent-title">
@@ -49,29 +44,30 @@ const recent: LatestItem[] = [
     <a class="links-gear" href={`${base}/gear/`}><span>The kit behind the work</span><strong>Explore my gear <span aria-hidden="true">↗</span></strong></a>
     <footer class="links-footer"><span>© 2026 Andrew Baxter</span><a href={`${base}/privacy/`}>Privacy</a></footer>
   </div>
-  <QrDialog id="andrew-links-qr" url={PERSONAL_BRAND.linksUrl} title="Keep in touch" label="Open my links" description="Scan to find my videos, writing, and social links.">
-    <Image src={PERSONAL_BRAND.logo} alt={PERSONAL_BRAND.name} width={170} format="png" />
-  </QrDialog>
+  <QrDialog id="andrew-links-qr" url={PERSONAL_BRAND.linksUrl} title="Keep in touch" label="Open my links" description="Scan to find my videos, writing, and social links." contact={{ href: `mailto:${CONTACT.personal}`, label: 'Contact' }} />
 </BaseLayout>
 <style>
   .links-hub { width: min(100% - 2rem, 860px); margin: 0 auto; padding: clamp(2rem, 5vw, 4rem) 0 1.5rem; }
   .links-profile { padding: 0; margin: 0; text-align: center; display: grid; justify-items: center; gap: 0.75rem; }
-  .links-avatar { width: 74px; height: 74px; object-fit: cover; border-radius: 50%; border: 1px solid var(--line); }
-  .links-profile h1 { margin: 0; font: 500 1rem var(--font-body); letter-spacing: 0.04em; }
-  .links-logo-trigger { width: min(74vw, 280px); min-height: 44px; border: 0; background: transparent; padding: 0.25rem; cursor: pointer; transition: opacity 0.2s ease; }
+  .links-avatar { width: 120px; height: 120px; object-fit: cover; border-radius: 50%; border: 1px solid var(--line); }
+  /* The CCC modal close pattern (CccInquiryModal.astro, .ccc-modal-close):
+     no box, border, background, outline or tap highlight in any state from a
+     mouse or a tap. Only a keyboard gets a thin 1px line (:focus-visible),
+     white here because this site is monochrome. */
+  .links-logo-trigger { appearance: none; width: min(74vw, 280px); min-height: 44px; border: none; border-radius: 0; background: none; padding: 0.25rem; cursor: pointer; outline: none; box-shadow: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; transition: opacity 0.2s ease; }
   .links-logo-trigger:hover { opacity: 0.7; }
+  .links-logo-trigger:focus-visible { outline: 1px solid #fff; outline-offset: 2px; }
   .links-logo-trigger img { width: 100%; height: auto; }
   .links-tagline { margin: 0; color: var(--muted); font: 0.66rem/1.6 var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; }
   .links-socials { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.25rem; margin: 1rem 0 1.35rem; }
   .links-socials a { display: grid; place-items: center; width: 44px; height: 44px; color: #aaa; transition: color 0.2s ease, transform 0.2s ease; }
   .links-socials a:hover { color: white; transform: translateY(-2px); }
   .links-socials :global(svg) { width: 23px; height: 23px; }
-  .links-actions { display: grid; grid-template-columns: 1.4fr 1fr; gap: 0.75rem; margin: 0 0 2rem; }
+  .links-actions { display: grid; grid-template-columns: minmax(0, 1fr); margin: 0 0 2rem; }
   .links-actions a { min-width: 0; min-height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 1rem 1.25rem; border: 1px solid var(--line); text-decoration: none; background: #101010; }
   .links-actions a:hover { border-color: #777; background: #181818; }
-  .links-home img { min-width: 0; width: min(100%, 160px); height: auto; flex: 0 1 160px; }
   .links-actions a > span { flex-shrink: 0; }
-  .links-contact { font: 0.8rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; }
+  .links-home { font: 0.8rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; }
   .links-recent { padding: 0; margin: 0; }
   .links-section-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--line); padding-top: 1.25rem; margin-bottom: 1rem; }
   .links-section-head h2 { margin: 0; font: 500 0.8rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.13em; }

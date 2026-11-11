@@ -65,11 +65,15 @@ for (const width of [390, 1440]) {
     const requests: string[] = [];
     page.on('request', request => requests.push(request.url()));
     await page.goto(`${base}links/`);
-    await expect(page.getByRole('heading',{level:1,name:'Andrew Baxter'})).toBeVisible();
+    await expect(page.locator('h1')).toHaveCount(0);
+    await expect(page.locator('#scroll-progress')).toHaveCount(0);
     await expect(page.locator('.links-profile img[alt="HEY_THISISANDREW"]')).toHaveAttribute('src', /hey-thisisandrew\..*\.png/);
+    await expect(page.locator('img[alt="HEY_THISISANDREW"]')).toHaveCount(1);
+    await expect(page.locator('.links-actions a')).toHaveCount(1);
+    await expect(page.locator('.links-actions a')).toHaveText(/Explore the full site/);
     await expect(page.locator('.links-socials a')).toHaveCount(7);
     await expect(page.locator('.links-socials svg')).toHaveCount(7);
-    await expect(page.getByRole('link',{name:'Contact',exact:true})).toHaveAttribute('href','mailto:heythisisandrewb@gmail.com');
+    await expect(page.locator('a[href^="mailto:"]:not(dialog a)')).toHaveCount(0);
     await expect(page.locator('.links-content-grid .latest-card')).toHaveCount(2);
     await expect(page.locator('a[href$="rss.xml"]')).toHaveCount(0);
     const trigger=page.getByRole('button',{name:'Open my links QR code'});
@@ -78,6 +82,10 @@ for (const width of [390, 1440]) {
     await expect(dialog).toBeVisible();
     await expect(dialog.locator('.qr-code svg')).toBeVisible();
     await expect(dialog.getByRole('link',{name:'Open my links'})).toHaveAttribute('href','https://heythisisandrew.github.io/hey-this-is-andrew/links/');
+    await expect(dialog.getByRole('link',{name:'Contact'})).toHaveAttribute('href','mailto:heythisisandrewb@gmail.com');
+    await expect(dialog.locator('img')).toHaveCount(0);
+    // Opening focuses the dialog, never the X, so no square is drawn round it.
+    await expect(dialog.getByRole('button',{name:'Close QR code'})).not.toBeFocused();
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
     await expect(trigger).toBeFocused();

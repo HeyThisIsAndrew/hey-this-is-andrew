@@ -13,6 +13,7 @@
   aria-modal="true"
   aria-label="Video player"
   aria-hidden="true"
+  tabindex="-1"
   hidden
 >
   <div class="vp-backdrop" data-vp-close></div>
@@ -92,7 +93,9 @@
         source: sourceEl,
         overlay: player,
         instant: prefersReducedMotion(),
-        onDone: () => player.querySelector<HTMLElement>('.vp-close')?.focus(),
+        // Focus the player, not the X (the CCC inquiry modal's pattern):
+        // focusing the close button on open is what drew a square round it.
+        onDone: () => player.focus({ preventScroll: true }),
       });
     }
 
@@ -259,6 +262,14 @@
   .vp-youtube:hover {
     color: #fff;
   }
+  /* The player is focused on open; it is a container, not a control. */
+  .video-player:focus {
+    outline: none;
+  }
+  /* The CCC modal close pattern (ccc/CccInquiryModal.astro, .ccc-modal-close):
+     a bare X, no box, no border, no background, no outline and no tap
+     highlight in any state from a mouse or a tap. Only a keyboard gets a thin
+     1px white line (:focus-visible). */
   .vp-btn {
     position: absolute;
     top: calc(1.25rem + env(safe-area-inset-top, 0px));
@@ -268,18 +279,29 @@
     justify-content: center;
     width: 56px;
     height: 56px;
-    background: rgba(20, 20, 20, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    color: rgba(245, 245, 245, 0.9);
-    font-size: 1.8rem;
-    cursor: pointer;
-    transition: border-color 0.25s ease, background-color 0.25s ease, transform 0.18s cubic-bezier(0.2, 0.9, 0.25, 1);
-  }
-  .vp-btn:hover,
-  .vp-btn:focus-visible {
-    border-color: rgba(255, 255, 255, 0.6);
-    background: rgba(35, 35, 35, 0.95);
+    padding: 0;
+    margin: 0;
+    appearance: none;
+    background: none;
+    border: none;
+    border-radius: 0;
     outline: none;
+    box-shadow: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    color: rgba(245, 245, 245, 0.9);
+    font-size: 2.5rem;
+    font-weight: 300;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.25s ease, transform 0.18s cubic-bezier(0.2, 0.9, 0.25, 1);
+  }
+  .vp-btn:hover {
+    color: #fff;
+  }
+  .vp-btn:focus-visible {
+    outline: 1px solid #fff;
+    outline-offset: 2px;
   }
   .vp-btn:active {
     transform: scale(0.92);
