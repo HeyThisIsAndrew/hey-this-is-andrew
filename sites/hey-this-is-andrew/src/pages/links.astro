@@ -1,155 +1,91 @@
 ---
-/**
- * /links: the link-in-bio page. One destination for every profile,
- * pointed at from social bios. Monochrome button list, no tracking.
- */
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { Image } from 'astro:assets';
+import QrDialog from '@andrew/ui/QrDialog.astro';
+import { SOCIAL_ICONS } from '@andrew/ui/icons';
+import LatestCard from '../components/LatestCard.astro';
 import headshot from '../assets/brands/hq/andrew-headshot.webp';
+import { PERSONAL_BRAND } from '../data/brand';
+import { SOCIALS, homeUrl } from '../data/nav';
 import { CONTACT } from '../data/contact';
-
-const rawBase = import.meta.env.BASE_URL;
-const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
-
-const LINKS = [
-  { label: 'YouTube', sub: '@HeyThisIsAndrew', href: 'https://www.youtube.com/@HeyThisIsAndrew' },
-  { label: 'Instagram', sub: '@hey_thisisandrew', href: 'https://www.instagram.com/hey_thisisandrew/' },
-  { label: 'TikTok', sub: '@hey_thisisandrew', href: 'https://tiktok.com/@hey_thisisandrew' },
-  { label: 'Substack', sub: 'Notes from the build', href: 'https://thisiscoffeetalk.substack.com/' },
-  { label: 'Full site', sub: 'hey-this-is-andrew', href: base ? `${base}/` : '/' },
-  { label: 'Feed', sub: 'Every video and article (RSS)', href: `${base}/rss.xml` },
-  { label: 'Bluesky', sub: '@thisisandrew', href: 'https://bsky.app/profile/thisisandrew.bsky.social' },
-  { label: 'LinkedIn', sub: 'Andrew Baxter', href: 'https://www.linkedin.com/in/andrewlwyrbaxter/' },
-  { label: 'Email', sub: CONTACT.personal, href: `mailto:${CONTACT.personal}` },
+import { getLatestArticles, getLatestVideos, type LatestItem } from '../lib/latest-content';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const [videos, articles] = await Promise.all([getLatestVideos(1), getLatestArticles(1)]);
+const recent: LatestItem[] = [
+  ...videos.slice(0, 1),
+  ...articles.slice(0, 1).map((article): LatestItem => ({ kind: 'article', label: 'Latest writing', title: article.title, description: article.subtitle, image: article.image, date: article.date, url: article.url })),
 ];
 ---
-
-<BaseLayout
-  title="Links · HEY_THISISANDREW"
-  description="Everywhere to find HEY_THISISANDREW: YouTube, Instagram, TikTok, Substack, and more."
->
-  <h1 class="vh">Links for HEY_THISISANDREW</h1>
-  <div class="links-wrap">
-    <section class="links-profile" aria-label="Profile">
-      <div class="links-avatar-wrap">
-        <Image src={headshot} alt="Andrew Baxter" width={160} height={160} class="links-avatar" />
-      </div>
-      <p class="links-wordmark">HEY_THISISANDREW</p>
+<BaseLayout title="Links · HEY_THISISANDREW" description="Videos, writing, gear, and everywhere to find Andrew Baxter." minimal>
+  <div class="links-hub">
+    <section class="links-profile" aria-labelledby="links-name">
+      <Image src={headshot} alt="" width={160} height={160} class="links-avatar" loading="eager" />
+      <h1 id="links-name">Andrew Baxter</h1>
+      <button type="button" class="links-logo-trigger" data-qr-open="andrew-links-qr" aria-haspopup="dialog" aria-controls="andrew-links-qr" aria-label="Open my links QR code">
+        <Image src={PERSONAL_BRAND.logo} alt={PERSONAL_BRAND.name} widths={[280, 560]} sizes="280px" format="png" loading="eager" />
+      </button>
       <p class="links-tagline">Creator · Photographer · Coffee Drinker</p>
     </section>
 
-    <nav class="links-list" aria-label="Social links">
-      {LINKS.map((l) => (
-        <a
-          class="links-btn"
-          href={l.href}
-          target={l.href.startsWith('http') ? '_blank' : undefined}
-          rel={l.href.startsWith('http') ? 'noopener' : undefined}
-        >
-          <span class="links-label">{l.label}</span>
-          <span class="links-sub">{l.sub}</span>
-          <span class="links-arrow" aria-hidden="true">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M1 11L11 1M11 1H3M11 1V9" stroke="currentColor" stroke-width="1.5" />
-            </svg>
-          </span>
-        </a>
+    <nav class="links-socials" aria-label="Find me on social media">
+      {SOCIALS.map((social) => (
+        <a href={social.href} target="_blank" rel="noopener noreferrer" aria-label={social.label} title={social.label} set:html={SOCIAL_ICONS[social.label]} />
       ))}
     </nav>
+
+    <nav class="links-actions" aria-label="Explore and contact">
+      <a class="links-home" href={homeUrl} aria-label="Explore the full site">
+        <Image src={PERSONAL_BRAND.logo} alt={PERSONAL_BRAND.name} width={180} format="png" />
+        <span aria-hidden="true">↗</span>
+      </a>
+      <a class="links-contact" href={`mailto:${CONTACT.personal}`}>Contact <span aria-hidden="true">↗</span></a>
+    </nav>
+
+    <section class="links-recent" aria-labelledby="links-recent-title">
+      <div class="links-section-head"><h2 id="links-recent-title">From the build</h2><a href={`${homeUrl}#latest`}>More posts <span aria-hidden="true">↗</span></a></div>
+      <div class="links-content-grid">{recent.map((item) => <LatestCard item={item} compact />)}</div>
+    </section>
+
+    <a class="links-gear" href={`${base}/gear/`}><span>The kit behind the work</span><strong>Explore my gear <span aria-hidden="true">↗</span></strong></a>
+    <footer class="links-footer"><span>© 2026 Andrew Baxter</span><a href={`${base}/privacy/`}>Privacy</a></footer>
   </div>
+  <QrDialog id="andrew-links-qr" url={PERSONAL_BRAND.linksUrl} title="Keep in touch" label="Open my links" description="Scan to find my videos, writing, and social links.">
+    <Image src={PERSONAL_BRAND.logo} alt={PERSONAL_BRAND.name} width={170} format="png" />
+  </QrDialog>
 </BaseLayout>
-
 <style>
-  .links-wrap {
-    max-width: 34rem;
-    margin: 0 auto;
-    padding: clamp(3rem, 8vw, 5rem) 1.25rem clamp(4rem, 8vw, 6rem);
+  .links-hub { width: min(100% - 2rem, 860px); margin: 0 auto; padding: clamp(2rem, 5vw, 4rem) 0 1.5rem; }
+  .links-profile { padding: 0; margin: 0; text-align: center; display: grid; justify-items: center; gap: 0.75rem; }
+  .links-avatar { width: 74px; height: 74px; object-fit: cover; border-radius: 50%; border: 1px solid var(--line); }
+  .links-profile h1 { margin: 0; font: 500 1rem var(--font-body); letter-spacing: 0.04em; }
+  .links-logo-trigger { width: min(74vw, 280px); min-height: 44px; border: 0; background: transparent; padding: 0.25rem; cursor: pointer; transition: opacity 0.2s ease; }
+  .links-logo-trigger:hover { opacity: 0.7; }
+  .links-logo-trigger img { width: 100%; height: auto; }
+  .links-tagline { margin: 0; color: var(--muted); font: 0.66rem/1.6 var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; }
+  .links-socials { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.25rem; margin: 1rem 0 1.35rem; }
+  .links-socials a { display: grid; place-items: center; width: 44px; height: 44px; color: #aaa; transition: color 0.2s ease, transform 0.2s ease; }
+  .links-socials a:hover { color: white; transform: translateY(-2px); }
+  .links-socials :global(svg) { width: 23px; height: 23px; }
+  .links-actions { display: grid; grid-template-columns: 1.4fr 1fr; gap: 0.75rem; margin: 0 0 2rem; }
+  .links-actions a { min-width: 0; min-height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 1rem 1.25rem; border: 1px solid var(--line); text-decoration: none; background: #101010; }
+  .links-actions a:hover { border-color: #777; background: #181818; }
+  .links-home img { min-width: 0; width: min(100%, 160px); height: auto; flex: 0 1 160px; }
+  .links-actions a > span { flex-shrink: 0; }
+  .links-contact { font: 0.8rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; }
+  .links-recent { padding: 0; margin: 0; }
+  .links-section-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--line); padding-top: 1.25rem; margin-bottom: 1rem; }
+  .links-section-head h2 { margin: 0; font: 500 0.8rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.13em; }
+  .links-section-head a { min-height: 44px; display: flex; align-items: center; gap: 0.5rem; font: 0.7rem var(--font-mono); color: #aaa; text-decoration: none; }
+  .links-content-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  .links-gear { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: 1rem; padding: 1.15rem; border: 1px solid var(--line); text-decoration: none; }
+  .links-gear > span { color: #aaa; font-size: 0.85rem; }
+  .links-gear strong { font: 0.7rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; }
+  .links-footer { display: flex; justify-content: space-between; gap: 1rem; padding-top: 2rem; color: #777; font-size: 0.75rem; }
+  .links-footer a { min-height: 44px; display: flex; align-items: center; }
+  @media (max-width: 600px) {
+    .links-content-grid { grid-template-columns: minmax(0, 1fr); }
+    .links-actions a { min-width: 0; min-height: 64px; padding: 0.85rem; }
+    .links-gear { align-items: flex-start; flex-direction: column; gap: 0.4rem; }
   }
-
-  .links-profile {
-    text-align: center;
-    margin-bottom: 2.5rem;
-  }
-
-  .links-avatar-wrap {
-    width: 84px;
-    height: 84px;
-    margin: 0 auto 1.25rem;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: #111;
-  }
-
-  .links-avatar {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .links-wordmark {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: clamp(0.95rem, 4.2vw, 1.4rem);
-    letter-spacing: 0.02em;
-    margin: 0 0 0.5rem;
-  }
-
-  .links-tagline {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin: 0;
-  }
-
-  .links-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-  }
-
-  .links-btn {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: 0.25rem 1rem;
-    padding: 1rem 1.25rem;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    color: var(--ink);
-    text-decoration: none;
-    transition: border-color 160ms ease, background 160ms ease;
-  }
-
-  .links-btn:hover {
-    border-color: var(--key);
-    background: var(--color-surface-2);
-  }
-
-  .links-label {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.02rem;
-    grid-column: 1;
-  }
-
-  .links-sub {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    letter-spacing: 0.06em;
-    color: var(--muted);
-    grid-column: 1;
-  }
-
-  .links-arrow {
-    grid-column: 2;
-    grid-row: 1 / 3;
-    color: var(--muted);
-  }
-
-  .links-btn:hover .links-arrow {
-    color: var(--ink);
-  }
+  @media (prefers-reduced-motion: reduce) { .links-socials a, .links-logo-trigger { transition: none; } }
 </style>

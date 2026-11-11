@@ -1,0 +1,11 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import { pageDirection, installPageTransitions } from './scripts/route-transitions.mjs';
+import './styles/route-transitions.css';
+interface Props { routes: string[]; filterRoots?: string[]; }
+const { routes, filterRoots = [] } = Astro.props;
+const options = JSON.stringify({ routes, filterRoots }).replace(/</g, '\\u003c');
+const bootstrap = `(${installPageTransitions.toString()})(${options}, ${pageDirection.toString()});`;
+---
+<ClientRouter />
+<script is:inline set:html={bootstrap} />

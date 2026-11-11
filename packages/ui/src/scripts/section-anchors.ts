@@ -116,7 +116,7 @@ export function initSectionAnchors(): void {
       }, 1800);
 
       // Smooth navigation with navbar offset
-      history.pushState(null, '', hash);
+      history.pushState(history.state, '', hash);
       const targetEl = document.getElementById(targetId) || header;
       if (targetEl) {
         const nav = document.querySelector('.site-nav');

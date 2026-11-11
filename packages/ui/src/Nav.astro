@@ -38,6 +38,8 @@ const isCurrent = (href: string) => {
   return currentPath === path || currentPath.startsWith(`${path}/`);
 };
 
+const isExactPage = (href: string) => !href.includes('#') && href.replace(/\/$/, '') === currentPath;
+
 const hasCurrentSub = (item: NavItem) =>
   Boolean(item.subsections?.some((sub) => isCurrent(sub.href)));
 ---
@@ -65,7 +67,7 @@ const hasCurrentSub = (item: NavItem) =>
                 data-spy={isHome && l.spy?.length ? l.spy.join(' ') : undefined}
                 aria-haspopup={l.subsections.length > 0 ? "true" : undefined}
                 aria-expanded={l.subsections.length > 0 ? "false" : undefined}
-                aria-current={isCurrent(l.href) ? 'page' : undefined}
+                aria-current={isExactPage(l.href) ? 'page' : undefined}
                 class:list={['nav-link', { active: isCurrent(l.href) || hasCurrentSub(l) }]}
               >
                 <span>{l.label}</span>
@@ -85,7 +87,7 @@ const hasCurrentSub = (item: NavItem) =>
                         <a
                           href={sub.href}
                           class:list={['dropdown-link', { active: isCurrent(sub.href) }]}
-                          aria-current={isCurrent(sub.href) ? 'page' : undefined}
+                          aria-current={isExactPage(sub.href) ? 'page' : undefined}
                           role="menuitem"
                         >
                           <span class="dropdown-kicker" aria-hidden="true">{sub.kicker}</span>
@@ -158,7 +160,7 @@ const hasCurrentSub = (item: NavItem) =>
               <a
                 href={l.href}
                 class:list={['mobile-main-link', { active: isCurrent(l.href) || hasCurrentSub(l) }]}
-                aria-current={isCurrent(l.href) ? 'page' : undefined}
+                aria-current={isExactPage(l.href) ? 'page' : undefined}
               >
                 {l.label}
               </a>
@@ -170,7 +172,7 @@ const hasCurrentSub = (item: NavItem) =>
                     <a
                       href={sub.href}
                       class:list={['mobile-sub-link', { active: isCurrent(sub.href) }]}
-                      aria-current={isCurrent(sub.href) ? 'page' : undefined}
+                      aria-current={isExactPage(sub.href) ? 'page' : undefined}
                     >
                       <span class="mobile-sub-kicker" aria-hidden="true">{sub.kicker}</span>
                       <span>{sub.label}</span>
@@ -203,11 +205,22 @@ const hasCurrentSub = (item: NavItem) =>
     document.documentElement.style.setProperty('--nav-bar-h', Math.round(row.getBoundingClientRect().height + top) + 'px');
   };
     set();
-    if ('ResizeObserver' in window) new ResizeObserver(set).observe(row);
+    if ('ResizeObserver' in window) {
+      const observer = new ResizeObserver(set);
+      observer.observe(row);
+      document.addEventListener('astro:before-swap', () => observer.disconnect(), { once: true });
+    }
   })();
 </script>
 
 <script>
+  import { createPageScope } from './scripts/page-scope';
+  function initNav() {
+    const navRoot = document.querySelector<HTMLElement>('.site-nav');
+    if (!navRoot || navRoot.dataset.navWired) return;
+    navRoot.dataset.navWired = '1';
+    const { on, timeout } = createPageScope(navRoot);
+
   const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const menuLabels = {
     menu: document.querySelector('.menu-btn-label')?.textContent ?? 'Menu',
@@ -225,7 +238,7 @@ const hasCurrentSub = (item: NavItem) =>
   // section and repeated clicks add nothing.
   const scrollHomeToTop = () => {
     window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
-    if (window.location.hash) history.pushState(null, '', window.location.pathname + window.location.search);
+    if (window.location.hash) history.pushState(history.state, '', window.location.pathname + window.location.search);
   };
 
   // Logo: on the homepage, return to top with a tactile press instead of
@@ -241,9 +254,9 @@ const hasCurrentSub = (item: NavItem) =>
         const el = logoHome as HTMLElement;
         el.style.transition = 'transform 180ms cubic-bezier(0.2, 0.9, 0.25, 1)';
         el.style.transform = 'scale(0.96)';
-        window.setTimeout(() => {
+        timeout(() => {
           el.style.transform = 'scale(1)';
-          window.setTimeout(() => {
+          timeout(() => {
             el.style.transition = '';
             el.style.transform = '';
           }, 200);
@@ -299,7 +312,7 @@ const hasCurrentSub = (item: NavItem) =>
       }
     });
     item.addEventListener('focusout', () => {
-      setTimeout(() => {
+      timeout(() => {
         if (!item.contains(document.activeElement)) {
           item.classList.remove('is-dismissed');
           setExpanded(false);
@@ -319,7 +332,7 @@ const hasCurrentSub = (item: NavItem) =>
         suppressFocusOpen = true;
         item.classList.add('is-dismissed');
         setExpanded(false);
-        window.setTimeout(() => {
+        timeout(() => {
           suppressFocusOpen = false;
         }, 50);
       }
@@ -350,7 +363,7 @@ const hasCurrentSub = (item: NavItem) =>
           item.classList.add('is-dismissed');
           setExpanded(false);
           mainLink.focus();
-          window.setTimeout(() => {
+          timeout(() => {
             suppressFocusOpen = false;
           }, 50);
         }
@@ -394,7 +407,7 @@ const hasCurrentSub = (item: NavItem) =>
         if (reduced()) {
           mobileMenu.hidden = true;
         } else {
-          closeTimer = window.setTimeout(() => {
+          closeTimer = timeout(() => {
             mobileMenu.hidden = true;
           }, 270);
         }
@@ -408,7 +421,7 @@ const hasCurrentSub = (item: NavItem) =>
         (menuBtn as HTMLElement)?.focus();
       })
     );
-    document.addEventListener('keydown', (e) => {
+    on(document, 'keydown', (e) => {
       if (e.key === 'Escape' && isOpen()) {
         setOpen(false);
         (menuBtn as HTMLElement)?.focus();
@@ -441,7 +454,7 @@ const hasCurrentSub = (item: NavItem) =>
     // exactly what scrolling its links is: it shut itself under the reader's
     // finger on every iPhone (100% repro on an iPhone 17 Pro Max).
     const header = mobileMenu.closest('header');
-    document.addEventListener('click', (e) => {
+    on(document, 'click', (e) => {
       if (!isOpen()) return;
       const t = e.target as Node | null;
       if (t && header && !header.contains(t)) setOpen(false);
@@ -449,7 +462,7 @@ const hasCurrentSub = (item: NavItem) =>
 
     // Same query as the CSS that swaps the links for the Menu button.
     const compact = window.matchMedia('(max-width: 860px), (orientation: landscape) and (max-height: 500px)');
-    window.addEventListener('resize', () => {
+    on(window, 'resize', () => {
       if (!compact.matches && isOpen()) setOpen(false);
     });
   }
@@ -514,8 +527,8 @@ const hasCurrentSub = (item: NavItem) =>
       queued = true;
       requestAnimationFrame(update);
     };
-    window.addEventListener('scroll', queue, { passive: true });
-    window.addEventListener('resize', queue, { passive: true });
+    on(window, 'scroll', queue, { passive: true });
+    on(window, 'resize', queue, { passive: true });
     update();
   }
   {
@@ -531,9 +544,13 @@ const hasCurrentSub = (item: NavItem) =>
         nav.classList.remove('scrolled');
       }
     };
-    window.addEventListener('scroll', updateNavScroll, { passive: true });
+    on(window, 'scroll', updateNavScroll, { passive: true });
     updateNavScroll();
   }
+
+  }
+  initNav();
+  document.addEventListener('astro:page-load', initNav);
 </script>
 
 <style>

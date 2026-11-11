@@ -1,6 +1,6 @@
 # Architecture: andrew-sites
 
-Andrew's website builder. One repository holds the **building blocks** (`packages/`) and the **sites made from them** (`sites/`). A new site is a copy of the starter, given its own colours and content. It never gets its own copy of the blocks, so a fix to a block reaches every site at once.
+Andrew's website builder. One repository holds the **building blocks** (`packages/`) and the **sites made from them** (`sites/`). A new site starts from the starter, with its own branding and content. Shared behavior is imported from packages rather than copied. A fix reaches every site that consumes the shared block; legacy site-local implementations require migration before they receive that fix.
 
 ## 1. The Workspace
 
@@ -8,6 +8,8 @@ Andrew's website builder. One repository holds the **building blocks** (`package
 - `packages/ui/`: The shared component library (Astro components, TS types, CSS).
 - `packages/local-cms/`: A local JSON editor (running at `/local-cms` under `pnpm dev`) for managing content without a database.
 - `sites/hey-this-is-andrew/`: The primary personal site.
+- `sites/be-unconventional-hq/`: The HQ publication. Its editorial layouts, navbar, and footer remain site-specific.
+- `sites/reelay/`: Reelay, another consumer of the shared UI and tokens.
 - `templates/site-starter/`: The starting point for every new site.
 
 ## 2. Shared Packages & Components
@@ -52,3 +54,21 @@ Every site uses `packages/local-cms/`. Content is strictly decoupled from layout
 3. **Edit**: Modify posts, brand panels, galleries, and any other JSON collections defined in `local-cms.config.mjs`.
 4. **Save**: The CMS writes back to `src/data/*.json`. The changes are instantly previewable on the local site.
 5. **Deploy**: Commit the changed JSON files and push. The CI pipeline builds the Astro site, treating the JSON files as a database.
+
+
+## Current reuse boundaries
+
+| Behavior | Shared owner | Consumers |
+| --- | --- | --- |
+| Basic content expansion | `Disclosure.astro` and `scripts/disclosure.ts` | Personal gear sections, product-grid mode, and `ExpandSection` |
+| Page-transition direction and animation | `RouteTransitions.astro`, `scripts/route-transitions.mjs`, and its stylesheet | Personal site; adapted from the existing HQ behavior |
+| QR generation and accessible dialog | `QrDialog.astro` | Personal links page |
+| Social platform artwork | `icons.ts` | Personal navigation/footer/links and HQ |
+| Per-page listener and observer lifetime | `scripts/page-scope.ts` | Shared navigation, page navigation, brand accordion, photo elevator, and personal page chrome |
+| Personal identity artwork | Personal `src/data/brand.ts` | Navigation, footer, hero, links, and QR branding |
+
+HQ's featured deck still contains editorial-specific trailer playback, information panels, and viewport sizing. The personal gear deck contains product/store selection and inventory filtering. These are site compositions, not interchangeable components. Further deck extraction should share the compatible mechanics without copying trailer or product rules into the other site.
+
+HQ is a reference for the personal site's navigation and QR behavior. Its source, existing shared imports, and deployment are unchanged by this work. The new shared modules are consumed by the personal site; other sites can opt in separately. The navigation rules account for route order, nested routes, browser history, anchor arrivals, and in-place list pagination. Personal-site initializers and page-owned listeners are cleaned up across Astro client navigation.
+
+The links route intentionally uses a compact bio layout instead of the full header/footer. The built-site audit checks that exception only on that route and verifies that personal-brand logo images use the approved PNG artwork everywhere.

@@ -1,5 +1,5 @@
 import type { FooterLink, NavItem, SocialLink } from '@andrew/ui/types';
-import { SOCIAL_LINE_ICONS } from '@andrew/ui/icons';
+import { SOCIAL_ICONS, SOCIAL_LINE_ICONS } from '@andrew/ui/icons';
 import { HOME_SECTIONS, BUILD_SECTIONS, ABOUT_SECTIONS, GEAR_SECTIONS } from './sections';
 
 const rawBase = import.meta.env.BASE_URL;
@@ -23,7 +23,7 @@ export const NAV_LINKS: NavItem[] = [
   },
   {
     label: 'Brands',
-    href: `${homeUrl}#brands`,
+    href: page('brands'),
     section: 'directory',
     spy: ['directory'],
     showMobileSubsections: true,
@@ -80,6 +80,7 @@ export const SOCIALS: SocialLink[] = [
   { label: 'TikTok', href: 'https://tiktok.com/@hey_thisisandrew', icon: SOCIAL_LINE_ICONS.TikTok },
   { label: 'Threads', href: 'https://www.threads.net/@hey_thisisandrew', icon: SOCIAL_LINE_ICONS.Threads },
   { label: 'Substack', href: 'https://thisiscoffeetalk.substack.com/', icon: SOCIAL_LINE_ICONS.Substack },
+  { label: 'Bluesky', href: 'https://bsky.app/profile/thisisandrew.bsky.social', icon: SOCIAL_ICONS.Bluesky },
   { label: 'LinkedIn', href: 'https://www.linkedin.com/in/andrewlwyrbaxter/', icon: SOCIAL_LINE_ICONS.LinkedIn },
 ];
 

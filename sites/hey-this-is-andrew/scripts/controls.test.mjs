@@ -73,7 +73,7 @@ assert.match(pageNav, /list\.prepend\(li\)/, 'a page without a Top heading gets 
 assert.match(layout, /if \(e\.defaultPrevented\) return;/, "the layout's hash handler leaves a link a component already handled");
 assert.doesNotMatch(nav, /nav-search-label/, 'the search trigger is the icon only, no SEARCH text');
 assert.match(nav, /\.nav-search-btn \{[^}]*border: 0;[^}]*\}/, 'the search trigger has no border or box');
-assert.match(nav, /aria-current=\{isCurrent\(l\.href\) \? 'page' : undefined\}/, 'a page link is current on its own page only');
+assert.match(nav, /aria-current=\{isExactPage\(l\.href\) \? 'page' : undefined\}/, 'a page link is current on its own page only');
 assert.match(nav, /data-spy=/, 'the home scrollspy lights only a link whose own section is current');
 assert.doesNotMatch(nav, /currentActiveId/, 'the old sticky scrollspy (About lit through What I do) is gone');
 assert.match(navData, /label: 'Gear',\s*href: page\('gear'\),/, 'Gear: one label, its own page (every nav item is a page)');

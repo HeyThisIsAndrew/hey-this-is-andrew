@@ -1,3 +1,4 @@
+import { createPageScope } from '@andrew/ui/scripts/page-scope.ts';
 /**
  * Parallax fallback for browsers without CSS `animation-timeline: view()`.
  *
@@ -39,6 +40,7 @@ export function initParallaxFallback(): void {
   );
   if (targets.length === 0) return;
 
+  const { on, cleanup } = createPageScope(document.querySelector<HTMLElement>('main') || document.body);
   const visible = new Set<HTMLElement>();
   const io = new IntersectionObserver(
     (entries) => {
@@ -56,6 +58,7 @@ export function initParallaxFallback(): void {
     { rootMargin: '10% 0px 10% 0px' }
   );
   targets.forEach((el) => io.observe(el));
+  cleanup(() => { io.disconnect(); cancelAnimationFrame(raf); });
 
   let raf = 0;
   let lastY = -1;
@@ -100,8 +103,8 @@ export function initParallaxFallback(): void {
     if (!raf) raf = requestAnimationFrame(tick);
   };
 
-  window.addEventListener('scroll', schedule, { passive: true });
-  window.addEventListener('resize', () => {
+  on(window, 'scroll', schedule, { passive: true });
+  on(window, 'resize', () => {
     lastY = -1;
     schedule();
   });

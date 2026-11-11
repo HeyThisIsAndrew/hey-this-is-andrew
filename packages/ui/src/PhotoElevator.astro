@@ -946,13 +946,17 @@ const SETS = [0, 1];
 </style>
 
 <script>
+  import { createPageScope } from './scripts/page-scope';
   // Manual reel control: AUTO MOVEMENT + USER CONTROL + CAMERA ZOOM
-  (() => {
+  function initPhotoElevator() {
     const wall = document.querySelector<HTMLElement>('.photo-wall');
     const stage = document.getElementById('camera-stage');
     const stageWrap = document.querySelector<HTMLElement>('.photo-stage-wrap');
     const photoSection = document.querySelector<HTMLElement>('.photo-section');
     if (!wall || !stage || !stageWrap || !('requestAnimationFrame' in window)) return;
+    if (wall.dataset.elevatorWired) return;
+    wall.dataset.elevatorWired = '1';
+    const { on, cleanup } = createPageScope(wall);
     wall.classList.add('js-reels');
 
     const reduced = () =>
@@ -1168,6 +1172,7 @@ const SETS = [0, 1];
         { threshold: 0 }
       );
       reels.forEach((r) => io.observe(r.column));
+      cleanup(() => io.disconnect());
     }
 
     reels.forEach(measure);
@@ -1182,6 +1187,7 @@ const SETS = [0, 1];
         near.disconnect();
       }, { rootMargin: '800px 0px' });
       near.observe(section);
+      cleanup(() => near.disconnect());
     }
 
     /* ---- Camera: translate(X, Y) scale(s) about the stage's top-left ----
@@ -1554,8 +1560,8 @@ const SETS = [0, 1];
       });
     };
 
-    window.addEventListener('resize', onResizeOrRotate, { passive: true });
-    window.addEventListener('orientationchange', onResizeOrRotate, { passive: true });
+    on(window, 'resize', onResizeOrRotate, { passive: true });
+    on(window, 'orientationchange', onResizeOrRotate, { passive: true });
     window.visualViewport?.addEventListener('resize', onResizeOrRotate, { passive: true });
 
     // Delegated click listener on wall so every item click (original or loop) is handled reliably
@@ -1618,6 +1624,7 @@ const SETS = [0, 1];
       if (gutter > 0) document.body.style.paddingRight = `${gutter}px`;
       document.documentElement.classList.remove('photo-zoom-closing');
       document.documentElement.classList.add('photo-zoom-open');
+      document.documentElement.dataset.historyView = 'photo';
 
       if (!history.state?.photoZoom) {
         history.pushState({ ...(history.state ?? {}), photoZoom: true }, '');
@@ -1744,6 +1751,7 @@ const SETS = [0, 1];
         document.body.style.overflow = '';
         document.body.style.paddingRight = '';
         document.documentElement.classList.remove('photo-zoom-open', 'photo-zoom-closing');
+        if (!expectPop && document.documentElement.dataset.historyView === 'photo') delete document.documentElement.dataset.historyView;
         if ('scrollRestoration' in history) {
           history.scrollRestoration = prevScrollRestoration;
         }
@@ -1780,8 +1788,8 @@ const SETS = [0, 1];
         stepItem(dir);
       }
     };
-    window.addEventListener('touchmove', preventBgTouch, { passive: false });
-    window.addEventListener('wheel', handleZoomWheel, { passive: false });
+    on(window, 'touchmove', preventBgTouch, { passive: false });
+    on(window, 'wheel', handleZoomWheel, { passive: false });
 
     // Clicking stage background or backdrop when zoomed resets
     stage.addEventListener('click', (e) => {
@@ -1811,7 +1819,7 @@ const SETS = [0, 1];
     });
 
     // ESC key resets; Arrow keys step between items when zoomed
-    window.addEventListener('keydown', (e) => {
+    on(window, 'keydown', (e) => {
       if (e.key === 'Escape') {
         if (isReelOpen) {
           e.preventDefault();
@@ -1835,24 +1843,43 @@ const SETS = [0, 1];
       }
     });
 
-    // Browser navigation resets without letting BaseLayout scroll the page
-    window.addEventListener(
-      'popstate',
-      () => {
-        if (!isZoomed && !expectPop) return;
-        const wasExpected = expectPop;
-        expectPop = false;
-        document.documentElement.dataset.viewPop = '1';
-        window.setTimeout(() => delete document.documentElement.dataset.viewPop, 80);
-        if (isZoomed) {
-          resetZoom(true);
-        } else if (wasExpected) {
-          if (Math.abs(window.scrollY - savedScrollY) > 2) {
-            instantScrollTo(savedScrollY);
-          }
-        }
-      },
-      { capture: true }
-    );
-  })();
+    const closeFromHistory = () => {
+      if (!isZoomed && !expectPop) return;
+      const wasExpected = expectPop;
+      expectPop = false;
+      if (document.documentElement.dataset.historyView === 'photo') delete document.documentElement.dataset.historyView;
+      document.documentElement.dataset.viewPop = '1';
+      window.setTimeout(() => delete document.documentElement.dataset.viewPop, 80);
+      if (isZoomed) resetZoom(true);
+      else if (wasExpected && Math.abs(window.scrollY - savedScrollY) > 2) instantScrollTo(savedScrollY);
+    };
+    on(window, 'andrew:view-pop', (event) => {
+      if (event.detail.owner === 'photo') closeFromHistory();
+    });
+    on(window, 'popstate', (event) => {
+      if (!isZoomed && !expectPop) return;
+      event.stopImmediatePropagation();
+      closeFromHistory();
+    }, { capture: true });
+    cleanup(() => {
+      cancelAnimationFrame(resizeRaf);
+      clearTimeout(settleTimer1);
+      clearTimeout(settleTimer2);
+      clearTimeout(hudTimer);
+      clearTimeout(closeTimer);
+      reels.forEach((reel) => { reel.anim?.cancel(); clearTimeout(reel.idleTimer); });
+      window.visualViewport?.removeEventListener('resize', onResizeOrRotate);
+      if (isZoomed || isClosing) {
+        stopPlayer();
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        document.documentElement.classList.remove('photo-zoom-open', 'photo-zoom-closing');
+        if (!expectPop && document.documentElement.dataset.historyView === 'photo') delete document.documentElement.dataset.historyView;
+        history.scrollRestoration = prevScrollRestoration;
+      }
+    });
+  }
+  initPhotoElevator();
+  document.addEventListener('astro:page-load', initPhotoElevator);
+
 </script>

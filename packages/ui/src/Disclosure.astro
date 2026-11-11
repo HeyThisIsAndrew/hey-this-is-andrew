@@ -1,0 +1,29 @@
+---
+/** Shared height, fade, and slide treatment. Padding belongs inside the clip. */
+import type { HTMLAttributes } from 'astro/types';
+interface Props extends HTMLAttributes<'div'> {
+  id: string;
+  open?: boolean;
+  class?: string;
+  labelledby?: string;
+  hiddenWhenClosed?: boolean;
+}
+const { id, open = false, class: className, labelledby, hiddenWhenClosed = false, ...attributes } = Astro.props;
+---
+<div {...attributes} id={id} class:list={['disclosure', className]} data-disclosure data-open={String(open)}
+  data-hide-closed={hiddenWhenClosed ? '' : undefined} hidden={hiddenWhenClosed && !open}
+  inert={!open} role={labelledby ? 'region' : undefined} aria-labelledby={labelledby}>
+  <div class="disclosure-clip"><div class="disclosure-content"><slot /></div></div>
+</div>
+<style>
+  .disclosure { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 0fr; min-width: 0; }
+  .disclosure[hidden] { display: none; }
+  .disclosure[data-open='true'] { grid-template-rows: 1fr; }
+  .disclosure-clip { min-width: 0; min-height: 0; overflow: hidden; }
+  .disclosure-content { min-width: 0; opacity: 0; transform: translateY(-0.5rem); }
+  .disclosure[data-open='true'] > .disclosure-clip > .disclosure-content { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: no-preference) {
+    .disclosure { transition: grid-template-rows 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+    .disclosure-content { transition: opacity 0.45s cubic-bezier(0.65, 0, 0.35, 1), transform 0.5s cubic-bezier(0.65, 0, 0.35, 1); }
+  }
+</style>

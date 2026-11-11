@@ -12,6 +12,7 @@ export async function GET() {
   const gear = await getCollection('gear');
 
   const searchData = [
+    { id: 'brands-overview', title: 'Brands', kicker: 'The lanes', url: `${base}/brands/`, type: 'page', excludeFromDefault: false },
     // There is no page per project: a project is a row of Selected Work
     // (it opens in place), or its own external link.
     ...projects.map((p) => ({

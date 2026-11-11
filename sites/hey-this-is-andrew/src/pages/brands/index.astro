@@ -1,0 +1,53 @@
+---
+import { Image } from 'astro:assets';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { childBrands } from '../../data/brands';
+import type { ImageMetadata } from 'astro';
+import type { RemoteImage } from '@andrew/ui/types';
+const sources = (image: ImageMetadata | RemoteImage) => 'remote' in image ? { src: image.src, width: image.width, height: image.height } : { src: image };
+---
+<BaseLayout title="Brands · HEY_THISISANDREW" description="Explore the brands Andrew is building: BE Unconventional HQ, Capture Create Caffeinate, and Sip the Magic.">
+  <section class="brands-overview" aria-labelledby="brands-title">
+    <header class="brands-intro"><p class="font-mono">The lanes</p><h1 id="brands-title">Brands</h1><p>Different worlds. One creator.</p></header>
+    <div class="brand-tiles">
+      {childBrands.map((brand) => {
+        const Tag = brand.url && !brand.comingSoon ? 'a' : 'article';
+        return (
+          <Tag class="brand-tile" href={Tag === 'a' ? brand.url : undefined} aria-label={Tag === 'a' ? `Explore ${brand.name}` : undefined}>
+            {brand.mediaSrc ? <Image {...sources(brand.mediaSrc)} alt="" widths={[480, 800, 1200]} sizes="(max-width: 767px) 92vw, 32vw" class="brand-tile-photo" /> : <div class="brand-tile-teaser" set:html={brand.teaserSvg || ''} />}
+            <div class="brand-tile-shade" aria-hidden="true"></div>
+            <div class="brand-tile-copy">
+              <p class="brand-tile-kicker font-mono">{brand.comingSoon ? 'Coming soon' : brand.kicker}</p>
+              {brand.logoSrc && <Image {...sources(brand.logoSrc)} alt="" width={200} class="brand-tile-logo" />}
+              <h2>{brand.name}</h2><p>{brand.deck}</p>
+              {!brand.comingSoon && <span class="brand-tile-action font-mono">Explore brand <span aria-hidden="true">↗</span></span>}
+            </div>
+          </Tag>
+        );
+      })}
+    </div>
+  </section>
+</BaseLayout>
+<style>
+  .brands-overview { width: var(--page-max); max-width: 1800px; margin: 0 auto; padding: clamp(2rem, 5vw, 5rem) 0; }
+  .brands-intro { margin-bottom: 2rem; }
+  .brands-intro > .font-mono { color: var(--muted); text-transform: uppercase; letter-spacing: 0.15em; font-size: 0.75rem; }
+  .brands-intro h1 { font-size: clamp(2.8rem, 6vw, 5.5rem); margin: 0.25rem 0; line-height: 1.05; }
+  .brands-intro > p:last-child { color: var(--muted); }
+  .brand-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
+  .brand-tile { min-width: 0; min-height: 540px; position: relative; overflow: hidden; display: flex; align-items: flex-end; background: #111; border: 1px solid var(--line); text-decoration: none; isolation: isolate; }
+  .brand-tile-photo, .brand-tile-shade, .brand-tile-teaser { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .brand-tile-photo { object-fit: cover; }
+  .brand-tile-teaser { display: grid; place-items: center; padding: 15%; color: #666; }
+  .brand-tile-teaser :global(svg) { width: 100%; max-height: 60%; }
+  .brand-tile-shade { background: linear-gradient(180deg, rgb(0 0 0 / 0.05), rgb(0 0 0 / 0.9) 80%); z-index: 1; }
+  .brand-tile-copy { min-width: 0; position: relative; z-index: 2; padding: 1.5rem; overflow-wrap: anywhere; }
+  .brand-tile-kicker { text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.65rem; }
+  .brand-tile-logo { width: auto; max-width: 170px; max-height: 70px; object-fit: contain; margin: 1rem 0; }
+  .brand-tile h2 { margin: 0.5rem 0; font: 700 clamp(1.4rem, 2vw, 2rem)/1.15 var(--font-body); text-transform: none; }
+  .brand-tile-copy > p:not(.brand-tile-kicker) { color: #bbb; font-size: 0.9rem; }
+  .brand-tile-action { display: flex; justify-content: space-between; align-items: center; min-height: 44px; margin-top: 1rem; border-top: 1px solid #555; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  a.brand-tile:hover { border-color: #999; }
+  @media (prefers-reduced-motion: no-preference) { .brand-tile-photo { transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); } a.brand-tile:hover .brand-tile-photo { transform: scale(1.035); } }
+  @media (max-width: 767px) { .brand-tiles { grid-template-columns: minmax(0, 1fr); } .brand-tile { min-height: 510px; } }
+</style>
