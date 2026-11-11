@@ -116,6 +116,7 @@ const stateOf = (i: number, n: number) =>
       />
       <button type="button" id="gear-search-clear" class="gear-search-clear" aria-label="Clear search" hidden>×</button>
     </div>
+    <button type="button" class="btn-all-toggle font-mono" data-all-toggle aria-expanded="false" aria-controls="gear-all-products">Show all products</button>
     <div class="gear-category-chips" role="group" aria-label="Gear categories">
       {sections.map((sec) => (
         <button type="button" class="gear-chip" data-cat={sec.chipKey} aria-pressed="false">{sec.chip}</button>
@@ -128,11 +129,50 @@ const stateOf = (i: number, n: number) =>
     <button type="button" id="gear-reset-btn" class="gear-reset-btn font-mono">Reset filter</button>
   </div>
 
+  <div class="gear-all-grid-view is-collapsed" id="gear-all-products" hidden inert aria-labelledby="gear-all-title">
+    <div class="gear-all-grid-content">
+      <div class="all-grid-topbar">
+        <h2 class="all-grid-title" id="gear-all-title">All products</h2>
+        <span class="font-mono" data-grid-count aria-live="polite">{sections.reduce((total, sec) => total + sec.items.length, 0)} products</span>
+      </div>
+      <div class="all-grid-cards">
+        {sections.flatMap((sec) => sec.items.map((it) => (
+          <article class="all-grid-card" data-search={it.search} data-chip={sec.chipKey}>
+            <div class="all-card-img-wrap">
+              {it.src ? (
+                <img src={it.src} alt={it.name} class="all-card-img" loading="lazy" decoding="async" />
+              ) : (
+                <span class="all-card-type" role="img" aria-label={it.name}>{it.short}</span>
+              )}
+            </div>
+            <div class="all-card-body">
+              {it.recommended && <span class="reco-badge reco-badge--grid font-mono">Recommended</span>}
+              <span class="all-card-tag font-mono">{it.tag || it.brand}</span>
+              <h3 class="all-card-name">{it.name}</h3>
+              <p class="all-card-spec">{it.spec}</p>
+              <div class="all-card-links">
+                {it.stores.map((s, si) => (
+                  <a
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener sponsored"
+                    class={`all-card-cta font-mono ${si === 0 ? 'is-primary' : ''}`}
+                  >
+                    {ctaLabel(s)}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </article>
+        )))}
+      </div>
+    </div>
+  </div>
+
   <div class="gear-accordion-container" id="gear-accordion-container">
     {sections.map((sec, secIdx) => {
       const open = secIdx === 0;
       const n = sec.items.length;
-      const hasAll = n > 6;
       return (
         <section
           class={`gear-accordion-section ${open ? 'is-expanded' : 'is-collapsed'}`}
@@ -167,17 +207,6 @@ const stateOf = (i: number, n: number) =>
               </button>
             </h2>
             <div class="gear-header-right btn-group btn-group--row">
-              {hasAll && (
-                <button
-                  type="button"
-                  class="btn-all-toggle font-mono"
-                  data-all-toggle={sec.slug}
-                  aria-expanded="false"
-                  aria-controls={`all-grid-${sec.slug}`}
-                >
-                  <span class="all-toggle-label">Show all ({n})</span>
-                </button>
-              )}
               <a href={sec.collectionUrl} target="_blank" rel="noopener sponsored" class="influencer-pill font-mono">
                 <span class="influencer-text">{sec.collectionLabel.replace(/ list$/i, '')}{/ list$/i.test(sec.collectionLabel) && <span class="influencer-text-long"> list</span>}</span>
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
@@ -344,46 +373,6 @@ const stateOf = (i: number, n: number) =>
                 ))}
               </div>
             </div>
-
-            {hasAll && (
-              <div class="gear-all-grid-view" id={`all-grid-${sec.slug}`} hidden data-all-view={sec.slug}>
-                <div class="all-grid-topbar">
-                  <h3 class="all-grid-title">{sec.title}: all {n}</h3>
-                  <button type="button" class="btn-back-carousel font-mono" data-back-carousel={sec.slug}>Back to the deck</button>
-                </div>
-                <div class="all-grid-cards">
-                  {sec.items.map((it) => (
-                    <article class="all-grid-card" data-search={it.search}>
-                      <div class="all-card-img-wrap">
-                        {it.src ? (
-                          <img src={it.src} alt={it.name} class="all-card-img" loading="lazy" decoding="async" />
-                        ) : (
-                          <span class="all-card-type" role="img" aria-label={it.name}>{it.short}</span>
-                        )}
-                      </div>
-                      <div class="all-card-body">
-                        {it.recommended && <span class="reco-badge reco-badge--grid font-mono">Recommended</span>}
-                        <span class="all-card-tag font-mono">{it.tag || it.brand}</span>
-                        <h4 class="all-card-name">{it.name}</h4>
-                        <p class="all-card-spec">{it.spec}</p>
-                        <div class="all-card-links">
-                          {it.stores.map((s, si) => (
-                            <a
-                              href={s.url}
-                              target="_blank"
-                              rel="noopener sponsored"
-                              class={`all-card-cta font-mono ${si === 0 ? 'is-primary' : ''}`}
-                            >
-                              {ctaLabel(s)}
-                            </a>
-                          ))}
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </section>
       );
@@ -515,6 +504,9 @@ const stateOf = (i: number, n: number) =>
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
+  }
+  .gear-accordion-container[hidden] {
+    display: none;
   }
   .gear-accordion-section {
     --accent: 176, 184, 196;
@@ -659,6 +651,9 @@ const stateOf = (i: number, n: number) =>
     position: relative;
     display: grid;
     grid-template-rows: 1fr;
+    /* minmax(0, 1fr) lets the deck shrink below its thumb row's max-content width. */
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     transition: grid-template-rows 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
@@ -686,6 +681,11 @@ const stateOf = (i: number, n: number) =>
     position: relative;
     display: flex;
     flex-direction: column;
+    /* Grid item of .gear-accordion-body: never wider than its section. */
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     gap: 1rem;
     padding: 1.75rem clamp(1rem, 2.5vw, 2rem) 1.25rem;
     background: #050505;
@@ -747,6 +747,7 @@ const stateOf = (i: number, n: number) =>
     width: var(--card-w);
     height: 100%;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr) auto;
     background: #0d0d0d;
     box-shadow: 0 30px 60px rgba(0, 0, 0, 0.85);
@@ -945,6 +946,7 @@ const stateOf = (i: number, n: number) =>
   }
   .card-title {
     margin: 0;
+    overflow-wrap: anywhere;
     font-family: var(--font-display);
     font-weight: 800;
     font-size: clamp(1.35rem, 2.4vw, 2.1rem);
@@ -1108,6 +1110,8 @@ const stateOf = (i: number, n: number) =>
     display: flex;
     gap: 0.6rem;
     overflow-x: auto;
+    min-width: 0;
+    max-width: 100%;
     padding: 0.5rem 0.25rem 0.5rem;
     scrollbar-width: none;
     justify-content: safe center;
@@ -1173,7 +1177,7 @@ const stateOf = (i: number, n: number) =>
   }
 
   /* ------------------------------------------------------------------
-     Show all: the whole section as a grid
+     Show all: one scrollable product grid
      ------------------------------------------------------------------ */
   .gear-all-grid-view {
     padding: 1.75rem clamp(1rem, 2.5vw, 2rem);
@@ -1184,12 +1188,21 @@ const stateOf = (i: number, n: number) =>
     opacity: 1;
     transition: grid-template-rows 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .gear-all-grid-view > * {
+  .gear-all-grid-content {
+    min-width: 0;
     min-height: 0;
+    overflow: hidden;
+    transition: opacity 0.45s cubic-bezier(0.65, 0, 0.35, 1), transform 0.5s cubic-bezier(0.65, 0, 0.35, 1);
   }
-  .gear-all-grid-view.is-collapsed,
+  .gear-all-grid-view.is-collapsed .gear-all-grid-content {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  /* Hidden views must not reserve space beside the active view. */
   .gear-all-grid-view[hidden] {
-    display: grid !important;
+    display: none;
+  }
+  .gear-all-grid-view.is-collapsed {
     grid-template-rows: 0fr;
     opacity: 0;
     padding-top: 0;
@@ -1212,24 +1225,9 @@ const stateOf = (i: number, n: number) =>
     font-size: 1.4rem;
     color: #fff;
   }
-  .btn-back-carousel {
-    min-height: 44px;
-    padding: 0.5rem 1rem;
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.24);
-    color: #fff;
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    cursor: pointer;
-  }
-  .btn-back-carousel:hover {
-    background: #fff;
-    color: #000;
-  }
   .all-grid-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
     gap: 1rem;
   }
   .all-grid-card {
@@ -1330,7 +1328,7 @@ const stateOf = (i: number, n: number) =>
     .gear-accordion-header {
       padding: 0.95rem 0.25rem 0.5rem 1rem;
     }
-    /* Its own row under the title, the two buttons in equal halves. */
+    /* The collection link uses its own row under the title. */
     .gear-header-right {
       flex: 0 0 calc(100% - 1rem);
       width: auto;
@@ -1466,6 +1464,7 @@ const stateOf = (i: number, n: number) =>
     .card-plate,
     .gear-accordion-body,
     .gear-all-grid-view,
+    .gear-all-grid-content,
     .header-chevron {
       transition-duration: 0.01ms !important;
     }
@@ -1574,7 +1573,7 @@ const stateOf = (i: number, n: number) =>
       sections.forEach((section) => {
         const bar = section.querySelector<HTMLElement>('.gear-accordion-header-bar');
         bar?.addEventListener('click', (e) => {
-          if ((e.target as HTMLElement).closest('.influencer-pill, .btn-all-toggle')) return;
+          if ((e.target as HTMLElement).closest('.influencer-pill')) return;
           toggleSection(section);
         });
 
@@ -1582,11 +1581,8 @@ const stateOf = (i: number, n: number) =>
         const cards = Array.from(section.querySelectorAll<HTMLElement>('.deck-card'));
         const thumbs = Array.from(section.querySelectorAll<HTMLElement>('.deck-thumb-tile'));
         const glows = Array.from(section.querySelectorAll<HTMLElement>('.deck-glow-layer'));
-        const gridCards = Array.from(section.querySelectorAll<HTMLElement>('.all-grid-card'));
         const counter = section.querySelector<HTMLElement>('[data-deck-counter]');
         const deck = section.querySelector<HTMLElement>('.gear-deck');
-        const allView = section.querySelector<HTMLElement>('[data-all-view]');
-        const allToggle = section.querySelector<HTMLButtonElement>('.btn-all-toggle');
         if (!stage || !cards.length) return;
 
         let active = 0;
@@ -1626,7 +1622,6 @@ const stateOf = (i: number, n: number) =>
             t.setAttribute('aria-selected', String(isActive));
             t.tabIndex = isActive ? 0 : -1;
           });
-          gridCards.forEach((g, i) => g.classList.toggle('is-filtered-out', !visible.includes(i)));
           glows.forEach((g, i) => {
             const isActive = i === active;
             g.classList.toggle('active', isActive);
@@ -1870,39 +1865,6 @@ const stateOf = (i: number, n: number) =>
           step(forward ? 1 : -1);
         }, { passive: false });
 
-        // Show all <-> deck.
-        const showAll = (on: boolean) => {
-          if (!allView || !deck) return;
-          if (on && !section.classList.contains('is-expanded')) toggleSection(section, true);
-          allToggle?.setAttribute('aria-expanded', String(on));
-          const lbl = allToggle?.querySelector('.all-toggle-label');
-          if (lbl) lbl.textContent = on ? 'Deck view' : `Show all (${cards.length})`;
-          if (on) {
-            allView.removeAttribute('hidden');
-            allView.classList.remove('is-collapsed');
-            deck.hidden = true;
-          } else {
-            allView.classList.add('is-collapsed');
-            deck.hidden = false;
-            const isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            if (isReduced) {
-              allView.setAttribute('hidden', '');
-            } else {
-              setTimeout(() => {
-                if (allView.classList.contains('is-collapsed')) {
-                  allView.setAttribute('hidden', '');
-                }
-              }, 400);
-            }
-          }
-        };
-        allToggle?.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const isCurrentlyOpen = !allView?.hidden && !allView?.classList.contains('is-collapsed');
-          showAll(!isCurrentlyOpen);
-        });
-        section.querySelectorAll('[data-back-carousel]').forEach((b) => b.addEventListener('click', () => showAll(false)));
-
         render();
       });
 
@@ -1916,6 +1878,38 @@ const stateOf = (i: number, n: number) =>
       let cat = '';
       let query = '';
 
+      const allView = document.getElementById('gear-all-products');
+      const allToggle = document.querySelector<HTMLButtonElement>('[data-all-toggle]');
+      const allCards = Array.from(allView?.querySelectorAll<HTMLElement>('.all-grid-card') || []);
+      const gridCount = allView?.querySelector('[data-grid-count]');
+      let gridOpen = false;
+
+      allToggle?.addEventListener('click', () => {
+        if (!allView) return;
+        gridOpen = !gridOpen;
+        const isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        allToggle.setAttribute('aria-expanded', String(gridOpen));
+        allToggle.textContent = gridOpen ? 'Deck view' : 'Show all products';
+        root.hidden = gridOpen;
+        if (!gridOpen) sections.forEach((section) => {
+          if (section.classList.contains('is-expanded')) decks.get(section)?.refresh();
+        });
+        allView.inert = !gridOpen;
+        if (gridOpen) {
+          allView.hidden = false;
+          if (isReduced) allView.classList.remove('is-collapsed');
+          else requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (gridOpen) allView.classList.remove('is-collapsed');
+          }));
+        } else {
+          allView.classList.add('is-collapsed');
+          if (isReduced) allView.hidden = true;
+          else setTimeout(() => {
+            if (!gridOpen) allView.hidden = true;
+          }, 400);
+        }
+      });
+
       function apply() {
         let total = 0;
         let firstShown: HTMLElement | null = null;
@@ -1927,6 +1921,11 @@ const stateOf = (i: number, n: number) =>
           total += s.hidden ? 0 : matches;
           if (!s.hidden && !firstShown) firstShown = s;
         });
+        allCards.forEach((card) => {
+          const matches = (!cat || card.dataset.chip === cat) && (!query || (card.dataset.search || '').includes(query));
+          card.classList.toggle('is-filtered-out', !matches);
+        });
+        if (gridCount) gridCount.textContent = `${total} ${total === 1 ? 'product' : 'products'}`;
         if (empty) empty.hidden = total > 0;
         if (clear) clear.hidden = !query;
         if (firstShown && (query || cat)) {
