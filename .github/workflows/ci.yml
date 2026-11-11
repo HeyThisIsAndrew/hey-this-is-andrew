@@ -76,9 +76,13 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
       - name: Install Playwright Browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install --with-deps chromium
-      - name: Install Playwright OS Dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: pnpm exec playwright install-deps chromium
+        run: pnpm exec playwright install chromium
+      - name: Verify Chromium runtime
+        # Hosted runners already include Chromium's shared libraries. Avoid
+        # package-mirror downloads unless a browser launch needs them.
+        run: |
+          if ! pnpm exec node --input-type=module -e "import { chromium } from '@playwright/test'; const browser = await chromium.launch(); await browser.close();"; then
+            timeout 180s pnpm exec playwright install-deps chromium
+          fi
       - name: Run Playwright E2E tests
         run: pnpm exec playwright test
