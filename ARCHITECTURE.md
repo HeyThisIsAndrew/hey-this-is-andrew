@@ -8,7 +8,7 @@ Andrew's website builder. One repository holds the **building blocks** (`package
 - `packages/ui/`: The shared component library (Astro components, TS types, CSS).
 - `packages/local-cms/`: A local JSON editor (running at `/local-cms` under `pnpm dev`) for managing content without a database.
 - `sites/hey-this-is-andrew/`: The primary personal site.
-- `sites/be-unconventional-hq/`: The HQ publication. Its editorial layouts, navbar, and footer remain site-specific.
+- `sites/be-unconventional-hq/`: An outdated reference copy. The live HQ publication has its own repository, whose latest changes are not pulled here. This workspace is not the authority for HQ deployments. Do not change or deploy HQ without an explicit user request for HQ work.
 - `sites/reelay/`: Reelay, another consumer of the shared UI and tokens.
 - `templates/site-starter/`: The starting point for every new site.
 
