@@ -1,3 +1,4 @@
+import { createPageScope } from '@andrew/ui/scripts/page-scope.ts';
 /**
  * spatial.ts — Site-wide spatial transition system for Hey This Is Andrew.
  *
@@ -583,7 +584,7 @@ export function initAnchorTransitions(
     }
 
     // Update URL hash without jump
-    history.pushState(null, "", hash);
+    history.pushState(history.state, "", hash);
 
     // Smooth scroll with sticky navbar offset (76px)
     const isTop = hash === "#top" || hash === "#overview" || target.id === "overview" || target.id === "top";
@@ -648,6 +649,9 @@ function sweepVisible(): void {
 }
 
 export function initReveals(): void {
+  const main = document.querySelector<HTMLElement>('main');
+  if (!main) return;
+  const { on, cleanup } = createPageScope(main);
   const root = document.documentElement;
   root.classList.add('js');
   const els = document.querySelectorAll(REVEAL_SELECTOR);
@@ -670,21 +674,22 @@ export function initReveals(): void {
     { threshold: 0, rootMargin: '0px 0px -8% 0px' }
   );
   els.forEach((el) => io.observe(el));
+  cleanup(() => io.disconnect());
 
   // In-page jumps: reveal the destination before the scroll lands.
   const revealHash = () => {
     const id = decodeURIComponent(window.location.hash.slice(1));
     if (id) forceReveal(document.getElementById(id));
   };
-  window.addEventListener('hashchange', revealHash);
+  on(window, 'hashchange', revealHash);
   revealHash();
-  document.addEventListener('click', (e) => {
+  on(document, 'click', (e) => {
     const a = (e.target as Element | null)?.closest?.('a[href*="#"]');
     const hash = a?.getAttribute('href')?.split('#')[1];
     if (hash) forceReveal(document.getElementById(decodeURIComponent(hash)));
   });
   // Components (e.g. gear tabs) ask for a reveal after changing content.
-  document.addEventListener('reveal:force', (e) => {
+  on(document, 'reveal:force', (e) => {
     forceReveal(((e as CustomEvent).detail as Element | null) ?? null);
   });
 
@@ -694,8 +699,8 @@ export function initReveals(): void {
     window.clearTimeout(t);
     t = window.setTimeout(sweepVisible, 120);
   };
-  window.addEventListener('scroll', settle, { passive: true });
-  window.addEventListener('resize', settle, { passive: true });
-  if ('onscrollend' in window) window.addEventListener('scrollend', sweepVisible);
-  window.addEventListener('load', sweepVisible, { once: true });
+  on(window, 'scroll', settle, { passive: true });
+  on(window, 'resize', settle, { passive: true });
+  if ('onscrollend' in window) on(window, 'scrollend', sweepVisible);
+  on(window, 'load', sweepVisible, { once: true });
 }

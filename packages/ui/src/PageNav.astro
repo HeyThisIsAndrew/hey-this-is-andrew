@@ -461,6 +461,7 @@ const { items = [], heading = 'Contents', selector = 'main h2[id], main [data-pn
 </style>
 
 <script>
+  import { createPageScope } from './scripts/page-scope';
   /*
     The active-section logic is HQ's (FloatingPageNav.astro), which carries the
     write-ups for the bugs it fixes: one rule decides (resolveActive), the
@@ -522,6 +523,7 @@ const { items = [], heading = 'Contents', selector = 'main h2[id], main [data-pn
     const nav = document.querySelector<HTMLElement>('[data-page-nav]');
     if (!nav || nav.dataset.ready) return;
     nav.dataset.ready = '1';
+    const { on, cleanup, timeout } = createPageScope(nav);
     const list = nav.querySelector<HTMLUListElement>('[data-pn-list]')!;
     const handle = nav.querySelector<HTMLButtonElement>('[data-pn-handle]')!;
 
@@ -632,11 +634,11 @@ const { items = [], heading = 'Contents', selector = 'main h2[id], main [data-pn
       setOpen(open);
       if (open && e.detail === 0) (links.find((l) => l.classList.contains('active')) ?? links[0])?.focus({ preventScroll: true });
     });
-    document.addEventListener('click', (e) => {
+    on(document, 'click', (e) => {
       const t = e.target as Node;
       if (nav.classList.contains('is-open') && !nav.contains(t) && !dockBtn?.contains(t)) setOpen(false);
     });
-    document.addEventListener('keydown', (e) => {
+    on(document, 'keydown', (e) => {
       if (e.key === 'Escape' && nav.classList.contains('is-open')) {
         setOpen(false);
         (nav.dataset.mode === 'header' && dockBtn ? dockBtn : handle).focus();
@@ -682,6 +684,7 @@ const { items = [], heading = 'Contents', selector = 'main h2[id], main [data-pn
     };
     const observer = new IntersectionObserver(() => resolveActive(), { rootMargin: '-80px 0px -50% 0px', threshold: 0 });
     headings.forEach((h) => observer.observe(h));
+    cleanup(() => observer.disconnect());
     resolveActive();
 
     // ─── Rail or header (headerFallback) ─────────────────────────────────
@@ -718,11 +721,11 @@ const { items = [], heading = 'Contents', selector = 'main h2[id], main [data-pn
     if (dockBtn) {
       decideMode();
       let rt: ReturnType<typeof setTimeout> | null = null;
-      window.addEventListener('resize', () => {
+      on(window, 'resize', () => {
         if (rt) clearTimeout(rt);
-        rt = setTimeout(decideMode, 150);
+        rt = timeout(decideMode, 150);
       });
-      window.addEventListener('load', decideMode, { once: true });
+      on(window, 'load', decideMode, { once: true });
       document.fonts?.ready.then(decideMode);
     }
 
@@ -763,7 +766,7 @@ const { items = [], heading = 'Contents', selector = 'main h2[id], main [data-pn
         if ('pnTop' in link.dataset) {
           // Top is the top: scroll position 0, and no #hash left behind.
           window.scrollTo({ top: 0, behavior });
-          history.replaceState(null, '', location.pathname + location.search);
+          history.replaceState(history.state, '', location.pathname + location.search);
           return;
         }
         // A section lands on its header block (see SECTIONS above), clear
@@ -794,7 +797,7 @@ const { items = [], heading = 'Contents', selector = 'main h2[id], main [data-pn
         const clearance = isCloser ? navH + 28 : Math.max(navH + extraStackH + 28, padding);
         const top = pageTop(aim) - clearance;
         window.scrollTo({ top: Math.max(0, top), behavior });
-        history.replaceState(null, '', `#${id}`);
+        history.replaceState(history.state, '', `#${id}`);
       });
     });
     const pinFromHash = () => {
@@ -818,14 +821,14 @@ const { items = [], heading = 'Contents', selector = 'main h2[id], main [data-pn
     // the site) puts it, and the scroll position decides what is current.
     const navEntry = performance.getEntriesByType?.('navigation')[0] as PerformanceNavigationTiming | undefined;
     if (navEntry?.type !== 'reload') pinFromHash();
-    window.addEventListener('hashchange', pinFromHash);
+    on(window, 'hashchange', pinFromHash);
     const releasePin = () => {
       if (releaseArmed) pinnedId = null;
     };
     const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ', 'Spacebar']);
-    window.addEventListener('wheel', releasePin, { passive: true });
-    window.addEventListener('touchmove', releasePin, { passive: true });
-    window.addEventListener('keydown', (e) => {
+    on(window, 'wheel', releasePin, { passive: true });
+    on(window, 'touchmove', releasePin, { passive: true });
+    on(window, 'keydown', (e) => {
       if (SCROLL_KEYS.has(e.key)) releasePin();
     });
     // Dragging the scrollbar fires no wheel, touch or key event, so a pin
@@ -834,13 +837,14 @@ const { items = [], heading = 'Contents', selector = 'main h2[id], main [data-pn
     // the page, however slowly they drag. Measured from the rest point, not
     // per event: a slow drag moves a few px an event and never released.
     let t: ReturnType<typeof setTimeout> | null = null;
-    window.addEventListener('scroll', () => {
+    on(window, 'scroll', () => {
       if (pinnedId !== null && releaseArmed && Math.abs(window.scrollY - settledY) > 50) pinnedId = null;
       if (t) clearTimeout(t);
-      t = setTimeout(resolveActive, 50);
+      t = timeout(resolveActive, 50);
     }, { passive: true });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initPageNav);
   else initPageNav();
+  document.addEventListener('astro:page-load', initPageNav);
 </script>

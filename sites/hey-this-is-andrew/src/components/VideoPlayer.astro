@@ -7,6 +7,7 @@
 
 <div
   id="video-player"
+  transition:persist="personal-video-player"
   class="video-player"
   role="dialog"
   aria-modal="true"
@@ -130,6 +131,8 @@
       const label = el.getAttribute('data-video-title') || el.getAttribute('aria-label') || 'Video';
       openFrom(resolveSource(el as HTMLElement) as HTMLElement, url, label);
     }
+
+    document.addEventListener('astro:before-preparation', () => { if (!player.hidden) close(); });
 
     // Global delegation: any [data-video-player] with data-video-url opens.
     document.addEventListener('click', (e) => {

@@ -1513,6 +1513,8 @@ const standards = [
 </style>
 
 <script>
+  import { createPageScope } from '@andrew/ui/scripts/page-scope.ts';
+
   function pageTop(el: HTMLElement): number {
     let y = 0;
     for (let n: HTMLElement | null = el; n; n = n.offsetParent as HTMLElement | null) {
@@ -1526,6 +1528,9 @@ const standards = [
     if (!stackEl || stackEl.dataset.hqStackWired === '1') return;
     stackEl.dataset.hqStackWired = '1';
     const stack: HTMLElement = stackEl;
+    const { on, cleanup, signal } = createPageScope(stack);
+    const priorScrollPadding = document.documentElement.style.scrollPaddingTop;
+    let frame = 0;
 
     const heroSection = document.getElementById('hero');
     const heroDockRow = stack.querySelector<HTMLElement>('.hq-dock-row--hero');
@@ -1692,17 +1697,21 @@ const standards = [
     function scheduleUpdate() {
       if (!ticking) {
         ticking = true;
-        window.requestAnimationFrame(onScroll);
+        frame = window.requestAnimationFrame(onScroll);
       }
     }
 
-    window.addEventListener('scroll', scheduleUpdate, { passive: true });
-    window.addEventListener('resize', scheduleUpdate, { passive: true });
-    window.addEventListener('orientationchange', scheduleUpdate, { passive: true });
+    on(window, 'scroll', scheduleUpdate, { passive: true });
+    on(window, 'resize', scheduleUpdate, { passive: true });
+    on(window, 'orientationchange', scheduleUpdate, { passive: true });
     if (typeof reducedMotionMq.addEventListener === 'function') {
-      reducedMotionMq.addEventListener('change', scheduleUpdate);
+      reducedMotionMq.addEventListener('change', scheduleUpdate, { signal });
     }
-    document.fonts?.ready.then(scheduleUpdate);
+    document.fonts?.ready.then(() => { if (!signal.aborted) scheduleUpdate(); });
+    cleanup(() => {
+      cancelAnimationFrame(frame);
+      document.documentElement.style.scrollPaddingTop = priorScrollPadding;
+    });
 
     onScroll();
   }
@@ -1717,7 +1726,10 @@ const standards = [
     }
 
     const mediaCards = document.querySelectorAll<HTMLElement>('#mission .hq-why-media');
-    if (!mediaCards.length) return;
+    if (!mediaCards.length || mediaCards[0].dataset.parallaxWired) return;
+    mediaCards[0].dataset.parallaxWired = '1';
+    const { cleanup, signal } = createPageScope(mediaCards[0]);
+    let frame = 0;
 
     const reducedMotionMq = window.matchMedia('(prefers-reduced-motion: reduce)');
     const activeCards = new Set<HTMLElement>();
@@ -1751,15 +1763,15 @@ const standards = [
     function scheduleUpdate() {
       if (!ticking) {
         ticking = true;
-        window.requestAnimationFrame(updateParallax);
+        frame = window.requestAnimationFrame(updateParallax);
       }
     }
 
     let isListeningToScroll = false;
     function syncScrollListener() {
       if (activeCards.size > 0 && !isListeningToScroll) {
-        window.addEventListener('scroll', scheduleUpdate, { passive: true });
-        window.addEventListener('resize', scheduleUpdate, { passive: true });
+        window.addEventListener('scroll', scheduleUpdate, { passive: true, signal });
+        window.addEventListener('resize', scheduleUpdate, { passive: true, signal });
         isListeningToScroll = true;
       } else if (activeCards.size === 0 && isListeningToScroll) {
         window.removeEventListener('scroll', scheduleUpdate);
@@ -1785,9 +1797,10 @@ const standards = [
     );
 
     mediaCards.forEach((card) => observer.observe(card));
+    cleanup(() => { observer.disconnect(); cancelAnimationFrame(frame); });
 
     if (typeof reducedMotionMq.addEventListener === 'function') {
-      reducedMotionMq.addEventListener('change', scheduleUpdate);
+      reducedMotionMq.addEventListener('change', scheduleUpdate, { signal });
     }
   }
 

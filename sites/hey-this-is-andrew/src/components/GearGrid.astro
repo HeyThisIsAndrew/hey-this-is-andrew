@@ -19,6 +19,7 @@
  * shown. An item whose image file is missing renders a typographic card
  * rather than a wrong or broken picture.
  */
+import Disclosure from '@andrew/ui/Disclosure.astro';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { CollectionEntry } from 'astro:content';
@@ -129,7 +130,7 @@ const stateOf = (i: number, n: number) =>
     <button type="button" id="gear-reset-btn" class="gear-reset-btn font-mono">Reset filter</button>
   </div>
 
-  <div class="gear-all-grid-view is-collapsed" id="gear-all-products" hidden inert aria-labelledby="gear-all-title">
+  <Disclosure class="gear-all-grid-view" id="gear-all-products" hiddenWhenClosed labelledby="gear-all-title">
     <div class="gear-all-grid-content">
       <div class="all-grid-topbar">
         <h2 class="all-grid-title" id="gear-all-title">All products</h2>
@@ -167,8 +168,9 @@ const stateOf = (i: number, n: number) =>
         )))}
       </div>
     </div>
-  </div>
+  </Disclosure>
 
+  <Disclosure id="gear-decks-view" open hiddenWhenClosed>
   <div class="gear-accordion-container" id="gear-accordion-container">
     {sections.map((sec, secIdx) => {
       const open = secIdx === 0;
@@ -188,6 +190,7 @@ const stateOf = (i: number, n: number) =>
               <button
                 type="button"
                 class="gear-accordion-header"
+                id={`gear-header-${sec.slug}`}
                 aria-expanded={open ? 'true' : 'false'}
                 aria-controls={`gear-body-${sec.slug}`}
               >
@@ -216,7 +219,7 @@ const stateOf = (i: number, n: number) =>
             </div>
           </div>
 
-          <div class="gear-accordion-body" id={`gear-body-${sec.slug}`}>
+          <Disclosure class="gear-accordion-body" id={`gear-body-${sec.slug}`} open={open} labelledby={`gear-header-${sec.slug}`}>
             <div class="gear-deck" data-deck={sec.slug}>
               <div class="deck-glow" aria-hidden="true">
                 {sec.items.map((it, i) => (
@@ -373,11 +376,12 @@ const stateOf = (i: number, n: number) =>
                 ))}
               </div>
             </div>
-          </div>
+          </Disclosure>
         </section>
       );
     })}
   </div>
+  </Disclosure>
 </div>
 
 <style>
@@ -649,26 +653,9 @@ const stateOf = (i: number, n: number) =>
   }
   .gear-accordion-body {
     position: relative;
-    display: grid;
-    grid-template-rows: 1fr;
-    /* minmax(0, 1fr) lets the deck shrink below its thumb row's max-content width. */
-    grid-template-columns: minmax(0, 1fr);
-    min-width: 0;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
-    transition: grid-template-rows 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .gear-accordion-section.is-settled .gear-accordion-body {
-    overflow: visible;
-  }
-  .gear-accordion-section:not(.is-settled) .gear-accordion-body {
-    overflow: hidden;
-  }
-  .gear-accordion-section:not(.is-settled) .gear-accordion-body > * {
-    min-height: 0;
-    overflow: hidden;
   }
   .gear-accordion-section.is-collapsed .gear-accordion-body {
-    grid-template-rows: 0fr;
     border-top-color: transparent;
   }
 
@@ -690,13 +677,15 @@ const stateOf = (i: number, n: number) =>
     padding: 1.75rem clamp(1rem, 2.5vw, 2rem) 1.25rem;
     background: #050505;
     isolation: isolate;
+    overflow: clip;
   }
   .gear-deck[hidden] {
     display: none;
   }
   .deck-glow {
     position: absolute;
-    inset: -10% 0 20% 0;
+    inset: 0;
+    overflow: clip;
     z-index: 0;
     pointer-events: none;
   }
@@ -1180,34 +1169,11 @@ const stateOf = (i: number, n: number) =>
      Show all: one scrollable product grid
      ------------------------------------------------------------------ */
   .gear-all-grid-view {
-    padding: 1.75rem clamp(1rem, 2.5vw, 2rem);
     background: #070707;
-    overflow: hidden;
-    display: grid;
-    grid-template-rows: 1fr;
-    opacity: 1;
-    transition: grid-template-rows 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .gear-all-grid-content {
     min-width: 0;
-    min-height: 0;
-    overflow: hidden;
-    transition: opacity 0.45s cubic-bezier(0.65, 0, 0.35, 1), transform 0.5s cubic-bezier(0.65, 0, 0.35, 1);
-  }
-  .gear-all-grid-view.is-collapsed .gear-all-grid-content {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  /* Hidden views must not reserve space beside the active view. */
-  .gear-all-grid-view[hidden] {
-    display: none;
-  }
-  .gear-all-grid-view.is-collapsed {
-    grid-template-rows: 0fr;
-    opacity: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-    pointer-events: none;
+    padding: 1.75rem clamp(1rem, 2.5vw, 2rem);
   }
   .all-grid-topbar {
     display: flex;
@@ -1227,10 +1193,12 @@ const stateOf = (i: number, n: number) =>
   }
   .all-grid-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, clamp(20rem, 26vw, 36rem)), 1fr));
     gap: 1rem;
   }
   .all-grid-card {
+    min-width: 0;
+    overflow-wrap: anywhere;
     display: flex;
     flex-direction: column;
     background: #101010;
@@ -1245,6 +1213,8 @@ const stateOf = (i: number, n: number) =>
     display: none;
   }
   .all-card-img-wrap {
+    min-width: 0;
+    overflow: hidden;
     height: 150px;
     display: flex;
     align-items: center;
@@ -1258,6 +1228,10 @@ const stateOf = (i: number, n: number) =>
     object-fit: contain;
   }
   .all-card-type {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    font-size: clamp(1rem, 1.5vw, 1.5rem);
     font-family: var(--font-display);
     font-weight: 800;
     text-transform: uppercase;
@@ -1265,6 +1239,7 @@ const stateOf = (i: number, n: number) =>
     color: #fff;
   }
   .all-card-body {
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
@@ -1278,6 +1253,8 @@ const stateOf = (i: number, n: number) =>
     color: var(--muted, #888);
   }
   .all-card-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
     margin: 0;
     font-size: 1rem;
     color: #fff;
@@ -1295,6 +1272,9 @@ const stateOf = (i: number, n: number) =>
     margin-top: auto;
   }
   .all-card-cta {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
     display: inline-flex;
     align-items: center;
     min-height: 44px;
@@ -1314,6 +1294,18 @@ const stateOf = (i: number, n: number) =>
   .all-card-cta:hover {
     background: #dcdcdc;
     color: #000;
+  }
+
+  @media (min-width: 1100px) {
+    .all-grid-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .all-grid-card { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); }
+    .all-card-img-wrap { height: auto; min-height: 180px; }
+    .all-card-img { max-height: clamp(140px, 12vw, 240px); }
+    .all-card-body { padding: 1.25rem; }
+  }
+
+  @media (min-width: 1600px) {
+    .all-grid-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
 
   /* ------------------------------------------------------------------
@@ -1472,6 +1464,8 @@ const stateOf = (i: number, n: number) =>
 </style>
 
 <script>
+  import { setDisclosureOpen } from '@andrew/ui/scripts/disclosure.ts';
+  import { createPageScope } from '@andrew/ui/scripts/page-scope.ts';
   (() => {
     function setNavHeight() {
       const nav = document.querySelector<HTMLElement>('.site-nav');
@@ -1483,8 +1477,9 @@ const stateOf = (i: number, n: number) =>
       const root = document.getElementById('gear-accordion-container');
       if (!root || root.dataset.gearWired === '1') return;
       root.dataset.gearWired = '1';
+      const { on, cleanup } = createPageScope(root);
       setNavHeight();
-      window.addEventListener('resize', setNavHeight, { passive: true });
+      on(window, 'resize', setNavHeight, { passive: true });
 
       const sections = Array.from(root.querySelectorAll<HTMLElement>('.gear-accordion-section'));
       const decks = new Map<HTMLElement, { refresh: () => void }>();
@@ -1493,51 +1488,26 @@ const stateOf = (i: number, n: number) =>
         const body = s.querySelector<HTMLElement>('.gear-accordion-body');
         if (s.classList.contains('is-expanded')) {
           s.classList.add('is-settled');
-          if (body) body.style.contentVisibility = 'visible';
+          if (body) body.inert = false;
         } else {
           s.classList.add('is-collapsed');
-          if (body) body.style.contentVisibility = 'hidden';
+          if (body) body.inert = true;
         }
       });
 
       const setOpen = (section: HTMLElement, open: boolean) => {
-        const isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const body = section.querySelector<HTMLElement>('.gear-accordion-body');
+        if (!body || (section.classList.contains('is-expanded') === open && body.inert === !open)) return;
         section.classList.toggle('is-expanded', open);
         section.classList.toggle('is-collapsed', !open);
+        section.classList.remove('is-settled');
+        section.classList.add('is-animating');
         section.querySelector('.gear-accordion-header')?.setAttribute('aria-expanded', String(open));
-        const body = section.querySelector<HTMLElement>('.gear-accordion-body');
-        if (body) {
-          body.inert = !open;
-          if (open) {
-            body.style.contentVisibility = 'visible';
-            section.classList.add('is-animating');
-            if (isReduced) {
-              section.classList.remove('is-animating');
-              section.classList.add('is-settled');
-            } else {
-              setTimeout(() => {
-                if (section.classList.contains('is-expanded')) {
-                  section.classList.remove('is-animating');
-                  section.classList.add('is-settled');
-                }
-              }, 400);
-            }
-          } else {
-            section.classList.remove('is-settled');
-            section.classList.add('is-animating');
-            if (isReduced) {
-              section.classList.remove('is-animating');
-              body.style.contentVisibility = 'hidden';
-            } else {
-              setTimeout(() => {
-                if (section.classList.contains('is-collapsed')) {
-                  section.classList.remove('is-animating');
-                  body.style.contentVisibility = 'hidden';
-                }
-              }, 400);
-            }
-          }
-        }
+        void setDisclosureOpen(body, open).then((settled) => {
+          if (!settled || section.classList.contains('is-expanded') !== open) return;
+          section.classList.remove('is-animating');
+          section.classList.toggle('is-settled', open);
+        });
       };
 
       /** Open one section and close the rest; or close it if it is open. */
@@ -1829,6 +1799,7 @@ const stateOf = (i: number, n: number) =>
           tailing = false;
           trough = Infinity;
         };
+        cleanup(() => window.clearTimeout(quietTimer));
         stage.addEventListener('wheel', (e) => {
           if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
           e.preventDefault();
@@ -1879,35 +1850,22 @@ const stateOf = (i: number, n: number) =>
       let query = '';
 
       const allView = document.getElementById('gear-all-products');
+      const deckView = document.getElementById('gear-decks-view');
       const allToggle = document.querySelector<HTMLButtonElement>('[data-all-toggle]');
       const allCards = Array.from(allView?.querySelectorAll<HTMLElement>('.all-grid-card') || []);
       const gridCount = allView?.querySelector('[data-grid-count]');
       let gridOpen = false;
 
       allToggle?.addEventListener('click', () => {
-        if (!allView) return;
+        if (!allView || !deckView) return;
         gridOpen = !gridOpen;
-        const isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         allToggle.setAttribute('aria-expanded', String(gridOpen));
         allToggle.textContent = gridOpen ? 'Deck view' : 'Show all products';
-        root.hidden = gridOpen;
+        void setDisclosureOpen(deckView, !gridOpen);
+        void setDisclosureOpen(allView, gridOpen);
         if (!gridOpen) sections.forEach((section) => {
           if (section.classList.contains('is-expanded')) decks.get(section)?.refresh();
         });
-        allView.inert = !gridOpen;
-        if (gridOpen) {
-          allView.hidden = false;
-          if (isReduced) allView.classList.remove('is-collapsed');
-          else requestAnimationFrame(() => requestAnimationFrame(() => {
-            if (gridOpen) allView.classList.remove('is-collapsed');
-          }));
-        } else {
-          allView.classList.add('is-collapsed');
-          if (isReduced) allView.hidden = true;
-          else setTimeout(() => {
-            if (!gridOpen) allView.hidden = true;
-          }, 400);
-        }
       });
 
       function apply() {

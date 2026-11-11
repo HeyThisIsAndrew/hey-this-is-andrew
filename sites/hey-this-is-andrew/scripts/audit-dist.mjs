@@ -72,8 +72,16 @@ for (const page of pages) {
   }
   // Attribute scans ignore inline scripts (their regexes look like markup).
   const html = raw.replace(/<script\b(?![^>]*type="application\/(?:ld\+)?json")[^>]*>[\s\S]*?<\/script>/gi, '<script></script>');
-  if (count(html, /<header[^>]*class="[^"]*site-nav/g) !== 1) fail(page, 'site header count != 1');
-  if (count(html, /<footer[^>]*class="[^"]*site-footer/g) !== 1) fail(page, 'site footer count != 1');
+  const bioPage = path.relative(dist, page) === 'links/index.html';
+  const chromeCount = bioPage ? 0 : 1;
+  if (count(html, /<header[^>]*class="[^"]*site-nav/g) !== chromeCount) fail(page, 'unexpected site header count');
+  if (count(html, /<footer[^>]*class="[^"]*site-footer/g) !== chromeCount) fail(page, 'unexpected site footer count');
+  if (bioPage && !html.includes('data-layout="bio"')) fail(page, 'links page lacks its bio layout');
+  const personalLogos = [...html.matchAll(/<img\b[^>]*alt="HEY_THISISANDREW"[^>]*>/g)];
+  if (personalLogos.length === 0) fail(page, 'missing personal-brand logo');
+  for (const [logo] of personalLogos) {
+    if (!/src="[^"]*\/hey-thisisandrew\.[^"]+\.png"/.test(logo)) fail(page, 'personal logo does not use approved artwork');
+  }
   if (count(html, /<h1[\s>]/g) !== 1) fail(page, `h1 count = ${count(html, /<h1[\s>]/g)}`);
   if (!/<html[^>]*data-theme="dark"/.test(html)) fail(page, 'html not data-theme="dark"');
   if (/id="nav-theme-toggle"/.test(html)) fail(page, 'theme toggle rendered');

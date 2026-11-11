@@ -5,6 +5,8 @@
  * Animates open using CSS grid layout transitions.
  * Accessible, and automatically opens if the URL hash targets an element inside.
  */
+import Disclosure from './Disclosure.astro';
+
 interface Props {
   /** The unique ID of the expandable content area (for ARIA controls). */
   id: string;
@@ -23,11 +25,11 @@ const { id, expandLabel = 'Show all', collapseLabel = 'Show less', buttonBottom 
 ---
 
 <expand-section data-id={id}>
-  <div class="expand-wrapper" id={id} data-state="closed">
+  <Disclosure class="expand-wrapper" id={id}>
     <div class="expand-inner">
       <slot />
     </div>
-  </div>
+  </Disclosure>
   
   {buttonBottom && (
     <div class="expand-actions">
@@ -46,8 +48,11 @@ const { id, expandLabel = 'Show all', collapseLabel = 'Show less', buttonBottom 
 </expand-section>
 
 <script>
+  import { setDisclosureOpen } from './scripts/disclosure';
+  import { createPageScope } from './scripts/page-scope';
   class ExpandSection extends HTMLElement {
     connectedCallback() {
+      const { on, timeout } = createPageScope(this);
       const id = this.dataset.id;
       const wrapper = this.querySelector('.expand-wrapper');
       const trigger = this.querySelector('.expand-trigger');
@@ -58,13 +63,13 @@ const { id, expandLabel = 'Show all', collapseLabel = 'Show less', buttonBottom 
       const collapseLabel = trigger.getAttribute('data-collapse-label') || 'Show less';
       
       const toggle = (forceOpen = false) => {
-        const isClosed = wrapper.getAttribute('data-state') === 'closed';
+        const isClosed = (wrapper as HTMLElement).dataset.open !== 'true';
         const willOpen = forceOpen ? true : isClosed;
         
-        wrapper.setAttribute('data-state', willOpen ? 'open' : 'closed');
+        void setDisclosureOpen(wrapper as HTMLElement, willOpen);
         trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
         trigger.textContent = willOpen ? collapseLabel : expandLabel;
-        if (willOpen && id) history.replaceState(null, '', '#' + id);
+        if (willOpen && id) history.replaceState(history.state, '', '#' + id);
       };
       
       trigger.addEventListener('click', () => toggle());
@@ -82,9 +87,9 @@ const { id, expandLabel = 'Show all', collapseLabel = 'Show less', buttonBottom 
         }
       };
       
-      window.addEventListener('hashchange', checkHash);
+      on(window, 'hashchange', checkHash);
       // Check on initial load (timeout helps ensure DOM and other scripts are ready)
-      setTimeout(checkHash, 50);
+      timeout(checkHash, 50);
     }
   }
   
@@ -94,20 +99,6 @@ const { id, expandLabel = 'Show all', collapseLabel = 'Show less', buttonBottom 
 </script>
 
 <style>
-  .expand-wrapper {
-    display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  
-  .expand-wrapper[data-state="open"] {
-    grid-template-rows: 1fr;
-  }
-  
-  .expand-inner {
-    overflow: hidden;
-  }
-  
   .expand-actions {
     display: flex;
     justify-content: center;

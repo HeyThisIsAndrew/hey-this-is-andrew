@@ -180,13 +180,13 @@ const linkAttrs = (href?: string) =>
                       stretches over the whole panel, so a tap on the art does
                       what the card does; on desktop a click on the art opens
                       the brand view instead. */}
-                  
+
                   <h3 class="bacc-headline">
                     {brand.headline.split('\n').map((l: string, k: number) => (
                       <>{k > 0 && <br/>}{l}</>
                     ))}
                   </h3>
-                  
+
                   {brand.stats && brand.stats.length > 0 && (
                     <div class="bacc-stats">
                       {brand.stats.map((s: any) => (
@@ -210,7 +210,7 @@ const linkAttrs = (href?: string) =>
                   )}
 
                   <p class="bacc-deck">{brand.deck}</p>
-                  
+
                   {brand.copy && brand.copy.length > 0 && (
                     <div class="bacc-copy">
                       {brand.copy.map((pText: string) => (
@@ -1633,6 +1633,7 @@ const linkAttrs = (href?: string) =>
 </style>
 
 <script>
+  import { createPageScope } from './scripts/page-scope';
   const MOBILE = '(max-width: 767px)';
   /* Phones in either orientation always get the FILL view (the art fills
      the screen under a black band, the copy over it), whatever `view` says. */
@@ -1643,6 +1644,7 @@ const linkAttrs = (href?: string) =>
     const root = document.querySelector<HTMLElement>('[data-bacc]');
     if (!root || root.dataset.ready) return;
     root.dataset.ready = '1';
+    const { on, cleanup, timeout } = createPageScope(root);
 
     const panels = Array.from(root.querySelectorAll<HTMLElement>('[data-bacc-panel]'));
     const triggers = panels.map((p) => p.querySelector<HTMLButtonElement>('[data-bacc-trigger]')!);
@@ -1801,10 +1803,11 @@ const linkAttrs = (href?: string) =>
     root.addEventListener('touchstart', hold('touch', true), { passive: true });
     root.addEventListener('touchend', hold('touch', false), { passive: true });
     root.addEventListener('touchcancel', hold('touch', false), { passive: true });
-    new IntersectionObserver(([entry]) => {
+    const visibilityObserver = new IntersectionObserver(([entry]) => {
       onScreen = entry.isIntersecting;
       kick();
-    }, { threshold: 0.25 }).observe(root);
+    }, { threshold: 0.25 });
+    visibilityObserver.observe(root);
     const onMedia = () => {
       if (mobile.matches) userPaused = true;
       syncToggle();
@@ -1965,6 +1968,7 @@ const linkAttrs = (href?: string) =>
            is up (iOS ignores overflow alone, so touches on the full-screen
            view are not allowed to pan either; see touchmove below). */
         document.documentElement.classList.add('bacc-view-open');
+        document.documentElement.dataset.historyView = 'brand';
         document.documentElement.style.overflow = 'hidden';
         /* Back closes the view, not the page. */
         if (!history.state?.baccView) history.pushState({ ...(history.state ?? {}), baccView: true }, '');
@@ -2047,7 +2051,7 @@ const linkAttrs = (href?: string) =>
           if (this.isClosing) this.cleanup();
         };
         stage.addEventListener('transitionend', onEnd);
-        window.setTimeout(done, 900);
+        timeout(done, 900);
       },
       cleanup() {
         stage.style.transition = 'none';
@@ -2058,6 +2062,7 @@ const linkAttrs = (href?: string) =>
         document.body.style.overflow = '';
         document.documentElement.style.overflow = '';
         document.documentElement.classList.remove('bacc-view-open');
+        if (!this.expectPop && document.documentElement.dataset.historyView === 'brand') delete document.documentElement.dataset.historyView;
         document.body.style.paddingRight = '';
         if (closeBtn) closeBtn.hidden = true;
         if (caption) {
@@ -2089,10 +2094,10 @@ const linkAttrs = (href?: string) =>
       if (expanding) choose(i);
       const panel = panels[i];
       const img = panel.querySelector<HTMLImageElement>('.bacc-media img');
-      const go = () => camera.open(panel, expanding && !phoneView.matches);
+      const go = () => { if (root.isConnected) camera.open(panel, expanding && !phoneView.matches); };
       if (!img || img.complete) return go();
       img.loading = 'eager';
-      Promise.race([img.decode().catch(() => {}), new Promise((r) => setTimeout(r, 350))]).then(go);
+      Promise.race([img.decode().catch(() => {}), new Promise<void>((resolve) => timeout(resolve, 350))]).then(go);
     }
 
     panels.forEach((panel, i) => {
@@ -2142,33 +2147,38 @@ const linkAttrs = (href?: string) =>
     };
     viewport.addEventListener('touchmove', noScroll, { passive: false });
     viewport.addEventListener('wheel', noScroll, { passive: false });
-    window.addEventListener('keydown', (e) => {
+    on(window, 'keydown', (e) => {
       if (e.key === 'Escape' && camera.isZoomed) {
         e.preventDefault();
         camera.close();
       }
     });
-    window.addEventListener('resize', () => camera.isZoomed && camera.recalc());
-    /* Capture phase: this runs before the page's own popstate handlers, and
-       marks the pop as the view's, so they leave the scroll alone. */
-    window.addEventListener(
-      'popstate',
-      () => {
-        if (!camera.isZoomed && !camera.expectPop) return;
-        camera.expectPop = false;
-        document.documentElement.dataset.viewPop = '1';
-        setTimeout(() => delete document.documentElement.dataset.viewPop, 0);
-        camera.close(true);
-      },
-      { capture: true },
-    );
+    on(window, 'resize', () => camera.isZoomed && camera.recalc());
+    // The early shared router guard relays the view's local history entry.
+    const closeFromHistory = () => {
+      if (!camera.isZoomed && !camera.expectPop) return;
+      camera.expectPop = false;
+      if (document.documentElement.dataset.historyView === 'brand') delete document.documentElement.dataset.historyView;
+      document.documentElement.dataset.viewPop = '1';
+      timeout(() => delete document.documentElement.dataset.viewPop, 0);
+      camera.close(true);
+    };
+    on(window, 'andrew:view-pop', (event) => {
+      if (event.detail.owner === 'brand') closeFromHistory();
+    });
+    // Sites without ClientRouter still use native browser history.
+    on(window, 'popstate', (event) => {
+      if (!camera.isZoomed && !camera.expectPop) return;
+      event.stopImmediatePropagation();
+      closeFromHistory();
+    }, { capture: true });
 
     /* #brand-<id> (a link or the URL hash) opens that brand's panel. */
     const selectById = (id: string) => {
       const i = panels.findIndex((p) => p.dataset.brandId === id);
       if (i >= 0) choose(i);
     };
-    document.addEventListener('click', (e) => {
+    on(document, 'click', (e) => {
       const link = (e.target as Element | null)?.closest?.('a[href*="#brand-"]');
       const m = link?.getAttribute('href')?.match(/#brand-([a-z0-9-]+)$/);
       if (m) selectById(m[1]);
@@ -2177,13 +2187,21 @@ const linkAttrs = (href?: string) =>
       const m = window.location.hash.match(/^#brand-([a-z0-9-]+)$/);
       if (m) selectById(m[1]);
     };
-    window.addEventListener('hashchange', fromHash);
+    on(window, 'hashchange', fromHash);
     fromHash();
 
+    cleanup(() => {
+      visibilityObserver.disconnect();
+      cancelAnimationFrame(raf);
+      reduced.removeEventListener('change', onMedia);
+      mobile.removeEventListener('change', onMedia);
+      if (camera.isZoomed || camera.isClosing) camera.cleanup();
+    });
     syncToggle();
   }
 
   initBrandAccordion();
+  document.addEventListener('astro:page-load', initBrandAccordion);
 </script>
 
 <style>
