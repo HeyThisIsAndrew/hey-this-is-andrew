@@ -32,7 +32,8 @@ const LIMITED_USE = (operatorTs.match(/LIMITED_USE =\s*'([^']+)'/) || [])[1];
 const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) =>
   e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]);
 const files = walk(dist);
-const pages = files.filter((f) => f.endsWith('.html'));
+/* Redirect stubs (astro.config.mjs redirects, e.g. /help → /support) aren't pages. */
+const pages = files.filter((f) => f.endsWith('.html') && !/http-equiv="refresh"/i.test(fs.readFileSync(f, 'utf8')));
 const read = (rel) => { const f = path.join(dist, rel); return fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : ''; };
 /* Visible text, plus meta and alt text: tags, scripts and styles removed. */
 const textOf = (html) => html
@@ -138,21 +139,30 @@ const FORBIDDEN = [
   [/watermark/i, 'never position importing around watermarks (TikTok review)'],
   [/download any/i, 'importing is for media you own or manage'],
   [/any account['’]?s videos|videos from any account/i, 'importing is for media you own or manage'],
-  [/MCP server/i, 'MCP is planned, not shipped'],
   [/\bIntel\b/, 'only Apple silicon is supported'],
   [/Windows download|download (?:for|on) Windows/i, 'there is no Windows build'],
   [/60 ?FPS/i, 'no frame-rate claim'],
-  [/Whisper (?:AI|speech|transcri|model|Neural)|offline Whisper/i, 'transcripts come from the original post captions'],
+  [/Whisper (?:AI|speech|transcri|model|Neural)|offline Whisper/i, 'transcripts come from captions, a caption file, or the optional faster-whisper add-on'],
   [/app\.db\b/, 'the database is reelay.db'],
   [/\b4482\b/, 'the Agent API is on port 8471'],
   [/Gatekeeper-verified|Hardened Runtime Configured|Apple Notarized/i, 'builds are not notarized'],
   [/Neural Engine|DirectX|Apple Metal|Metal GPU/i, 'no GPU acceleration is claimed by the app'],
-  [/\$79|\$199|money-back|one-time license/i, 'no pricing is set; the beta is free'],
+  [/money-back|lifetime (?:licen[cs]e|deal|access|plan|updates)(?![”"])/i, 'the price includes 12 months of updates: never promise lifetime'],
   [/5-stage|five-stage|5 Stages/i, 'the board has four columns'],
   [/posts? (?:automatically )?to (?:TikTok|Instagram)|auto-?posts? to (?:TikTok|Instagram)/i, 'Reelay never posts to TikTok or Instagram'],
   [/\bSYS \d+\b|\bSUBSYSTEM\b|\/\/ ?WORKSTATION/, 'Reelay is a creator product: no developer-console headers'],
   [/mobile (?:companion )?app|cloud sync|Reelay cloud account/i, 'no mobile app or cloud sync has shipped'],
 ];
+/* One price everywhere: every dollar amount over $1 must be PRICING.amount from src/data/site.ts. */
+const PRICE = (fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../src/data/site.ts'), 'utf8')
+  .match(/amount:\s*'(\$\d+)'/) || [])[1];
+if (!PRICE) fail('src/data/site.ts has no PRICING.amount');
+for (const p of pages) {
+  const rel = path.relative(dist, p);
+  for (const m of textOf(fs.readFileSync(p, 'utf8')).matchAll(/\$(\d{2,4})(?![\d.,])/g)) {
+    if (m[0] !== PRICE) fail(`${rel} shows ${m[0]}, but the price is ${PRICE} (src/data/site.ts PRICING)`);
+  }
+}
 for (const p of pages) {
   const rel = path.relative(dist, p);
   const t = textOf(fs.readFileSync(p, 'utf8'));

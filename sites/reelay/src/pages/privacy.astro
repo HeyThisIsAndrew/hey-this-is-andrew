@@ -6,7 +6,7 @@ import SignInDiagram from '../components/SignInDiagram.astro';
 import { SITE, DATA_PATHS, AGENT_API, href } from '../data/site';
 import { OPERATOR, CONTACTS, LIMITED_USE, YOUTUBE_30_DAY_REFRESH } from '../data/operator';
 
-const updated = 'October 12, 2026';
+const updated = 'November 12, 2026';
 const ph = (v: string) => /\{\{/.test(v);
 const toc: [string, string][] = [
   ['summary', 'Summary'],
@@ -32,7 +32,9 @@ const services: [string, string, string][] = [
   ['YouTube Data API (googleapis.com)', 'When you list your channel, upload, schedule or check for updates', 'Your Google token and the video and details you upload.'],
   ['Meta’s and Bluesky’s APIs (graph.facebook.com, graph.threads.com, bsky.social)', 'Only when you have turned automatic posting on for that platform and a post is due', 'Your token or App Password and the post you wrote.'],
   ['Google, TikTok and Meta sign-in pages', 'When you sign in or refresh a sign-in', 'What you enter on their own pages; Reelay never sees your password.'],
-  ['auth.reelay.app (Reelay’s sign-in server)', 'TikTok and Meta sign-in, token refresh, TikTok disconnect', 'The sign-in code or token, for the few minutes described above.'],
+  ['Meta Model API (api.meta.ai)', 'Only when you click Generate in Repurpose, after ticking “Allow Muse Spark”', 'That video’s title, description, notes and transcript, and your voice profile, sent with the Meta API key you added. Meta’s terms for its Model API govern what it does with them.'],
+  ['auth.reelay.app (Reelay’s sign-in server)', 'Not used by this version. Once Reelay’s own TikTok and Meta sign-in is switched on: sign-in, token refresh, TikTok disconnect', 'The sign-in code or token, for the few minutes described in section 7.'],
+  ['huggingface.co', 'Once, only if you installed the optional faster-whisper add-on, the first time a video is transcribed', 'A one-time download of the speech model; transcription then runs on your Mac and no audio leaves it.'],
   ['suggestqueries.google.com', 'When you ask for SEO keyword ideas', 'The phrase you typed.'],
   ['docs.google.com', 'When you import a Google Sheet', 'A request for the sheet you shared by link.'],
   ['LanguageTool', 'Once, on first use, if you installed it', 'A one-time download of the checker; it then runs offline.'],
@@ -57,7 +59,8 @@ const services: [string, string, string][] = [
       <li>Your library, post records, captions, transcripts and history live in a database file on your Mac. We don’t run a cloud database and we can’t see yours.</li>
       <li>Sign-in tokens are kept in the macOS Keychain, never in a file.</li>
       <li>Uploads and posts go straight from your Mac to the platform. Your videos are never copied to a Reelay server.</li>
-      <li>For TikTok and Meta sign-in only, Reelay’s sign-in server swaps the sign-in code for tokens. It holds the result at most 10 minutes and never stores it.</li>
+      <li>AI drafting (Repurpose) is the one feature that sends your words to an AI provider: a video’s title, description, notes, transcript and your voice profile go to Meta’s Model API, only when you click Generate, using your own Meta API key.</li>
+      <li>Once Reelay’s own TikTok and Meta sign-in is switched on, a small sign-in server swaps the sign-in code for tokens, holds the result at most 10 minutes and never stores it. This version doesn’t use it yet.</li>
       <li>No analytics, no tracking, no advertising, no update checks, and no account with us. We don’t sell or share data, or use it to train AI models.</li>
     </ul>
   </section>
@@ -74,7 +77,7 @@ const services: [string, string, string][] = [
     <ul>
       <li><strong>Your videos</strong> are saved in the library folder you choose (by default <code>{DATA_PATHS.library}</code>), with a metadata file per video.</li>
       <li><strong>The database</strong>, <code>{DATA_PATHS.dbName}</code>, holds your profiles, video records, platform copy, transcripts, source records, publishing history, change history, automation rules and the search index. It lives in <code>{DATA_PATHS.mac}</code> with caches and the backups Reelay makes before upgrading the database. Reelay makes that folder and its files readable by your macOS user only.</li>
-      <li><strong>Sign-in tokens and keys</strong> (YouTube, TikTok, Instagram, Threads and Facebook tokens, Bluesky App Passwords and the agent API key) are stored in the macOS Keychain.</li>
+      <li><strong>Sign-in tokens and keys</strong> (YouTube, TikTok, Instagram, Threads and Facebook tokens, Bluesky App Passwords, the agent API key and the Meta API key you add for Repurpose) are stored in the macOS Keychain. Keys for AI clients you pair are stored in the database only as one-way hashes.</li>
       <li><strong>Logs</strong> are written to <code>{DATA_PATHS.logs}</code>. Tokens and secrets are never logged.</li>
     </ul>
     <p>If you choose to move the database into a folder synced by Google Drive, Dropbox, iCloud Drive or OneDrive so a teammate can open it, that provider stores the file under your account and its own terms.</p>
@@ -112,7 +115,7 @@ const services: [string, string, string][] = [
 
   <section id="tiktok">
     <h2>4. TikTok</h2>
-    <p>Reelay uses TikTok’s Login Kit to attach your TikTok account to a creator profile. <strong>Reelay does not post to TikTok</strong>: you post in TikTok, with Prepare to Publish.</p>
+    <p>Reelay uses TikTok’s Login Kit to attach your TikTok account to a creator profile, once Reelay’s TikTok app is approved (it isn’t switched on in this version; see section 7). <strong>Reelay does not post to TikTok</strong>: you post in TikTok, with Prepare to Publish.</p>
     <PermissionsTable only={['tiktok']} headingLevel={4} />
     <p>The token is stored in your Keychain. Sign-in, token refresh and disconnect pass through Reelay’s sign-in server, because TikTok requires the app secret for them. Disconnect asks TikTok to revoke access. You can also remove Reelay in TikTok under Settings and privacy → Security and permissions → Apps and services.</p>
   </section>
@@ -131,6 +134,7 @@ const services: [string, string, string][] = [
 
   <section id="sign-in-server">
     <h2>7. Reelay’s sign-in server</h2>
+    <p class="callout"><strong>Not switched on in this version.</strong> Reelay’s own one-click sign-in for TikTok, Instagram, Threads and Facebook waits on each platform’s app review, so this version never contacts <code>auth.reelay.app</code>. Until then, TikTok and Instagram aren’t connected, and Threads and Facebook connect with a token from your own Meta developer app (Accounts → Advanced Setup). This section describes the server as it works once it is switched on.</p>
     <p>TikTok and Meta require an app secret to turn a sign-in code into tokens, and a secret shipped inside a Mac app can be extracted. So for those platforms only, Reelay runs a small sign-in server at <code>auth.reelay.app</code> that holds Reelay’s app secrets and does that one step.</p>
     <SignInDiagram id="privacy-sign-in" />
     <ul>
@@ -155,7 +159,9 @@ const services: [string, string, string][] = [
 
   <section id="agents-and-ai">
     <h2>9. Agents and AI</h2>
-    <p>Reelay’s Agent API listens only on your Mac at <code>{AGENT_API.host}:{AGENT_API.port}</code>, needs an access key from your Keychain, and checks the Host header of every request. If you connect an AI agent to it, what that agent sends to its own provider is governed by your agreement with that provider. Anything an agent asks to publish, schedule, archive or bulk-edit waits for a person’s approval, and captions downloaded from the internet are labelled as untrusted text. Writing help runs on a model on your Mac; Reelay doesn’t send captions to a paid AI service. AI suggestions are suggestions: you decide what to use.</p>
+    <p>Reelay’s Agent API listens only on your Mac at <code>{AGENT_API.host}:{AGENT_API.port}</code>, needs an access key from your Keychain, and checks the Host header of every request. If you connect an AI agent to it, what that agent sends to its own provider is governed by your agreement with that provider. Anything an agent asks to publish, schedule, archive or bulk-edit waits for a person’s approval, and captions downloaded from the internet are labelled as untrusted text. MCP clients you pair (with a one-time code in Settings → AI agents) get their own key, which works only for MCP on this Mac, and their edits are recorded under the client’s name.</p>
+    <p><strong>Repurpose (AI drafting).</strong> Repurpose drafts each platform’s copy with Meta’s Muse Spark model through Meta’s Model API, using an API key you get from Meta and add yourself. It runs only when you tick “Allow Muse Spark” and click Generate for a video (or a batch you chose), and it sends that video’s title, description, notes and transcript and your voice profile. Reelay doesn’t receive any of it, adds no key of its own, and saves nothing until you review the draft and apply it. Meta’s terms and privacy policy govern Meta’s use of what you send. Without a key, or with the box unticked, nothing is sent.</p>
+    <p><strong>Local writing help.</strong> The Assist menu’s rewrites run on a model on your Mac (Ollama or llama.cpp, if you installed one), and nothing leaves it. AI suggestions are suggestions: you decide what to use.</p>
   </section>
 
   <section id="website">

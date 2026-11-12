@@ -16,9 +16,9 @@ export const href = (path: string) => `${base}${path}`;
 export const SITE = {
   name: 'Reelay',
   fullName: 'Reelay Studio',
-  tagline: 'Publish everywhere. Never lose control.',
+  tagline: 'Get everything ready to publish everywhere.',
   description:
-    'Reelay is a Mac app for creators who post short-form video to more than one platform. Bring in the videos you own or manage, prepare tailored captions and post details for every platform, and only publish what is actually ready. Your library, database, and sign-ins stay on your Mac.',
+    'Reelay is a Mac app that turns one finished video into a complete publishing package: a title, description and caption for every platform, drafted from the video’s transcript and checked against each platform’s rules. It posts to YouTube for you and hands TikTok and Instagram to you ready to paste. Your library, database and sign-ins stay on your Mac.',
   version: RELEASE.label,
   versionNumber: RELEASE.version,
   releaseDate: RELEASE.dateLabel,
@@ -27,6 +27,20 @@ export const SITE = {
   supportEmail: CONTACTS.support,
   complianceEmail: CONTACTS.reviewers,
   privacyEmail: CONTACTS.privacy,
+};
+
+/*
+ * The price (owner's decision: $79 to $99 one-time). One licence, every feature, 12 months of updates
+ * included. Never "lifetime". purchaseUrl stays a {{PLACEHOLDER}} until checkout exists, so the release
+ * audit (REELAY_RELEASE=1) fails rather than shipping a dead Buy button.
+ */
+export const PRICING = {
+  amount: '$79',
+  terms: 'one-time',
+  updates: '12 months of updates included',
+  afterUpdates: 'After 12 months your copy of Reelay keeps working; you stop getting new versions unless you renew updates.',
+  refund: '{{REFUND_WINDOW}}',
+  purchaseUrl: '{{PURCHASE_URL}}',
 };
 
 /* Where the app keeps its data (reelay/paths.py: APP_ID = "Reelay"). */
@@ -184,11 +198,12 @@ export const NAV_LINKS: NavItem[] = [
   { label: 'Download', href: href('/download'), section: 'download', subsections: [] },
   { label: 'Pricing', href: href('/pricing'), section: 'pricing', subsections: [] },
   {
-    label: 'Support',
+    label: 'Help',
     href: href('/support'),
     section: 'support',
     subsections: [
       { label: 'Help and FAQ', href: href('/support'), kicker: 'Help' },
+      { label: 'Contact', href: href('/contact'), kicker: 'Email' },
       { label: 'Security', href: href('/security'), kicker: 'Trust' },
       { label: 'Changelog', href: href('/changelog'), kicker: 'New' },
     ],
@@ -201,9 +216,9 @@ export const FOOTER_EXPLORE: FooterLink[] = [
   { label: 'Automations', href: href('/features/automations') },
   { label: 'Agents', href: href('/ai') },
   { label: 'Download', href: href('/download') },
-  { label: 'Changelog', href: href('/changelog') },
   { label: 'Pricing', href: href('/pricing') },
-  { label: 'Support', href: href('/support') },
+  { label: 'Help', href: href('/support') },
+  { label: 'Contact', href: href('/contact') },
 ];
 
 export const UTILITY_LINKS: FooterLink[] = [

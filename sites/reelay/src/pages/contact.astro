@@ -1,0 +1,48 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/ui/PageHero.astro';
+import { href } from '../data/site';
+import { CONTACTS } from '../data/operator';
+
+/* Who to write to. Reelay has no contact form and no chat widget: the site loads no third-party scripts,
+ * and email keeps a record you control. */
+const rows: [string, string, string][] = [
+  ['Help with the app', CONTACTS.support, 'Something not working, a question the Help pages don’t answer, refunds and licences.'],
+  ['Privacy', CONTACTS.privacy, 'What data Reelay handles, and requests to access or delete anything we hold (we hold very little: see the Privacy Policy).'],
+  ['Security', CONTACTS.security, 'A vulnerability in the app or this site. Please don’t include working exploits for live accounts.'],
+  ['Platform review', CONTACTS.reviewers, 'Google, TikTok and Meta app reviewers, and questions about the Terms.'],
+  ['Copyright', CONTACTS.copyright, 'Notices about material you believe infringes your rights (see the Copyright page).'],
+];
+---
+
+<BaseLayout title="Contact: Reelay Studio" description="How to reach the people behind Reelay Studio: help with the app, privacy, security, platform review and copyright.">
+  <PageHero eyebrow="Contact">
+    <Fragment slot="title">Write to a person.</Fragment>
+    <Fragment slot="lede">Reelay is made by a solo creator. Email reaches me directly. For most questions the <a href={href('/support')}>Help pages</a> are faster.</Fragment>
+  </PageHero>
+
+  <section class="stage stage--flush-top" aria-labelledby="contact-list-title">
+    <div class="wrap-narrow">
+      <h2 id="contact-list-title" class="sr-only">Email addresses</h2>
+      <dl class="contact-list" data-reveal>
+        {rows.map(([label, email, what]) => (
+          <div class="contact-row">
+            <dt>{label}</dt>
+            <dd><a href={`mailto:${email}`}>{email}</a><p class="fine">{what}</p></dd>
+          </div>
+        ))}
+      </dl>
+      <p class="fine mt-3" data-reveal>Please don’t send passwords, API keys or tokens by email. Reelay never needs them to help you.</p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .contact-list { display: grid; gap: 0; }
+  .contact-row { display: grid; gap: 0.35rem 2rem; padding: 1.1rem 0; border-top: 1px solid var(--hairline); }
+  @media (min-width: 720px) { .contact-row { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr); } }
+  .contact-row dt { font-weight: 600; color: var(--r-ink); }
+  .contact-row dd { margin: 0; min-width: 0; }
+  .contact-row dd a { overflow-wrap: anywhere; }
+  .contact-row .fine { margin-top: 0.3rem; }
+</style>

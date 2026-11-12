@@ -29,7 +29,7 @@ const pages = walk(dist).map((f) => {
   const title = decode(h1.replace(/<br\b[^>]*>/g, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim())
     || decode((html.match(/<title>([^<]*)<\/title>/) || [])[1] || 'Reelay').split(':')[0].trim();
   const eyebrow = decode((html.match(/<p class="eyebrow[^"]*"[^>]*>([^<]*)<\/p>/) || [])[1] || 'Reelay Studio');
-  return { slug, title: slug === 'home' ? 'Publish everywhere. Never lose control.' : title, eyebrow: slug === 'home' ? 'Reelay Studio' : eyebrow };
+  return { slug, title: slug === 'home' ? 'Get everything ready to publish everywhere.' : title, eyebrow: slug === 'home' ? 'Reelay Studio' : eyebrow };
 });
 
 const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
