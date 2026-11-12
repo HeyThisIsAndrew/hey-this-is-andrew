@@ -38,7 +38,6 @@ export const GEAR_PICKS: StorefrontPick[] = [
  */
 export const REFERRALS: StorefrontPick[] = [
   {
-    kicker: 'Mobile workflow',
     title: 'Mint Mobile',
     desc: 'Switch to Mint Mobile and stop spending so much on your wireless plan. Use my referral link to get $15 in renewal credit. Then use the money you save to buy me lunch or something (as a thank you).',
     cta: 'Check out Mint Mobile',

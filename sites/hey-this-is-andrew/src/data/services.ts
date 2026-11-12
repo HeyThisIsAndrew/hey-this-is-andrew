@@ -30,3 +30,6 @@ export const UGC_INQUIRY_HREF =
   '&body=' +
   encodeURIComponent('Brand:\nProduct:\nWhat you want shown:\nTimeline:\n');
 
+
+/** The owner's UGC creator profile on Cohley, the UGC platform he works through. */
+export const COHLEY_PROFILE_URL = 'https://connect.cohley.com/public/profile/andrew-baxter/';

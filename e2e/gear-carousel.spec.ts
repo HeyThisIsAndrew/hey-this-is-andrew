@@ -58,10 +58,14 @@ test('/gear/ section and item links open their section', async ({ page }) => {
   await expect(page.locator('#gear-lighting .deck-card.active')).toHaveAttribute('aria-label', 'Aputure Amaran 200d');
 });
 
-test('Mint Mobile is a referral on /about/, never in a gear section', async ({ page }) => {
+test('referrals on /about/ (Mint Mobile never in a gear section), Cohley under What I do', async ({ page }) => {
   await page.goto('./about/');
   const referrals = page.getByRole('complementary', { name: 'Referrals' });
   await expect(referrals.getByRole('link', { name: /Check out Mint Mobile/ })).toHaveAttribute('href', 'https://my.mintmobile.com/refer/pHvGFQz');
+  await expect(referrals.locator('.storefront-pick h3')).toHaveText(['Mint Mobile', 'inKind', 'Fetch', 'Instacart', 'Rakuten']);
+  await page.goto('./');
+  await expect(page.locator('#services').getByRole('link', { name: /View my Cohley profile/ }))
+    .toHaveAttribute('href', 'https://connect.cohley.com/public/profile/andrew-baxter/');
   await page.goto('./gear/');
   await expect(page.locator('main')).not.toContainText('Mint Mobile');
 });
