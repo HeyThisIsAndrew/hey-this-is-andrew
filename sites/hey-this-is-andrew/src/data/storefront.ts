@@ -4,7 +4,8 @@
 export const AMAZON_STOREFRONT = 'https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh';
 
 export interface StorefrontPick {
-  kicker: string;
+  /** Optional small label above the title. */
+  kicker?: string;
   title: string;
   desc: string;
   cta: string;
@@ -41,5 +42,11 @@ export const REFERRALS: StorefrontPick[] = [
     desc: 'Switch to Mint Mobile and stop spending so much on your wireless plan. Use my referral link to get $15 in renewal credit. Then use the money you save to buy me lunch or something (as a thank you).',
     cta: 'Check out Mint Mobile',
     url: 'https://my.mintmobile.com/refer/pHvGFQz',
+  },
+  {
+    title: 'inKind',
+    desc: "Hey! Join inKind and we'll both get $25 to spend at amazing restaurants!",
+    cta: 'Check out inKind',
+    url: 'https://app.inkind.com/refer/YMEZOONP',
   },
 ];
