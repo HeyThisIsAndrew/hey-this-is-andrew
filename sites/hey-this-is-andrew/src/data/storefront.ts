@@ -31,15 +31,15 @@ export const GEAR_PICKS: StorefrontPick[] = [
 
 /**
  * Referrals: not gear, so never in a gear section. Shown on /about/
- * (StorefrontCTA with picks={REFERRALS}). Put a personal referral link in
- * `url` when there is one; today it is Mint Mobile's home page.
+ * (StorefrontCTA with picks={REFERRALS}). The copy and the referral link
+ * are the owner's own, word for word.
  */
 export const REFERRALS: StorefrontPick[] = [
   {
     kicker: 'Mobile workflow',
     title: 'Mint Mobile',
-    desc: 'Reliable, flexible cellular connectivity powering off-site shoots and mobile production.',
+    desc: 'Switch to Mint Mobile and stop spending so much on your wireless plan. Use my referral link to get $15 in renewal credit. Then use the money you save to buy me lunch or something (as a thank you).',
     cta: 'Check out Mint Mobile',
-    url: 'https://mintmobile.com/',
+    url: 'https://my.mintmobile.com/refer/pHvGFQz',
   },
 ];

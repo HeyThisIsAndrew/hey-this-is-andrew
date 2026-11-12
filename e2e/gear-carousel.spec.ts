@@ -61,7 +61,7 @@ test('/gear/ section and item links open their section', async ({ page }) => {
 test('Mint Mobile is a referral on /about/, never in a gear section', async ({ page }) => {
   await page.goto('./about/');
   const referrals = page.getByRole('complementary', { name: 'Referrals' });
-  await expect(referrals.getByRole('link', { name: /Check out Mint Mobile/ })).toHaveAttribute('href', 'https://mintmobile.com/');
+  await expect(referrals.getByRole('link', { name: /Check out Mint Mobile/ })).toHaveAttribute('href', 'https://my.mintmobile.com/refer/pHvGFQz');
   await page.goto('./gear/');
   await expect(page.locator('main')).not.toContainText('Mint Mobile');
 });
