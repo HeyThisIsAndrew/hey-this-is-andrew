@@ -61,4 +61,9 @@ export const REFERRALS: StorefrontPick[] = [
     cta: 'Check out Instacart',
     url: 'https://inst.cr/t/c821eab27',
   },
+  {
+    title: 'Rakuten',
+    cta: 'Check out Rakuten',
+    url: 'https://www.rakuten.com/r/HEYTHI34?eeid=44971',
+  },
 ];
