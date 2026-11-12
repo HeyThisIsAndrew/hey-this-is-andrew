@@ -282,13 +282,13 @@ test.describe('Global QA', () => {
     const index = page.waitForResponse((r) => r.url().endsWith('/hey-this-is-andrew/api/search.json'));
     await page.goto('./');
     if (isMobile) {
-      // One search on a phone: the header magnifier, not a second one in
-      // the Menu.
+      // One search on a phone: inside the Menu, not beside it too.
+      await expect(page.locator('#nav-search-trigger')).toBeHidden();
       await page.locator('.menu-btn').click();
-      await expect(page.locator('#mobile-search-trigger')).toBeHidden();
-      await page.locator('.menu-btn').click();
+      await page.locator('#mobile-search-trigger').click();
+    } else {
+      await page.locator('#nav-search-trigger').click();
     }
-    await page.locator('#nav-search-trigger').click();
     await expect(page.locator('#command-palette')).toHaveAttribute('open', '');
     expect((await index).status()).toBe(200);
     await page.keyboard.type('sony');
