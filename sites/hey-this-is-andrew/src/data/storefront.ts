@@ -7,7 +7,8 @@ export interface StorefrontPick {
   /** Optional small label above the title. */
   kicker?: string;
   title: string;
-  desc: string;
+  /** Optional; left out rather than written for the owner. */
+  desc?: string;
   cta: string;
   url: string;
 }
@@ -54,5 +55,10 @@ export const REFERRALS: StorefrontPick[] = [
     desc: "Stop tossing your receipts. 🧾 They're worth gift cards on Fetch! Use my code FJ6MX and we'll both get a bonus when you join and complete any point-earning action.",
     cta: 'Check out Fetch',
     url: 'https://referral.fetch.com/vvv3/share?code=FJ6MX',
+  },
+  {
+    title: 'Instacart',
+    cta: 'Check out Instacart',
+    url: 'https://inst.cr/t/c821eab27',
   },
 ];
