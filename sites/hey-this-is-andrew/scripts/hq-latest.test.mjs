@@ -114,11 +114,17 @@ for (const item of liveDev) {
   assert.ok(Array.isArray(item.image?.candidates) && item.image.candidates.length > 0, `item "${item.id}" has responsive candidates`);
 }
 
-// 6. Test build helper: must use live endpoint without falling back to search index
+// 6. Test build helper: must use the live endpoint without falling back to
+// the search index. Compare it with the endpoint the build itself reads
+// (production, falling back to the workers.dev preview), never with the
+// preview alone: the two are separate deployments, and the preview went
+// stale the first time the HQ published after it.
 const buildPosts = await getLatestPostsForBuild();
+const live = await fetchLiveLatestPosts();
 assert.ok(buildPosts, 'getLatestPostsForBuild succeeds');
+assert.ok(live, 'live endpoint returns parsed items');
 assert.equal(buildPosts.length, 2, 'build posts return 2 items');
-assert.equal(buildPosts[0].id, liveDev[0].id, 'build posts match live endpoint first item');
-assert.equal(buildPosts[1].id, liveDev[1].id, 'build posts match live endpoint second item');
+assert.equal(buildPosts[0].id, live[0].id, 'build posts match live endpoint first item');
+assert.equal(buildPosts[1].id, live[1].id, 'build posts match live endpoint second item');
 
 console.log('hq-latest: ok');
