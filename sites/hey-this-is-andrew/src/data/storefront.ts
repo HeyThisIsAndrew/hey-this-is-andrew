@@ -49,4 +49,10 @@ export const REFERRALS: StorefrontPick[] = [
     cta: 'Check out inKind',
     url: 'https://app.inkind.com/refer/YMEZOONP',
   },
+  {
+    title: 'Fetch',
+    desc: "Stop tossing your receipts. 🧾 They're worth gift cards on Fetch! Use my code FJ6MX and we'll both get a bonus when you join and complete any point-earning action.",
+    cta: 'Check out Fetch',
+    url: 'https://referral.fetch.com/vvv3/share?code=FJ6MX',
+  },
 ];
