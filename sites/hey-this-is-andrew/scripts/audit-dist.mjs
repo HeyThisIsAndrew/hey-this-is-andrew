@@ -170,9 +170,9 @@ for (const page of pages) {
           // The goals summary opens its group's row of the /build accordion
           // (the full checklists live there, by Andrew's call).
           const isBuildRow = link === base + 'build/' || link.startsWith(base + 'build/#');
-          // The Gear carousel's cards open that item on /gear/ (its section
-          // open, the item in front), GearCarousel.astro.
-          const isGearItem = link.startsWith(base + 'gear/#gear-item-');
+          // The Gear carousel's cards open their section on /gear/
+          // (GearCarousel.astro); /gear/ also opens an item a link names.
+          const isGearItem = link.startsWith(base + 'gear/#');
           // The Capture Create Caffeinate and BE Unconventional HQ cards open their brand hub pages.
           const isCcc = link.startsWith(base + 'ccc/');
           const isBrands = link.startsWith(base + 'brands/');

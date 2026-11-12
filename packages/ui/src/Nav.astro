@@ -1126,11 +1126,18 @@ const hasCurrentSub = (item: NavItem) =>
   @media (max-width: 860px), (orientation: landscape) and (max-height: 500px) {
     .site-nav .desktop-nav { display: none; }
     .site-nav .menu-btn { display: inline-flex; }
-    /* Search is the first row of the Menu: a second search button beside
-       it said the same thing twice. Desktop, which has no Menu, keeps it. */
-    .site-nav .nav-search-btn { display: none; }
+    /* Search stays in the header at every width (the magnifier, beside
+       Menu), one tap away instead of two. It is the only search on a
+       phone: the Menu's own search row would say the same thing twice. */
+    .mobile-search-row { display: none; }
     .nav-inner { gap: 1rem; }
     .wordmark-logo { height: 1.75rem; }
+  }
+  /* Except under 360px on a page with the section list (PageNav's dock
+     button): there the header cannot hold all three, the magnifier steps
+     out (PageNav.astro), and the Menu's search row is the way in again. */
+  @media (max-width: 359px) {
+    .site-nav:has(.pn-dock-btn:not([hidden])) .mobile-search-row { display: block; }
   }
 
   /* Phones (portrait, and landscape where the width passes 860): the

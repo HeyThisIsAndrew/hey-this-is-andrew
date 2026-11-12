@@ -1,4 +1,19 @@
 ---
+/**
+ * /brands/: the three lanes as tall tiles, in the same cinematic language as
+ * the homepage Brands panels (@andrew/ui BrandAccordion):
+ * - each tile carries its brand accent (data-accent: BE red, CCC gold, the
+ *   one sanctioned exception to monochrome, src/styles/theme.css); Sip the
+ *   Magic has none, so it uses the monochrome base tokens;
+ * - at rest the art is graded down and over-scanned; on hover or keyboard
+ *   focus the accent frame and a glow rising from the foot fade in, the
+ *   accent edge draws down the left side, the art brightens and slowly
+ *   pushes in, a light sweep crosses the tile, the logo lifts and the
+ *   kicker widens with the accent's label glow;
+ * - phones have no hover, so the tile in the middle of the screen takes the
+ *   same lit state as you scroll (is-lit, set below);
+ * - reduced motion keeps the light, frame and colour, without any movement.
+ */
 import { Image } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { childBrands } from '../../data/brands';
@@ -9,18 +24,27 @@ const sources = (image: ImageMetadata | RemoteImage) => 'remote' in image ? { sr
 <BaseLayout title="Brands · HEY_THISISANDREW" description="Explore the brands Andrew is building: BE Unconventional HQ, Capture Create Caffeinate, and Sip the Magic.">
   <section class="brands-overview" aria-labelledby="brands-title">
     <header class="brands-intro"><p class="font-mono">The lanes</p><h1 id="brands-title">Brands</h1><p>Different worlds. One creator.</p></header>
-    <div class="brand-tiles">
-      {childBrands.map((brand) => {
+    <div class="brand-tiles" data-brand-tiles>
+      {childBrands.map((brand, i) => {
         const Tag = brand.url && !brand.comingSoon ? 'a' : 'article';
         return (
-          <Tag class="brand-tile" href={Tag === 'a' ? brand.url : undefined} aria-label={Tag === 'a' ? `Explore ${brand.name}` : undefined}>
-            {brand.mediaSrc ? <Image {...sources(brand.mediaSrc)} alt="" widths={[480, 800, 1200]} sizes="(max-width: 767px) 92vw, 32vw" class="brand-tile-photo" /> : <div class="brand-tile-teaser" set:html={brand.teaserSvg || ''} />}
+          <Tag
+            class="brand-tile reveal"
+            href={Tag === 'a' ? brand.url : undefined}
+            aria-label={Tag === 'a' ? `Explore ${brand.name}` : undefined}
+            data-accent={brand.accent}
+            style={`--rd: ${i * 90}ms`}
+          >
+            <div class="brand-tile-art" aria-hidden="true">
+              {brand.mediaSrc ? <Image {...sources(brand.mediaSrc)} alt="" widths={[480, 800, 1200]} sizes="(max-width: 767px) 92vw, 32vw" class="brand-tile-photo" /> : <div class="brand-tile-teaser" set:html={brand.teaserSvg || ''} />}
+            </div>
             <div class="brand-tile-shade" aria-hidden="true"></div>
+            <div class="brand-tile-sweep" aria-hidden="true"></div>
             <div class="brand-tile-copy">
               <p class="brand-tile-kicker font-mono">{brand.comingSoon ? 'Coming soon' : brand.kicker}</p>
               {brand.logoSrc && <Image {...sources(brand.logoSrc)} alt="" width={200} class="brand-tile-logo" />}
               <h2>{brand.name}</h2><p>{brand.deck}</p>
-              {!brand.comingSoon && <span class="brand-tile-action font-mono">Explore brand <span aria-hidden="true">↗</span></span>}
+              {!brand.comingSoon && <span class="brand-tile-action font-mono">Explore brand <span class="brand-tile-arrow" aria-hidden="true">↗</span></span>}
             </div>
           </Tag>
         );
@@ -35,19 +59,196 @@ const sources = (image: ImageMetadata | RemoteImage) => 'remote' in image ? { sr
   .brands-intro h1 { font-size: clamp(2.8rem, 6vw, 5.5rem); margin: 0.25rem 0; line-height: 1.05; }
   .brands-intro > p:last-child { color: var(--muted); }
   .brand-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
-  .brand-tile { min-width: 0; min-height: 540px; position: relative; overflow: hidden; display: flex; align-items: flex-end; background: #111; border: 1px solid var(--line); text-decoration: none; isolation: isolate; }
-  .brand-tile-photo, .brand-tile-shade, .brand-tile-teaser { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .brand-tile-photo { object-fit: cover; }
-  .brand-tile-teaser { display: grid; place-items: center; padding: 15%; color: #666; }
+
+  .brand-tile {
+    min-width: 0;
+    min-height: 540px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    background: #0a0a0a;
+    border: 1px solid var(--line);
+    text-decoration: none;
+    color: var(--ink);
+    isolation: isolate;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* The accent edge: drawn down the left side when the tile lights. */
+  .brand-tile::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--accordion-edge);
+    z-index: 5;
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: transform 0.5s ease 0.1s;
+  }
+  /* The frame and the glow rising from the foot, in the tile's accent. */
+  .brand-tile::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    opacity: 0;
+    box-shadow:
+      inset 0 0 0 1px var(--accordion-frame),
+      inset 0 -160px 110px -70px var(--accordion-frame-glow);
+    transition: opacity 0.35s ease;
+  }
+
+  /* The art: graded down and over-scanned at rest. */
+  .brand-tile-art,
+  .brand-tile-shade,
+  .brand-tile-sweep { position: absolute; inset: 0; }
+  .brand-tile-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: contrast(1.05) brightness(0.62) saturate(0.85);
+    transform: scale(1.02);
+    transition: filter 0.6s ease, transform 1.4s ease;
+  }
+  .brand-tile-teaser {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    padding: 15%;
+    color: #555;
+    transform: scale(1);
+    transition: color 0.6s ease, transform 1.4s ease, filter 0.6s ease;
+  }
   .brand-tile-teaser :global(svg) { width: 100%; max-height: 60%; }
-  .brand-tile-shade { background: linear-gradient(180deg, rgb(0 0 0 / 0.05), rgb(0 0 0 / 0.9) 80%); z-index: 1; }
-  .brand-tile-copy { min-width: 0; position: relative; z-index: 2; padding: 1.5rem; overflow-wrap: anywhere; }
-  .brand-tile-kicker { text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.65rem; }
-  .brand-tile-logo { width: auto; max-width: 170px; max-height: 70px; object-fit: contain; margin: 1rem 0; }
-  .brand-tile h2 { margin: 0.5rem 0; font: 700 clamp(1.4rem, 2vw, 2rem)/1.15 var(--font-body); text-transform: none; }
+  .brand-tile-shade {
+    z-index: 1;
+    background: linear-gradient(180deg, rgb(0 0 0 / 0.15) 0%, rgb(0 0 0 / 0.35) 40%, rgb(0 0 0 / 0.94) 82%);
+    transition: opacity 0.7s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  /* A light sweep across the tile, once per hover. */
+  .brand-tile-sweep {
+    z-index: 2;
+    pointer-events: none;
+    background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.09) 50%, transparent 65%) no-repeat;
+    background-size: 250% 100%;
+    background-position: 130% 0;
+    opacity: 0;
+  }
+
+  .brand-tile-copy { min-width: 0; position: relative; z-index: 3; padding: 1.5rem; overflow-wrap: anywhere; width: 100%; }
+  .brand-tile-kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.65rem;
+    color: #bbb;
+    transition: color 0.3s ease, letter-spacing 0.4s ease, text-shadow 0.3s ease;
+  }
+  .brand-tile-logo {
+    width: auto;
+    max-width: 170px;
+    max-height: 70px;
+    object-fit: contain;
+    margin: 1rem 0;
+    opacity: 0.92;
+    transition: transform 0.4s ease, opacity 0.4s ease;
+  }
+  .brand-tile h2 { margin: 0.5rem 0; font: 700 clamp(1.4rem, 2vw, 2rem)/1.15 var(--font-body); text-transform: none; letter-spacing: 0.01em; }
   .brand-tile-copy > p:not(.brand-tile-kicker) { color: #bbb; font-size: 0.9rem; }
-  .brand-tile-action { display: flex; justify-content: space-between; align-items: center; min-height: 44px; margin-top: 1rem; border-top: 1px solid #555; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; }
-  a.brand-tile:hover { border-color: #999; }
-  @media (prefers-reduced-motion: no-preference) { .brand-tile-photo { transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); } a.brand-tile:hover .brand-tile-photo { transform: scale(1.035); } }
+  .brand-tile-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 44px;
+    margin-top: 1rem;
+    border-top: 1px solid #555;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: border-color 0.35s ease, letter-spacing 0.4s ease;
+  }
+  .brand-tile-arrow { display: inline-block; transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+
+  /* ─── LIT: hover, keyboard focus, or (phones) the tile mid-screen ───── */
+  .brand-tile:hover::after,
+  .brand-tile:focus-visible::after,
+  .brand-tile.is-lit::after { opacity: 1; }
+  .brand-tile:hover::before,
+  .brand-tile:focus-visible::before,
+  .brand-tile.is-lit::before { transform: scaleY(1); }
+  .brand-tile:hover .brand-tile-photo,
+  .brand-tile:focus-visible .brand-tile-photo,
+  .brand-tile.is-lit .brand-tile-photo { filter: contrast(1.1) brightness(0.9) saturate(1); }
+  .brand-tile:hover .brand-tile-teaser,
+  .brand-tile:focus-visible .brand-tile-teaser,
+  .brand-tile.is-lit .brand-tile-teaser { color: #8a8a8a; }
+  .brand-tile:hover .brand-tile-shade,
+  .brand-tile:focus-visible .brand-tile-shade,
+  .brand-tile.is-lit .brand-tile-shade { opacity: 0.85; }
+  .brand-tile:hover .brand-tile-kicker,
+  .brand-tile:focus-visible .brand-tile-kicker,
+  .brand-tile.is-lit .brand-tile-kicker { color: #fff; letter-spacing: 0.24em; text-shadow: var(--accordion-label-glow); }
+  .brand-tile:hover .brand-tile-logo,
+  .brand-tile:focus-visible .brand-tile-logo,
+  .brand-tile.is-lit .brand-tile-logo { opacity: 1; }
+  a.brand-tile:hover .brand-tile-action,
+  a.brand-tile:focus-visible .brand-tile-action,
+  a.brand-tile.is-lit .brand-tile-action { border-color: var(--accordion-edge); letter-spacing: 0.14em; }
+  .brand-tile:focus-visible { outline-offset: 4px; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .brand-tile:hover .brand-tile-photo,
+    .brand-tile:focus-visible .brand-tile-photo,
+    .brand-tile.is-lit .brand-tile-photo { transform: scale(1.08); }
+    .brand-tile:hover .brand-tile-teaser,
+    .brand-tile:focus-visible .brand-tile-teaser,
+    .brand-tile.is-lit .brand-tile-teaser { transform: scale(1.06); }
+    .brand-tile:hover .brand-tile-logo,
+    .brand-tile:focus-visible .brand-tile-logo,
+    .brand-tile.is-lit .brand-tile-logo { transform: translateY(-6px) scale(1.06); }
+    a.brand-tile:hover .brand-tile-arrow,
+    a.brand-tile:focus-visible .brand-tile-arrow,
+    a.brand-tile.is-lit .brand-tile-arrow { transform: translate(3px, -3px); }
+    .brand-tile:hover .brand-tile-sweep,
+    .brand-tile:focus-visible .brand-tile-sweep,
+    .brand-tile.is-lit .brand-tile-sweep { animation: brand-sweep 1.1s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  }
+  @keyframes brand-sweep {
+    0% { background-position: 130% 0; opacity: 0; }
+    30% { opacity: 1; }
+    100% { background-position: -30% 0; opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .brand-tile::before,
+    .brand-tile::after,
+    .brand-tile-photo,
+    .brand-tile-teaser,
+    .brand-tile-shade,
+    .brand-tile-kicker,
+    .brand-tile-logo,
+    .brand-tile-action { transition: none; }
+  }
+
   @media (max-width: 767px) { .brand-tiles { grid-template-columns: minmax(0, 1fr); } .brand-tile { min-height: 510px; } }
 </style>
+<script>
+  // Phones have no hover: the tile across the middle of the screen is lit
+  // instead, so scrolling the page plays the same effect tile by tile.
+  function initBrandTiles() {
+    const grid = document.querySelector<HTMLElement>('[data-brand-tiles]');
+    if (!grid || grid.dataset.ready === '1') return;
+    grid.dataset.ready = '1';
+    if (!window.matchMedia('(hover: none)').matches || !('IntersectionObserver' in window)) return;
+    const tiles = Array.from(grid.querySelectorAll<HTMLElement>('.brand-tile'));
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((en) => en.target.classList.toggle('is-lit', en.isIntersecting));
+    }, { rootMargin: '-45% 0px -45% 0px' });
+    tiles.forEach((t) => io.observe(t));
+    document.addEventListener('astro:before-swap', () => io.disconnect(), { once: true });
+  }
+  initBrandTiles();
+  document.addEventListener('astro:page-load', initBrandTiles);
+</script>

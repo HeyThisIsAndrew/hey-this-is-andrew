@@ -25,7 +25,7 @@ import path from 'node:path';
 import type { CollectionEntry } from 'astro:content';
 import { AMAZON_STOREFRONT } from '../data/storefront';
 import { sampleAccent, NEUTRAL_ACCENT } from '../lib/gear-accent';
-import { gearItemId } from '../lib/gear-anchor';
+import { gearItemId, gearSectionId, gearChipLabel } from '../lib/gear-anchor';
 
 interface Props {
   categories: CollectionEntry<'gear'>[];
@@ -45,9 +45,8 @@ const imageUrl = (img?: string) => {
   return fs.existsSync(path.join(publicDir, clean)) ? `${base}${clean}` : '';
 };
 
-// Section DOM ids predate this file (anchors, the sitemap, site search).
-const DOM_ID: Record<string, string> = { cafe: 'brew' };
-const CHIP: Record<string, string> = { bodies: 'Cameras', tools: 'Support', cafe: 'Cafe' };
+// Section DOM ids and chip names: src/lib/gear-anchor.ts (shared with the
+// homepage Gear carousel, which links to these sections).
 
 interface Store {
   store: string;
@@ -81,8 +80,8 @@ const sections = await Promise.all(
       );
       return {
         slug: cat.id,
-        domId: DOM_ID[cat.id] || `gear-${cat.id}`,
-        chip: CHIP[cat.id] || cat.data.category,
+        domId: gearSectionId(cat.id),
+        chip: gearChipLabel(cat.id, cat.data.category),
         chipKey: cat.id === 'bodies' ? 'cameras' : cat.id === 'tools' ? 'support' : cat.id,
         title: cat.data.category,
         kicker: cat.data.kicker || '',

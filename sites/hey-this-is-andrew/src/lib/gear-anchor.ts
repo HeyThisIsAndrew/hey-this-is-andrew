@@ -15,3 +15,19 @@ export function gearItemId(name: string): string {
     .replace(/^-+|-+$/g, '');
   return `gear-item-${slug}`;
 }
+
+// Section DOM ids on /gear/ predate the page (anchors, the nav, the sitemap,
+// site search): every category is gear-<id> except the Cafe Bar, #brew.
+const SECTION_ID: Record<string, string> = { cafe: 'brew' };
+// The short names the /gear/ filter chips use.
+const CHIP: Record<string, string> = { bodies: 'Cameras', tools: 'Support', cafe: 'Cafe' };
+
+/** The id of a category's section on /gear/, e.g. gear-lenses, brew. */
+export function gearSectionId(categoryId: string): string {
+  return SECTION_ID[categoryId] || `gear-${categoryId}`;
+}
+
+/** A category's short name (Cameras, Lenses, Support, Cafe...). */
+export function gearChipLabel(categoryId: string, category: string): string {
+  return CHIP[categoryId] || category;
+}

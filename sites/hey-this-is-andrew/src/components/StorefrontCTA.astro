@@ -1,145 +1,61 @@
 ---
 /**
- * The storefront picks (src/data/storefront.ts).
- * - `rotator` (default, /gear/ and /about/): one pick at a time with dots.
- *   It advances on its own until the reader picks a dot, then never again.
- * - `static` (the homepage Gear section): every pick at once, nothing
- *   moves. The homepage carousel above it is gear only (GearCarousel).
+ * Storefront picks or referrals (src/data/storefront.ts), all shown at once,
+ * each with its own button. Nothing rotates: it used to be a one-at-a-time
+ * rotator whose only control was a row of thin dot bars, and with two gear
+ * picks there is nothing to rotate through.
+ *
+ * - Default: the gear picks (the homepage Gear section, /gear/).
+ * - picks={REFERRALS} with an eyebrow (/about/): referrals, which are not gear.
  */
-import { PICKS } from '../data/storefront';
+import { GEAR_PICKS, type StorefrontPick } from '../data/storefront';
 
 interface Props {
-  variant?: 'rotator' | 'static';
+  picks?: StorefrontPick[];
+  /** Accessible name of the block. */
+  label?: string;
+  /** Optional small heading above the picks. */
+  eyebrow?: string;
 }
-const { variant = 'rotator' } = Astro.props;
-const arrow = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const { picks = GEAR_PICKS, label = 'Featured picks and recommendations', eyebrow } = Astro.props;
 ---
-{variant === 'static' ? (
-<aside class="storefront storefront--static" aria-label="Featured picks and recommendations">
+<aside class="storefront" aria-label={label}>
+  {eyebrow && <p class="storefront-eyebrow font-mono">{eyebrow}</p>}
   <ul class="storefront-picks">
-    {PICKS.map((pick) => (
+    {picks.map((pick) => (
       <li class="storefront-pick">
         <p class="kicker font-mono">{pick.kicker}</p>
         <h3 class="display storefront-pick-title">{pick.title}</h3>
         <p class="storefront-pick-desc">{pick.desc}</p>
         <a class="btn btn-primary storefront-cta" href={pick.url} target="_blank" rel="noopener">
           {pick.cta}
-          <Fragment set:html={arrow} />
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
         </a>
       </li>
     ))}
   </ul>
 </aside>
-) : (
-<aside class="storefront" aria-label="Featured picks and recommendations" id="storefront-rotator">
-  <div class="storefront-slider">
-    {PICKS.map((pick, i) => (
-      <div class={`storefront-slide ${i === 0 ? 'is-active' : ''}`} data-slide-index={i}>
-        <div class="storefront-copy">
-          <p class="kicker font-mono">{pick.kicker}</p>
-          <h3 class="display storefront-title">{pick.title}</h3>
-          <p>{pick.desc}</p>
-        </div>
-        <a
-          class="btn btn-primary storefront-cta"
-          href={pick.url}
-          target="_blank"
-          rel="noopener"
-        >
-          {pick.cta}
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-            <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </a>
-      </div>
-    ))}
-  </div>
-
-  <div class="storefront-nav">
-    <div class="storefront-dots" role="group" aria-label="Select storefront pick">
-      {PICKS.map((pick, i) => (
-        <button
-          type="button"
-          class={`storefront-dot ${i === 0 ? 'is-active' : ''}`}
-          data-dot-index={i}
-          aria-label={`Show ${pick.title}`}
-          aria-current={i === 0 ? 'true' : undefined}
-        ></button>
-      ))}
-    </div>
-  </div>
-</aside>
-)}
 
 <style>
   .storefront {
     margin-top: 2.5rem;
     border: 1px solid var(--line);
-    border-radius: 0;
     background: var(--surface);
     padding: clamp(1.25rem, 3vw, 2rem);
-    position: relative;
-    overflow: hidden;
   }
-  .storefront-slider {
-    position: relative;
-    min-height: 100px;
+  .storefront-eyebrow {
+    margin: 0 0 1.25rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink);
   }
-  .storefront-slide {
-    display: none;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-    opacity: 0;
-    transition: opacity 0.35s ease;
-  }
-  .storefront-slide.is-active {
-    display: flex;
-    opacity: 1;
-  }
-  .storefront .kicker { margin-bottom: 0.5rem; font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
-  .storefront-title { font-size: clamp(1.6rem, 3.5vw, 2.4rem); margin: 0 0 0.5rem; text-transform: uppercase; font-weight: 800; }
-  .storefront-copy p:last-child { color: var(--muted); margin: 0; max-width: 52ch; }
-  .storefront-nav {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 1.25rem;
-  }
-  .storefront-dots {
-    display: flex;
-    gap: 0;
-  }
-  /* A 44px hit area around the same 24x3 bar (the bar is the ::before). */
-  .storefront-dot {
-    position: relative;
-    width: 44px;
-    height: 44px;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-  }
-  .storefront-dot::before {
-    content: '';
-    position: absolute;
-    left: 10px;
-    top: calc(50% - 1.5px);
-    width: 24px;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.2);
-    transition: background 0.25s ease;
-  }
-  .storefront-dot.is-active::before {
-    background: var(--ink);
-  }
-
-  /* Static: the picks side by side, each with its own button. */
   .storefront-picks {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-    gap: 1.5rem 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    gap: 1.5rem 2.5rem;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -151,6 +67,13 @@ const arrow = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-
     gap: 0.5rem;
     min-width: 0;
   }
+  .storefront .kicker {
+    margin: 0;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
   .storefront-pick-title {
     margin: 0;
     font-size: clamp(1.2rem, 2vw, 1.5rem);
@@ -161,66 +84,9 @@ const arrow = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-
     flex: 1;
     margin: 0 0 0.5rem;
     color: var(--muted);
+    max-width: 52ch;
   }
-  .storefront--static .storefront-cta {
+  .storefront-cta {
     max-width: 100%;
   }
 </style>
-
-<script>
-  (() => {
-    const root = document.getElementById('storefront-rotator');
-    if (!root) return;
-    const slides = Array.from(root.querySelectorAll<HTMLElement>('.storefront-slide'));
-    const dots = Array.from(root.querySelectorAll<HTMLElement>('.storefront-dot'));
-    if (slides.length <= 1) return;
-
-    let current = 0;
-    let timer: number | null = null;
-    // Manual control wins: once the reader picks a dot, it never moves again.
-    let userTook = false;
-
-    const show = (idx: number) => {
-      slides.forEach((s, i) => {
-        s.classList.toggle('is-active', i === idx);
-      });
-      dots.forEach((d, i) => {
-        d.classList.toggle('is-active', i === idx);
-        if (i === idx) d.setAttribute('aria-current', 'true');
-        else d.removeAttribute('aria-current');
-      });
-      current = idx;
-    };
-
-    const next = () => {
-      show((current + 1) % slides.length);
-    };
-
-    const stopTimer = () => {
-      if (timer) clearInterval(timer);
-      timer = null;
-    };
-
-    // One interval at most. A tap fires mouseenter/mouseleave too, and each
-    // mouseleave used to add a second interval beside the first.
-    const startTimer = () => {
-      stopTimer();
-      if (userTook) return;
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      timer = window.setInterval(next, 7000);
-    };
-
-    dots.forEach((dot, idx) => {
-      dot.addEventListener('click', () => {
-        userTook = true;
-        stopTimer();
-        show(idx);
-      });
-    });
-
-    root.addEventListener('mouseenter', stopTimer);
-    root.addEventListener('mouseleave', startTimer);
-
-    startTimer();
-  })();
-</script>

@@ -1,62 +1,107 @@
 ---
 /**
- * The homepage Gear carousel (#gear): real pieces of the kit from
- * src/data/gear.json, one card in view at a time. The featured set is
- * src/data/gear-featured.ts.
+ * The homepage Gear carousel (#gear): the seven gear sections of /gear/
+ * (src/data/gear.json), one card in view at a time, in the /gear/ page's
+ * order. Each card is a whole section: its lead photo, kicker, name,
+ * subtitle and piece count, and a strip of the other pieces in it. The card
+ * in view is the link; it opens that section on /gear/ (GearGrid opens the
+ * section a link names).
  *
- * The reader is in charge of it:
- * - Swipe on touch (native horizontal scroll with snap, one card per swipe),
- *   drag with a mouse, a trackpad swipe, the Prev and Next arrows, a dot, or
- *   the arrow keys all move it, and it stays where they put it.
- * - It advances on its own only until the reader touches it. Any swipe, tap,
- *   click, drag, wheel or key inside it stops the auto-advance for the rest
- *   of the visit. Before that it also holds still while hovered, while
- *   focused, while scrolled out of view, in a background tab, and always
- *   under reduced motion.
- * - The card in view is the link: it opens that item on /gear/ (its section
- *   open, the item in front), via the item's anchor (src/lib/gear-anchor.ts).
+ * Named tabs above the card say what is in it and which section is showing.
+ * Swipe on touch (native scroll with snap, one card per swipe), mouse drag,
+ * a trackpad or Shift+wheel swipe, the Prev and Next arrows, a tab, or the
+ * arrow keys all move it, and it stays where they put it: it advances on
+ * its own only until the reader touches it, and never while hovered,
+ * focused, off screen, in a background tab or under reduced motion.
+ *
+ * Photos come from public/gear/ through Astro's image pipeline (WebP at the
+ * size each slot needs), not the full-size JPGs /gear/ shows.
  */
 import { getCollection } from 'astro:content';
-import fs from 'node:fs';
-import path from 'node:path';
-import { FEATURED_GEAR } from '../data/gear-featured';
-import { gearItemId } from '../lib/gear-anchor';
+import { getImage } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import { gearSectionId, gearChipLabel } from '../lib/gear-anchor';
 
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
-const publicDir = path.resolve(process.cwd(), 'public');
 
+const photos = import.meta.glob<{ default: ImageMetadata }>('../../public/gear/*.{jpg,jpeg,png,webp}', { eager: true });
+const photoFor = (image?: string) => {
+  if (!image) return undefined;
+  const file = image.replace(/^\/?gear\//, '');
+  return Object.entries(photos).find(([key]) => key.endsWith(`/gear/${file}`))?.[1].default;
+};
+
+const THUMBS = 4;
 const categories = (await getCollection('gear')).sort((a, b) => a.data.order - b.data.order);
-const items = FEATURED_GEAR.map((name) => {
-  const cat = categories.find((c) => c.data.items.some((it) => it.name === name));
-  const item = cat?.data.items.find((it) => it.name === name);
-  if (!cat || !item) throw new Error(`gear-featured.ts: "${name}" is not in gear.json`);
-  if (!item.image || !fs.existsSync(path.join(publicDir, item.image))) throw new Error(`gear-featured.ts: "${name}" has no photo in public/`);
-  if (!item.stores.length) throw new Error(`gear-featured.ts: "${name}" has no store link, so /gear/ does not show it`);
-  return {
-    name: item.name,
-    category: cat.data.category,
-    src: `${base}${item.image.startsWith('/') ? item.image : `/${item.image}`}`,
-    href: `${base}/gear/#${gearItemId(item.name)}`,
-  };
-});
-const n = items.length;
+const sections = (
+  await Promise.all(
+    categories.map(async (cat) => {
+      // What /gear/ shows: items with a store link.
+      const shown = cat.data.items.filter((it) => it.stores.length > 0);
+      const withPhoto = shown.map((it) => ({ it, photo: photoFor(it.image) })).filter((x) => x.photo);
+      if (!shown.length || !withPhoto.length) return null;
+      const lead = withPhoto[0];
+      const hero = await getImage({ src: lead.photo!, widths: [480, 800, 1200], format: 'webp' });
+      const thumbs = await Promise.all(
+        withPhoto.slice(1, 1 + THUMBS).map(async ({ it, photo }) => ({
+          name: it.name,
+          src: (await getImage({ src: photo!, width: 128, format: 'webp' })).src,
+        }))
+      );
+      return {
+        id: cat.id,
+        chip: gearChipLabel(cat.id, cat.data.category),
+        title: cat.data.category,
+        kicker: cat.data.kicker || '',
+        subtitle: cat.data.subtitle || '',
+        count: shown.length,
+        more: Math.max(0, shown.length - 1 - thumbs.length),
+        hero: { src: hero.src, srcset: hero.srcSet.attribute, alt: lead.it.name },
+        thumbs,
+        href: `${base}/gear/#${gearSectionId(cat.id)}`,
+      };
+    })
+  )
+).filter((s): s is NonNullable<typeof s> => s !== null);
+const n = sections.length;
 const pad = (v: number) => String(v).padStart(2, '0');
 ---
-<div class="gear-carousel" data-gear-carousel role="region" aria-roledescription="carousel" aria-label="Featured gear">
+<div class="gear-carousel" data-gear-carousel role="region" aria-roledescription="carousel" aria-label="Gear sections">
+  <div class="gc-tabs" role="group" aria-label="Choose a gear section">
+    {sections.map((s, i) => (
+      <button type="button" class:list={['gc-tab', 'font-mono', { 'is-active': i === 0 }]} data-gc-tab={i} aria-current={i === 0 ? 'true' : undefined}>
+        {s.chip}
+      </button>
+    ))}
+  </div>
+
   <ul class="gc-track" data-gc-track>
-    {items.map((it, i) => (
-      <li class="gc-slide" role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${n}`}>
-        <a class="gc-card" href={it.href} draggable="false" tabindex={i === 0 ? undefined : '-1'}>
+    {sections.map((s, i) => (
+      <li class="gc-slide" role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${n}: ${s.title}`}>
+        <a class="gc-card" href={s.href} draggable="false" tabindex={i === 0 ? undefined : '-1'}>
           <span class="gc-media">
-            <img src={it.src} alt="" width="1200" height="900" loading="lazy" decoding="async" draggable="false" />
+            <img src={s.hero.src} srcset={s.hero.srcset} sizes="(max-width: 720px) 92vw, 55vw" alt={s.hero.alt} width="1200" height="900" loading="lazy" decoding="async" draggable="false" />
           </span>
           <span class="gc-body">
-            <span class="gc-category font-mono">{it.category}</span>
-            <span class="gc-name display">{it.name}</span>
-            <svg class="gc-go" width="18" height="18" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
+            <span class="gc-kicker font-mono">{s.kicker}</span>
+            <span class="gc-title display">{s.title}</span>
+            {s.subtitle && <span class="gc-subtitle">{s.subtitle}</span>}
+            <span class="gc-count font-mono">{s.count} {s.count === 1 ? 'piece' : 'pieces'}</span>
+            {s.thumbs.length > 0 && (
+              <span class="gc-strip" aria-hidden="true">
+                {s.thumbs.map((t) => (
+                  <img src={t.src} alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false" />
+                ))}
+                {s.more > 0 && <span class="gc-more font-mono">+{s.more}</span>}
+              </span>
+            )}
+            <span class="gc-go font-mono">
+              Open {s.chip}
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
           </span>
         </a>
       </li>
@@ -64,16 +109,11 @@ const pad = (v: number) => String(v).padStart(2, '0');
   </ul>
 
   <div class="gc-controls">
-    <button type="button" class="gc-step gc-prev" data-gc-prev aria-label="Previous gear item">
+    <button type="button" class="gc-step" data-gc-prev aria-label="Previous gear section">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
     </button>
-    <div class="gc-dots" role="group" aria-label="Choose a gear item">
-      {items.map((it, i) => (
-        <button type="button" class:list={['gc-dot', { 'is-active': i === 0 }]} data-gc-dot={i} aria-label={`Show ${it.name}`} aria-current={i === 0 ? 'true' : undefined}></button>
-      ))}
-    </div>
     <span class="gc-counter font-mono" data-gc-counter aria-hidden="true">{pad(1)} / {pad(n)}</span>
-    <button type="button" class="gc-step gc-next" data-gc-next aria-label="Next gear item">
+    <button type="button" class="gc-step" data-gc-next aria-label="Next gear section">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
     </button>
   </div>
@@ -83,6 +123,39 @@ const pad = (v: number) => String(v).padStart(2, '0');
   .gear-carousel {
     margin-top: 2.5rem;
   }
+
+  /* The section tabs: every section by name, the current one filled. They
+     wrap on a phone rather than scroll, so all seven are always in sight. */
+  .gc-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .gc-tab {
+    min-height: 44px;
+    padding: 0 1rem;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: var(--muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: color 0.25s ease, border-color 0.25s ease, background-color 0.25s ease;
+  }
+  .gc-tab:hover {
+    color: var(--ink);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+  .gc-tab.is-active {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--bg, #000);
+  }
+
   .gc-track {
     position: relative;
     display: flex;
@@ -112,9 +185,10 @@ const pad = (v: number) => String(v).padStart(2, '0');
     scroll-snap-stop: always;
   }
   .gc-card {
+    position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-    min-height: clamp(280px, 30vw, 400px);
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    min-height: clamp(300px, 30vw, 420px);
     color: var(--ink);
     text-decoration: none;
     -webkit-user-select: none;
@@ -132,6 +206,7 @@ const pad = (v: number) => String(v).padStart(2, '0');
     /* The gear photos are shot on this same near-black. */
     background: #0d0d0d;
     border-right: 1px solid var(--line);
+    overflow: hidden;
   }
   .gc-media img {
     display: block;
@@ -140,55 +215,89 @@ const pad = (v: number) => String(v).padStart(2, '0');
     max-height: 340px;
     object-fit: contain;
     -webkit-user-drag: none;
-    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform 1.4s ease;
   }
   .gc-body {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 0.75rem;
+    align-items: flex-start;
+    gap: 0.6rem;
+    min-width: 0;
     padding: clamp(1.25rem, 3vw, 2.5rem);
   }
-  .gc-category {
+  .gc-kicker,
+  .gc-count {
     font-size: 0.72rem;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--muted);
   }
-  .gc-name {
-    font-size: clamp(1.5rem, 3vw, 2.3rem);
-    line-height: 1.05;
+  .gc-title {
+    font-size: clamp(1.8rem, 3.6vw, 2.8rem);
+    line-height: 1;
     overflow-wrap: anywhere;
   }
-  .gc-go {
-    margin-top: 0.5rem;
+  .gc-subtitle {
     color: var(--muted);
-    transition: color 0.25s ease, transform 0.25s ease;
+    max-width: 40ch;
+  }
+  .gc-strip {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+  }
+  .gc-strip img {
+    width: 48px;
+    height: 48px;
+    padding: 3px;
+    object-fit: contain;
+    background: #0d0d0d;
+    border: 1px solid var(--line);
+    -webkit-user-drag: none;
+  }
+  .gc-more {
+    display: grid;
+    place-items: center;
+    min-width: 48px;
+    height: 48px;
+    padding: 0 0.4rem;
+    border: 1px solid var(--line);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .gc-go {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    margin-top: 0.4rem;
+    padding: 0 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
   }
   @media (hover: hover) {
     .gc-card:hover .gc-media img {
-      transform: scale(1.03);
+      transform: scale(1.04);
     }
     .gc-card:hover .gc-go {
-      color: var(--ink);
-      transform: translate(2px, -2px);
+      background: var(--ink);
+      border-color: var(--ink);
+      color: var(--bg, #000);
     }
   }
 
-  /* Prev, the dots, the counter, Next: one row on a wide screen; on a phone
-     the dots take their own row under the arrows and the counter. */
   .gc-controls {
-    display: grid;
-    grid-template-columns: auto 1fr auto auto;
-    grid-template-areas: 'prev dots counter next';
+    display: flex;
     align-items: center;
-    gap: 0.5rem 0.75rem;
+    justify-content: center;
+    gap: 0.75rem;
     margin-top: 0.75rem;
   }
-  .gc-prev { grid-area: prev; }
-  .gc-next { grid-area: next; }
-  .gc-dots { grid-area: dots; }
-  .gc-counter { grid-area: counter; }
   .gc-step {
     display: inline-flex;
     align-items: center;
@@ -208,41 +317,8 @@ const pad = (v: number) => String(v).padStart(2, '0');
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.45);
   }
-  .gc-dots {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-  /* A 44px hit area around a 10px square: an outline when not current, solid
-     white when current. */
-  .gc-dot {
-    position: relative;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    background: none;
-    border: 0;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-  }
-  .gc-dot::before {
-    content: '';
-    position: absolute;
-    inset: 17px;
-    border: 1px solid rgba(255, 255, 255, 0.45);
-    transition: background-color 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
-  }
-  .gc-dot:hover::before {
-    border-color: var(--ink);
-  }
-  .gc-dot.is-active::before {
-    background: var(--ink);
-    border-color: var(--ink);
-    transform: scale(1.2);
-  }
   .gc-counter {
-    min-width: 4.5em;
+    min-width: 5.5em;
     text-align: center;
     font-size: 0.78rem;
     letter-spacing: 0.12em;
@@ -250,6 +326,10 @@ const pad = (v: number) => String(v).padStart(2, '0');
   }
 
   @media (max-width: 720px) {
+    .gc-tab {
+      flex: 1 1 auto;
+      padding: 0 0.75rem;
+    }
     .gc-card {
       grid-template-columns: minmax(0, 1fr);
       min-height: 0;
@@ -262,21 +342,15 @@ const pad = (v: number) => String(v).padStart(2, '0');
     .gc-media img {
       max-height: none;
     }
-    .gc-body {
-      gap: 0.5rem;
-    }
-    .gc-controls {
-      grid-template-columns: auto 1fr auto;
-      grid-template-areas:
-        'prev counter next'
-        'dots dots dots';
+    .gc-title {
+      font-size: clamp(1.6rem, 8vw, 2.2rem);
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .gc-media img,
     .gc-go,
-    .gc-dot::before,
+    .gc-tab,
     .gc-step {
       transition: none;
     }
@@ -294,7 +368,7 @@ const pad = (v: number) => String(v).padStart(2, '0');
       if (!track) return;
       const slides = Array.from(track.querySelectorAll<HTMLElement>('.gc-slide'));
       const links = slides.map((s) => s.querySelector<HTMLAnchorElement>('.gc-card'));
-      const dots = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-gc-dot]'));
+      const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-gc-tab]'));
       const counter = root.querySelector<HTMLElement>('[data-gc-counter]');
       const n = slides.length;
       if (n < 2) return;
@@ -303,15 +377,15 @@ const pad = (v: number) => String(v).padStart(2, '0');
 
       let current = 0;
       /** The index a programmatic scroll is heading to; scroll positions on
-       *  the way there do not move the dots. */
+       *  the way there do not move the tabs. */
       let heading: number | null = null;
 
       const mark = (i: number) => {
         current = i;
-        dots.forEach((d, k) => {
-          d.classList.toggle('is-active', k === i);
-          if (k === i) d.setAttribute('aria-current', 'true');
-          else d.removeAttribute('aria-current');
+        tabs.forEach((t, k) => {
+          t.classList.toggle('is-active', k === i);
+          if (k === i) t.setAttribute('aria-current', 'true');
+          else t.removeAttribute('aria-current');
         });
         links.forEach((a, k) => {
           if (!a) return;
@@ -351,7 +425,7 @@ const pad = (v: number) => String(v).padStart(2, '0');
         sync();
       };
 
-      // The dots follow the reader's own swipe or scroll as it happens.
+      // The tabs follow the reader's own swipe or scroll as it happens.
       let raf = 0;
       track.addEventListener('scroll', () => {
         if (raf) return;
@@ -374,7 +448,7 @@ const pad = (v: number) => String(v).padStart(2, '0');
         takeOver();
         go(current + 1);
       });
-      dots.forEach((dot, i) => dot.addEventListener('click', () => {
+      tabs.forEach((tab, i) => tab.addEventListener('click', () => {
         takeOver();
         go(i);
       }));
@@ -383,12 +457,14 @@ const pad = (v: number) => String(v).padStart(2, '0');
         e.preventDefault();
         takeOver();
         go(current + (e.key === 'ArrowRight' ? 1 : -1));
-        links[current]?.focus({ preventScroll: true });
+        const onTab = (e.target as HTMLElement).closest('[data-gc-tab]');
+        (onTab ? tabs[current] : links[current])?.focus({ preventScroll: true });
       });
 
-      // Any hand on it, before a click lands: a touch, a press, a wheel.
+      // Any hand on it, before a click lands: a touch or a press.
       root.addEventListener('pointerdown', takeOver);
       track.addEventListener('touchstart', takeOver, { passive: true });
+
       // A horizontal wheel or trackpad swipe (Shift+wheel included) moves one
       // card per gesture. Left to native snap, a short swipe settled back on
       // the card it started from; the momentum tail is ignored until the
@@ -397,7 +473,8 @@ const pad = (v: number) => String(v).padStart(2, '0');
       let wheelLocked = false;
       let wheelQuiet = 0;
       track.addEventListener('wheel', (e) => {
-        if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+        const dx = e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX;
+        if (Math.abs(dx) <= Math.abs(e.shiftKey ? 0 : e.deltaY)) return;
         e.preventDefault();
         takeOver();
         window.clearTimeout(wheelQuiet);
@@ -406,7 +483,7 @@ const pad = (v: number) => String(v).padStart(2, '0');
           wheelAcc = 0;
         }, 220);
         if (wheelLocked) return;
-        wheelAcc += e.deltaX;
+        wheelAcc += dx;
         if (Math.abs(wheelAcc) < 40) return;
         wheelLocked = true;
         go(Math.max(0, Math.min(n - 1, current + (wheelAcc > 0 ? 1 : -1))));
@@ -441,7 +518,7 @@ const pad = (v: number) => String(v).padStart(2, '0');
           try {
             track.setPointerCapture(e.pointerId);
           } catch {
-            /* the window listener below still ends it */
+            /* the release below still ends it */
           }
         }
         track.scrollLeft = pressLeft - dx;
@@ -479,7 +556,7 @@ const pad = (v: number) => String(v).padStart(2, '0');
       new IntersectionObserver((entries) => {
         inView = entries.some((en) => en.isIntersecting);
         sync();
-      }, { threshold: 0.6 }).observe(root);
+      }, { threshold: 0.5 }).observe(root);
 
       // A resize keeps the current card in place.
       window.addEventListener('resize', () => {
