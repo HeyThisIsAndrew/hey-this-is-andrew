@@ -736,16 +736,21 @@ import { CCC_EMAIL } from '../../data/ccc';
         subject,
       };
 
+      // Under the site's base path (/hey-this-is-andrew/ in production), not
+      // the domain root, which is another site. And only a real answer counts
+      // as sent: a static host (GitHub Pages, astro preview) can answer a
+      // POST to the prerendered api/contact file with 200 and the file's own
+      // body, {"error":"not_configured"}, and that used to read as success,
+      // showing "received" for an inquiry that went nowhere.
       let success = false;
       try {
-        const res = await fetch('/api/contact', {
+        const res = await fetch(`${import.meta.env.BASE_URL.replace(/\/?$/, '/')}api/contact`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        if (res.ok) {
-          success = true;
-        }
+        const answer = res.ok ? await res.json().catch(() => null) : null;
+        success = Boolean(answer) && typeof answer === 'object' && !('error' in answer);
       } catch {
         success = false;
       }

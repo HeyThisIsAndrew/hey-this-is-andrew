@@ -25,6 +25,7 @@ import path from 'node:path';
 import type { CollectionEntry } from 'astro:content';
 import { AMAZON_STOREFRONT } from '../data/storefront';
 import { sampleAccent, NEUTRAL_ACCENT } from '../lib/gear-accent';
+import { gearItemId } from '../lib/gear-anchor';
 
 interface Props {
   categories: CollectionEntry<'gear'>[];
@@ -183,6 +184,7 @@ const stateOf = (i: number, n: number) =>
           data-chip={sec.chipKey}
           data-pn-entry
           data-pn-label={sec.title}
+          data-sec-head
           style={`--accent: ${sec.items[0].accent};`}
         >
           <div class="gear-accordion-header-bar">
@@ -248,6 +250,7 @@ const stateOf = (i: number, n: number) =>
                   return (
                     <article
                       class={`deck-card ${stateOf(i, n)}`}
+                      id={gearItemId(it.name)}
                       data-index={i}
                       data-accent={it.accent}
                       data-search={it.search}
@@ -1482,7 +1485,7 @@ const stateOf = (i: number, n: number) =>
       on(window, 'resize', setNavHeight, { passive: true });
 
       const sections = Array.from(root.querySelectorAll<HTMLElement>('.gear-accordion-section'));
-      const decks = new Map<HTMLElement, { refresh: () => void }>();
+      const decks = new Map<HTMLElement, { refresh: () => void; show: (index: number) => void }>();
 
       sections.forEach((s) => {
         const body = s.querySelector<HTMLElement>('.gear-accordion-body');
@@ -1625,6 +1628,7 @@ const stateOf = (i: number, n: number) =>
 
         decks.set(section, {
           refresh: () => render(),
+          show: (index: number) => go(index),
         });
         (section as HTMLElement & { _gearFilter?: (q: string) => number })._gearFilter = (q: string) => {
           visible = cards
@@ -1930,6 +1934,59 @@ const stateOf = (i: number, n: number) =>
         });
         apply();
       });
+
+      // A link to a section (the nav's Lenses, Audio, The Cafe...) or to one
+      // item in it (#gear-item-..., what the homepage Gear carousel links to)
+      // opens that section, with that item in front: on load, on a hash
+      // change, and on a same-page link click, before the layout's anchor
+      // scroll measures it (the Accordion.astro pattern). Arriving from
+      // another page, the section is simply open, as the first one is on any
+      // load; on this page it opens with the usual ease. The layout then
+      // scrolls to the section's header (data-sec-head on the section).
+      const targetFor = (hash: string) => {
+        if (!hash || hash.length < 2) return null;
+        let id = hash.slice(1);
+        try {
+          id = decodeURIComponent(id);
+        } catch {
+          return null;
+        }
+        const el = document.getElementById(id);
+        const section = el?.closest<HTMLElement>('.gear-accordion-section');
+        if (!el || !section || !root.contains(section)) return null;
+        return { section, card: el.closest<HTMLElement>('.deck-card') };
+      };
+      const openFor = (hash: string, instant: boolean) => {
+        const t = targetFor(hash);
+        if (!t) return;
+        if (gridOpen) allToggle?.click();
+        if (t.section.hidden || t.card?.classList.contains('is-filtered-out')) reset?.click();
+        if (instant) {
+          const quiet = sections.flatMap((s) =>
+            Array.from(s.querySelectorAll<HTMLElement>('.gear-accordion-body, .gear-accordion-body > .disclosure-clip > .disclosure-content'))
+          );
+          quiet.forEach((el) => (el.style.transition = 'none'));
+          sections.forEach((s) => setOpen(s, s === t.section));
+          void root.offsetHeight;
+          requestAnimationFrame(() => quiet.forEach((el) => el.style.removeProperty('transition')));
+          decks.get(t.section)?.refresh();
+        } else {
+          toggleSection(t.section, true);
+        }
+        if (t.card) decks.get(t.section)?.show(Number(t.card.dataset.index));
+      };
+      const arrival = performance.getEntriesByType?.('navigation')[0] as PerformanceNavigationTiming | undefined;
+      if (location.hash && !(arrival?.type === 'reload' && !document.documentElement.dataset.pageTransition)) {
+        openFor(location.hash, true);
+      }
+      on(window, 'hashchange', () => openFor(location.hash, false));
+      on(document, 'click', (e) => {
+        const link = (e.target as Element | null)?.closest?.('a[href*="#"]') as HTMLAnchorElement | null;
+        if (!link) return;
+        const url = new URL(link.href, location.href);
+        if (url.pathname.replace(/\/$/, '') !== location.pathname.replace(/\/$/, '')) return;
+        openFor(url.hash, false);
+      }, { capture: true });
     }
 
     init();

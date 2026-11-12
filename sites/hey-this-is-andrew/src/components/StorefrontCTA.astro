@@ -1,6 +1,36 @@
 ---
+/**
+ * The storefront picks (src/data/storefront.ts).
+ * - `rotator` (default, /gear/ and /about/): one pick at a time with dots.
+ *   It advances on its own until the reader picks a dot, then never again.
+ * - `static` (the homepage Gear section): every pick at once, nothing
+ *   moves. The homepage carousel above it is gear only (GearCarousel).
+ */
 import { PICKS } from '../data/storefront';
+
+interface Props {
+  variant?: 'rotator' | 'static';
+}
+const { variant = 'rotator' } = Astro.props;
+const arrow = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 ---
+{variant === 'static' ? (
+<aside class="storefront storefront--static" aria-label="Featured picks and recommendations">
+  <ul class="storefront-picks">
+    {PICKS.map((pick) => (
+      <li class="storefront-pick">
+        <p class="kicker font-mono">{pick.kicker}</p>
+        <h3 class="display storefront-pick-title">{pick.title}</h3>
+        <p class="storefront-pick-desc">{pick.desc}</p>
+        <a class="btn btn-primary storefront-cta" href={pick.url} target="_blank" rel="noopener">
+          {pick.cta}
+          <Fragment set:html={arrow} />
+        </a>
+      </li>
+    ))}
+  </ul>
+</aside>
+) : (
 <aside class="storefront" aria-label="Featured picks and recommendations" id="storefront-rotator">
   <div class="storefront-slider">
     {PICKS.map((pick, i) => (
@@ -39,6 +69,7 @@ import { PICKS } from '../data/storefront';
     </div>
   </div>
 </aside>
+)}
 
 <style>
   .storefront {
@@ -103,6 +134,37 @@ import { PICKS } from '../data/storefront';
   .storefront-dot.is-active::before {
     background: var(--ink);
   }
+
+  /* Static: the picks side by side, each with its own button. */
+  .storefront-picks {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+    gap: 1.5rem 2rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .storefront-pick {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+  .storefront-pick-title {
+    margin: 0;
+    font-size: clamp(1.2rem, 2vw, 1.5rem);
+    text-transform: uppercase;
+    font-weight: 800;
+  }
+  .storefront-pick-desc {
+    flex: 1;
+    margin: 0 0 0.5rem;
+    color: var(--muted);
+  }
+  .storefront--static .storefront-cta {
+    max-width: 100%;
+  }
 </style>
 
 <script>
@@ -115,6 +177,8 @@ import { PICKS } from '../data/storefront';
 
     let current = 0;
     let timer: number | null = null;
+    // Manual control wins: once the reader picks a dot, it never moves again.
+    let userTook = false;
 
     const show = (idx: number) => {
       slides.forEach((s, i) => {
@@ -132,25 +196,30 @@ import { PICKS } from '../data/storefront';
       show((current + 1) % slides.length);
     };
 
-    dots.forEach((dot, idx) => {
-      dot.addEventListener('click', () => {
-        show(idx);
-        restartTimer();
-      });
-    });
+    const stopTimer = () => {
+      if (timer) clearInterval(timer);
+      timer = null;
+    };
 
+    // One interval at most. A tap fires mouseenter/mouseleave too, and each
+    // mouseleave used to add a second interval beside the first.
     const startTimer = () => {
+      stopTimer();
+      if (userTook) return;
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       timer = window.setInterval(next, 7000);
     };
 
-    const restartTimer = () => {
-      if (timer) clearInterval(timer);
-      startTimer();
-    };
+    dots.forEach((dot, idx) => {
+      dot.addEventListener('click', () => {
+        userTook = true;
+        stopTimer();
+        show(idx);
+      });
+    });
 
-    root.addEventListener('mouseenter', () => { if (timer) clearInterval(timer); });
-    root.addEventListener('mouseleave', () => startTimer());
+    root.addEventListener('mouseenter', stopTimer);
+    root.addEventListener('mouseleave', startTimer);
 
     startTimer();
   })();

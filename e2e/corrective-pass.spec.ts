@@ -184,6 +184,10 @@ test.describe('Corrective Pass Verification', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('./brands/be-unconventional-hq/');
     await page.evaluate(() => document.fonts?.ready);
+    // The card art is lazy and sits far below the fold: measure it once it
+    // has loaded, as a reader scrolling there sees it.
+    await page.locator('#coverage').scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>('#coverage .hq-card-img')].every((i) => i.complete && i.naturalWidth > 0));
 
     const mobileCards = await page.evaluate(() => {
       const cards = Array.from(document.querySelectorAll('#coverage .hq-card'));
@@ -215,6 +219,10 @@ test.describe('Corrective Pass Verification', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('./brands/be-unconventional-hq/');
     await page.evaluate(() => document.fonts?.ready);
+    // The card art is lazy and sits far below the fold: measure it once it
+    // has loaded, as a reader scrolling there sees it.
+    await page.locator('#coverage').scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>('#coverage .hq-card-img')].every((i) => i.complete && i.naturalWidth > 0));
 
     const desktopCards = await page.evaluate(() => {
       const cards = Array.from(document.querySelectorAll('#coverage .hq-card'));
