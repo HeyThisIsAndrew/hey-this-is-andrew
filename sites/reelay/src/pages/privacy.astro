@@ -6,7 +6,7 @@ import SignInDiagram from '../components/SignInDiagram.astro';
 import { SITE, DATA_PATHS, AGENT_API, href } from '../data/site';
 import { OPERATOR, CONTACTS, LIMITED_USE, YOUTUBE_30_DAY_REFRESH } from '../data/operator';
 
-const updated = 'November 12, 2026';
+const updated = 'November 13, 2026';
 const ph = (v: string) => /\{\{/.test(v);
 const toc: [string, string][] = [
   ['summary', 'Summary'],
@@ -29,6 +29,7 @@ const toc: [string, string][] = [
 ];
 const services: [string, string, string][] = [
   ['TikTok, Instagram, YouTube, Snapchat', 'When you list or bring in your own media', 'Requests from your Mac for the videos and details you asked for. With “Use browser sign-in” on, the sign-in cookies of the browser you chose, for that platform only.'],
+  ['Instagram API (graph.instagram.com)', 'When you list your own Instagram source after connecting it with a token', 'Your Instagram token; Instagram returns your own account’s posts, and Reelay keeps the videos and Reels.'],
   ['YouTube Data API (googleapis.com)', 'When you list your channel, upload, schedule or check for updates', 'Your Google token and the video and details you upload.'],
   ['Meta’s and Bluesky’s APIs (graph.facebook.com, graph.threads.com, bsky.social)', 'Only when you have turned automatic posting on for that platform and a post is due', 'Your token or App Password and the post you wrote.'],
   ['Google, TikTok and Meta sign-in pages', 'When you sign in or refresh a sign-in', 'What you enter on their own pages; Reelay never sees your password.'],
@@ -124,7 +125,7 @@ const services: [string, string, string][] = [
     <h2>5. Instagram, Threads and Facebook</h2>
     <p>Reelay complies with the <a href="https://developers.facebook.com/terms/" target="_blank" rel="noopener">Meta Platform Terms</a> and <a href="https://developers.facebook.com/devpolicy/" target="_blank" rel="noopener">Developer Policies</a>. Reelay never posts to Instagram for you. It can post to Threads and to a Facebook Page only after you turn that on; both are off by default.</p>
     <PermissionsTable only={['instagram', 'threads', 'facebook']} headingLevel={4} />
-    <p>Tokens are stored in your Keychain. Posts go from your Mac directly to Meta’s APIs. Threads fetches a video from a link rather than accepting an upload, so for Threads Reelay serves the file from your Mac through a public address you set up yourself (such as a Cloudflare Tunnel), on a link that expires after an hour. Disconnect asks Facebook to revoke access; Instagram and Threads access is removed in their own settings. How to remove everything is set out in our <a href={href('/data-deletion')}>Data Deletion Instructions</a>.</p>
+    <p>Tokens are stored in your Keychain. Posts go from your Mac directly to Meta’s APIs. Threads fetches a video from a link rather than accepting an upload, so for Threads Reelay serves the file from your Mac through a public address you set up yourself (such as a Cloudflare Tunnel), on a link that expires after an hour. When you list your own Instagram source, Reelay asks Instagram’s API for that account’s posts and keeps only its videos and Reels in your library, as it does for any other source. Disconnect asks Facebook to revoke access; Instagram and Threads access is removed in their own settings. How to remove everything is set out in our <a href={href('/data-deletion')}>Data Deletion Instructions</a>.</p>
   </section>
 
   <section id="bluesky-snapchat">
@@ -134,7 +135,7 @@ const services: [string, string, string][] = [
 
   <section id="sign-in-server">
     <h2>7. Reelay’s sign-in server</h2>
-    <p class="callout"><strong>Not switched on in this version.</strong> Reelay’s own one-click sign-in for TikTok, Instagram, Threads and Facebook waits on each platform’s app review, so this version never contacts <code>auth.reelay.app</code>. Until then, TikTok and Instagram aren’t connected, and Threads and Facebook connect with a token from your own Meta developer app (Accounts → Advanced Setup). This section describes the server as it works once it is switched on.</p>
+    <p class="callout"><strong>Not switched on in this version.</strong> Reelay’s own one-click sign-in for TikTok, Instagram, Threads and Facebook waits on each platform’s app review, so this version never contacts <code>auth.reelay.app</code>. Until then, TikTok isn’t connected, and Instagram, Threads and Facebook connect with a token from your own Meta developer app (Accounts → Advanced Setup). This section describes the server as it works once it is switched on.</p>
     <p>TikTok and Meta require an app secret to turn a sign-in code into tokens, and a secret shipped inside a Mac app can be extracted. So for those platforms only, Reelay runs a small sign-in server at <code>auth.reelay.app</code> that holds Reelay’s app secrets and does that one step.</p>
     <SignInDiagram id="privacy-sign-in" />
     <ul>
