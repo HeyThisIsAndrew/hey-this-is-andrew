@@ -31,8 +31,9 @@ const services: [string, string, string][] = [
   ['TikTok, Instagram, YouTube, Snapchat', 'When you list or bring in your own media', 'Requests from your Mac for the videos and details you asked for. With “Use browser sign-in” on, the sign-in cookies of the browser you chose, for that platform only.'],
   ['Instagram API (graph.instagram.com)', 'When you list your own Instagram source after connecting it with a token', 'Your Instagram token; Instagram returns your own account’s posts, and Reelay keeps the videos and Reels.'],
   ['YouTube Data API (googleapis.com)', 'When you list your channel, upload, schedule or check for updates', 'Your Google token and the video and details you upload.'],
-  ['Meta’s and Bluesky’s APIs (graph.facebook.com, graph.threads.com, bsky.social)', 'Only when you have turned automatic posting on for that platform and a post is due', 'Your token or App Password and the post you wrote.'],
-  ['Google, TikTok and Meta sign-in pages', 'When you sign in or refresh a sign-in', 'What you enter on their own pages; Reelay never sees your password.'],
+  ['Meta’s and Bluesky’s APIs (graph.facebook.com, graph.threads.com, your Bluesky server such as bsky.social, video.bsky.app)', 'Only when you have turned automatic posting on for that platform and a post is due', 'Your token or App Password and the post you wrote.'],
+  ['Google, TikTok, Meta and Bluesky sign-in pages', 'When you sign in or refresh a sign-in', 'What you enter on their own pages; Reelay never sees your password.'],
+  ['Bluesky account lookup (plc.directory, your handle’s own web address, bsky.social)', 'When you sign in with Bluesky', 'The handle you typed or your account ID (DID), to find which server holds your account and where to sign in.'],
   ['Meta Model API (api.meta.ai)', 'Only when you click Generate in Repurpose, after ticking “Allow Muse Spark”', 'That video’s title, description, notes and transcript, and your voice profile, sent with the Meta API key you added. Meta’s terms for its Model API govern what it does with them.'],
   ['auth.reelay.app (Reelay’s sign-in server)', 'Not used by this version. Once Reelay’s own TikTok and Meta sign-in is switched on: sign-in, token refresh, TikTok disconnect', 'The sign-in code or token, for the few minutes described in section 7.'],
   ['huggingface.co', 'Once, only if you installed the optional faster-whisper add-on, the first time a video is transcribed', 'A one-time download of the speech model; transcription then runs on your Mac and no audio leaves it.'],
@@ -78,7 +79,7 @@ const services: [string, string, string][] = [
     <ul>
       <li><strong>Your videos</strong> are saved in the library folder you choose (by default <code>{DATA_PATHS.library}</code>), with a metadata file per video.</li>
       <li><strong>The database</strong>, <code>{DATA_PATHS.dbName}</code>, holds your profiles, video records, platform copy, transcripts, source records, publishing history, change history, automation rules and the search index. It lives in <code>{DATA_PATHS.mac}</code> with caches and the backups Reelay makes before upgrading the database. Reelay makes that folder and its files readable by your macOS user only.</li>
-      <li><strong>Sign-in tokens and keys</strong> (YouTube, TikTok, Instagram, Threads and Facebook tokens, Bluesky App Passwords, the agent API key and the Meta API key you add for Repurpose) are stored in the macOS Keychain. Keys for AI clients you pair are stored in the database only as one-way hashes.</li>
+      <li><strong>Sign-in tokens and keys</strong> (YouTube, TikTok, Instagram, Threads and Facebook tokens, Bluesky sign-ins and App Passwords, the agent API key and the Meta API key you add for Repurpose) are stored in the macOS Keychain. Keys for AI clients you pair are stored in the database only as one-way hashes.</li>
       <li><strong>Logs</strong> are written to <code>{DATA_PATHS.logs}</code>. Tokens and secrets are never logged.</li>
     </ul>
     <p>If you choose to move the database into a folder synced by Google Drive, Dropbox, iCloud Drive or OneDrive so a teammate can open it, that provider stores the file under your account and its own terms.</p>
@@ -130,7 +131,14 @@ const services: [string, string, string][] = [
 
   <section id="bluesky-snapchat">
     <h2>6. Bluesky and Snapchat</h2>
-    <p><strong>Bluesky</strong> is connected with an App Password you create in Bluesky, stored in your Keychain. When automatic posting is on, posts go from your Mac to Bluesky. <strong>Snapchat</strong> has no sign-in in Reelay: you paste links to your own Spotlight videos to bring them in, and you post in Snapchat.</p>
+    <p><strong>Bluesky</strong> connects in one of two ways. Either one is kept only in your Keychain.</p>
+    <ul>
+      <li><strong>Sign in with Bluesky</strong>, Bluesky’s own OAuth sign-in. Your Bluesky server’s sign-in page opens in your browser and returns to a one-time loopback address on your Mac (<code>http://127.0.0.1</code>), protected with PKCE. The tokens are tied to a key made on your Mac for that sign-in (DPoP), so they can’t be used from anywhere else. No Reelay server takes part: Bluesky reads the public description of the app at <code>https://reelay.app/oauth/bluesky-client-metadata.json</code>, and everything else happens between your Mac and Bluesky. Reelay asks for the same access an App Password gives (<code>atproto</code> and <code>transition:generic</code>), which it uses only to upload your video and create the post you scheduled. That access can’t change your handle, email or password, delete your account, or read your direct messages. Reelay never sees your Bluesky password.</li>
+      <li><strong>App Password</strong> (Accounts → Advanced Setup): a separate password just for Reelay that you create in Bluesky’s settings and can revoke there at any time.</li>
+    </ul>
+    <p class="callout">Sign in with Bluesky appears in Reelay once it is switched on in a release. Until then, Bluesky connects with an App Password.</p>
+    <p>When automatic posting is on, the video goes from your Mac to Bluesky’s video service (<code>video.bsky.app</code>) and the post to your Bluesky server. Click <strong>Disconnect</strong> in Accounts and Reelay deletes the sign-in from your Keychain; for Sign in with Bluesky it also asks Bluesky to revoke Reelay’s tokens. Bluesky ends a Sign in with Bluesky session on its own after at most two weeks, and Reelay then asks you to sign in again.</p>
+    <p><strong>Snapchat</strong> has no sign-in in Reelay: you paste links to your own Spotlight videos to bring them in, and you post in Snapchat.</p>
   </section>
 
   <section id="sign-in-server">
