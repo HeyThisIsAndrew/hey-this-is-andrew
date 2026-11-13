@@ -58,6 +58,7 @@ shows nothing in its place, and the audit only counts them.
 | `help-tour-publish` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Get Started, Publish or schedule | `help-tour-publish.mp4` `help-tour-publish.vtt` `help-tour-publish-poster.png` |
 | `help-tour-find` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Get Started, Find your work | `help-tour-find.mp4` `help-tour-find.vtt` `help-tour-find-poster.png` |
 | `help-library-add` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Add videos | `help-library-add.mp4` `help-library-add.vtt` `help-library-add-poster.png` |
+| `help-library-file` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Add a finished video | `help-library-file.mp4` `help-library-file.vtt` `help-library-file-poster.png` |
 | `help-library-sources` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Download Sources | `help-library-sources.mp4` `help-library-sources.vtt` `help-library-sources-poster.png` |
 | `help-library-select` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Select and download | `help-library-select.mp4` `help-library-select.vtt` `help-library-select-poster.png` |
 | `help-library-views` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Filters and pages | `help-library-views.mp4` `help-library-views.vtt` `help-library-views-poster.png` |
@@ -66,6 +67,7 @@ shows nothing in its place, and the audit only counts them.
 | `help-board-overview` | video *optional* | light | 2880 × 1800 | `/support` | Help video: The Board | `help-board-overview.mp4` `help-board-overview.vtt` `help-board-overview-poster.png` |
 | `help-board-captions` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Write captions | `help-board-captions.mp4` `help-board-captions.vtt` `help-board-captions-poster.png` |
 | `help-board-readiness` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Readiness | `help-board-readiness.mp4` `help-board-readiness.vtt` `help-board-readiness-poster.png` |
+| `help-board-repurpose` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Draft with Repurpose | `help-board-repurpose.mp4` `help-board-repurpose.vtt` `help-board-repurpose-poster.png` |
 | `help-board-details` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Details and video tools | `help-board-details.mp4` `help-board-details.vtt` `help-board-details-poster.png` |
 | `help-board-find` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Find, filter and archive | `help-board-find.mp4` `help-board-find.vtt` `help-board-find-poster.png` |
 | `help-publish-which` | video *optional* | light | 2880 × 1800 | `/support` | Help video: Where Reelay posts | `help-publish-which.mp4` `help-publish-which.vtt` `help-publish-which-poster.png` |
