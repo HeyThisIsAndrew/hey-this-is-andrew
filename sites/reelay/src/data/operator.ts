@@ -47,8 +47,10 @@ export const LIMITED_USE =
 
 /*
  * Google's YouTube API Services policy asks that stored API data be
- * refreshed or deleted within 30 days. The app (9f3a2fb) keeps listed
- * YouTube videos in the library until you remove them, so the site does NOT
- * claim this yet. Flip to true only once the app enforces it.
+ * refreshed or deleted within 30 days. The app enforces it
+ * (reelay/youtube_retention.py, docs/youtube-data-retention.md): at launch,
+ * daily and on every account change it refreshes YouTube API data 27 days or
+ * older through the connected channel, or clears it. Set back to false if
+ * that ever stops being true.
  */
-export const YOUTUBE_30_DAY_REFRESH = false;
+export const YOUTUBE_30_DAY_REFRESH = true;
