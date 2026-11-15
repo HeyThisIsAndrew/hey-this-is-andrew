@@ -1,8 +1,9 @@
 ---
 /**
- * The ONE layout every page uses: head and meta, favicon, shared chrome
- * (grain, focus, selection) from @andrew/ui, the Nav and the Footer.
- * Feminine, soft, warm styling for Netta Henna and Feathered Soul.
+ * BaseLayout.astro
+ * Netta Henna and Feathered Soul base layout.
+ * Light and dark mode support with logo palette.
+ * Crisp circular logo asset, slim footer, zero em dashes.
  */
 import '@andrew/tokens/tokens.css';
 import '../styles/theme.css';
@@ -11,11 +12,11 @@ import '@andrew/ui/styles/chips.css';
 import '../styles/global.css';
 import '@andrew/ui/styles/cta.css';
 import Nav from '@andrew/ui/Nav.astro';
-import Footer from '@andrew/ui/Footer.astro';
+import SlimFooter from '../components/SlimFooter.astro';
 import ChromeMeta from '@andrew/ui/ChromeMeta.astro';
 import PageNav from '@andrew/ui/PageNav.astro';
-import logo from '../assets/logo.svg';
-import { SITE, NAV_LINKS, FOOTER_EXPLORE, SOCIALS, homeUrl } from '../data/site';
+import logo from '../assets/netta-logo.png';
+import { SITE, NAV_LINKS, homeUrl } from '../data/site';
 
 interface Props {
   title: string;
@@ -28,10 +29,23 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
 const logoAsset = { src: logo.src, width: logo.width, height: logo.height, alt: SITE.name };
 ---
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <ChromeMeta color="#faf5ee" lightColor="#faf5ee" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline>
+      (function() {
+        try {
+          const stored = localStorage.getItem('netta-theme');
+          const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const theme = stored ? stored : (systemDark ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+    <ChromeMeta color="#181310" lightColor="#faf6f0" />
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
@@ -48,18 +62,49 @@ const logoAsset = { src: logo.src, width: logo.width, height: logo.height, alt: 
       <slot />
     </main>
     <PageNav />
-    <Footer
-      logo={logoAsset}
-      homeHref={homeUrl}
-      tagline={SITE.tagline}
-      explore={FOOTER_EXPLORE}
-      socials={SOCIALS}
-      copyright={SITE.copyright}
-      privacyHref={homeUrl}
-    />
+    <SlimFooter />
     <script>
       import { initSectionAnchors } from '@andrew/ui/scripts/section-anchors.ts';
       initSectionAnchors();
+
+      // Theme toggle mounting and handling
+      function setupThemeToggle() {
+        const rightActions = document.querySelector('.nav-right-actions');
+        if (!rightActions || document.getElementById('theme-toggle-btn')) return;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = 'theme-toggle-btn';
+        btn.className = 'theme-toggle-btn';
+        btn.setAttribute('aria-label', 'Toggle dark and light color theme');
+
+        function updateIcon() {
+          const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+          btn.innerHTML = isDark
+            ? `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`
+            : `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+        }
+
+        btn.addEventListener('click', () => {
+          const current = document.documentElement.getAttribute('data-theme') || 'light';
+          const next = current === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          try {
+            localStorage.setItem('netta-theme', next);
+          } catch (e) {}
+          updateIcon();
+        });
+
+        updateIcon();
+        rightActions.insertBefore(btn, rightActions.firstChild);
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupThemeToggle, { once: true });
+      } else {
+        setupThemeToggle();
+      }
+      document.addEventListener('astro:page-load', setupThemeToggle);
     </script>
   </body>
 </html>
