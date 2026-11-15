@@ -7,32 +7,47 @@ export const homeUrl = base ? `${base}/` : '/';
 
 export const SITE = {
   name: 'Netta Henna and Feathered Soul',
+  website: 'nettahennaandfeatheredsoul.com',
   tagline: 'Henna art, hair feathers, and hair tinsel in Santa Barbara.',
-  description: 'Boho beauty and earthy luxury. Henna art, hair feathers, and hair tinsel in Santa Barbara, CA.',
+  description: 'Boho beauty and earthy luxury. Henna art, hair feathers, and hair tinsel in Santa Barbara, CA. DM to Book.',
   location: 'Santa Barbara, CA',
+  bookingLine: 'DM to Book',
   instagramHandle: '@nettahennaandfeatheredsoul',
   instagramUrl: 'https://www.instagram.com/nettahennaandfeatheredsoul',
   copyright: '© 2026 Netta Henna and Feathered Soul. All rights reserved.',
 };
 
 export const HOME_SECTIONS = [
+  { id: 'overview', label: 'Home' },
   { id: 'services', label: 'Services' },
+  { id: 'price-list', label: 'Price List' },
   { id: 'gallery', label: 'Gallery' },
-  { id: 'how-it-works', label: 'How It Works' },
-  { id: 'booking', label: 'Book a Date' },
-  { id: 'instagram', label: 'Instagram' },
+  { id: 'booking', label: 'Book an Appointment' },
+  { id: 'contact', label: 'Contact' },
 ];
 
 export const NAV_LINKS: NavItem[] = [
+  {
+    label: 'Home',
+    href: `${homeUrl}#overview`,
+    section: 'overview',
+    subsections: [],
+  },
   {
     label: 'Services',
     href: `${homeUrl}#services`,
     section: 'services',
     subsections: [
-      { label: 'Henna Art', href: `${homeUrl}#brand-henna-art`, kicker: '01' },
-      { label: 'Hair Feathers', href: `${homeUrl}#brand-hair-feathers`, kicker: '02' },
-      { label: 'Hair Tinsel', href: `${homeUrl}#brand-hair-tinsel`, kicker: '03' },
+      { label: 'Henna Art', href: `${homeUrl}#services`, kicker: '01' },
+      { label: 'Hair Feathers', href: `${homeUrl}#services`, kicker: '02' },
+      { label: 'Hair Tinsel', href: `${homeUrl}#services`, kicker: '03' },
     ],
+  },
+  {
+    label: 'Price List',
+    href: `${homeUrl}#price-list`,
+    section: 'price-list',
+    subsections: [],
   },
   {
     label: 'Gallery',
@@ -41,31 +56,26 @@ export const NAV_LINKS: NavItem[] = [
     subsections: [],
   },
   {
-    label: 'How It Works',
-    href: `${homeUrl}#how-it-works`,
-    section: 'how-it-works',
-    subsections: [],
-  },
-  {
-    label: 'Book',
+    label: 'Book Now',
     href: `${homeUrl}#booking`,
     section: 'booking',
     subsections: [],
   },
   {
-    label: 'Instagram',
-    href: 'https://www.instagram.com/nettahennaandfeatheredsoul',
-    section: 'instagram',
+    label: 'Contact',
+    href: `${homeUrl}#site-footer`,
+    section: 'contact',
     subsections: [],
   },
 ];
 
 export const FOOTER_EXPLORE: FooterLink[] = [
+  { label: 'Home', href: `${homeUrl}#overview` },
   { label: 'Services', href: `${homeUrl}#services` },
+  { label: 'Price List', href: `${homeUrl}#price-list` },
   { label: 'Gallery', href: `${homeUrl}#gallery` },
-  { label: 'How It Works', href: `${homeUrl}#how-it-works` },
-  { label: 'Book a Date', href: `${homeUrl}#booking` },
-  { label: 'Instagram (@nettahennaandfeatheredsoul)', href: 'https://www.instagram.com/nettahennaandfeatheredsoul' },
+  { label: 'Book an Appointment', href: `${homeUrl}#booking` },
+  { label: 'Contact Netta', href: `${homeUrl}#site-footer` },
 ];
 
 export const SOCIALS: SocialLink[] = [
