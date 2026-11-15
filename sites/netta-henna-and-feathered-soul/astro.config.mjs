@@ -6,7 +6,7 @@ import localCmsConfig from './local-cms.config.mjs';
 // Cloudflare Pages automatically provides CF_PAGES_URL.
 // BASE_PATH: the sub-path it is served from ("/" for Cloudflare Pages or a custom domain,
 // "/hey-this-is-andrew/netta/" for GitHub Pages project preview).
-const siteUrl = process.env.SITE_URL || process.env.CF_PAGES_URL || 'https://nettahennaandfeatheredsoul.com';
+const siteUrl = process.env.SITE_URL || process.env.CF_PAGES_URL || 'https://netta-henna-and-feathered-soul.pages.dev';
 const basePath = process.env.BASE_PATH || '/';
 
 export default defineConfig({

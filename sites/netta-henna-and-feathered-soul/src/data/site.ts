@@ -17,10 +17,32 @@ export const SITE = {
   copyright: '© 2026 Netta Henna and Feathered Soul. All rights reserved.',
 };
 
+/**
+ * BOOKING_MODE:
+ * Master switch for Netta's appointment request flow.
+ * - 'sms': 3A Flip the Flow (PRIMARY / DEFAULT ON).
+ *   On submit, opens the customer's native Messages app with Netta's number
+ *   and appointment request prefilled. The customer taps Send directly in Messages.
+ *   Free forever, zero backend/workers, zero third-party accounts.
+ * - 'email': 3B Direct Email via Formspree (FALLBACK SWITCH).
+ *   On submit, posts the booking to BOOKING_DELIVERY.endpoint, delivering
+ *   an email to Netta with customer contact info.
+ *
+ * Flipping this one setting switches the live submission path without modifying any other code.
+ */
+export const BOOKING_MODE: 'sms' | 'email' = 'sms';
+
+/**
+ * Netta's booking phone number for 3A Flip the Flow.
+ * Andrew will fill this in once Netta confirms her preferred business phone number.
+ * Format: digits only or E.164, e.g. '8055550123' or '+18055550123'.
+ * Leave empty ('') until Netta confirms her number.
+ */
+export const BOOKING_SMS_NUMBER = '';
+
 export const BOOKING_DELIVERY = {
-  // Configured submission endpoint for appointment requests (Formspree free tier or custom endpoint).
-  // Sends an immediate email notification to Netta with customer name, phone (tap-to-text),
-  // selected services, preferred date and time, and notes.
+  // Configured submission endpoint for 3B email fallback (Formspree free tier or custom endpoint).
+  // Built as a fallback switch; placeholder ID from pass 17, owner unknown.
   endpoint: 'https://formspree.io/f/mqaeovgq',
   serviceName: 'Formspree Free Tier (Direct Email Notification)',
 };

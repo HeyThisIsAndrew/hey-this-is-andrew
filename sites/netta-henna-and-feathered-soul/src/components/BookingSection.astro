@@ -12,7 +12,7 @@
  * - Full iOS Safari-safe background scroll & interaction lock (locks body at current scrollY, marks background inert, restores exact scrollY on X, backdrop tap, or Escape)
  * - Zero em dashes, zero horizontal modal scroll
  */
-import { SITE, BOOKING_DELIVERY } from '../data/site';
+import { SITE, BOOKING_DELIVERY, BOOKING_MODE, BOOKING_SMS_NUMBER } from '../data/site';
 ---
 
 <!-- On-Page Booking Section Card (Content section: centered) -->
@@ -33,9 +33,9 @@ import { SITE, BOOKING_DELIVERY } from '../data/site';
 
     <div class="booking-card-content text-center">
       <span class="booking-kicker">✦ Santa Barbara, CA ✦</span>
-      <h2 id="booking-heading" class="booking-title gold-script-text">Book an Appointment</h2>
+      <h2 id="booking-heading" class="booking-title gold-script-text">Ready for a little boho magic?</h2>
       <p class="booking-desc">
-        Ready for a little boho magic? Book your henna, hair feathers, or hair tinsel appointment today! Tell Netta what you would like and when, and she will text you to confirm.
+        Tell Netta what you would like and when, and she will text you to confirm.
       </p>
 
       <div class="booking-actions-row">
@@ -95,7 +95,7 @@ import { SITE, BOOKING_DELIVERY } from '../data/site';
     <header class="booking-modal-head">
       <div class="booking-modal-titles">
         <p class="booking-modal-kicker">✦ Netta Henna &amp; Feathered Soul ✦</p>
-        <h2 id="booking-modal-title" class="booking-modal-title gold-script-text">Book an Appointment</h2>
+        <h2 id="booking-modal-title" class="booking-modal-title gold-script-text">Book a Date</h2>
       </div>
       <!-- Uncircled X close button that rotates on hover/tap -->
       <button type="button" class="booking-modal-close-x" id="booking-modal-close" aria-label="Close booking modal">
@@ -129,7 +129,14 @@ import { SITE, BOOKING_DELIVERY } from '../data/site';
       </div>
 
       <!-- Appointment Form -->
-      <form id="booking-request-form" class="booking-form" data-endpoint={BOOKING_DELIVERY.endpoint} novalidate>
+      <form
+        id="booking-request-form"
+        class="booking-form"
+        data-endpoint={BOOKING_DELIVERY.endpoint}
+        data-booking-mode={BOOKING_MODE}
+        data-sms-number={BOOKING_SMS_NUMBER}
+        novalidate
+      >
         <!-- Row 1: Name & Phone Number (Mandatory) -->
         <div class="form-grid">
           <div class="form-group">
@@ -354,6 +361,9 @@ import { SITE, BOOKING_DELIVERY } from '../data/site';
           By submitting, you agree Netta may text you about this appointment.
         </p>
 
+        <!-- Configuration notice if 3A SMS number is not configured -->
+        <p class="field-error-msg form-general-error" id="booking-config-error" hidden></p>
+
         <div class="form-actions">
           <button type="submit" class="btn btn-primary modal-submit-btn" id="booking-submit-btn">
             Send Appointment Request
@@ -364,14 +374,42 @@ import { SITE, BOOKING_DELIVERY } from '../data/site';
       <!-- Confirmation Notice (Left-Aligned inside Modal) -->
       <div id="booking-confirm-box" class="booking-confirm-box" hidden>
         <div class="confirm-head-row">
-          <div class="confirm-icon" aria-hidden="true">✓</div>
-          <h4 class="confirm-title" role="status">Request Received!</h4>
+          <div class="confirm-icon" id="confirm-icon" aria-hidden="true">✓</div>
+          <h4 class="confirm-title" id="confirm-title" role="status">Request Received!</h4>
         </div>
-        <p class="confirm-desc">
+        <p class="confirm-desc" id="confirm-desc">
           Thank you. Netta will reach out directly to confirm availability and finalize your appointment.
         </p>
-        <div class="confirm-details" id="confirm-details-summary"></div>
-        <button type="button" class="btn btn-secondary" id="confirm-close-btn">
+
+        <!-- 3A Flip the Flow Interactive Messages & Copy Fallback (Shown when BOOKING_MODE === 'sms') -->
+        <div id="sms-flow-details" class="sms-flow-details" hidden>
+          <div class="sms-action-banner">
+            <span class="sms-banner-badge">Step 2 of 2</span>
+            <p class="sms-banner-instruction">
+              Your appointment request is prefilled in Messages. <strong>Tap Send in your Messages app</strong> to send it to Netta.
+            </p>
+          </div>
+
+          <div class="sms-fallback-wrap">
+            <label for="sms-fallback-textarea" class="sms-fallback-label">
+              If Messages didn't open automatically, copy this message and text it to <strong id="sms-target-phone-display">Netta</strong>:
+            </label>
+            <textarea id="sms-fallback-textarea" class="sms-fallback-textarea" readonly rows="5" tabindex="-1"></textarea>
+            <div class="sms-fallback-actions">
+              <button type="button" class="btn btn-primary btn-copy-sms" id="btn-copy-sms">
+                📋 Copy Message
+              </button>
+              <a href="#" class="btn btn-secondary btn-open-sms" id="btn-open-sms">
+                💬 Open Messages
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3B Direct Email Summary (Shown when BOOKING_MODE === 'email') -->
+        <div class="confirm-details" id="confirm-details-summary" hidden></div>
+
+        <button type="button" class="btn btn-secondary confirm-close-btn" id="confirm-close-btn">
           Done
         </button>
       </div>
@@ -1284,6 +1322,134 @@ import { SITE, BOOKING_DELIVERY } from '../data/site';
     color: var(--ink);
     line-height: 1.6;
   }
+
+  .form-general-error {
+    text-align: center;
+    margin: 0.5rem 0 1rem;
+    padding: 0.75rem 1rem;
+    background: rgba(199, 81, 70, 0.08);
+    border: 1px solid rgba(199, 81, 70, 0.35);
+    border-radius: 10px;
+    font-size: 0.88rem;
+    line-height: 1.45;
+    color: #c75146;
+  }
+
+  [data-theme="dark"] .form-general-error {
+    background: rgba(235, 110, 98, 0.12);
+    border-color: rgba(235, 110, 98, 0.4);
+    color: #f18c82;
+  }
+
+  .sms-flow-details {
+    margin-top: 0.75rem;
+  }
+
+  .sms-action-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background: var(--surface);
+    border: 1.5px solid var(--brand-teal);
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .sms-banner-badge {
+    background: var(--brand-teal);
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.55rem;
+    border-radius: 9999px;
+    white-space: nowrap;
+    margin-top: 0.1rem;
+    flex-shrink: 0;
+  }
+
+  .sms-banner-instruction {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: var(--ink);
+    text-align: left;
+  }
+
+  .sms-fallback-wrap {
+    background: var(--surface);
+    border: 1px solid var(--gold-border);
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .sms-fallback-label {
+    display: block;
+    font-size: 0.84rem;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+    text-align: left;
+  }
+
+  .sms-fallback-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: var(--font-body, inherit);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    padding: 0.65rem 0.75rem;
+    background: var(--surface-2);
+    color: var(--ink);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    resize: none;
+    margin-bottom: 0.75rem;
+    display: block;
+  }
+
+  .sms-fallback-actions {
+    display: flex;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-copy-sms,
+  .btn-open-sms {
+    flex: 1 1 140px;
+    height: 44px !important;
+    min-height: 44px !important;
+    font-size: 0.88rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-decoration: none !important;
+    box-sizing: border-box !important;
+    border-radius: 9999px !important;
+    font-family: var(--font-body, inherit) !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+  }
+
+  .btn-copy-sms {
+    background: var(--brand-teal) !important;
+    color: #ffffff !important;
+    border: none !important;
+  }
+
+  .btn-open-sms {
+    background: transparent !important;
+    color: var(--ink) !important;
+    border: 1.5px solid var(--gold-border) !important;
+  }
+
+  .btn-open-sms:hover {
+    border-color: var(--brand-gold) !important;
+    background: var(--surface-2) !important;
+  }
 </style>
 
 <script>
@@ -1490,6 +1656,14 @@ import { SITE, BOOKING_DELIVERY } from '../data/site';
       if (confirmBox) {
         confirmBox.hidden = true;
       }
+      const configErr = document.getElementById('booking-config-error');
+      if (configErr) {
+        configErr.hidden = true;
+        configErr.textContent = '';
+      }
+      const smsFlowDetails = document.getElementById('sms-flow-details');
+      if (smsFlowDetails) smsFlowDetails.hidden = true;
+      if (detailsSummary) detailsSummary.hidden = true;
       if (calToggleText) {
         calToggleText.textContent = '📅 Choose a date on the calendar';
       }
@@ -1777,9 +1951,11 @@ import { SITE, BOOKING_DELIVERY } from '../data/site';
       const phoneErr = document.getElementById('phone-error-msg');
       const emailErr = document.getElementById('email-error-msg');
       const nameErr = document.getElementById('name-error-msg');
+      const configErr = document.getElementById('booking-config-error');
       if (phoneErr) { phoneErr.hidden = true; phoneErr.textContent = ''; }
       if (emailErr) { emailErr.hidden = true; emailErr.textContent = ''; }
       if (nameErr) { nameErr.hidden = true; nameErr.textContent = ''; }
+      if (configErr) { configErr.hidden = true; configErr.textContent = ''; }
       if (errorMsg) { errorMsg.hidden = true; }
 
       const formData = new FormData(form);
@@ -1850,60 +2026,169 @@ import { SITE, BOOKING_DELIVERY } from '../data/site';
 
       const preferredTime = preferredTimeRaw || 'To be coordinated';
 
-      // 5. Build and send delivery payload to Netta
-      const payload = {
-        name,
-        phone,
-        email: email || undefined,
-        instagram: instagram || undefined,
-        services: serviceLines.join(', '),
-        preferred_time: preferredTime,
-        notes: notes || undefined,
-        _subject: `New Appointment Request from ${name} (${phone})`,
-        message: `New Appointment Request:\n` +
-          `• Name: ${name}\n` +
-          `• Phone: ${phone} (Tap to reply by text/call)\n` +
-          (email ? `• Email: ${email}\n` : '') +
-          (instagram ? `• Instagram: ${instagram}\n` : '') +
-          `• Services: ${serviceLines.join(' + ')}\n` +
-          `• Preferred Date & Time: ${preferredTime}\n` +
-          (notes ? `• Notes: ${notes}\n` : '')
-      };
+      const bookingMode = (form.getAttribute('data-booking-mode') || 'sms').toLowerCase();
+      const smsNumber = (form.getAttribute('data-sms-number') || '').trim();
 
-      try {
-        const deliveryEndpoint = form.getAttribute('data-endpoint');
-        if (deliveryEndpoint && !deliveryEndpoint.includes('YOUR_FORM_ID')) {
-          await fetch(deliveryEndpoint, {
-            method: 'POST',
-            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-            signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined,
-          });
+      // If in 3A mode and Netta's number is not configured yet
+      if (bookingMode === 'sms' && !smsNumber) {
+        if (configErr) {
+          configErr.textContent = "Netta's booking phone number is not set yet. Please contact Netta directly on Instagram (@nettahennaandfeatheredsoul) or check back soon.";
+          configErr.hidden = false;
         }
-      } catch (err) {
-        console.warn('Booking dispatch notice:', err);
+        return;
       }
 
-      if (detailsSummary) {
-        let summaryHtml = `<strong>Name:</strong> ${escapeHtml(name)}<br/>
-          <strong>Phone:</strong> ${escapeHtml(phone)}<br/>`;
-        if (email) {
-          summaryHtml += `<strong>Email:</strong> ${escapeHtml(email)}<br/>`;
+      const confirmTitle = document.getElementById('confirm-title');
+      const confirmIcon = document.getElementById('confirm-icon');
+      const confirmDesc = document.getElementById('confirm-desc');
+      const smsFlowDetails = document.getElementById('sms-flow-details');
+      const confirmDetailsSummary = document.getElementById('confirm-details-summary');
+
+      if (bookingMode === 'sms') {
+        // --- 3A Flip the Flow (SMS Link) ---
+        const cleanSmsNumber = smsNumber.replace(/[^\d+]/g, '');
+        let formattedDisplay = smsNumber;
+        if (/^\d{10}$/.test(cleanSmsNumber)) {
+          formattedDisplay = `(${cleanSmsNumber.slice(0,3)}) ${cleanSmsNumber.slice(3,6)}-${cleanSmsNumber.slice(6)}`;
+        } else if (/^1\d{10}$/.test(cleanSmsNumber)) {
+          formattedDisplay = `+1 (${cleanSmsNumber.slice(1,4)}) ${cleanSmsNumber.slice(4,7)}-${cleanSmsNumber.slice(7)}`;
         }
+
+        const smsLines = [
+          "Hi Netta! I'd like to request an appointment:",
+          `• Name: ${name}`,
+          `• Phone: ${phone}`,
+          `• Services: ${serviceLines.join(' + ')}`,
+          `• Preferred Date & Time: ${preferredTime}`,
+        ];
+        if (notes) smsLines.push(`• Notes: ${notes}`);
+        if (email) smsLines.push(`• Email: ${email}`);
         if (instagram) {
           const igFormatted = instagram.startsWith('@') ? instagram : `@${instagram}`;
-          summaryHtml += `<strong>Instagram:</strong> ${escapeHtml(igFormatted)}<br/>`;
+          smsLines.push(`• Instagram: ${igFormatted}`);
         }
-        summaryHtml += `<strong>Selected Services:</strong> ${serviceLines.map(escapeHtml).join(' + ')}<br/>
-          <strong>Preferred date and time:</strong> ${escapeHtml(preferredTime)}`;
-        if (notes) {
-          summaryHtml += `<br/><strong>Notes:</strong> ${escapeHtml(notes)}`;
+        const smsBody = smsLines.join('\n');
+
+        const isApple = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent) && !('MSStream' in window);
+        const separator = isApple ? '&' : '?';
+        const smsUrl = `sms:${cleanSmsNumber}${separator}body=${encodeURIComponent(smsBody)}`;
+
+        if (confirmTitle) confirmTitle.textContent = 'Check Your Messages';
+        if (confirmIcon) confirmIcon.textContent = '💬';
+        if (confirmDesc) {
+          confirmDesc.textContent = 'Check your Messages, tap Send to text Netta your appointment request.';
         }
-        detailsSummary.innerHTML = summaryHtml;
+
+        if (smsFlowDetails) smsFlowDetails.hidden = false;
+        if (confirmDetailsSummary) confirmDetailsSummary.hidden = true;
+
+        const phoneDisplay = document.getElementById('sms-target-phone-display');
+        if (phoneDisplay) phoneDisplay.textContent = formattedDisplay;
+
+        const fallbackTextarea = document.getElementById('sms-fallback-textarea') as HTMLTextAreaElement | null;
+        if (fallbackTextarea) fallbackTextarea.value = smsBody;
+
+        const openSmsBtn = document.getElementById('btn-open-sms') as HTMLAnchorElement | null;
+        if (openSmsBtn) openSmsBtn.href = smsUrl;
+
+        // Trigger SMS application
+        try {
+          window.location.href = smsUrl;
+        } catch (e) {
+          console.warn('SMS trigger notice:', e);
+        }
+
+      } else {
+        // --- 3B Direct Email via Formspree ---
+        if (confirmTitle) confirmTitle.textContent = 'Request Received!';
+        if (confirmIcon) confirmIcon.textContent = '✓';
+        if (confirmDesc) {
+          confirmDesc.textContent = 'Thank you. Netta will reach out directly to confirm availability and finalize your appointment.';
+        }
+
+        if (smsFlowDetails) smsFlowDetails.hidden = true;
+        if (confirmDetailsSummary) confirmDetailsSummary.hidden = false;
+
+        const payload = {
+          name,
+          phone,
+          email: email || undefined,
+          instagram: instagram || undefined,
+          services: serviceLines.join(', '),
+          preferred_time: preferredTime,
+          notes: notes || undefined,
+          _subject: `New Appointment Request from ${name} (${phone})`,
+          message: `New Appointment Request:\n` +
+            `• Name: ${name}\n` +
+            `• Phone: ${phone} (Tap to reply by text/call)\n` +
+            (email ? `• Email: ${email}\n` : '') +
+            (instagram ? `• Instagram: ${instagram}\n` : '') +
+            `• Services: ${serviceLines.join(' + ')}\n` +
+            `• Preferred Date & Time: ${preferredTime}\n` +
+            (notes ? `• Notes: ${notes}\n` : '')
+        };
+
+        try {
+          const deliveryEndpoint = form.getAttribute('data-endpoint');
+          if (deliveryEndpoint && !deliveryEndpoint.includes('YOUR_FORM_ID')) {
+            await fetch(deliveryEndpoint, {
+              method: 'POST',
+              headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+              signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined,
+            });
+          }
+        } catch (err) {
+          console.warn('Booking dispatch notice:', err);
+        }
+
+        if (confirmDetailsSummary) {
+          let summaryHtml = `<strong>Name:</strong> ${escapeHtml(name)}<br/>
+            <strong>Phone:</strong> ${escapeHtml(phone)}<br/>`;
+          if (email) {
+            summaryHtml += `<strong>Email:</strong> ${escapeHtml(email)}<br/>`;
+          }
+          if (instagram) {
+            const igFormatted = instagram.startsWith('@') ? instagram : `@${instagram}`;
+            summaryHtml += `<strong>Instagram:</strong> ${escapeHtml(igFormatted)}<br/>`;
+          }
+          summaryHtml += `<strong>Selected Services:</strong> ${serviceLines.map(escapeHtml).join(' + ')}<br/>
+            <strong>Preferred date and time:</strong> ${escapeHtml(preferredTime)}`;
+          if (notes) {
+            summaryHtml += `<br/><strong>Notes:</strong> ${escapeHtml(notes)}`;
+          }
+          confirmDetailsSummary.innerHTML = summaryHtml;
+        }
       }
 
       form.hidden = true;
       if (confirmBox) confirmBox.hidden = false;
+    });
+
+    // Wire up Copy SMS Button in 3A confirmation screen
+    const copySmsBtn = document.getElementById('btn-copy-sms');
+    const fallbackTextarea = document.getElementById('sms-fallback-textarea') as HTMLTextAreaElement | null;
+    copySmsBtn?.addEventListener('click', async () => {
+      if (!fallbackTextarea) return;
+      const textToCopy = fallbackTextarea.value;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(textToCopy);
+        } else {
+          fallbackTextarea.select();
+          document.execCommand('copy');
+        }
+        copySmsBtn.textContent = '✓ Copied!';
+        window.setTimeout(() => {
+          copySmsBtn.textContent = '📋 Copy Message';
+        }, 2500);
+      } catch (err) {
+        fallbackTextarea.select();
+        copySmsBtn.textContent = '✓ Copied!';
+        window.setTimeout(() => {
+          copySmsBtn.textContent = '📋 Copy Message';
+        }, 2500);
+      }
     });
   }
 
