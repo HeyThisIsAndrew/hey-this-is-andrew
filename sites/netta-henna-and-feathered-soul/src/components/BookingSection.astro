@@ -385,26 +385,32 @@ import { SITE } from '../data/site';
   }
 
   .booking-kicker {
-    font-family: var(--font-section);
-    font-size: 0.85rem;
-    letter-spacing: 0.15em;
+    font-family: var(--font-body);
+    font-size: 0.86rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--brand-gold);
+    color: var(--ink);
     display: inline-block;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
     text-align: center;
   }
 
   .booking-title {
     font-size: clamp(2.8rem, 6vw, 3.8rem);
-    margin: 0 0 0.5rem;
-    line-height: 1.15;
+    margin: 0 0 0.25rem;
+    line-height: 1.45 !important;
+    padding-top: 0.25em !important;
+    padding-bottom: 0.2em !important;
+    overflow: visible !important;
     text-align: center;
   }
 
   .booking-desc {
-    font-size: 1.02rem;
-    color: var(--muted);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--ink);
     line-height: 1.6;
     margin: 0 auto 1.75rem;
     max-width: 44ch;
@@ -421,22 +427,25 @@ import { SITE } from '../data/site';
   }
 
   .booking-note {
-    font-size: 0.85rem;
-    color: var(--muted);
-    font-style: italic;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--ink);
+    font-style: normal;
     margin: 0;
     text-align: center;
   }
 
-  /* ── Sticky Floating Calendar Icon Circle (48x48, icon only) ── */
+  /* ── Sticky Floating Calendar Icon Circle (48x48, icon only, safe-area padded & never overlapping cards/text) ── */
   .sticky-book-wrap {
     position: fixed;
-    bottom: 1.25rem;
-    right: 1.25rem;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+    right: 1rem;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     z-index: 95;
     display: flex;
     align-items: center;
-    transition: transform 0.3s ease, opacity 0.3s ease;
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
   }
 
   .sticky-book-wrap.is-hidden-footer {
@@ -457,24 +466,24 @@ import { SITE } from '../data/site';
     max-height: 48px !important;
     padding: 0 !important;
     border-radius: 50% !important;
-    background: var(--brand-teal) !important;
+    background: #117578 !important;
     color: #ffffff !important;
     border: 1.5px solid var(--brand-gold) !important;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.24) !important;
     cursor: pointer;
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, box-shadow 0.2s ease !important;
+    transition: transform 0.25s ease-in-out, background-color 0.2s ease, box-shadow 0.2s ease !important;
   }
 
   .sticky-book-icon-btn:hover {
-    background: var(--brand-teal-hover) !important;
+    background: #0c5d60 !important;
     transform: translateY(-2px) scale(1.04);
     box-shadow: 0 8px 24px var(--brand-teal-glow) !important;
   }
 
   @media (max-width: 640px) {
     .sticky-book-wrap {
-      bottom: 1rem;
-      right: 1rem;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+      right: 0.75rem;
     }
     .booking-ornate-card {
       padding: 2.35rem 1.15rem;
@@ -594,15 +603,17 @@ import { SITE } from '../data/site';
 
   .booking-modal-titles {
     text-align: left;
+    overflow: visible;
   }
 
   .booking-modal-kicker {
-    margin: 0 0 0.25rem;
-    font-family: var(--font-section);
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
+    margin: 0 0 0.2rem;
+    font-family: var(--font-body);
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--brand-gold);
+    color: var(--ink);
     text-align: left;
     white-space: nowrap;
   }
@@ -610,7 +621,10 @@ import { SITE } from '../data/site';
   .booking-modal-title {
     margin: 0;
     font-size: clamp(2rem, 5.5vw, 2.45rem);
-    line-height: 1.15;
+    line-height: 1.45 !important;
+    padding-top: 0.25em !important;
+    padding-bottom: 0.2em !important;
+    overflow: visible !important;
     text-align: left;
   }
 
@@ -1549,7 +1563,26 @@ import { SITE } from '../data/site';
     function updateStickyVisibility() {
       if (!stickyWrap) return;
       const currentY = isLocked ? savedScrollY : window.scrollY;
-      if (currentY > 300 && !isFooterVisible && !isLocked) {
+
+      // Check if the floating 48x48 button at bottom-right would overlap any photo card, caption, text block, or interactive control
+      const btnLeft = window.innerWidth - 64;
+      const btnRight = window.innerWidth - 8;
+      const btnTop = window.innerHeight - 68;
+      const btnBottom = window.innerHeight - 8;
+
+      let overlapsContent = false;
+      const protectedEls = document.querySelectorAll(
+        '.gallery-item, .gallery-caption, .medallion-circle, .service-desc, .service-rate-badge, .btn-primary, .price-frame, .booking-ornate-card, footer'
+      );
+      for (let i = 0; i < protectedEls.length; i++) {
+        const r = protectedEls[i].getBoundingClientRect();
+        if (r.right > btnLeft && r.left < btnRight && r.bottom > btnTop && r.top < btnBottom) {
+          overlapsContent = true;
+          break;
+        }
+      }
+
+      if (currentY > 240 && !isFooterVisible && !isLocked && !overlapsContent) {
         stickyWrap.style.transform = 'translateY(0)';
         stickyWrap.style.opacity = '1';
         stickyWrap.style.pointerEvents = 'auto';
