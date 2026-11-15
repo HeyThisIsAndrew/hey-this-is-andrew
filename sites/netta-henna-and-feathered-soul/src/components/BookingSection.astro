@@ -3,13 +3,13 @@
  * BookingSection.astro
  * Netta Henna and Feathered Soul - Booking Card, Floating Calendar Icon & Modal
  * 
- * Features:
- * - On-page centered booking card with ornate gold & turquoise gem filigree
- * - Floating 48x48 circular calendar icon button (hides when footer is in view)
- * - Strictly left-aligned Booking Modal form
- * - Multi-select A La Carte service checkboxes (Henna Art, Hair Feather Extensions, Hair Tinsel Extensions)
- * - Expandable pricing options under each ticked service from Netta's official price list
- * - Pre-ticks service when opened from a service card, and pre-selects service + pricing option when opened from Price List pills
+ * Pass 8 Redesign:
+ * - Option 1 ("DM to Book on Instagram") uses the circular 48x48 Instagram logo icon button (no "DM NETTA" text pill)
+ * - Tall, calm modal layout (up to 92dvh on mobile) with generous vertical breathing room
+ * - 52px tall inputs and triggers with comfortable internal padding
+ * - Full-width stacked fields on mobile (two-column only on desktop > 640px)
+ * - Multi-select A La Carte service checkboxes (Henna Art, Hair Feather Extensions, Hair Tinsel Extensions) with expandable pricing options
+ * - Full iOS Safari-safe background scroll & interaction lock (locks body at current scrollY, marks background inert, restores exact scrollY on X, backdrop tap, or Escape)
  * - Zero em dashes, zero horizontal modal scroll
  */
 import { SITE } from '../data/site';
@@ -92,7 +92,7 @@ import { SITE } from '../data/site';
   </button>
 </div>
 
-<!-- Accessible Booking Modal (Strictly Left-Aligned Form Layout) -->
+<!-- Accessible Booking Modal (Strictly Left-Aligned, Spacious, Full Mobile Stack) -->
 <dialog id="booking-modal" class="booking-modal" aria-labelledby="booking-modal-title">
   <div class="booking-modal-card">
     <header class="booking-modal-head">
@@ -107,7 +107,7 @@ import { SITE } from '../data/site';
     </header>
 
     <div class="modal-body">
-      <!-- Quick Option: DM on Instagram -->
+      <!-- Quick Option 1: DM on Instagram with Circular Instagram Logo Icon Only -->
       <div class="dm-quick-bar">
         <div class="dm-quick-info">
           <span class="dm-badge">Option 1 · Quickest</span>
@@ -117,10 +117,13 @@ import { SITE } from '../data/site';
           href={SITE.instagramUrl}
           target="_blank"
           rel="noopener"
-          class="teal-brush-banner dm-quick-btn"
+          class="btn-instagram dm-ig-icon-btn"
           aria-label="Direct message Netta on Instagram"
+          title="DM to Book @nettahennaandfeatheredsoul"
         >
-          DM Netta &rarr;
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+          </svg>
         </a>
       </div>
 
@@ -128,47 +131,9 @@ import { SITE } from '../data/site';
         <span>✦ OR REQUEST APPOINTMENT BELOW ✦</span>
       </div>
 
-      <!-- Collapsible Calendar Trigger -->
-      <div class="calendar-collapsible-wrapper">
-        <button type="button" class="cal-toggle-btn" id="cal-toggle-btn" aria-expanded="false" aria-controls="modal-calendar-block">
-          <span class="cal-toggle-text">📅 Choose a date on the calendar</span>
-          <svg class="cal-toggle-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor">
-            <path d="M6 9l6 6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-
-        <!-- Calendar Block (Collapsed by default) -->
-        <div class="modal-calendar-block is-collapsed" id="modal-calendar-block" hidden>
-          <div class="schedule-pending-notice">
-            <div class="pending-badge-row">
-              <span class="pending-pill">Google Calendar</span>
-              <span class="pending-status-text">Schedule Pending</span>
-            </div>
-            <p class="pending-notice-body">
-              Netta is setting up her official Google Calendar schedule titled "Book Netta". Select your preferred date below and submit your request. Netta will confirm directly.
-            </p>
-          </div>
-
-          <div class="calendar-container">
-            <header class="calendar-header">
-              <div class="calendar-nav">
-                <button type="button" class="cal-nav-btn" id="cal-prev-btn" aria-label="Previous month">&larr;</button>
-                <h4 class="calendar-month-heading" id="cal-month-title" aria-live="polite">Loading...</h4>
-                <button type="button" class="cal-nav-btn" id="cal-next-btn" aria-label="Next month">&rarr;</button>
-              </div>
-            </header>
-
-            <div class="calendar-weekdays" aria-hidden="true">
-              <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
-            </div>
-
-            <div class="calendar-grid" id="calendar-grid" role="grid" aria-labelledby="cal-month-title"></div>
-          </div>
-        </div>
-      </div>
-
       <!-- Appointment Form -->
       <form id="booking-request-form" class="booking-form">
+        <!-- Row 1: Name & Contact (Stacked full-width on mobile, 2-col on desktop) -->
         <div class="form-grid">
           <div class="form-group">
             <label for="book-name">Your Name <span class="req" aria-hidden="true">*</span></label>
@@ -178,6 +143,46 @@ import { SITE } from '../data/site';
           <div class="form-group">
             <label for="book-contact">Instagram or Email <span class="req" aria-hidden="true">*</span></label>
             <input type="text" id="book-contact" name="contact" required placeholder="@handle or email" />
+          </div>
+        </div>
+
+        <!-- Collapsible Calendar Trigger -->
+        <div class="calendar-collapsible-wrapper">
+          <span class="field-section-label">Preferred Date</span>
+          <button type="button" class="cal-toggle-btn" id="cal-toggle-btn" aria-expanded="false" aria-controls="modal-calendar-block">
+            <span class="cal-toggle-text" id="cal-toggle-text">📅 Choose a date on the calendar</span>
+            <svg class="cal-toggle-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor">
+              <path d="M6 9l6 6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+
+          <!-- Calendar Block (Collapsed by default) -->
+          <div class="modal-calendar-block is-collapsed" id="modal-calendar-block" hidden>
+            <div class="schedule-pending-notice">
+              <div class="pending-badge-row">
+                <span class="pending-pill">Google Calendar</span>
+                <span class="pending-status-text">Schedule Pending</span>
+              </div>
+              <p class="pending-notice-body">
+                Netta is setting up her official Google Calendar schedule titled "Book Netta". Select your preferred date below and submit your request. Netta will confirm directly.
+              </p>
+            </div>
+
+            <div class="calendar-container">
+              <header class="calendar-header">
+                <div class="calendar-nav">
+                  <button type="button" class="cal-nav-btn" id="cal-prev-btn" aria-label="Previous month">&larr;</button>
+                  <h4 class="calendar-month-heading" id="cal-month-title" aria-live="polite">Loading...</h4>
+                  <button type="button" class="cal-nav-btn" id="cal-next-btn" aria-label="Next month">&rarr;</button>
+                </div>
+              </header>
+
+              <div class="calendar-weekdays" aria-hidden="true">
+                <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+              </div>
+
+              <div class="calendar-grid" id="calendar-grid" role="grid" aria-labelledby="cal-month-title"></div>
+            </div>
           </div>
         </div>
 
@@ -307,20 +312,21 @@ import { SITE } from '../data/site';
           <p class="service-error-msg" id="service-error-msg" hidden>Please select at least one service.</p>
         </fieldset>
 
+        <!-- Row 2: Selected Date & Notes (Stacked full-width on mobile, 2-col on desktop) -->
         <div class="form-grid">
           <div class="form-group">
             <label for="book-date">Selected Date</label>
-            <input type="text" id="book-date" name="date" readonly placeholder="Pick date above" />
+            <input type="text" id="book-date" name="date" readonly placeholder="Pick a date above or coordinate via DM" />
           </div>
 
           <div class="form-group">
             <label for="book-message">Notes or design ideas</label>
-            <input type="text" id="book-message" name="message" placeholder="Placement or ideas" />
+            <input type="text" id="book-message" name="message" placeholder="Placement, colors, or preferred timing" />
           </div>
         </div>
 
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary" id="booking-submit-btn">
+          <button type="submit" class="btn btn-primary modal-submit-btn" id="booking-submit-btn">
             Send Appointment Request
           </button>
         </div>
@@ -485,41 +491,66 @@ import { SITE } from '../data/site';
     .corner-filigree.bottom-right { bottom: 8px; right: 8px; }
   }
 
-  /* ── Booking Modal & Dialog (Strictly Left-Aligned Form Layout) ── */
+  /* ── Pass 8: Spacious, Calm Booking Modal & Full-Screen Backdrop Lock ── */
+  :global(html.modal-open),
+  :global(body.modal-open) {
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
   .booking-modal {
     border: none;
-    border-radius: 22px;
+    border-radius: 26px;
     padding: 0;
-    max-width: 580px;
+    max-width: 620px;
     width: calc(100% - 1.5rem);
+    max-height: 90vh;
     background: transparent;
     color: var(--ink);
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
-    overflow-x: hidden;
+    box-shadow: 0 28px 70px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
     text-align: left;
   }
 
+  /* Full-screen backdrop covering Dynamic Island / status bar and blocking all background taps */
   .booking-modal::backdrop {
-    background: rgba(24, 19, 16, 0.65);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    position: fixed;
+    top: -120px;
+    left: -120px;
+    right: -120px;
+    bottom: -120px;
+    background: rgba(18, 14, 11, 0.74);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    overscroll-behavior: none;
+    touch-action: none;
   }
 
   .booking-modal-card {
     background: var(--surface);
-    border: 1.5px solid var(--brand-gold);
-    border-radius: 22px;
-    padding: 1.1rem 1.35rem;
-    max-height: 92vh;
+    border: 2px solid var(--brand-gold);
+    border-radius: 26px;
+    padding: 2rem 2rem 2.25rem;
+    max-height: 90vh;
     overflow-y: auto;
     overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     box-sizing: border-box;
     text-align: left;
   }
 
-  @media (max-width: 520px) {
+  @media (max-width: 640px) {
+    .booking-modal {
+      width: calc(100% - 1.25rem);
+      max-height: 92dvh;
+      border-radius: 24px;
+    }
+
     .booking-modal-card {
-      padding: 0.9rem 0.95rem;
+      padding: 1.5rem 1.25rem 1.75rem;
+      max-height: 92dvh;
+      border-radius: 24px;
     }
   }
 
@@ -527,8 +558,9 @@ import { SITE } from '../data/site';
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.45rem;
+    gap: 1rem;
+    margin-bottom: 1.35rem;
+    padding-bottom: 1rem;
     border-bottom: 1px solid var(--gold-border);
     text-align: left;
   }
@@ -538,18 +570,19 @@ import { SITE } from '../data/site';
   }
 
   .booking-modal-kicker {
-    margin: 0;
+    margin: 0 0 0.25rem;
     font-family: var(--font-section);
     font-size: 0.72rem;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--brand-gold);
     text-align: left;
+    white-space: nowrap;
   }
 
   .booking-modal-title {
-    margin: 0.05rem 0 0;
-    font-size: 1.7rem;
+    margin: 0;
+    font-size: clamp(2rem, 5.5vw, 2.45rem);
     line-height: 1.15;
     text-align: left;
   }
@@ -561,10 +594,10 @@ import { SITE } from '../data/site';
     outline: none !important;
     box-shadow: none !important;
     color: var(--ink);
-    font-size: 1.75rem;
+    font-size: 2rem;
     line-height: 1;
-    width: 30px;
-    height: 30px;
+    width: 40px;
+    height: 40px;
     padding: 0;
     display: flex;
     align-items: center;
@@ -590,30 +623,31 @@ import { SITE } from '../data/site';
     display: none !important;
   }
 
+  /* Option 1 Box: DM to Book on Instagram with 48x48 Circular Instagram Logo Icon */
   .dm-quick-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.6rem;
+    gap: 1rem;
     background: var(--brand-cream-surface);
-    border: 1px solid var(--gold-border);
-    border-radius: 10px;
-    padding: 0.4rem 0.75rem;
-    margin-bottom: 0.35rem;
+    border: 1.5px solid var(--gold-border);
+    border-radius: 16px;
+    padding: 0.95rem 1.15rem;
+    margin-bottom: 1.35rem;
     text-align: left;
   }
 
   .dm-quick-info {
     display: flex;
     flex-direction: column;
-    gap: 0.05rem;
+    gap: 0.2rem;
     text-align: left;
   }
 
   .dm-badge {
     font-family: var(--font-section);
-    font-size: 0.65rem;
-    letter-spacing: 0.08em;
+    font-size: 0.76rem;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--brand-gold);
     font-weight: 600;
@@ -622,37 +656,27 @@ import { SITE } from '../data/site';
 
   .dm-title {
     font-family: var(--font-section);
-    font-size: 0.98rem;
+    font-size: 1.2rem;
     font-weight: 600;
     color: var(--ink);
     text-align: left;
+    line-height: 1.25;
   }
 
-  .teal-brush-banner.dm-quick-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #1b8a8e, #136a6e);
-    color: #ffffff !important;
-    white-space: nowrap;
-    padding: 0.32rem 0.8rem !important;
-    font-size: 0.75rem !important;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    border-radius: 9999px;
-    text-decoration: none;
+  .dm-ig-icon-btn {
+    flex-shrink: 0;
   }
 
   .method-separator {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 0.5rem;
-    margin: 0.35rem 0;
+    gap: 0.65rem;
+    margin: 1.35rem 0;
     color: var(--brand-gold);
-    font-size: 0.64rem;
-    letter-spacing: 0.08em;
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
     text-align: left;
   }
   .method-separator::after {
@@ -662,23 +686,95 @@ import { SITE } from '../data/site';
     background: linear-gradient(90deg, var(--gold-border), transparent);
   }
 
-  /* Collapsible Calendar Trigger */
+  /* ── Form & A La Carte Multi-Select Styles (Spacious & Left-Aligned) ── */
+  .booking-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    text-align: left;
+  }
+
+  /* Two-column on desktop (> 640px), Full-Width 1-column stack on mobile (<= 640px) */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.15rem;
+  }
+
+  @media (max-width: 640px) {
+    .form-grid {
+      grid-template-columns: 1fr;
+      gap: 1.15rem;
+    }
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    text-align: left;
+  }
+
+  .form-group label,
+  .field-section-label,
+  .alacarte-legend {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--ink);
+    text-align: left;
+    letter-spacing: 0.01em;
+  }
+
+  .req {
+    color: var(--brand-teal);
+  }
+
+  /* Generous 52px+ Input Heights & Internal Padding */
+  input[type="text"],
+  textarea {
+    width: 100%;
+    min-height: 52px;
+    height: 52px;
+    background: var(--surface);
+    border: 1.5px solid var(--gold-border);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--ink);
+    box-sizing: border-box;
+    text-align: left;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  input[type="text"]:focus,
+  textarea:focus {
+    outline: none;
+    border-color: var(--brand-teal);
+    box-shadow: 0 0 0 3px var(--brand-teal-glow);
+  }
+
+  /* Collapsible Calendar Trigger (52px tall) */
   .calendar-collapsible-wrapper {
-    margin-bottom: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
     text-align: left;
   }
 
   .cal-toggle-btn {
     width: 100%;
+    min-height: 52px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     background: var(--surface);
     border: 1.5px solid var(--brand-gold-border);
-    border-radius: 8px;
-    padding: 0.38rem 0.65rem;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
     font-family: var(--font-body);
-    font-size: 0.8rem;
+    font-size: 0.95rem;
+    font-weight: 500;
     color: var(--ink);
     cursor: pointer;
     text-align: left;
@@ -700,9 +796,9 @@ import { SITE } from '../data/site';
 
   .modal-calendar-block {
     margin-top: 0.5rem;
-    border: 1px solid var(--gold-border);
-    border-radius: 12px;
-    padding: 0.85rem;
+    border: 1.5px solid var(--gold-border);
+    border-radius: 16px;
+    padding: 1.15rem;
     background: var(--surface);
     text-align: left;
   }
@@ -710,9 +806,9 @@ import { SITE } from '../data/site';
   .schedule-pending-notice {
     background: var(--brand-teal-light);
     border-left: 3px solid var(--brand-teal);
-    border-radius: 8px;
-    padding: 0.6rem 0.8rem;
-    margin-bottom: 0.75rem;
+    border-radius: 10px;
+    padding: 0.75rem 0.95rem;
+    margin-bottom: 1rem;
     text-align: left;
   }
 
@@ -720,35 +816,35 @@ import { SITE } from '../data/site';
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.3rem;
   }
 
   .pending-pill {
     background: var(--brand-teal);
     color: #ffffff;
-    font-size: 0.66rem;
+    font-size: 0.7rem;
     font-weight: 700;
-    padding: 0.12rem 0.45rem;
+    padding: 0.15rem 0.5rem;
     border-radius: 9999px;
     text-transform: uppercase;
   }
 
   .pending-status-text {
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     font-weight: 600;
     color: var(--brand-teal);
   }
 
   .pending-notice-body {
     margin: 0;
-    font-size: 0.78rem;
+    font-size: 0.84rem;
     color: var(--ink);
-    line-height: 1.4;
+    line-height: 1.45;
     text-align: left;
   }
 
   .calendar-header {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.65rem;
   }
 
   .calendar-nav {
@@ -762,14 +858,14 @@ import { SITE } from '../data/site';
     border: 1px solid var(--gold-border);
     color: var(--ink);
     border-radius: 8px;
-    padding: 0.2rem 0.6rem;
+    padding: 0.35rem 0.75rem;
     cursor: pointer;
   }
 
   .calendar-month-heading {
     margin: 0;
     font-family: var(--font-section);
-    font-size: 1.05rem;
+    font-size: 1.15rem;
     color: var(--ink);
   }
 
@@ -777,16 +873,16 @@ import { SITE } from '../data/site';
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     text-align: center;
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     font-weight: 600;
     color: var(--brand-gold);
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.45rem;
   }
 
   .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
+    gap: 5px;
   }
 
   :global(.cal-day) {
@@ -798,7 +894,7 @@ import { SITE } from '../data/site';
     border-radius: 8px;
     background: var(--surface);
     color: var(--ink);
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.15s ease;
     padding: 0;
@@ -828,77 +924,18 @@ import { SITE } from '../data/site';
     background: transparent;
   }
 
-  /* ── Form & A La Carte Multi-Select Styles (Left-Aligned) ── */
-  .booking-form {
-    display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
-    text-align: left;
-  }
-
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-  }
-
-  @media (max-width: 520px) {
-    .form-grid {
-      grid-template-columns: 1fr 1fr;
-      gap: 0.45rem;
-    }
-  }
-
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.18rem;
-    text-align: left;
-  }
-
-  .form-group label,
-  .alacarte-legend {
-    font-size: 0.74rem;
-    font-weight: 600;
-    color: var(--ink);
-    text-align: left;
-  }
-
-  .req {
-    color: var(--brand-teal);
-  }
-
-  input[type="text"],
-  textarea {
-    width: 100%;
-    background: var(--surface);
-    border: 1.5px solid var(--gold-border);
-    border-radius: 8px;
-    padding: 0.38rem 0.55rem;
-    font-family: var(--font-body);
-    font-size: 0.8rem;
-    color: var(--ink);
-    box-sizing: border-box;
-    text-align: left;
-    transition: border-color 0.2s ease;
-  }
-
-  input[type="text"]:focus,
-  textarea:focus {
-    outline: none;
-    border-color: var(--brand-teal);
-    box-shadow: 0 0 0 2px var(--brand-teal-glow);
-  }
-
+  /* A La Carte Multi-Select Checkboxes with Generous Spacing */
   .alacarte-fieldset {
     border: none;
     margin: 0;
     padding: 0;
+    min-width: 0;
+    width: 100%;
     text-align: left;
   }
 
   .alacarte-legend {
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.55rem;
     padding: 0;
     display: block;
     width: 100%;
@@ -907,14 +944,18 @@ import { SITE } from '../data/site';
   .alacarte-services-list {
     display: flex;
     flex-direction: column;
-    gap: 0.32rem;
+    gap: 0.75rem;
+    width: 100%;
   }
 
   .service-check-block {
     border: 1.5px solid var(--gold-border);
-    border-radius: 10px;
+    border-radius: 14px;
     background: var(--surface);
-    padding: 0.38rem 0.65rem;
+    padding: 0.85rem 0.9rem;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
     transition: border-color 0.2s ease, background-color 0.2s ease;
     text-align: left;
   }
@@ -929,16 +970,17 @@ import { SITE } from '../data/site';
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
+    min-height: 28px;
     cursor: pointer;
-    font-size: 0.82rem;
+    font-size: 0.95rem;
     color: var(--ink);
     text-align: left;
     user-select: none;
   }
 
   .service-checkbox {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     accent-color: var(--brand-teal);
     margin: 0;
     cursor: pointer;
@@ -947,10 +989,11 @@ import { SITE } from '../data/site';
 
   .service-check-title {
     font-family: var(--font-section);
-    font-size: 0.96rem;
+    font-size: 0.98rem;
     font-weight: 600;
     color: var(--ink);
     flex: 1;
+    min-width: 0;
     text-align: left;
   }
 
@@ -959,18 +1002,19 @@ import { SITE } from '../data/site';
     font-weight: 600;
     color: var(--brand-teal);
     white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .service-suboptions {
-    margin-top: 0.4rem;
-    padding-top: 0.38rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
     border-top: 1px dashed var(--gold-border);
     text-align: left;
   }
 
   .suboptions-hint {
-    margin: 0 0 0.3rem;
-    font-size: 0.72rem;
+    margin: 0 0 0.55rem;
+    font-size: 0.82rem;
     color: var(--muted);
     font-style: italic;
     text-align: left;
@@ -979,20 +1023,20 @@ import { SITE } from '../data/site';
   .suboptions-pills {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
+    gap: 0.5rem;
     justify-content: flex-start;
   }
 
   .modal-opt-pill {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
-    padding: 0.26rem 0.55rem;
+    gap: 0.4rem;
+    padding: 0.45rem 0.8rem;
     border-radius: 9999px;
-    border: 1px solid var(--gold-border);
+    border: 1.5px solid var(--gold-border);
     background: var(--surface);
     color: var(--ink);
-    font-size: 0.74rem;
+    font-size: 0.84rem;
     font-weight: 500;
     cursor: pointer;
     user-select: none;
@@ -1001,8 +1045,8 @@ import { SITE } from '../data/site';
   }
 
   .modal-opt-pill input {
-    width: 13px;
-    height: 13px;
+    width: 15px;
+    height: 15px;
     margin: 0;
     accent-color: var(--brand-teal);
     cursor: pointer;
@@ -1016,44 +1060,50 @@ import { SITE } from '../data/site';
   }
 
   .service-error-msg {
-    margin: 0.25rem 0 0;
-    font-size: 0.75rem;
+    margin: 0.5rem 0 0;
+    font-size: 0.84rem;
     color: #c93b2b;
     font-weight: 600;
     text-align: left;
   }
 
   .form-actions {
-    margin-top: 0.25rem;
+    margin-top: 0.65rem;
+    padding-top: 0.35rem;
     text-align: left;
   }
 
-  .form-actions .btn {
-    width: 100%;
+  .modal-submit-btn {
+    width: 100% !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    max-height: 52px !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
   }
 
   .booking-confirm-box {
     text-align: left;
-    padding: 1.15rem;
+    padding: 1.35rem;
     background: var(--surface-2);
-    border-radius: 14px;
-    border: 1px solid var(--gold-border);
+    border-radius: 16px;
+    border: 1.5px solid var(--gold-border);
   }
 
   .confirm-head-row {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
-    margin-bottom: 0.5rem;
+    gap: 0.75rem;
+    margin-bottom: 0.65rem;
   }
 
   .confirm-icon {
-    width: 34px;
-    height: 34px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     background: var(--brand-teal);
     color: #ffffff;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1062,30 +1112,30 @@ import { SITE } from '../data/site';
 
   .confirm-title {
     font-family: var(--font-section);
-    font-size: 1.35rem;
+    font-size: 1.45rem;
     margin: 0;
     color: var(--ink);
     text-align: left;
   }
 
   .confirm-desc {
-    font-size: 0.88rem;
+    font-size: 0.92rem;
     color: var(--muted);
-    margin: 0 0 0.85rem;
-    line-height: 1.45;
+    margin: 0 0 1rem;
+    line-height: 1.5;
     text-align: left;
   }
 
   .confirm-details {
     background: var(--surface);
     border: 1px solid var(--gold-border);
-    border-radius: 10px;
-    padding: 0.75rem;
-    margin-bottom: 0.85rem;
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    margin-bottom: 1rem;
     text-align: left;
-    font-size: 0.82rem;
+    font-size: 0.88rem;
     color: var(--ink);
-    line-height: 1.55;
+    line-height: 1.6;
   }
 </style>
 
@@ -1100,10 +1150,87 @@ import { SITE } from '../data/site';
     const detailsSummary = document.getElementById('confirm-details-summary');
     const stickyWrap = document.getElementById('sticky-book-wrap');
     const calToggleBtn = document.getElementById('cal-toggle-btn');
+    const calToggleText = document.getElementById('cal-toggle-text');
     const calBlock = document.getElementById('modal-calendar-block');
     const errorMsg = document.getElementById('service-error-msg');
 
     if (!modal) return;
+
+    // ── Agent 2: Full iOS Safari-Safe Background Scroll & Interaction Lock ──
+    let savedScrollY = 0;
+    let isLocked = false;
+
+    function getBackgroundElements(): HTMLElement[] {
+      return [
+        document.querySelector<HTMLElement>('header.site-nav'),
+        document.querySelector<HTMLElement>('#main-content'),
+        document.querySelector<HTMLElement>('footer#site-footer'),
+        document.getElementById('sticky-book-wrap'),
+      ].filter((el): el is HTMLElement => Boolean(el));
+    }
+
+    function lockPageBackground() {
+      if (isLocked) return;
+      savedScrollY = window.scrollY || window.pageYOffset || 0;
+      isLocked = true;
+
+      document.documentElement.classList.add('modal-open');
+      document.body.classList.add('modal-open');
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${savedScrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+
+      getBackgroundElements().forEach((el) => {
+        // Do not set inert on #main-content itself since #booking-modal lives inside #main-content;
+        // instead set inert on all sibling sections and non-modal children!
+        if (el.id === 'main-content') {
+          Array.from(el.children).forEach((child) => {
+            if (child.id !== 'booking') {
+              (child as HTMLElement).setAttribute('inert', '');
+            } else {
+              const interactiveCard = child.querySelector('#booking-interactive');
+              interactiveCard?.setAttribute('inert', '');
+            }
+          });
+        } else {
+          el.setAttribute('inert', '');
+        }
+      });
+      updateStickyVisibility();
+    }
+
+    function unlockPageBackground() {
+      if (!isLocked) return;
+      const restoreY = savedScrollY;
+      isLocked = false;
+
+      document.querySelectorAll('[inert]').forEach((el) => el.removeAttribute('inert'));
+
+      document.documentElement.classList.remove('modal-open');
+      document.body.classList.remove('modal-open');
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+
+      window.scrollTo({ top: restoreY, left: 0, behavior: 'instant' });
+      updateStickyVisibility();
+    }
+
+    function closeModal() {
+      modal?.close();
+      unlockPageBackground();
+    }
+
+    // Listen to native dialog close event (covers Escape key as well as programmatic close)
+    modal.addEventListener('close', () => {
+      unlockPageBackground();
+    });
 
     function normalizeServiceName(raw?: string): string {
       if (!raw) return '';
@@ -1140,7 +1267,7 @@ import { SITE } from '../data/site';
       cb.addEventListener('change', syncServiceBlocks);
     });
 
-    // Open Modal function: resets form unless service / option passed
+    // Open Modal function: locks page background, resets form unless service / option passed
     function openModal(defaultService?: string, defaultOption?: string) {
       if (form) {
         form.reset();
@@ -1148,6 +1275,9 @@ import { SITE } from '../data/site';
       }
       if (confirmBox) {
         confirmBox.hidden = true;
+      }
+      if (calToggleText) {
+        calToggleText.textContent = '📅 Choose a date on the calendar';
       }
 
       const canonicalService = normalizeServiceName(defaultService);
@@ -1168,7 +1298,12 @@ import { SITE } from '../data/site';
         });
       }
 
-      modal?.showModal();
+      lockPageBackground();
+      if (!modal?.open) {
+        modal?.showModal();
+      }
+      const modalCard = modal?.querySelector('.booking-modal-card');
+      if (modalCard) modalCard.scrollTop = 0;
     }
 
     // Toggle calendar collapse
@@ -1180,6 +1315,14 @@ import { SITE } from '../data/site';
         if (!isExpanded) {
           renderCalendar();
         }
+      }
+    });
+
+    // Clicking the read-only Selected Date field also expands the calendar chooser smoothly
+    dateInput?.addEventListener('click', () => {
+      if (calToggleBtn && calBlock && calBlock.hidden) {
+        calToggleBtn.click();
+        calToggleBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     });
 
@@ -1208,7 +1351,6 @@ import { SITE } from '../data/site';
         const service = pill.getAttribute('data-select-service') || '';
         const option = pill.getAttribute('data-select-option') || '';
 
-        // Toggle selected visual state on the clicked pill
         pricePills.forEach((p) => {
           p.classList.remove('is-selected');
           p.setAttribute('aria-pressed', 'false');
@@ -1220,11 +1362,11 @@ import { SITE } from '../data/site';
       });
     });
 
-    closeBtn?.addEventListener('click', () => modal.close());
-    confirmCloseBtn?.addEventListener('click', () => modal.close());
+    closeBtn?.addEventListener('click', () => closeModal());
+    confirmCloseBtn?.addEventListener('click', () => closeModal());
 
     modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.close();
+      if (e.target === modal) closeModal();
     });
 
     // Sticky book button visibility: hides when footer is in view
@@ -1243,7 +1385,8 @@ import { SITE } from '../data/site';
 
     function updateStickyVisibility() {
       if (!stickyWrap) return;
-      if (window.scrollY > 300 && !isFooterVisible) {
+      const currentY = isLocked ? savedScrollY : window.scrollY;
+      if (currentY > 300 && !isFooterVisible && !isLocked) {
         stickyWrap.style.transform = 'translateY(0)';
         stickyWrap.style.opacity = '1';
         stickyWrap.style.pointerEvents = 'auto';
@@ -1312,6 +1455,7 @@ import { SITE } from '../data/site';
           btn.addEventListener('click', () => {
             selectedDateStr = formatted;
             if (dateInput) dateInput.value = formatted;
+            if (calToggleText) calToggleText.textContent = `📅 Selected: ${formatted}`;
             document.querySelectorAll('.cal-day.is-selected').forEach((d) => d.classList.remove('is-selected'));
             btn.classList.add('is-selected');
           });
