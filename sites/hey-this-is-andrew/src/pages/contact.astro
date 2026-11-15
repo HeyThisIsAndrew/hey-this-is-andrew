@@ -1,0 +1,453 @@
+---
+/**
+ * /contact - Direct contact page.
+ * Works with /api/contact endpoint and provides a clean mailto fallback.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SectionHeader from '@andrew/ui/SectionHeader.astro';
+import { CONTACT } from '../data/contact';
+
+const CONTACT_EMAIL = CONTACT.personal;
+const rawBase = import.meta.env.BASE_URL;
+const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
+---
+
+<BaseLayout
+  title="Contact · HEY_THISISANDREW"
+  description="Get in touch with Andrew Baxter. Inquiries for brand partnerships, cinematography, production, and speaking."
+>
+  <h1 class="vh">Contact Andrew Baxter</h1>
+  <div class="page-head" aria-hidden="true"></div>
+
+  <section class="contact-section" aria-labelledby="contact-heading">
+    <div class="container">
+      <SectionHeader
+        id="contact-heading"
+        kicker="Get in touch"
+        title="Contact"
+        lede="Have a project, collaboration, or question in mind? Send a message below or email directly."
+      />
+
+      <div class="contact-grid">
+        <div class="contact-card">
+          <form id="contact-page-form" class="contact-form" novalidate>
+            <div class="form-group">
+              <label for="contact-name" class="font-mono">Name</label>
+              <input
+                type="text"
+                id="contact-name"
+                name="name"
+                class="form-input"
+                placeholder="Your name"
+                required
+                autocomplete="name"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="contact-email" class="font-mono">Email</label>
+              <input
+                type="email"
+                id="contact-email"
+                name="email"
+                class="form-input"
+                placeholder="you@domain.com"
+                required
+                autocomplete="email"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="contact-subject" class="font-mono">Subject</label>
+              <input
+                type="text"
+                id="contact-subject"
+                name="subject"
+                class="form-input"
+                placeholder="Collaboration, production, or general inquiry"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="contact-message" class="font-mono">Message</label>
+              <textarea
+                id="contact-message"
+                name="message"
+                class="form-textarea"
+                rows="6"
+                placeholder="Tell me about what you are working on..."
+                required
+              ></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" id="contact-submit-btn" class="btn btn-primary">
+                Send message
+              </button>
+            </div>
+
+            <div id="contact-status" class="contact-status" aria-live="polite" hidden></div>
+          </form>
+
+          <div id="contact-success" class="contact-success" hidden>
+            <h3 class="success-title">Message sent</h3>
+            <p class="success-desc">Thanks for reaching out. I will get back to you shortly.</p>
+            <button type="button" id="contact-reset-btn" class="btn btn-secondary">Send another message</button>
+          </div>
+        </div>
+
+        <aside class="contact-aside">
+          <div class="aside-block">
+            <h2 class="aside-title font-mono">Direct email</h2>
+            <p class="aside-text">For direct inquiries, you can reach out at:</p>
+            <a href={`mailto:${CONTACT_EMAIL}`} class="aside-email font-mono">{CONTACT_EMAIL}</a>
+          </div>
+
+          <div class="aside-block">
+            <h2 class="aside-title font-mono">Specialized inquiries</h2>
+            <ul class="aside-links">
+              <li>
+                <span class="aside-link-label">Beverage and cafe production</span>
+                <a href={`${base}/ccc/`} class="aside-link">Capture Create Caffeinate &rarr;</a>
+              </li>
+              <li>
+                <span class="aside-link-label">Publication and editorial coverage</span>
+                <a href={`${base}/brands/be-unconventional-hq/`} class="aside-link">BE Unconventional HQ &rarr;</a>
+              </li>
+              <li>
+                <span class="aside-link-label">Press kit and bios</span>
+                <a href={`${base}/about/#press`} class="aside-link">Press assets &rarr;</a>
+              </li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script is:inline define:vars={{ base, CONTACT_EMAIL }}>
+  (function () {
+    function initContact() {
+      const form = document.getElementById('contact-page-form');
+      const submitBtn = document.getElementById('contact-submit-btn');
+      const statusEl = document.getElementById('contact-status');
+      const successEl = document.getElementById('contact-success');
+      const resetBtn = document.getElementById('contact-reset-btn');
+
+      if (!form || form.dataset.wired) return;
+      form.dataset.wired = '1';
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (statusEl) {
+          statusEl.hidden = true;
+          statusEl.textContent = '';
+          statusEl.className = 'contact-status';
+        }
+
+        const nameInput = document.getElementById('contact-name');
+        const emailInput = document.getElementById('contact-email');
+        const subjectInput = document.getElementById('contact-subject');
+        const messageInput = document.getElementById('contact-message');
+
+        const name = nameInput ? nameInput.value.trim() : '';
+        const email = emailInput ? emailInput.value.trim() : '';
+        const subject = subjectInput ? subjectInput.value.trim() : '';
+        const message = messageInput ? messageInput.value.trim() : '';
+
+        if (!email || !message) {
+          if (statusEl) {
+            statusEl.hidden = false;
+            statusEl.textContent = 'Please provide both your email and a message.';
+            statusEl.className = 'contact-status is-error';
+          }
+          return;
+        }
+
+        const payload = {
+          name,
+          email,
+          subject: subject || 'Website Contact Form',
+          message,
+          recipient: CONTACT_EMAIL,
+        };
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Sending...';
+        }
+
+        let sent = false;
+        try {
+          const apiPath = (base ? base.replace(/\/$/, '') : '') + '/api/contact';
+          const res = await fetch(apiPath, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const answer = res.ok ? await res.json().catch(() => null) : null;
+          sent = Boolean(answer) && typeof answer === 'object' && !('error' in answer);
+        } catch {
+          sent = false;
+        }
+
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Send message';
+        }
+
+        if (sent) {
+          form.hidden = true;
+          if (successEl) successEl.hidden = false;
+        } else {
+          // Fallback to mailto
+          const mailtoSubject = encodeURIComponent(subject || 'Inquiry from website');
+          const mailtoBody = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\n${message}`);
+          const mailtoUrl = `mailto:${CONTACT_EMAIL}?subject=${mailtoSubject}&body=${mailtoBody}`;
+
+          if (statusEl) {
+            statusEl.hidden = false;
+            statusEl.className = 'contact-status is-fallback';
+            statusEl.innerHTML = `Message service is completing setup. Opening your email app to send directly, or <a href="${mailtoUrl}">click here to email ${CONTACT_EMAIL}</a>.`;
+          }
+
+          const fallbackLink = document.createElement('a');
+          fallbackLink.href = mailtoUrl;
+          fallbackLink.style.display = 'none';
+          document.body.appendChild(fallbackLink);
+          fallbackLink.click();
+          fallbackLink.remove();
+        }
+      });
+
+      if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+          form.reset();
+          form.hidden = false;
+          if (successEl) successEl.hidden = true;
+          if (statusEl) statusEl.hidden = true;
+        });
+      }
+    }
+
+    initContact();
+    document.addEventListener('astro:page-load', initContact);
+  })();
+</script>
+
+<style>
+  .contact-section {
+    padding: clamp(2rem, 5vw, 4rem) 0 clamp(4rem, 8vw, 6rem);
+  }
+  .contact-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: clamp(2rem, 4vw, 4rem);
+    margin-top: 2rem;
+  }
+  @media (max-width: 860px) {
+    .contact-grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2.5rem;
+    }
+  }
+
+  .contact-card {
+    background: #0d0d0d;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: clamp(1.5rem, 3vw, 2.5rem);
+  }
+
+  .contact-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .form-group label {
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted, #999);
+  }
+
+  .form-input,
+  .form-textarea {
+    width: 100%;
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #fff;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .form-input:focus,
+  .form-textarea:focus {
+    outline: none;
+    border-color: #fff;
+    background: #181818;
+  }
+
+  .form-textarea {
+    resize: vertical;
+    min-height: 120px;
+  }
+
+  .form-actions {
+    margin-top: 0.5rem;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0.75rem 1.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .btn-primary {
+    background: #fff;
+    color: #000;
+    border: 1px solid #fff;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: #e0e0e0;
+    border-color: #e0e0e0;
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .btn-secondary:hover {
+    border-color: #fff;
+  }
+
+  .contact-status {
+    padding: 0.85rem 1rem;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin-top: 0.5rem;
+  }
+
+  .contact-status.is-error {
+    background: rgba(255, 50, 50, 0.1);
+    border: 1px solid rgba(255, 50, 50, 0.3);
+    color: #ff9999;
+  }
+
+  .contact-status.is-fallback {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #e0e0e0;
+  }
+
+  .contact-status a {
+    color: #fff;
+    text-decoration: underline;
+  }
+
+  .contact-success {
+    text-align: center;
+    padding: 2.5rem 1rem;
+  }
+
+  .success-title {
+    font-family: var(--font-display, inherit);
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .success-desc {
+    color: var(--muted, #999);
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+  }
+
+  .contact-aside {
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+    padding: 0.5rem 0;
+  }
+
+  .aside-title {
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted, #888);
+    margin-bottom: 0.75rem;
+  }
+
+  .aside-text {
+    font-size: 0.9rem;
+    color: #bbb;
+    margin-bottom: 0.5rem;
+  }
+
+  .aside-email {
+    display: inline-block;
+    color: #fff;
+    font-size: 0.95rem;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    word-break: break-all;
+  }
+
+  .aside-email:hover {
+    color: #aaa;
+  }
+
+  .aside-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .aside-link-label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--muted, #888);
+    margin-bottom: 0.2rem;
+  }
+
+  .aside-link {
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .aside-link:hover {
+    text-decoration: underline;
+  }
+</style>

@@ -403,13 +403,26 @@ const isCcc = Astro.url.pathname.includes('/ccc');
       (function () {
         const progressBar = document.getElementById('scroll-progress') as HTMLElement | null;
         const main = (document.getElementById('main-content') || document.querySelector('main')) as HTMLElement | null;
-        if (!progressBar || !main) return;
+        const nav = document.querySelector('.site-nav') as HTMLElement | null;
+        if (!progressBar) return;
+        if (!nav || !main) {
+          progressBar.style.display = 'none';
+          return;
+        }
 
         const targetBar = progressBar;
         const targetMain = main;
+        const targetNav = nav;
+
+        function updatePosition() {
+          const navBottom = Math.round(targetNav.getBoundingClientRect().bottom);
+          targetBar.style.top = `${navBottom}px`;
+          document.documentElement.style.setProperty('--nav-bar-h', `${navBottom}px`);
+        }
 
         let ticking = false;
         function updateProgress() {
+          updatePosition();
           const mainRect = targetMain.getBoundingClientRect();
           const mainTop = mainRect.top + window.scrollY;
           const mainHeight = targetMain.offsetHeight || mainRect.height;
@@ -436,7 +449,10 @@ const isCcc = Astro.url.pathname.includes('/ccc');
         }
 
         on(window, 'scroll', onScroll, { passive: true });
-        on(window, 'resize', onScroll, { passive: true });
+        on(window, 'resize', () => {
+          updatePosition();
+          onScroll();
+        }, { passive: true });
         updateProgress();
       })();
 

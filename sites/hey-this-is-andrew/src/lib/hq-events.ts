@@ -93,19 +93,6 @@ export const EVENT_BLURBS: Record<string, string> = {
     'Full on-location convention coverage of San Diego Comic-Con, including Hall H studio reveals, exhibit floor highlights, and pop culture dispatches.',
 };
 
-export const COHLEY_SUMMIT: EventItem = {
-  id: 'cohley-summit-2026',
-  name: 'Cohley Summit',
-  location: 'Fairmont Miramar Hotel, Santa Monica, CA',
-  dates: 'Nov 12, 2026',
-  blurb:
-    'Brand and creator marketing summit focusing on content strategies, creator partnerships, and community retention.',
-  url: 'https://www.cohley.com/',
-  source: 'Attending',
-  rawDate: '2026-11-12',
-  image: '',
-};
-
 export const CCC_COVERAGE_ITEMS: EventItem[] = [
   {
     id: 'ccc-desert-escape-2026',
@@ -211,7 +198,6 @@ export function parseSearchIndexEvents(items: unknown[]): { upcoming: EventItem[
   }
 
   const upcomingMap = new Map<string, EventItem>();
-  upcomingMap.set(COHLEY_SUMMIT.id, COHLEY_SUMMIT);
   for (const ev of upcomingHq) {
     upcomingMap.set(ev.id, ev);
   }

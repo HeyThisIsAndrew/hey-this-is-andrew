@@ -53,5 +53,26 @@ export default defineConfig({
       // Hero concept previews and the 404 are not pages to index.
       filter: (page) => !page.includes('/preview/') && !page.includes('/404') && !page.includes('/kit/') && !page.includes('/work/') && !page.includes('/latest/') && !page.includes('/goals/') && !page.includes('/services/') && !page.includes('/press/'),
     }),
+    {
+      name: 'cloudflare-prep',
+      hooks: {
+        'astro:route:setup': ({ route }) => {
+          if (route.component.includes('src/pages/api/contact.ts')) {
+            route.prerender = !isCloudflare;
+          }
+        },
+        'astro:build:done': async ({ dir }) => {
+          const fs = await import('node:fs');
+          const targetDirs = [dir, new URL('client/', dir)].filter((d) => fs.existsSync(d));
+          for (const d of targetDirs) {
+            const sIdx = new URL('sitemap-index.xml', d);
+            const sOut = new URL('sitemap.xml', d);
+            if (fs.existsSync(sIdx)) {
+              fs.copyFileSync(sIdx, sOut);
+            }
+          }
+        },
+      },
+    },
   ],
 });
