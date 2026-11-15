@@ -1,0 +1,103 @@
+---
+/**
+ * FeatherParallax: site-local subtle feather scroll effect.
+ * Only covers the Hero and Services section.
+ * Respects prefers-reduced-motion. Pointer events none, zero legibility impact.
+ */
+import featherSvg from '../assets/feather.svg?raw';
+---
+
+<div class="feather-layer" aria-hidden="true" data-feather-layer>
+  <div class="feather-graphic" data-feather>
+    <Fragment set:html={featherSvg} />
+  </div>
+</div>
+
+<style>
+  .feather-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 1;
+  }
+
+  .feather-graphic {
+    position: sticky;
+    top: 15vh;
+    left: calc(100% - 140px);
+    width: 100px;
+    height: 240px;
+    opacity: 0.35;
+    transform: translate3d(0, 0, 0) rotate(12deg);
+    transition: opacity 200ms linear;
+    will-change: transform, opacity;
+  }
+
+  @media (max-width: 640px) {
+    .feather-graphic {
+      left: calc(100% - 80px);
+      width: 70px;
+      height: 168px;
+      opacity: 0.22;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .feather-graphic {
+      transform: none !important;
+      opacity: 0.25 !important;
+      will-change: auto !important;
+    }
+  }
+</style>
+
+<script>
+  function initFeather() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+
+    const layer = document.querySelector('[data-feather-layer]');
+    const feather = document.querySelector('[data-feather]') as HTMLElement | null;
+    if (!layer || !feather) return;
+
+    const targetLayer: Element = layer;
+    const targetFeather: HTMLElement = feather;
+    let ticking = false;
+
+    function update() {
+      const rect = targetLayer.getBoundingClientRect();
+      const scrollProgress = Math.max(0, Math.min(1, -rect.top / (rect.height - window.innerHeight)));
+
+      // Drifts down and slightly sideways with a slow fade
+      const translateY = scrollProgress * 120;
+      const translateX = scrollProgress * -40;
+      const rotation = 12 + scrollProgress * 18;
+      const opacity = Math.max(0, 0.38 - scrollProgress * 0.3);
+
+      targetFeather.style.transform = `translate3d(${translateX}px, ${translateY}px, 0) rotate(${rotation}deg)`;
+      targetFeather.style.opacity = `${opacity}`;
+      ticking = false;
+    }
+
+    window.addEventListener(
+      'scroll',
+      () => {
+        if (!ticking) {
+          window.requestAnimationFrame(update);
+          ticking = true;
+        }
+      },
+      { passive: true }
+    );
+
+    update();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFeather);
+  } else {
+    initFeather();
+  }
+</script>
