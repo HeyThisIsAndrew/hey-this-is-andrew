@@ -37,25 +37,32 @@ const logoAsset = { src: logo.src, width: logo.width, height: logo.height, alt: 
       (function() {
         function applyNettaTheme(theme) {
           var isDark = theme === 'dark';
+          var resolved = isDark ? 'dark' : 'light';
           var chromeHex = isDark ? '#181310' : '#ffffff';
           var root = document.documentElement;
-          root.setAttribute('data-theme', isDark ? 'dark' : 'light');
-          root.style.colorScheme = isDark ? 'dark' : 'light';
-          root.style.setProperty('--chrome', chromeHex);
-          root.style.setProperty('--nav-bg', chromeHex);
-          root.style.setProperty('--page-bg', chromeHex);
+
+          root.setAttribute('data-theme', resolved);
+          root.style.colorScheme = resolved;
+          root.style.setProperty('--chrome', chromeHex, 'important');
+          root.style.setProperty('--nav-bg', chromeHex, 'important');
+          root.style.setProperty('--page-bg', chromeHex, 'important');
           root.style.backgroundColor = chromeHex;
-          var metas = document.querySelectorAll('meta[name="theme-color"]');
-          for (var i = 0; i < metas.length; i++) {
-            metas[i].setAttribute('content', chromeHex);
-            metas[i].removeAttribute('media');
+
+          var oldMetas = document.querySelectorAll('meta[name="theme-color"]');
+          for (var i = 0; i < oldMetas.length; i++) {
+            if (oldMetas[i].parentNode) {
+              oldMetas[i].parentNode.removeChild(oldMetas[i]);
+            }
           }
+          var meta = document.createElement('meta');
+          meta.name = 'theme-color';
+          meta.content = chromeHex;
+          document.head.appendChild(meta);
         }
         window.__applyNettaTheme = applyNettaTheme;
         try {
           var stored = localStorage.getItem('netta-theme');
-          var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          var initialTheme = stored ? stored : (systemDark ? 'dark' : 'light');
+          var initialTheme = (stored === 'dark' || stored === 'light') ? stored : 'light';
           applyNettaTheme(initialTheme);
         } catch (e) {
           applyNettaTheme('light');
@@ -107,16 +114,27 @@ const logoAsset = { src: logo.src, width: logo.width, height: logo.height, alt: 
             (window as any).__applyNettaTheme(next);
           } else {
             const chromeHex = next === 'dark' ? '#181310' : '#ffffff';
-            document.documentElement.setAttribute('data-theme', next);
-            document.documentElement.style.colorScheme = next;
-            document.documentElement.style.setProperty('--chrome', chromeHex);
-            document.documentElement.style.setProperty('--nav-bg', chromeHex);
-            document.documentElement.style.setProperty('--page-bg', chromeHex);
-            document.documentElement.style.backgroundColor = chromeHex;
+            const root = document.documentElement;
+            root.setAttribute('data-theme', next);
+            root.style.colorScheme = next;
+            root.style.setProperty('--chrome', chromeHex, 'important');
+            root.style.setProperty('--nav-bg', chromeHex, 'important');
+            root.style.setProperty('--page-bg', chromeHex, 'important');
+            root.style.backgroundColor = chromeHex;
+
+            const oldMetas = document.querySelectorAll('meta[name="theme-color"]');
+            for (let i = 0; i < oldMetas.length; i++) {
+              if (oldMetas[i].parentNode) {
+                oldMetas[i].parentNode!.removeChild(oldMetas[i]);
+              }
+            }
+            const meta = document.createElement('meta');
+            meta.name = 'theme-color';
+            meta.content = chromeHex;
+            document.head.appendChild(meta);
           }
           try {
             localStorage.setItem('netta-theme', next);
-            localStorage.setItem('theme', next);
           } catch (e) {}
           updateIcon();
         });

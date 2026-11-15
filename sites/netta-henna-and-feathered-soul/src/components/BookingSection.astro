@@ -74,7 +74,7 @@ import { SITE } from '../data/site';
 </div>
 
 <!-- Sticky Floating Calendar Icon Button (48x48 circle, icon only, hides when footer is in view) -->
-<div class="sticky-book-wrap" id="sticky-book-wrap" aria-hidden="true">
+<div class="sticky-book-wrap is-hidden" id="sticky-book-wrap" aria-hidden="true">
   <button
     type="button"
     class="sticky-book-icon-btn"
@@ -436,16 +436,24 @@ import { SITE } from '../data/site';
     text-align: center;
   }
 
-  /* ── Sticky Floating Calendar Icon Circle (48x48, icon only, safe-area padded & never overlapping cards/text) ── */
+  /* ── Sticky Floating Calendar Icon Circle (48x48, icon only, safe-area padded & floating cleanly) ── */
   .sticky-book-wrap {
     position: fixed;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
-    right: 1rem;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem);
+    right: 1.5rem;
     z-index: 95;
     display: flex;
     align-items: center;
-    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+
+  .sticky-book-wrap.is-hidden {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: translateY(24px) !important;
   }
 
   .sticky-book-wrap.is-hidden-footer {
@@ -482,8 +490,8 @@ import { SITE } from '../data/site';
 
   @media (max-width: 640px) {
     .sticky-book-wrap {
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
-      right: 0.75rem;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 1.25rem);
+      right: 1.25rem;
     }
     .booking-ornate-card {
       padding: 2.35rem 1.15rem;
@@ -1230,6 +1238,7 @@ import { SITE } from '../data/site';
     const dateInput = document.getElementById('book-date') as HTMLInputElement | null;
     const detailsSummary = document.getElementById('confirm-details-summary');
     const stickyWrap = document.getElementById('sticky-book-wrap');
+    const stickyBtn = document.getElementById('sticky-book-btn');
     const calToggleBtn = document.getElementById('cal-toggle-btn');
     const calToggleText = document.getElementById('cal-toggle-text');
     const calBlock = document.getElementById('modal-calendar-block');
@@ -1546,9 +1555,14 @@ import { SITE } from '../data/site';
       if (e.target === modal) closeModal();
     });
 
-    // Sticky book button visibility: hides when footer is in view
+    // Sticky book button visibility: exactly 3 states
+    // 1. Hidden in hero (scrollY <= 240)
+    // 2. Visible from scrollY > 240 down through services, gallery, price list, booking
+    // 3. Hidden when footer is in view (IntersectionObserver)
+    // 4. Hidden while booking modal is open (isLocked)
     const footer = document.getElementById('site-footer') || document.querySelector('footer');
     let isFooterVisible = false;
+    let scrollTicking = false;
 
     if (footer && 'IntersectionObserver' in window) {
       const footerObserver = new IntersectionObserver((entries) => {
@@ -1562,40 +1576,37 @@ import { SITE } from '../data/site';
 
     function updateStickyVisibility() {
       if (!stickyWrap) return;
-      const currentY = isLocked ? savedScrollY : window.scrollY;
+      const currentY = isLocked ? savedScrollY : (window.scrollY || window.pageYOffset || 0);
+      const shouldHide = currentY <= 240 || isFooterVisible || isLocked;
 
-      // Check if the floating 48x48 button at bottom-right would overlap any photo card, caption, text block, or interactive control
-      const btnLeft = window.innerWidth - 64;
-      const btnRight = window.innerWidth - 8;
-      const btnTop = window.innerHeight - 68;
-      const btnBottom = window.innerHeight - 8;
-
-      let overlapsContent = false;
-      const protectedEls = document.querySelectorAll(
-        '.gallery-item, .gallery-caption, .medallion-circle, .service-desc, .service-rate-badge, .btn-primary, .price-frame, .booking-ornate-card, footer'
-      );
-      for (let i = 0; i < protectedEls.length; i++) {
-        const r = protectedEls[i].getBoundingClientRect();
-        if (r.right > btnLeft && r.left < btnRight && r.bottom > btnTop && r.top < btnBottom) {
-          overlapsContent = true;
-          break;
+      if (shouldHide) {
+        stickyWrap.classList.add('is-hidden');
+        if (isFooterVisible) {
+          stickyWrap.classList.add('is-hidden-footer');
+        } else {
+          stickyWrap.classList.remove('is-hidden-footer');
         }
-      }
-
-      if (currentY > 240 && !isFooterVisible && !isLocked && !overlapsContent) {
-        stickyWrap.style.transform = 'translateY(0)';
-        stickyWrap.style.opacity = '1';
-        stickyWrap.style.pointerEvents = 'auto';
-        stickyWrap.removeAttribute('aria-hidden');
-      } else {
-        stickyWrap.style.transform = 'translateY(24px)';
-        stickyWrap.style.opacity = '0';
-        stickyWrap.style.pointerEvents = 'none';
         stickyWrap.setAttribute('aria-hidden', 'true');
+        stickyBtn?.setAttribute('tabindex', '-1');
+      } else {
+        stickyWrap.classList.remove('is-hidden');
+        stickyWrap.classList.remove('is-hidden-footer');
+        stickyWrap.removeAttribute('aria-hidden');
+        stickyBtn?.removeAttribute('tabindex');
       }
     }
 
-    window.addEventListener('scroll', updateStickyVisibility, { passive: true });
+    function onScrollThrottled() {
+      if (!scrollTicking) {
+        scrollTicking = true;
+        window.requestAnimationFrame(() => {
+          updateStickyVisibility();
+          scrollTicking = false;
+        });
+      }
+    }
+
+    window.addEventListener('scroll', onScrollThrottled, { passive: true });
     updateStickyVisibility();
 
     // Calendar dynamic logic inside modal
