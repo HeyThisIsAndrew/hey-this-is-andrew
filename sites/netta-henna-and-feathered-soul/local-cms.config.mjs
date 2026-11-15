@@ -36,28 +36,6 @@ export default {
       ],
     },
     {
-      name: 'availability',
-      label: 'Calendar Availability',
-      file: 'src/data/availability.json',
-      itemLabel: 'date',
-      idField: 'date',
-      help: 'Dates Netta is available or booked. Edit dates or add new ones.',
-      fields: [
-        { key: 'date', label: 'Date (YYYY-MM-DD)', type: 'date', required: true },
-        {
-          key: 'status',
-          label: 'Status',
-          type: 'select',
-          required: true,
-          options: [
-            { value: 'available', label: 'Available' },
-            { value: 'booked', label: 'Booked' },
-          ],
-        },
-        { key: 'note', label: 'Internal Note', type: 'text' },
-      ],
-    },
-    {
       name: 'posts',
       label: 'Posts',
       file: 'src/data/posts.json',

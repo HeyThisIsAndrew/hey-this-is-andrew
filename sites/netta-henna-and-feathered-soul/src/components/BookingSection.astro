@@ -1,73 +1,110 @@
 ---
 /**
  * BookingSection.astro
- * Mobile-first interactive booking calendar and accessible contact modal.
- * Reads availability from src/data/availability.json at build time.
- * Option C: Example dates marked TBD until Netta supplies live booking link or real availability.
+ * Booking flow for Netta Henna and Feathered Soul.
+ * Uses Google Calendar appointment scheduling (titled "Book Netta") with contact request modal fallback.
+ * No custom JSON availability file is used.
  * Punctuation hygiene: zero em dashes throughout.
  */
-import availabilityData from '../data/availability.json';
 
-interface AvailabilityEntry {
-  date: string;
-  status: 'available' | 'booked';
-  note?: string;
-}
-
-const availabilityList: AvailabilityEntry[] = availabilityData as AvailabilityEntry[];
+// TODO: Google Calendar appointment schedule URL from Netta (titled "Book Netta")
+// Example: https://calendar.google.com/calendar/appointments/schedules/...
+const GOOGLE_BOOKING_SCHEDULE_URL = '';
 ---
 
 <div class="booking-wrap" id="booking-interactive">
-  <div class="calendar-card">
-    <header class="calendar-header">
-      <div class="calendar-nav">
-        <button type="button" class="cal-nav-btn" id="cal-prev-btn" aria-label="Previous month">
-          &larr;
-        </button>
-        <h3 class="calendar-month-heading" id="cal-month-title" aria-live="polite">
-          Loading month...
-        </h3>
-        <button type="button" class="cal-nav-btn" id="cal-next-btn" aria-label="Next month">
-          &rarr;
-        </button>
-      </div>
-      <p class="calendar-subtext">
-        Pick an available date below to open the booking request form.
+  <!-- Google Calendar Appointment Schedule: "Book Netta" -->
+  <div class="booking-schedule-card">
+    <div class="schedule-head">
+      <span class="schedule-badge font-mono">Google Calendar</span>
+      <h3 class="schedule-title">Book Netta</h3>
+      <p class="schedule-subtext">
+        Direct booking via Netta's Google Calendar appointment schedule.
       </p>
-    </header>
-
-    <div class="calendar-weekdays" aria-hidden="true">
-      <span>Sun</span>
-      <span>Mon</span>
-      <span>Tue</span>
-      <span>Wed</span>
-      <span>Thu</span>
-      <span>Fri</span>
-      <span>Sat</span>
     </div>
 
-    <div class="calendar-grid" id="calendar-grid" role="grid" aria-labelledby="cal-month-title">
-      <!-- Days populated by client-side script -->
+    {GOOGLE_BOOKING_SCHEDULE_URL ? (
+      <div class="google-calendar-embed">
+        <iframe
+          src={GOOGLE_BOOKING_SCHEDULE_URL}
+          style="border: 0"
+          width="100%"
+          height="600"
+          title="Book Netta on Google Calendar"
+        ></iframe>
+      </div>
+    ) : (
+      <div class="schedule-pending-box">
+        <p class="pending-tag font-mono">Appointment Schedule Pending</p>
+        <p class="pending-desc">
+          TODO: Waiting for Netta to provide her Google Calendar appointment schedule link (titled "Book Netta"). No third-party accounts (no Cal.com, no Calendly).
+        </p>
+        <div class="schedule-flow-steps">
+          <div class="flow-step">
+            <span class="flow-num font-mono">1</span>
+            <span class="flow-text">Pick your service in the booking request modal.</span>
+          </div>
+          <div class="flow-step">
+            <span class="flow-num font-mono">2</span>
+            <span class="flow-text">Pick an available date and time on Netta's calendar.</span>
+          </div>
+          <div class="flow-step">
+            <span class="flow-num font-mono">3</span>
+            <span class="flow-text">Netta receives your appointment directly in her Google Calendar.</span>
+          </div>
+        </div>
+      </div>
+    )}
+
+    <div class="calendar-preview-block">
+      <header class="calendar-header">
+        <div class="calendar-nav">
+          <button type="button" class="cal-nav-btn" id="cal-prev-btn" aria-label="Previous month">
+            &larr;
+          </button>
+          <h4 class="calendar-month-heading" id="cal-month-title" aria-live="polite">
+            Loading month...
+          </h4>
+          <button type="button" class="cal-nav-btn" id="cal-next-btn" aria-label="Next month">
+            &rarr;
+          </button>
+        </div>
+        <p class="calendar-subtext">
+          Select a date to request an appointment. Past dates are not selectable.
+        </p>
+      </header>
+
+      <div class="calendar-weekdays" aria-hidden="true">
+        <span>Sun</span>
+        <span>Mon</span>
+        <span>Tue</span>
+        <span>Wed</span>
+        <span>Thu</span>
+        <span>Fri</span>
+        <span>Sat</span>
+      </div>
+
+      <div class="calendar-grid" id="calendar-grid" role="grid" aria-labelledby="cal-month-title">
+        <!-- Days populated dynamically by client-side script -->
+      </div>
+
+      <footer class="calendar-footer">
+        <div class="calendar-legend">
+          <span class="legend-item"><span class="legend-swatch legend-available"></span> Selectable Date</span>
+          <span class="legend-item"><span class="legend-swatch legend-past"></span> Past Date</span>
+        </div>
+        <p class="calendar-disclaimer">
+          This is a request system, not live booking. Netta will confirm your date.
+        </p>
+      </footer>
     </div>
 
-    <footer class="calendar-footer">
-      <div class="calendar-legend">
-        <span class="legend-item"><span class="legend-swatch legend-available"></span> Available</span>
-        <span class="legend-item"><span class="legend-swatch legend-booked"></span> Booked</span>
-        <span class="legend-item"><span class="legend-swatch legend-unavailable"></span> Unavailable</span>
-      </div>
-      <p class="calendar-disclaimer">
-        This is a request system, not live booking. Netta will confirm your date.
-        <span class="tbd-note">(Example dates shown for demonstration. Availability TBD from Netta.)</span>
-      </p>
-    </footer>
-  </div>
-
-  <div class="direct-request-box">
-    <p class="direct-request-text">Looking for a specific date or have questions?</p>
-    <button type="button" class="btn btn-secondary" id="open-modal-direct-btn">
-      Open Booking Form
-    </button>
+    <div class="direct-request-box">
+      <p class="direct-request-text">Ready to request a booking or have questions?</p>
+      <button type="button" class="btn btn-secondary" id="open-modal-direct-btn">
+        Open Booking Form
+      </button>
+    </div>
   </div>
 </div>
 
@@ -129,7 +166,7 @@ const availabilityList: AvailabilityEntry[] = availabilityData as AvailabilityEn
       <div class="confirm-icon" aria-hidden="true">&#10003;</div>
       <h3 class="confirm-title" role="status" aria-live="polite">Request sent. Netta will confirm your date.</h3>
       <p class="confirm-desc">
-        Thank you! Your request details have been recorded. Netta will contact you via your provided contact information to confirm your date and finalize details.
+        Thank you. Your request details have been recorded. Netta will contact you via your provided contact information to confirm your date and finalize details.
       </p>
       <div class="confirm-details" id="confirm-details-summary"></div>
       <button type="button" class="btn btn-secondary" id="confirm-close-btn">
@@ -139,25 +176,104 @@ const availabilityList: AvailabilityEntry[] = availabilityData as AvailabilityEn
   </div>
 </dialog>
 
-<!-- Availability Data for Client Script -->
-<script type="application/json" id="availability-raw" set:html={JSON.stringify(availabilityList)} />
-
 <style>
   .booking-wrap {
     max-width: 680px;
     margin: 0 auto;
   }
 
-  .calendar-card {
+  .booking-schedule-card {
     background: var(--surface, #111111);
     border: 1px solid var(--hairline, #222222);
     padding: 1.5rem;
   }
 
   @media (max-width: 480px) {
-    .calendar-card {
+    .booking-schedule-card {
       padding: 1rem 0.75rem;
     }
+  }
+
+  .schedule-head {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--hairline, #222222);
+  }
+
+  .schedule-badge {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    color: var(--brand, #c86446);
+    letter-spacing: 0.05em;
+    display: inline-block;
+    margin-bottom: 0.25rem;
+  }
+
+  .schedule-title {
+    margin: 0 0 0.35rem;
+    font-family: var(--font-display, Syne, sans-serif);
+    font-size: 1.4rem;
+    color: var(--white, #f0f0f0);
+  }
+
+  .schedule-subtext {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--muted, #888888);
+  }
+
+  .schedule-pending-box {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed var(--hairline, #333333);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .pending-tag {
+    margin: 0 0 0.5rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--brand, #c86446);
+    letter-spacing: 0.05em;
+  }
+
+  .pending-desc {
+    margin: 0 0 1rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: #aaaaaa;
+  }
+
+  .schedule-flow-steps {
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  .flow-step {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.82rem;
+    color: var(--white, #f0f0f0);
+  }
+
+  .flow-num {
+    width: 22px;
+    height: 22px;
+    background: rgba(200, 100, 70, 0.15);
+    border: 1px solid var(--brand, #c86446);
+    color: var(--brand, #c86446);
+    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .calendar-preview-block {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--hairline, #222222);
   }
 
   .calendar-header {
@@ -174,7 +290,7 @@ const availabilityList: AvailabilityEntry[] = availabilityData as AvailabilityEn
   .calendar-month-heading {
     margin: 0;
     font-family: var(--font-display, Syne, sans-serif);
-    font-size: 1.25rem;
+    font-size: 1.15rem;
     font-weight: 700;
     color: var(--white, #f0f0f0);
     letter-spacing: 0.05em;
@@ -252,41 +368,22 @@ const availabilityList: AvailabilityEntry[] = availabilityData as AvailabilityEn
   :global(.cal-day.is-past) {
     color: #444444;
     text-decoration: line-through;
-    opacity: 0.4;
-  }
-
-  :global(.cal-day.is-unavailable) {
-    color: #555555;
-    background: rgba(255, 255, 255, 0.015);
-  }
-
-  :global(.cal-day.is-booked) {
-    color: #777777;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px dashed #333333;
-    opacity: 0.65;
-  }
-
-  :global(.cal-day.is-booked)::after {
-    content: 'Booked';
-    font-size: 0.55rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #777777;
-    margin-top: 2px;
+    opacity: 0.35;
+    pointer-events: none;
   }
 
   :global(.cal-day.is-available) {
     background: rgba(200, 100, 70, 0.08);
-    border: 1px solid var(--brand, #c86446);
+    border: 1px solid var(--hairline, #333333);
     color: var(--white, #f0f0f0);
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
-    transition: transform 120ms ease, background 120ms ease, color 120ms ease;
+    transition: transform 120ms ease, background 120ms ease, color 120ms ease, border-color 120ms ease;
   }
 
   :global(.cal-day.is-available:hover) {
     background: var(--brand, #c86446);
+    border-color: var(--brand, #c86446);
     color: #ffffff;
     transform: scale(1.04);
   }
@@ -325,17 +422,13 @@ const availabilityList: AvailabilityEntry[] = availabilityData as AvailabilityEn
 
   .legend-available {
     background: rgba(200, 100, 70, 0.15);
-    border: 1px solid var(--brand, #c86446);
+    border: 1px solid var(--hairline, #444444);
   }
 
-  .legend-booked {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px dashed #555555;
-  }
-
-  .legend-unavailable {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid #333333;
+  .legend-past {
+    background: transparent;
+    border: 1px solid #444444;
+    text-decoration: line-through;
   }
 
   .calendar-disclaimer {
@@ -343,12 +436,6 @@ const availabilityList: AvailabilityEntry[] = availabilityData as AvailabilityEn
     font-size: 0.75rem;
     line-height: 1.4;
     color: var(--muted, #888888);
-  }
-
-  .tbd-note {
-    display: block;
-    color: #666666;
-    margin-top: 0.2rem;
   }
 
   .direct-request-box {
@@ -589,14 +676,7 @@ const availabilityList: AvailabilityEntry[] = availabilityData as AvailabilityEn
 </style>
 
 <script>
-  interface AvailabilityEntry {
-    date: string;
-    status: 'available' | 'booked';
-    note?: string;
-  }
-
   function initBookingCalendar() {
-    const rawDataEl = document.getElementById('availability-raw');
     const calendarGrid = document.getElementById('calendar-grid');
     const monthTitle = document.getElementById('cal-month-title');
     const prevBtn = document.getElementById('cal-prev-btn');
@@ -611,25 +691,11 @@ const availabilityList: AvailabilityEntry[] = availabilityData as AvailabilityEn
     const confirmDetails = document.getElementById('confirm-details-summary');
     const confirmCloseBtn = document.getElementById('confirm-close-btn');
 
-    let availabilityMap: Record<string, 'available' | 'booked'> = {};
-    if (rawDataEl && rawDataEl.textContent) {
-      try {
-        const list: AvailabilityEntry[] = JSON.parse(rawDataEl.textContent);
-        list.forEach((item) => {
-          availabilityMap[item.date] = item.status;
-        });
-      } catch (err) {
-        console.warn('Could not parse availability data', err);
-      }
-    }
-
     // Default viewing month: November 2026 (matching brief context) or current month
     const today = new Date();
-    // Default to November 2026
     let viewYear = 2026;
     let viewMonth = 10; // 0-indexed: 10 is November
 
-    // If today is after Nov 2026, use today
     if (today.getFullYear() > 2026 || (today.getFullYear() === 2026 && today.getMonth() > 10)) {
       viewYear = today.getFullYear();
       viewMonth = today.getMonth();
@@ -667,26 +733,18 @@ const availabilityList: AvailabilityEntry[] = availabilityData as AvailabilityEn
         dayBtn.setAttribute('data-date', dateStr);
 
         const isPast = dateStr < todayStr;
-        const status = availabilityMap[dateStr];
 
         if (isPast) {
           dayBtn.classList.add('is-past');
           dayBtn.setAttribute('aria-disabled', 'true');
-          dayBtn.title = 'Past date';
-        } else if (status === 'available') {
+          dayBtn.setAttribute('disabled', 'true');
+          dayBtn.title = 'Past date (not selectable)';
+        } else {
           dayBtn.classList.add('is-available');
-          dayBtn.setAttribute('aria-label', `${monthNames[viewMonth]} ${day}, ${viewYear} - Available, click to request date`);
+          dayBtn.setAttribute('aria-label', `${monthNames[viewMonth]} ${day}, ${viewYear} - Select date to request booking`);
           dayBtn.addEventListener('click', () => {
             selectDateAndOpenModal(dateStr);
           });
-        } else if (status === 'booked') {
-          dayBtn.classList.add('is-booked');
-          dayBtn.setAttribute('aria-disabled', 'true');
-          dayBtn.title = 'Already booked';
-        } else {
-          dayBtn.classList.add('is-unavailable');
-          dayBtn.setAttribute('aria-disabled', 'true');
-          dayBtn.title = 'Unavailable';
         }
 
         calendarGrid.appendChild(dayBtn);
@@ -760,7 +818,6 @@ const availabilityList: AvailabilityEntry[] = availabilityData as AvailabilityEn
     }
 
     if (modal) {
-      // Close on backdrop click
       modal.addEventListener('click', (e) => {
         const rect = modal.getBoundingClientRect();
         const isInDialog = (
