@@ -67,11 +67,7 @@ export const NAV_LINKS: NavItem[] = [
     label: 'Services',
     href: `${homeUrl}#services`,
     section: 'services',
-    subsections: [
-      { label: 'Henna Art', href: `${homeUrl}#services`, kicker: '01' },
-      { label: 'Hair Feathers', href: `${homeUrl}#services`, kicker: '02' },
-      { label: 'Hair Tinsel', href: `${homeUrl}#services`, kicker: '03' },
-    ],
+    subsections: [],
   },
   {
     label: 'Price List',
