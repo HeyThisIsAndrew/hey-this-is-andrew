@@ -1,15 +1,26 @@
 ---
 /**
- * FeatherParallax: site-local subtle feather scroll effect.
- * Only covers the Hero and Services section.
+ * FeatherParallax.astro
+ * Visible, organic dual feather parallax effect.
+ * Hero and Services section only.
+ * Larger sizes (180-250px desktop, 120-140px mobile), prominent opacity (0.7-0.78),
+ * at least 300px vertical travel on scroll, rotation, and slow fade.
+ * Visible on load before scrolling.
  * Respects prefers-reduced-motion. Pointer events none, zero legibility impact.
  */
-import featherSvg from '../assets/feather.svg?raw';
+import feather1Svg from '../assets/feather.svg?raw';
+import feather2Svg from '../assets/feather-2.svg?raw';
 ---
 
 <div class="feather-layer" aria-hidden="true" data-feather-layer>
-  <div class="feather-graphic" data-feather>
-    <Fragment set:html={featherSvg} />
+  <!-- Feather 1: Upper right (Terracotta & Gold) - Visible in hero on first load -->
+  <div class="feather-item feather-one" data-feather="1">
+    <Fragment set:html={feather1Svg} />
+  </div>
+
+  <!-- Feather 2: Mid-left (Sage & Grizzly) - Transitions between Hero and Services -->
+  <div class="feather-item feather-two" data-feather="2">
+    <Fragment set:html={feather2Svg} />
   </div>
 </div>
 
@@ -22,62 +33,102 @@ import featherSvg from '../assets/feather.svg?raw';
     z-index: 1;
   }
 
-  .feather-graphic {
-    position: sticky;
-    top: 15vh;
-    left: calc(100% - 140px);
-    width: 100px;
-    height: 240px;
-    opacity: 0.35;
-    transform: translate3d(0, 0, 0) rotate(12deg);
-    transition: opacity 200ms linear;
+  .feather-item {
+    position: absolute;
     will-change: transform, opacity;
+    filter: drop-shadow(0 12px 24px rgba(100, 60, 40, 0.12));
+  }
+
+  .feather-item :global(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* Feather 1 (Top right) */
+  .feather-one {
+    top: 5vh;
+    right: clamp(10px, 3vw, 50px);
+    width: clamp(180px, 17vw, 250px);
+    opacity: 0.78;
+    transform: translate3d(0, 0, 0) rotate(16deg);
+  }
+
+  /* Feather 2 (Mid-left) */
+  .feather-two {
+    top: 52vh;
+    left: clamp(10px, 2.5vw, 40px);
+    width: clamp(180px, 15vw, 220px);
+    opacity: 0.72;
+    transform: translate3d(0, 0, 0) rotate(-18deg);
   }
 
   @media (max-width: 640px) {
-    .feather-graphic {
-      left: calc(100% - 80px);
-      width: 70px;
-      height: 168px;
-      opacity: 0.22;
+    .feather-one {
+      top: 1vh;
+      right: -25px;
+      width: 120px;
+      opacity: 0.75;
+    }
+
+    .feather-two {
+      top: 58vh;
+      left: -20px;
+      width: 120px;
+      opacity: 0.7;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .feather-graphic {
+    .feather-item {
       transform: none !important;
-      opacity: 0.25 !important;
+      opacity: 0.65 !important;
       will-change: auto !important;
     }
   }
 </style>
 
 <script>
-  function initFeather() {
+  function initFeatherParallax() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       return;
     }
 
     const layer = document.querySelector('[data-feather-layer]');
-    const feather = document.querySelector('[data-feather]') as HTMLElement | null;
-    if (!layer || !feather) return;
+    const feather1 = document.querySelector('[data-feather="1"]') as HTMLElement | null;
+    const feather2 = document.querySelector('[data-feather="2"]') as HTMLElement | null;
+    if (!layer || (!feather1 && !feather2)) return;
 
     const targetLayer: Element = layer;
-    const targetFeather: HTMLElement = feather;
+    const f1: HTMLElement | null = feather1;
+    const f2: HTMLElement | null = feather2;
     let ticking = false;
 
     function update() {
       const rect = targetLayer.getBoundingClientRect();
-      const scrollProgress = Math.max(0, Math.min(1, -rect.top / (rect.height - window.innerHeight)));
+      const scrollHeight = rect.height - window.innerHeight;
+      const progress = scrollHeight > 0 ? Math.max(0, Math.min(1, -rect.top / scrollHeight)) : 0;
 
-      // Drifts down and slightly sideways with a slow fade
-      const translateY = scrollProgress * 120;
-      const translateX = scrollProgress * -40;
-      const rotation = 12 + scrollProgress * 18;
-      const opacity = Math.max(0, 0.38 - scrollProgress * 0.3);
+      // Feather 1: drifts down by 350px, sways left by -65px, rotates +18deg, fades from 0.78 to 0.25
+      if (f1) {
+        const y1 = progress * 350;
+        const x1 = progress * -65;
+        const rot1 = 16 + progress * 20;
+        const op1 = Math.max(0.2, 0.78 - progress * 0.58);
+        f1.style.transform = `translate3d(${x1}px, ${y1}px, 0) rotate(${rot1}deg)`;
+        f1.style.opacity = `${op1}`;
+      }
 
-      targetFeather.style.transform = `translate3d(${translateX}px, ${translateY}px, 0) rotate(${rotation}deg)`;
-      targetFeather.style.opacity = `${opacity}`;
+      // Feather 2: drifts down by 360px, sways right by +50px, rotates from -18deg towards -2deg, fades from 0.72 to 0.2
+      if (f2) {
+        const y2 = progress * 360;
+        const x2 = progress * 50;
+        const rot2 = -18 + progress * 16;
+        const op2 = Math.max(0.18, 0.72 - progress * 0.54);
+        f2.style.transform = `translate3d(${x2}px, ${y2}px, 0) rotate(${rot2}deg)`;
+        f2.style.opacity = `${op2}`;
+      }
+
       ticking = false;
     }
 
@@ -96,8 +147,8 @@ import featherSvg from '../assets/feather.svg?raw';
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initFeather);
+    document.addEventListener('DOMContentLoaded', initFeatherParallax);
   } else {
-    initFeather();
+    initFeatherParallax();
   }
 </script>
