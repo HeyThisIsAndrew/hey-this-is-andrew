@@ -32,19 +32,36 @@ const logoAsset = { src: logo.src, width: logo.width, height: logo.height, alt: 
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <ChromeMeta color="#181310" lightColor="#ffffff" />
     <script is:inline>
       (function() {
+        function applyNettaTheme(theme) {
+          var isDark = theme === 'dark';
+          var chromeHex = isDark ? '#181310' : '#ffffff';
+          var root = document.documentElement;
+          root.setAttribute('data-theme', isDark ? 'dark' : 'light');
+          root.style.colorScheme = isDark ? 'dark' : 'light';
+          root.style.setProperty('--chrome', chromeHex);
+          root.style.setProperty('--nav-bg', chromeHex);
+          root.style.setProperty('--page-bg', chromeHex);
+          root.style.backgroundColor = chromeHex;
+          var metas = document.querySelectorAll('meta[name="theme-color"]');
+          for (var i = 0; i < metas.length; i++) {
+            metas[i].setAttribute('content', chromeHex);
+            metas[i].removeAttribute('media');
+          }
+        }
+        window.__applyNettaTheme = applyNettaTheme;
         try {
-          const stored = localStorage.getItem('netta-theme');
-          const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          const theme = stored ? stored : (systemDark ? 'dark' : 'light');
-          document.documentElement.setAttribute('data-theme', theme);
+          var stored = localStorage.getItem('netta-theme');
+          var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var initialTheme = stored ? stored : (systemDark ? 'dark' : 'light');
+          applyNettaTheme(initialTheme);
         } catch (e) {
-          document.documentElement.setAttribute('data-theme', 'light');
+          applyNettaTheme('light');
         }
       })();
     </script>
-    <ChromeMeta color="#181310" lightColor="#faf6ee" />
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
@@ -86,14 +103,30 @@ const logoAsset = { src: logo.src, width: logo.width, height: logo.height, alt: 
         btn.addEventListener('click', () => {
           const current = document.documentElement.getAttribute('data-theme') || 'light';
           const next = current === 'dark' ? 'light' : 'dark';
-          document.documentElement.setAttribute('data-theme', next);
+          if (typeof (window as any).__applyNettaTheme === 'function') {
+            (window as any).__applyNettaTheme(next);
+          } else {
+            const chromeHex = next === 'dark' ? '#181310' : '#ffffff';
+            document.documentElement.setAttribute('data-theme', next);
+            document.documentElement.style.colorScheme = next;
+            document.documentElement.style.setProperty('--chrome', chromeHex);
+            document.documentElement.style.setProperty('--nav-bg', chromeHex);
+            document.documentElement.style.setProperty('--page-bg', chromeHex);
+            document.documentElement.style.backgroundColor = chromeHex;
+          }
           try {
             localStorage.setItem('netta-theme', next);
+            localStorage.setItem('theme', next);
           } catch (e) {}
           updateIcon();
         });
 
         updateIcon();
+        const themeObserver = new MutationObserver(() => updateIcon());
+        themeObserver.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ['data-theme'],
+        });
         rightActions.insertBefore(btn, rightActions.firstChild);
       }
 

@@ -3,8 +3,9 @@
  * FeatherParallax.astro
  * Organic feather parallax incorporating the vibrant turquoise blue feather
  * directly from Netta's logo, alongside warm gold and natural brown feathers.
- * Now visible for the entire scroll of the site.
- * Respects prefers-reduced-motion. Pointer events none, zero legibility impact.
+ * Visible and active across mobile (390px), iPad (820px), and desktop (1440px).
+ * Responsive widths, high visibility (0.5 to 0.8 opacity), dynamic travel (>= 300px),
+ * and full prefers-reduced-motion support. Pointer events none, zero legibility impact.
  */
 import featherBlueSvg from '../assets/feather-blue.svg?raw';
 import featherGoldSvg from '../assets/feather.svg?raw';
@@ -37,19 +38,20 @@ import featherBrownSvg from '../assets/feather-2.svg?raw';
   .feather-layer {
     position: fixed;
     inset: 0;
-    pointer-events: none;
+    pointer-events: none !important;
     overflow: hidden;
     z-index: 0;
   }
 
   .feather-item {
     position: absolute;
+    pointer-events: none !important;
     will-change: transform, opacity;
-    filter: drop-shadow(0 12px 24px rgba(61, 40, 23, 0.1));
+    filter: drop-shadow(0 12px 24px rgba(61, 40, 23, 0.12));
   }
 
   :global([data-theme="dark"]) .feather-item {
-    filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.5));
+    filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.55));
   }
 
   .feather-item :global(svg) {
@@ -58,45 +60,95 @@ import featherBrownSvg from '../assets/feather-2.svg?raw';
     height: auto;
   }
 
-  /* Feather 1: Turquoise Blue (Top right) */
+  /* ── Desktop Default (>= 1025px, e.g. 1440px) ── */
+  /* Width clamp 140px to 190px, opacity 0.6 to 0.8 */
   .feather-one {
-    top: 8vh;
-    right: clamp(20px, 3.5vw, 60px);
-    width: clamp(140px, 13vw, 190px);
-    opacity: 0.14;
+    top: 6vh;
+    right: clamp(16px, 3.5vw, 60px);
+    width: clamp(140px, 12vw, 190px);
+    opacity: 0.75;
     transform: rotate(16deg);
   }
 
-  /* Feather 2: Warm Gold (Mid-left) */
   .feather-two {
-    top: 38vh;
-    left: clamp(20px, 2.5vw, 40px);
-    width: clamp(130px, 12vw, 175px);
-    opacity: 0.14;
+    top: 32vh;
+    left: clamp(16px, 2.5vw, 40px);
+    width: clamp(130px, 11vw, 175px);
+    opacity: 0.72;
     transform: rotate(-18deg);
   }
 
-  /* Feather 3: Warm Brown Grizzly (Mid-right) */
   .feather-three {
-    top: 65vh;
-    right: clamp(20px, 3.5vw, 60px);
-    width: clamp(120px, 11vw, 165px);
-    opacity: 0.14;
+    top: 55vh;
+    right: clamp(16px, 3.5vw, 60px);
+    width: clamp(125px, 11vw, 165px);
+    opacity: 0.72;
     transform: rotate(12deg);
   }
 
-  /* Feather 4: Soft Turquoise (Mid-low left, well above footer) */
   .feather-four {
-    top: 66vh;
-    left: clamp(20px, 2.5vw, 40px);
-    width: clamp(90px, 8vw, 115px);
-    opacity: 0.12;
+    top: 72vh;
+    left: clamp(16px, 2.5vw, 40px);
+    width: clamp(115px, 9vw, 145px);
+    opacity: 0.68;
     transform: rotate(-24deg);
   }
 
+  /* ── iPad Tablet (641px - 1024px, e.g. 820px) ── */
+  /* Width clamp 120px to 160px, opacity 0.6 to 0.7 */
+  @media (max-width: 1024px) {
+    .feather-one {
+      top: 5vh;
+      right: clamp(12px, 3vw, 36px);
+      width: clamp(120px, 15vw, 160px);
+      opacity: 0.68;
+    }
+    .feather-two {
+      top: 30vh;
+      left: clamp(12px, 2.5vw, 30px);
+      width: clamp(115px, 14vw, 150px);
+      opacity: 0.65;
+    }
+    .feather-three {
+      top: 52vh;
+      right: clamp(12px, 3vw, 36px);
+      width: clamp(110px, 13vw, 145px);
+      opacity: 0.66;
+    }
+    .feather-four {
+      top: 70vh;
+      left: clamp(12px, 2.5vw, 30px);
+      width: clamp(100px, 12vw, 135px);
+      opacity: 0.62;
+    }
+  }
+
+  /* ── Mobile Phone (<= 640px, e.g. 390px) ── */
+  /* Width clamp 90px to 130px, opacity 0.5 to 0.6 */
   @media (max-width: 640px) {
-    .feather-layer {
-      display: none !important;
+    .feather-one {
+      top: 4vh;
+      right: 6px;
+      width: clamp(90px, 26vw, 125px);
+      opacity: 0.58;
+    }
+    .feather-two {
+      top: 28vh;
+      left: 6px;
+      width: clamp(85px, 24vw, 115px);
+      opacity: 0.55;
+    }
+    .feather-three {
+      top: 52vh;
+      right: 6px;
+      width: clamp(85px, 24vw, 115px);
+      opacity: 0.56;
+    }
+    .feather-four {
+      top: 70vh;
+      left: 6px;
+      width: clamp(80px, 22vw, 110px);
+      opacity: 0.52;
     }
   }
 
@@ -128,33 +180,34 @@ import featherBrownSvg from '../assets/feather-2.svg?raw';
       const docHeight = document.documentElement.scrollHeight - window.innerHeight;
       const progress = docHeight > 0 ? Math.min(1, Math.max(0, scrollY / docHeight)) : 0;
 
-      // Gentle floating cycle across the entire document scroll
+      // Each feather travels >= 300px over the full page scroll at distinct speeds
+      // Feathers 1 & 3 move downwards; Feathers 2 & 4 move upwards (separating continuously)
       if (feather1) {
-        const y = progress * 160;
-        const x = Math.sin(progress * Math.PI) * -25;
-        const rot = 16 + progress * 12;
-        feather1.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${rot}deg)`;
+        const y1 = progress * 380; // 380px travel down
+        const x1 = Math.sin(progress * Math.PI) * -30;
+        const rot1 = 16 + progress * 12;
+        feather1.style.transform = `translate3d(${x1}px, ${y1}px, 0) rotate(${rot1}deg)`;
       }
 
       if (feather2) {
-        const y = progress * -120;
-        const x = Math.sin(progress * Math.PI) * 30;
-        const rot = -18 + progress * 14;
-        feather2.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${rot}deg)`;
+        const y2 = progress * -320; // 320px travel up
+        const x2 = Math.sin(progress * Math.PI) * 28;
+        const rot2 = -18 + progress * 14;
+        feather2.style.transform = `translate3d(${x2}px, ${y2}px, 0) rotate(${rot2}deg)`;
       }
 
       if (feather3) {
-        const y = progress * 140;
-        const x = Math.cos(progress * Math.PI) * -20;
-        const rot = 12 + progress * 10;
-        feather3.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${rot}deg)`;
+        const y3 = progress * 350; // 350px travel down
+        const x3 = Math.cos(progress * Math.PI) * -25;
+        const rot3 = 12 + progress * 10;
+        feather3.style.transform = `translate3d(${x3}px, ${y3}px, 0) rotate(${rot3}deg)`;
       }
 
       if (feather4) {
-        const y = progress * -100;
-        const x = Math.sin(progress * Math.PI) * -25;
-        const rot = -24 + progress * 16;
-        feather4.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${rot}deg)`;
+        const y4 = progress * -330; // 330px travel up
+        const x4 = Math.sin(progress * Math.PI) * -28;
+        const rot4 = -24 + progress * 14;
+        feather4.style.transform = `translate3d(${x4}px, ${y4}px, 0) rotate(${rot4}deg)`;
       }
 
       ticking = false;
