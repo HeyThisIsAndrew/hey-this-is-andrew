@@ -26,7 +26,23 @@ corepack pnpm --filter netta-henna-and-feathered-soul build
 
 ## Deployment
 
-Deploy independently to Cloudflare Pages or Netlify.
-- **Root directory**: `sites/netta-henna-and-feathered-soul`
-- **Build command**: `pnpm install && pnpm run build`
-- **Output directory**: `dist`
+Cloudflare Pages project `netta-henna-and-feathered-soul`, connected to this repo
+(production branch `main`). This site depends on `workspace:*` packages, so the
+build runs from the repo root:
+
+- **Framework preset**: None
+- **Root directory**: *(leave blank, repo root)*
+- **Build command**: `pnpm --filter netta-henna-and-feathered-soul build`
+- **Build output directory**: `sites/netta-henna-and-feathered-soul/dist`
+- **Build watch paths (include)**: `sites/netta-henna-and-feathered-soul/*`, `packages/*`, `pnpm-lock.yaml`
+
+Production environment variables:
+
+| Name | Value |
+| --- | --- |
+| `NODE_VERSION` | `22` (Astro 7 needs Node >= 22.12; the repo requires >= 22.15, so 20 fails) |
+| `BASE_PATH` | `/` |
+| `SITE_URL` | `https://netta-henna-and-feathered-soul.pages.dev` |
+
+Leave `SITE_URL` unset for Preview so preview builds fall back to `CF_PAGES_URL`.
+Cloudflare installs dependencies automatically from the root `pnpm-lock.yaml`.
