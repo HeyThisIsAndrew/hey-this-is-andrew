@@ -17,6 +17,14 @@ export const SITE = {
   copyright: '© 2026 Netta Henna and Feathered Soul. All rights reserved.',
 };
 
+export const BOOKING_DELIVERY = {
+  // Configured submission endpoint for appointment requests (Formspree free tier or custom endpoint).
+  // Sends an immediate email notification to Netta with customer name, phone (tap-to-text),
+  // selected services, preferred date and time, and notes.
+  endpoint: 'https://formspree.io/f/mqaeovgq',
+  serviceName: 'Formspree Free Tier (Direct Email Notification)',
+};
+
 export const HOME_SECTIONS = [
   { id: 'overview', label: 'Home' },
   { id: 'services', label: 'Services' },

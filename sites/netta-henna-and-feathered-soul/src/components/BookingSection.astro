@@ -12,7 +12,7 @@
  * - Full iOS Safari-safe background scroll & interaction lock (locks body at current scrollY, marks background inert, restores exact scrollY on X, backdrop tap, or Escape)
  * - Zero em dashes, zero horizontal modal scroll
  */
-import { SITE } from '../data/site';
+import { SITE, BOOKING_DELIVERY } from '../data/site';
 ---
 
 <!-- On-Page Booking Section Card (Content section: centered) -->
@@ -35,7 +35,7 @@ import { SITE } from '../data/site';
       <span class="booking-kicker">✦ Santa Barbara, CA ✦</span>
       <h2 id="booking-heading" class="booking-title gold-script-text">Book an Appointment</h2>
       <p class="booking-desc">
-        Ready for a little boho magic? Book your henna, hair feathers, or hair tinsel appointment today!
+        Ready for a little boho magic? Book your henna, hair feathers, or hair tinsel appointment today! Tell Netta what you would like and when, and she will text you to confirm.
       </p>
 
       <div class="booking-actions-row">
@@ -73,7 +73,7 @@ import { SITE } from '../data/site';
   </div>
 </div>
 
-<!-- Sticky Floating Calendar Icon Button (48x48 circle, icon only, hides when footer is in view) -->
+<!-- Sticky Floating Appointment Button (48x48 circle, appointment chat icon, hides when footer is in view) -->
 <div class="sticky-book-wrap is-hidden" id="sticky-book-wrap" aria-hidden="true">
   <button
     type="button"
@@ -84,10 +84,7 @@ import { SITE } from '../data/site';
     title="Book a date"
   >
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-      <line x1="16" y1="2" x2="16" y2="6"></line>
-      <line x1="8" y1="2" x2="8" y2="6"></line>
-      <line x1="3" y1="10" x2="21" y2="10"></line>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
     </svg>
   </button>
 </div>
@@ -132,24 +129,40 @@ import { SITE } from '../data/site';
       </div>
 
       <!-- Appointment Form -->
-      <form id="booking-request-form" class="booking-form">
-        <!-- Row 1: Name & Contact (Stacked full-width on mobile, 2-col on desktop) -->
+      <form id="booking-request-form" class="booking-form" data-endpoint={BOOKING_DELIVERY.endpoint} novalidate>
+        <!-- Row 1: Name & Phone Number (Mandatory) -->
         <div class="form-grid">
           <div class="form-group">
             <label for="book-name">Your Name <span class="req" aria-hidden="true">*</span></label>
             <input type="text" id="book-name" name="name" required placeholder="First and last name" autocomplete="name" />
+            <p class="field-error-msg" id="name-error-msg" hidden></p>
           </div>
 
           <div class="form-group">
-            <label for="book-contact">Instagram or Email <span class="req" aria-hidden="true">*</span></label>
-            <input type="text" id="book-contact" name="contact" required placeholder="@handle or email" />
+            <label for="book-phone">Phone number <span class="req" aria-hidden="true">*</span></label>
+            <input type="tel" id="book-phone" name="phone" required autocomplete="tel" inputmode="tel" placeholder="(555) 123-4567" />
+            <p class="field-error-msg" id="phone-error-msg" hidden></p>
           </div>
         </div>
 
-        <!-- Collapsible Calendar Trigger -->
-        <div class="calendar-collapsible-wrapper">
+        <!-- Row 2: Email (Optional) & Instagram Handle (Optional) -->
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="book-email">Email (optional)</label>
+            <input type="email" id="book-email" name="email" autocomplete="email" placeholder="Email (optional)" />
+            <p class="field-error-msg" id="email-error-msg" hidden></p>
+          </div>
+
+          <div class="form-group">
+            <label for="book-instagram">Instagram handle (optional)</label>
+            <input type="text" id="book-instagram" name="instagram" autocomplete="off" placeholder="@handle (optional)" />
+          </div>
+        </div>
+
+        <!-- Hidden per Netta, Nov 15, 2026, no calendar at all. Do not re-enable without Andrew's approval. -->
+        <div class="calendar-collapsible-wrapper" id="calendar-wrapper" hidden style="display: none !important;">
           <span class="field-section-label">Preferred Date</span>
-          <button type="button" class="cal-toggle-btn" id="cal-toggle-btn" aria-expanded="false" aria-controls="modal-calendar-block">
+          <button type="button" class="cal-toggle-btn" id="cal-toggle-btn" aria-expanded="false" aria-controls="modal-calendar-block" tabindex="-1">
             <span class="cal-toggle-text" id="cal-toggle-text">📅 Choose a date on the calendar</span>
             <svg class="cal-toggle-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor">
               <path d="M6 9l6 6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -157,7 +170,7 @@ import { SITE } from '../data/site';
           </button>
 
           <!-- Calendar Block (Collapsed by default) -->
-          <div class="modal-calendar-block is-collapsed" id="modal-calendar-block" hidden>
+          <div class="modal-calendar-block is-collapsed" id="modal-calendar-block" hidden style="display: none !important;">
             <div class="schedule-pending-notice">
               <div class="pending-badge-row">
                 <span class="pending-pill">Google Calendar</span>
@@ -171,9 +184,9 @@ import { SITE } from '../data/site';
             <div class="calendar-container">
               <header class="calendar-header">
                 <div class="calendar-nav">
-                  <button type="button" class="cal-nav-btn" id="cal-prev-btn" aria-label="Previous month">&larr;</button>
+                  <button type="button" class="cal-nav-btn" id="cal-prev-btn" aria-label="Previous month" tabindex="-1">&larr;</button>
                   <h4 class="calendar-month-heading" id="cal-month-title" aria-live="polite">Loading...</h4>
-                  <button type="button" class="cal-nav-btn" id="cal-next-btn" aria-label="Next month">&rarr;</button>
+                  <button type="button" class="cal-nav-btn" id="cal-next-btn" aria-label="Next month" tabindex="-1">&rarr;</button>
                 </div>
               </header>
 
@@ -312,11 +325,22 @@ import { SITE } from '../data/site';
           <p class="service-error-msg" id="service-error-msg" hidden>Please select at least one service.</p>
         </fieldset>
 
-        <!-- Row 2: Selected Date & Notes (Stacked full-width on mobile, 2-col on desktop) -->
+        <!-- Hidden per Netta, Nov 15, 2026, no calendar at all. Do not re-enable without Andrew's approval. -->
+        <div class="form-group" hidden style="display: none !important;">
+          <label for="book-date">Selected Date</label>
+          <input type="text" id="book-date" name="date" readonly placeholder="Pick a date above or coordinate via DM" tabindex="-1" hidden />
+        </div>
+
+        <!-- Row 3: Preferred Date and Time & Notes (Stacked full-width on mobile, 2-col on desktop) -->
         <div class="form-grid">
           <div class="form-group">
-            <label for="book-date">Selected Date</label>
-            <input type="text" id="book-date" name="date" readonly placeholder="Pick a date above or coordinate via DM" />
+            <label for="book-preferred-time">Preferred date and time</label>
+            <input
+              type="text"
+              id="book-preferred-time"
+              name="preferred_time"
+              placeholder="For example: Saturday afternoon, or Nov 22 at 2pm"
+            />
           </div>
 
           <div class="form-group">
@@ -324,6 +348,11 @@ import { SITE } from '../data/site';
             <input type="text" id="book-message" name="message" placeholder="Placement, colors, or preferred timing" />
           </div>
         </div>
+
+        <!-- Consent line directly above submit button -->
+        <p class="form-consent-text">
+          By submitting, you agree Netta may text you about this appointment.
+        </p>
 
         <div class="form-actions">
           <button type="submit" class="btn btn-primary modal-submit-btn" id="booking-submit-btn">
@@ -775,11 +804,38 @@ import { SITE } from '../data/site';
   }
 
   .req {
-    color: var(--brand-teal);
+    color: #dc2626 !important;
+  }
+
+  /* Inline Field Error Messages */
+  .field-error-msg {
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #dc2626;
+    margin: 0.2rem 0 0;
+    line-height: 1.4;
+    text-align: left;
+  }
+  [data-theme="dark"] .field-error-msg {
+    color: #f87171;
+  }
+
+  /* Consent line above submit button */
+  .form-consent-text {
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    color: var(--ink);
+    opacity: 0.75;
+    margin: 0.65rem 0 0.25rem;
+    line-height: 1.45;
+    text-align: left;
   }
 
   /* Generous 52px+ Input Heights & Internal Padding */
   input[type="text"],
+  input[type="tel"],
+  input[type="email"],
   textarea {
     width: 100%;
     min-height: 52px;
@@ -797,6 +853,8 @@ import { SITE } from '../data/site';
   }
 
   input[type="text"]:focus,
+  input[type="tel"]:focus,
+  input[type="email"]:focus,
   textarea:focus {
     outline: none;
     border-color: var(--brand-teal);
@@ -1610,6 +1668,7 @@ import { SITE } from '../data/site';
     updateStickyVisibility();
 
     // Calendar dynamic logic inside modal
+    // Kept for future use, hidden per Netta, Nov 15, 2026. Do not re-enable without Andrew's approval.
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth();
     let selectedDateStr = '';
@@ -1625,6 +1684,8 @@ import { SITE } from '../data/site';
     ];
 
     function renderCalendar() {
+      // Kept for future use, hidden per Netta, Nov 15, 2026. Do not re-enable without Andrew's approval.
+      if (!calBlock || calBlock.hidden || calBlock.style.display === 'none') return;
       if (!grid || !monthTitle) return;
       monthTitle.textContent = `${monthNames[currentMonth]} ${currentYear}`;
       grid.innerHTML = '';
@@ -1673,6 +1734,8 @@ import { SITE } from '../data/site';
     }
 
     prevBtn?.addEventListener('click', () => {
+      // Kept for future use, hidden per Netta, Nov 15, 2026.
+      if (!calBlock || calBlock.hidden) return;
       currentMonth--;
       if (currentMonth < 0) {
         currentMonth = 11;
@@ -1682,6 +1745,8 @@ import { SITE } from '../data/site';
     });
 
     nextBtn?.addEventListener('click', () => {
+      // Kept for future use, hidden per Netta, Nov 15, 2026.
+      if (!calBlock || calBlock.hidden) return;
       currentMonth++;
       if (currentMonth > 11) {
         currentMonth = 0;
@@ -1690,21 +1755,91 @@ import { SITE } from '../data/site';
       renderCalendar();
     });
 
-    // Form submission with A La Carte multi-select summary
-    form?.addEventListener('submit', (e) => {
+    // Calendar is hidden per Netta, Nov 15, 2026: renderCalendar() is gated and NOT called while hidden.
+    if (calBlock && !calBlock.hidden && calBlock.style.display !== 'none') {
+      renderCalendar();
+    }
+
+    function escapeHtml(str: string): string {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // Form submission with mandatory phone validation, optional email/instagram,
+    // preferred date/time, and real delivery dispatch
+    form?.addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      // Clear previous inline errors
+      const phoneErr = document.getElementById('phone-error-msg');
+      const emailErr = document.getElementById('email-error-msg');
+      const nameErr = document.getElementById('name-error-msg');
+      if (phoneErr) { phoneErr.hidden = true; phoneErr.textContent = ''; }
+      if (emailErr) { emailErr.hidden = true; emailErr.textContent = ''; }
+      if (nameErr) { nameErr.hidden = true; nameErr.textContent = ''; }
+      if (errorMsg) { errorMsg.hidden = true; }
+
       const formData = new FormData(form);
-      const name = (formData.get('name') as string) || '';
-      const contact = (formData.get('contact') as string) || '';
+      const name = ((formData.get('name') as string) || '').trim();
+      const phone = ((formData.get('phone') as string) || '').trim();
+      const email = ((formData.get('email') as string) || '').trim();
+      const instagram = ((formData.get('instagram') as string) || '').trim();
       const selectedServices = formData.getAll('services') as string[];
       const selectedOptions = formData.getAll('service_options') as string[];
-      const date = (formData.get('date') as string) || 'To be coordinated';
-      const notes = (formData.get('message') as string) || '';
+      const preferredTimeRaw = ((formData.get('preferred_time') as string) || '').trim();
+      const notes = ((formData.get('message') as string) || '').trim();
 
+      let hasError = false;
+
+      // 1. Validate Name
+      if (!name) {
+        if (nameErr) {
+          nameErr.textContent = 'Please enter your name.';
+          nameErr.hidden = false;
+        }
+        hasError = true;
+      }
+
+      // 2. Validate Phone (Mandatory, >= 10 digits)
+      if (!phone) {
+        if (phoneErr) {
+          phoneErr.textContent = 'Please add a phone number so Netta can text you to confirm.';
+          phoneErr.hidden = false;
+        }
+        hasError = true;
+      } else {
+        const digits = phone.replace(/\D/g, '');
+        if (digits.length < 10) {
+          if (phoneErr) {
+            phoneErr.textContent = 'That phone number looks incomplete. Please check it and try again.';
+            phoneErr.hidden = false;
+          }
+          hasError = true;
+        }
+      }
+
+      // 3. Validate Email (Optional, but if present must be valid)
+      if (email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          if (emailErr) {
+            emailErr.textContent = 'Please enter a valid email address.';
+            emailErr.hidden = false;
+          }
+          hasError = true;
+        }
+      }
+
+      // 4. Validate Services (At least 1)
       if (selectedServices.length === 0) {
         if (errorMsg) errorMsg.hidden = false;
-        return;
+        hasError = true;
       }
+
+      if (hasError) return;
 
       const serviceLines = selectedServices.map((srv) => {
         const optsForSrv = selectedOptions
@@ -1713,13 +1848,58 @@ import { SITE } from '../data/site';
         return optsForSrv.length > 0 ? `${srv} (${optsForSrv.join(', ')})` : srv;
       });
 
+      const preferredTime = preferredTimeRaw || 'To be coordinated';
+
+      // 5. Build and send delivery payload to Netta
+      const payload = {
+        name,
+        phone,
+        email: email || undefined,
+        instagram: instagram || undefined,
+        services: serviceLines.join(', '),
+        preferred_time: preferredTime,
+        notes: notes || undefined,
+        _subject: `New Appointment Request from ${name} (${phone})`,
+        message: `New Appointment Request:\n` +
+          `• Name: ${name}\n` +
+          `• Phone: ${phone} (Tap to reply by text/call)\n` +
+          (email ? `• Email: ${email}\n` : '') +
+          (instagram ? `• Instagram: ${instagram}\n` : '') +
+          `• Services: ${serviceLines.join(' + ')}\n` +
+          `• Preferred Date & Time: ${preferredTime}\n` +
+          (notes ? `• Notes: ${notes}\n` : '')
+      };
+
+      try {
+        const deliveryEndpoint = form.getAttribute('data-endpoint');
+        if (deliveryEndpoint && !deliveryEndpoint.includes('YOUR_FORM_ID')) {
+          await fetch(deliveryEndpoint, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined,
+          });
+        }
+      } catch (err) {
+        console.warn('Booking dispatch notice:', err);
+      }
+
       if (detailsSummary) {
-        detailsSummary.innerHTML = `
-          <strong>Name:</strong> ${name}<br/>
-          <strong>Contact:</strong> ${contact}<br/>
-          <strong>Selected Services:</strong> ${serviceLines.join(' + ')}<br/>
-          <strong>Requested Date:</strong> ${date}${notes ? `<br/><strong>Notes:</strong> ${notes}` : ''}
-        `;
+        let summaryHtml = `<strong>Name:</strong> ${escapeHtml(name)}<br/>
+          <strong>Phone:</strong> ${escapeHtml(phone)}<br/>`;
+        if (email) {
+          summaryHtml += `<strong>Email:</strong> ${escapeHtml(email)}<br/>`;
+        }
+        if (instagram) {
+          const igFormatted = instagram.startsWith('@') ? instagram : `@${instagram}`;
+          summaryHtml += `<strong>Instagram:</strong> ${escapeHtml(igFormatted)}<br/>`;
+        }
+        summaryHtml += `<strong>Selected Services:</strong> ${serviceLines.map(escapeHtml).join(' + ')}<br/>
+          <strong>Preferred date and time:</strong> ${escapeHtml(preferredTime)}`;
+        if (notes) {
+          summaryHtml += `<br/><strong>Notes:</strong> ${escapeHtml(notes)}`;
+        }
+        detailsSummary.innerHTML = summaryHtml;
       }
 
       form.hidden = true;
