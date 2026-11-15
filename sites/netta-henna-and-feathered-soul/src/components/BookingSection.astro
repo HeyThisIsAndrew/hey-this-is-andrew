@@ -510,6 +510,23 @@ import { SITE } from '../data/site';
     box-shadow: 0 28px 70px rgba(0, 0, 0, 0.45);
     overflow: hidden;
     text-align: left;
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+    transition:
+      opacity 0.28s ease-in-out,
+      transform 0.28s ease-in-out;
+    will-change: opacity, transform;
+  }
+
+  .booking-modal.is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .booking-modal.is-closing {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+    pointer-events: none;
   }
 
   /* Full-screen backdrop covering Dynamic Island / status bar and blocking all background taps */
@@ -524,6 +541,16 @@ import { SITE } from '../data/site';
     -webkit-backdrop-filter: blur(8px);
     overscroll-behavior: none;
     touch-action: none;
+    opacity: 0;
+    transition: opacity 0.28s ease-in-out;
+  }
+
+  .booking-modal.is-visible::backdrop {
+    opacity: 1;
+  }
+
+  .booking-modal.is-closing::backdrop {
+    opacity: 0;
   }
 
   .booking-modal-card {
@@ -787,7 +814,7 @@ import { SITE } from '../data/site';
   }
 
   .cal-toggle-icon {
-    transition: transform 0.25s ease;
+    transition: transform 0.25s ease-in-out;
     flex-shrink: 0;
   }
   .cal-toggle-btn[aria-expanded="true"] .cal-toggle-icon {
@@ -795,12 +822,32 @@ import { SITE } from '../data/site';
   }
 
   .modal-calendar-block {
-    margin-top: 0.5rem;
-    border: 1.5px solid var(--gold-border);
+    margin-top: 0;
+    border: 0 solid var(--gold-border);
     border-radius: 16px;
-    padding: 1.15rem;
+    padding: 0 1.15rem;
     background: var(--surface);
     text-align: left;
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-6px);
+    overflow: hidden;
+    transition:
+      max-height 0.26s ease-in-out,
+      opacity 0.24s ease-in-out,
+      transform 0.24s ease-in-out,
+      padding 0.24s ease-in-out,
+      margin-top 0.24s ease-in-out,
+      border-width 0.24s ease-in-out;
+  }
+
+  .modal-calendar-block.is-expanded {
+    margin-top: 0.5rem;
+    border-width: 1.5px;
+    padding: 1.15rem;
+    max-height: 520px;
+    opacity: 1;
+    transform: translateY(0);
   }
 
   .schedule-pending-notice {
@@ -1006,10 +1053,30 @@ import { SITE } from '../data/site';
   }
 
   .service-suboptions {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0 dashed var(--gold-border);
+    text-align: left;
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-4px);
+    overflow: hidden;
+    transition:
+      max-height 0.25s ease-in-out,
+      opacity 0.22s ease-in-out,
+      transform 0.22s ease-in-out,
+      margin-top 0.22s ease-in-out,
+      padding-top 0.22s ease-in-out,
+      border-top-width 0.22s ease-in-out;
+  }
+
+  .service-suboptions.is-expanded {
     margin-top: 0.75rem;
     padding-top: 0.75rem;
-    border-top: 1px dashed var(--gold-border);
-    text-align: left;
+    border-top-width: 1px;
+    max-height: 320px;
+    opacity: 1;
+    transform: translateY(0);
   }
 
   .suboptions-hint {
@@ -1222,13 +1289,49 @@ import { SITE } from '../data/site';
       updateStickyVisibility();
     }
 
+    let modalCloseTimer: number | null = null;
+    const prefersReducedMotion = () =>
+      window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     function closeModal() {
-      modal?.close();
-      unlockPageBackground();
+      if (!modal || !modal.open) {
+        unlockPageBackground();
+        return;
+      }
+      if (modalCloseTimer !== null) {
+        window.clearTimeout(modalCloseTimer);
+        modalCloseTimer = null;
+      }
+
+      modal.classList.remove('is-visible');
+
+      if (prefersReducedMotion()) {
+        modal.classList.remove('is-closing');
+        modal.close();
+        unlockPageBackground();
+        return;
+      }
+
+      modal.classList.add('is-closing');
+      modalCloseTimer = window.setTimeout(() => {
+        modalCloseTimer = null;
+        modal.classList.remove('is-closing');
+        if (modal.open) {
+          modal.close();
+        }
+        unlockPageBackground();
+      }, 280);
     }
 
-    // Listen to native dialog close event (covers Escape key as well as programmatic close)
+    // Intercept Escape key ('cancel' event) so it uses the smooth ease-in-out close animation
+    modal.addEventListener('cancel', (e) => {
+      e.preventDefault();
+      closeModal();
+    });
+
+    // Listen to native dialog close event as a fallback
     modal.addEventListener('close', () => {
+      modal.classList.remove('is-visible', 'is-closing');
       unlockPageBackground();
     });
 
@@ -1241,22 +1344,46 @@ import { SITE } from '../data/site';
       return '';
     }
 
-    function syncServiceBlocks() {
+    const subOptionTimers = new Map<HTMLElement, number>();
+
+    function syncServiceBlocks(immediate = false) {
       const checkboxes = modal?.querySelectorAll<HTMLInputElement>('.service-checkbox') || [];
       checkboxes.forEach((cb) => {
         const serviceName = cb.getAttribute('data-service-box') || '';
         const block = modal?.querySelector(`[data-service-block="${serviceName}"]`);
         const subOptions = modal?.querySelector<HTMLElement>(`[data-service-options="${serviceName}"]`);
+        if (subOptions && subOptionTimers.has(subOptions)) {
+          window.clearTimeout(subOptionTimers.get(subOptions));
+          subOptionTimers.delete(subOptions);
+        }
+
         if (cb.checked) {
           block?.classList.add('is-checked');
-          if (subOptions) subOptions.hidden = false;
+          if (subOptions) {
+            subOptions.hidden = false;
+            if (immediate || prefersReducedMotion()) {
+              subOptions.classList.add('is-expanded');
+            } else {
+              void subOptions.offsetWidth;
+              subOptions.classList.add('is-expanded');
+            }
+          }
         } else {
           block?.classList.remove('is-checked');
           if (subOptions) {
-            subOptions.hidden = true;
             subOptions.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((opt) => {
               opt.checked = false;
             });
+            subOptions.classList.remove('is-expanded');
+            if (immediate || prefersReducedMotion()) {
+              subOptions.hidden = true;
+            } else {
+              const t = window.setTimeout(() => {
+                subOptions.hidden = true;
+                subOptionTimers.delete(subOptions);
+              }, 240);
+              subOptionTimers.set(subOptions, t);
+            }
           }
         }
       });
@@ -1264,11 +1391,17 @@ import { SITE } from '../data/site';
     }
 
     modal.querySelectorAll<HTMLInputElement>('.service-checkbox').forEach((cb) => {
-      cb.addEventListener('change', syncServiceBlocks);
+      cb.addEventListener('change', () => syncServiceBlocks(false));
     });
 
     // Open Modal function: locks page background, resets form unless service / option passed
     function openModal(defaultService?: string, defaultOption?: string) {
+      if (modalCloseTimer !== null) {
+        window.clearTimeout(modalCloseTimer);
+        modalCloseTimer = null;
+      }
+      modal?.classList.remove('is-closing');
+
       if (form) {
         form.reset();
         form.hidden = false;
@@ -1279,12 +1412,19 @@ import { SITE } from '../data/site';
       if (calToggleText) {
         calToggleText.textContent = '📅 Choose a date on the calendar';
       }
+      if (calToggleBtn) {
+        calToggleBtn.setAttribute('aria-expanded', 'false');
+      }
+      if (calBlock) {
+        calBlock.classList.remove('is-expanded');
+        calBlock.hidden = true;
+      }
 
       const canonicalService = normalizeServiceName(defaultService);
       modal?.querySelectorAll<HTMLInputElement>('.service-checkbox').forEach((cb) => {
         cb.checked = canonicalService !== '' && cb.value === canonicalService;
       });
-      syncServiceBlocks();
+      syncServiceBlocks(true);
 
       if (canonicalService && defaultOption) {
         const optInputs = modal?.querySelectorAll<HTMLInputElement>(
@@ -1300,20 +1440,43 @@ import { SITE } from '../data/site';
 
       lockPageBackground();
       if (!modal?.open) {
+        modal?.classList.remove('is-visible');
         modal?.showModal();
       }
+      // Trigger reflow so the ease-in-out open transition always plays smoothly
+      void modal?.offsetWidth;
+      modal?.classList.add('is-visible');
+
       const modalCard = modal?.querySelector('.booking-modal-card');
       if (modalCard) modalCard.scrollTop = 0;
     }
 
-    // Toggle calendar collapse
+    // Toggle calendar collapse with smooth ease-in-out transition
+    let calCollapseTimer: number | null = null;
     calToggleBtn?.addEventListener('click', () => {
       const isExpanded = calToggleBtn.getAttribute('aria-expanded') === 'true';
-      calToggleBtn.setAttribute('aria-expanded', String(!isExpanded));
+      const nextExpanded = !isExpanded;
+      calToggleBtn.setAttribute('aria-expanded', String(nextExpanded));
       if (calBlock) {
-        calBlock.hidden = isExpanded;
-        if (!isExpanded) {
+        if (calCollapseTimer !== null) {
+          window.clearTimeout(calCollapseTimer);
+          calCollapseTimer = null;
+        }
+        if (nextExpanded) {
           renderCalendar();
+          calBlock.hidden = false;
+          void calBlock.offsetWidth;
+          calBlock.classList.add('is-expanded');
+        } else {
+          calBlock.classList.remove('is-expanded');
+          if (prefersReducedMotion()) {
+            calBlock.hidden = true;
+          } else {
+            calCollapseTimer = window.setTimeout(() => {
+              calBlock.hidden = true;
+              calCollapseTimer = null;
+            }, 250);
+          }
         }
       }
     });
