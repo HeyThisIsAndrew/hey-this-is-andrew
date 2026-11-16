@@ -642,12 +642,43 @@ section,
   }
 }
 
-.site-nav .nav-link {
+/* Pass 32: nav links in the cinematic display font, the same values as the shared
+   Nav default (packages/ui/src/Nav.astro, not edited): Cormorant Garamond, 0.75rem,
+   700, 0.2em, uppercase. The old plain Inter override is gone. */
+:root .site-nav .nav-link {
   color: var(--ink) !important;
-  font-family: var(--font-body);
-  font-weight: 500;
-  text-transform: none;
-  letter-spacing: 0.02em;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border-bottom: 0 !important;
+  text-decoration: none !important;
+}
+
+@media (max-width: 1099px) {
+  :root .site-nav .nav-link {
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+  }
+}
+
+/* Underline only on hover or keyboard focus: a thin 1px gold line, styled like
+   the booking .method-separator, drawing on left to right in 0.4s. No underline
+   by default, and none for the active section or a link that keeps mouse focus. */
+:root .site-nav .nav-link::after {
+  height: 1px !important;
+  background: linear-gradient(90deg, var(--gold-border), transparent) !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  transform: scaleX(0) !important;
+  transform-origin: left !important;
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1) !important;
+}
+
+:root .site-nav .nav-link:hover::after,
+:root .site-nav .nav-link:focus-visible::after {
+  transform: scaleX(1) !important;
 }
 
 .site-nav .nav-link:hover,
