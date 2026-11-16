@@ -13,11 +13,25 @@
  * - Zero em dashes, zero horizontal modal scroll
  */
 import { SITE, BOOKING_DELIVERY, BOOKING_MODE, BOOKING_SMS_NUMBER } from '../data/site';
+import HennaBorderDraw from './HennaBorderDraw.astro';
 ---
 
 <!-- On-Page Booking Section Card (Content section: centered) -->
 <div class="booking-wrap" id="booking-interactive">
   <div class="booking-ornate-card">
+    <!-- All-Out Henna Art Wrapping the Booking Card (Top, Sides, Bottom) -->
+    <div class="booking-henna-surround" data-henna-box-draw aria-hidden="true">
+      <div class="b-henna-edge b-henna-top">
+        <div class="b-henna-half"><HennaBorderDraw side="left" /></div>
+        <div class="b-henna-half b-henna-mirror"><HennaBorderDraw side="left" /></div>
+      </div>
+      <div class="b-henna-edge b-henna-bottom">
+        <div class="b-henna-half"><HennaBorderDraw side="left" /></div>
+        <div class="b-henna-half b-henna-mirror"><HennaBorderDraw side="left" /></div>
+      </div>
+      <div class="b-henna-edge b-henna-left"><HennaBorderDraw side="left" /></div>
+      <div class="b-henna-edge b-henna-right"><HennaBorderDraw side="right" /></div>
+    </div>
     <div class="corner-filigree top-left" aria-hidden="true">
       <svg viewBox="0 0 50 50" width="50" height="50" fill="none">
         <path d="M4 46 C4 18, 18 4, 46 4 M11 46 C11 24, 24 11, 46 11" stroke="currentColor" stroke-width="1.4" opacity="0.65"/>
@@ -32,10 +46,10 @@ import { SITE, BOOKING_DELIVERY, BOOKING_MODE, BOOKING_SMS_NUMBER } from '../dat
     </div>
 
     <div class="booking-card-content text-center">
-      <div class="section-ornament" aria-hidden="true">
-        <span class="ornament-line"></span>
+      <div class="section-ornament booking-henna-divider" data-henna-box-draw aria-hidden="true">
+        <div class="b-divider-wing"><HennaBorderDraw side="left" /></div>
         <span class="ornament-gem"><span class="teal-diamond">◆</span></span>
-        <span class="ornament-line"></span>
+        <div class="b-divider-wing b-henna-mirror"><HennaBorderDraw side="left" /></div>
       </div>
       <span class="booking-kicker"><span class="teal-diamond" aria-hidden="true">◆</span> Santa Barbara, CA <span class="teal-diamond" aria-hidden="true">◆</span></span>
       <h2 id="booking-heading" class="booking-title gold-script-text">Book an Appointment</h2>
@@ -44,7 +58,7 @@ import { SITE, BOOKING_DELIVERY, BOOKING_MODE, BOOKING_SMS_NUMBER } from '../dat
       </p>
 
       <div class="booking-actions-row">
-        <button type="button" class="btn btn-primary" id="open-booking-modal-btn" data-action="book-date">
+        <button type="button" class="btn btn-primary brush-ribbon-btn" id="open-booking-modal-btn" data-action="book-date">
           Book Now &rarr;
         </button>
         <a
@@ -370,7 +384,7 @@ import { SITE, BOOKING_DELIVERY, BOOKING_MODE, BOOKING_SMS_NUMBER } from '../dat
         <p class="field-error-msg form-general-error" id="booking-config-error" hidden></p>
 
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary modal-submit-btn" id="booking-submit-btn">
+          <button type="submit" class="btn btn-primary modal-submit-btn brush-ribbon-btn" id="booking-submit-btn">
             Send Appointment Request
           </button>
         </div>
@@ -440,12 +454,14 @@ import { SITE, BOOKING_DELIVERY, BOOKING_MODE, BOOKING_SMS_NUMBER } from '../dat
     padding: 3.25rem 2.25rem;
     box-shadow: 0 12px 40px rgba(61, 40, 23, 0.08);
     text-align: center;
+    overflow: hidden;
   }
 
   .corner-filigree {
     position: absolute;
     color: var(--brand-gold);
     pointer-events: none;
+    z-index: 1;
   }
   .corner-filigree.top-left { top: 10px; left: 10px; }
   .corner-filigree.top-right { top: 10px; right: 10px; }
@@ -453,7 +469,183 @@ import { SITE, BOOKING_DELIVERY, BOOKING_MODE, BOOKING_SMS_NUMBER } from '../dat
   .corner-filigree.bottom-right { bottom: 10px; right: 10px; }
 
   .booking-card-content {
+    position: relative;
+    z-index: 2;
     text-align: center;
+  }
+
+  .booking-henna-surround {
+    position: absolute;
+    inset: 0;
+    pointer-events: none !important;
+    overflow: hidden;
+    z-index: 0;
+    opacity: 0.72;
+    border-radius: inherit;
+  }
+
+  :global([data-theme="dark"]) .booking-henna-surround {
+    opacity: 0.52;
+  }
+
+  .b-henna-edge {
+    position: absolute;
+    pointer-events: none !important;
+    overflow: hidden;
+  }
+
+  .b-henna-left {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 48px;
+    -webkit-mask-image: linear-gradient(90deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.5) 62%, transparent 100%);
+    mask-image: linear-gradient(90deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.5) 62%, transparent 100%);
+  }
+
+  .b-henna-right {
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: 48px;
+    -webkit-mask-image: linear-gradient(270deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.5) 62%, transparent 100%);
+    mask-image: linear-gradient(270deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.5) 62%, transparent 100%);
+  }
+
+  .b-henna-top,
+  .b-henna-bottom {
+    left: 0;
+    right: 0;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .b-henna-top {
+    top: 0;
+    -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.45) 65%, transparent 100%);
+    mask-image: linear-gradient(180deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.45) 65%, transparent 100%);
+  }
+
+  .b-henna-bottom {
+    bottom: 0;
+    -webkit-mask-image: linear-gradient(0deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.45) 65%, transparent 100%);
+    mask-image: linear-gradient(0deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.45) 65%, transparent 100%);
+  }
+
+  .b-henna-half {
+    width: 540px;
+    height: 40px;
+    position: relative;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .b-henna-mirror {
+    transform: scaleX(-1);
+  }
+
+  .b-henna-top .b-henna-half :global(.henna-art-svg) {
+    width: 40px !important;
+    height: 540px !important;
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) rotate(90deg) scaleY(-1) !important;
+  }
+
+  .b-henna-bottom .b-henna-half :global(.henna-art-svg) {
+    width: 40px !important;
+    height: 540px !important;
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) rotate(-90deg) !important;
+  }
+
+  .booking-henna-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    height: 56px;
+    margin: 0 auto 0.85rem;
+    max-width: 520px;
+    overflow: hidden;
+    opacity: 0.85;
+  }
+
+  .b-divider-wing {
+    flex: 1;
+    height: 48px;
+    position: relative;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 18%, #000 88%, transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0%, #000 18%, #000 88%, transparent 100%);
+  }
+
+  .b-divider-wing :global(.henna-art-svg) {
+    width: 44px !important;
+    height: 440px !important;
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) rotate(-90deg) !important;
+  }
+
+  .booking-henna-surround :global(.henna-path),
+  .booking-henna-divider :global(.henna-path) {
+    stroke-dasharray: 320;
+    stroke-dashoffset: 320;
+    transition: stroke-dashoffset 2s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+
+  .booking-henna-surround :global(.henna-dot),
+  .booking-henna-divider :global(.henna-dot) {
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 1.2s ease 1s, transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) 1s;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .booking-henna-surround.is-drawn :global(.henna-path),
+  .booking-henna-divider.is-drawn :global(.henna-path) {
+    stroke-dashoffset: 0;
+  }
+
+  .booking-henna-surround.is-drawn :global(.henna-dot),
+  .booking-henna-divider.is-drawn :global(.henna-dot) {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .booking-henna-surround :global(.henna-path),
+    .booking-henna-divider :global(.henna-path) {
+      stroke-dashoffset: 0 !important;
+      transition: none !important;
+    }
+    .booking-henna-surround :global(.henna-dot),
+    .booking-henna-divider :global(.henna-dot) {
+      opacity: 1 !important;
+      transform: scale(1) !important;
+      transition: none !important;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .booking-henna-surround {
+      opacity: 0.42;
+    }
+    .b-henna-left,
+    .b-henna-right {
+      width: 28px;
+    }
+    .booking-henna-divider {
+      height: 42px;
+    }
   }
 
   .booking-kicker {
