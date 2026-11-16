@@ -7,16 +7,16 @@ html[data-theme="light"],
 html:root[data-theme="light"] {
   color-scheme: light !important;
 
-  /* ── Light Mode: Near White (#ffffff) Page Tokens (Pass 13) ── */
-  --page-bg: #ffffff;
-  --brand-cream: #ffffff; /* Light page color */
-  --nav-bg: #ffffff;
-  --chrome: #ffffff !important;
-  --surface: #ffffff;
-  --surface-2: #fbfaf7; /* Very light warm white */
-  --brand-cream-card: #ffffff;
-  --brand-cream-surface: #fbfaf7;
-  --bg: #ffffff;
+  /* ── Light Mode: Warm Cream Parchment (#faf6ee) Page Tokens ── */
+  --page-bg: #faf6ee;
+  --brand-cream: #faf6ee; /* Light page color */
+  --nav-bg: #faf6ee;
+  --chrome: #faf6ee !important;
+  --surface: #faf6ee;
+  --surface-2: #f7efdd; /* Warm parchment card tint */
+  --brand-cream-card: #faf6ee;
+  --brand-cream-surface: #f7efdd;
+  --bg: #faf6ee;
 
   /* ── Light Mode Typography Tokens ── */
   --ink: #3d2817; /* Dark brown for high readability on white */
@@ -149,9 +149,9 @@ html:root[data-theme="dark"] {
    Overrides ChromeMeta's inline <style> and base tokens regardless of system setting */
 html:root:not([data-theme="dark"]),
 html:root[data-theme="light"] {
-  --chrome: #ffffff !important;
-  --nav-bg: #ffffff !important;
-  --page-bg: #ffffff !important;
+  --chrome: #faf6ee !important;
+  --nav-bg: #faf6ee !important;
+  --page-bg: #faf6ee !important;
 }
 
 html:root[data-theme="dark"] {
@@ -161,15 +161,26 @@ html:root[data-theme="dark"] {
 }
 
 /* ── Section 3C: Base Body and HTML are Solid; Main and Sections are Transparent ──
-   Body and HTML are the only solid backgrounds (#ffffff in light mode, #181310 in dark mode).
+   Body and HTML are warm cream parchment (#faf6ee) in light mode, #181310 in dark mode.
    Main and sections are transparent so the fixed feather parallax shows through everywhere. */
 html,
 body {
   background: var(--page-bg) !important;
   background-color: var(--page-bg) !important;
-  background-image: none !important;
   color: var(--ink) !important;
   transition: none !important;
+}
+
+:root:not([data-theme="dark"]) body,
+html[data-theme="light"] body {
+  background-color: #faf6ee !important;
+  background-image: radial-gradient(circle at 50% 25%, rgba(255, 255, 255, 0.45) 0%, rgba(247, 239, 221, 0.6) 100%) !important;
+  background-attachment: fixed !important;
+}
+
+[data-theme="dark"] body {
+  background-color: #181310 !important;
+  background-image: none !important;
 }
 
 main,
@@ -354,6 +365,106 @@ section,
   }
 }
 
+/* ── Step 3A & 3B: Hide Wordmark & Center Nav Links ── */
+:root .site-nav a.wordmark,
+html .site-nav .wordmark,
+.site-nav .wordmark {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  clip: rect(0, 0, 0, 0) !important;
+}
+
+@media (min-width: 861px) {
+  :root .site-nav .nav-inner {
+    justify-content: center !important;
+    position: relative !important;
+  }
+
+  :root .site-nav .desktop-nav {
+    margin: 0 auto !important;
+    display: flex !important;
+    justify-content: center !important;
+  }
+
+  :root .site-nav .nav-links {
+    justify-content: center !important;
+    margin: 0 auto !important;
+  }
+
+  :root .site-nav .nav-right-actions {
+    position: absolute !important;
+    right: clamp(1.5rem, 3.5vw, 4rem) !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    margin-left: 1.5rem !important;
+  }
+}
+
+@media (max-width: 860px) {
+  :root .site-nav .nav-inner {
+    justify-content: flex-end !important;
+  }
+
+  :root .site-nav .nav-right-actions {
+    margin-left: auto !important;
+    margin-right: clamp(68px, 16vw, 85px) !important;
+  }
+}
+
+/* ── Step 3C: Henna Curtains Framing Nav Corners ── */
+.nav-henna-curtains {
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+.nav-henna-curtain {
+  position: fixed !important;
+  top: 0 !important;
+  pointer-events: none !important;
+  z-index: 105 !important;
+  height: auto !important;
+  display: block !important;
+}
+
+:root:not([data-theme="dark"]) .nav-henna-curtain {
+  opacity: 0.85 !important;
+}
+
+[data-theme="dark"] .nav-henna-curtain {
+  opacity: 0.70 !important;
+}
+
+.nav-henna-curtain-left {
+  left: 0 !important;
+  width: clamp(140px, 12vw, 220px) !important;
+}
+
+.nav-henna-curtain-right {
+  right: 0 !important;
+  width: clamp(140px, 12vw, 220px) !important;
+}
+
+@media (max-width: 1099px) {
+  .nav-henna-curtain-left,
+  .nav-henna-curtain-right {
+    width: clamp(100px, 10vw, 140px) !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .nav-henna-curtain-left {
+    width: clamp(70px, 8vw, 100px) !important;
+  }
+  .nav-henna-curtain-right {
+    width: clamp(70px, 8vw, 100px) !important;
+  }
+}
+
 .site-nav .nav-link {
   color: var(--ink) !important;
   font-family: var(--font-body);
@@ -498,7 +609,7 @@ section,
   border-bottom: 1px solid var(--gold-border) !important;
 }
 
-/* Status bar & Nav solid matching chrome (Light Mode: #ffffff, Dark Mode: #181310) */
+/* Status bar & Nav solid matching chrome (Light Mode: #faf6ee, Dark Mode: #181310) */
 :root:not([data-theme="dark"]) .site-nav,
 :root:not([data-theme="dark"]) .site-nav:hover,
 :root:not([data-theme="dark"]) .site-nav.at-top,
@@ -510,8 +621,8 @@ section,
 :root:not([data-theme="dark"]) .site-nav--home.at-top:hover,
 :root:not([data-theme="dark"]) .site-nav--home.scrolled,
 :root:not([data-theme="dark"]) .site-nav--home.scrolled:hover {
-  background: #ffffff !important;
-  background-color: #ffffff !important;
+  background: #faf6ee !important;
+  background-color: #faf6ee !important;
   background-image: none !important;
   border-bottom: 1px solid #e8dcc8 !important;
   box-shadow: 0 2px 8px rgba(61, 40, 23, 0.05) !important;
@@ -523,8 +634,8 @@ section,
 
 :root:not([data-theme="dark"]) .site-nav .nav-inner,
 :root:not([data-theme="dark"]) .safe-area-blackout {
-  background: #ffffff !important;
-  background-color: #ffffff !important;
+  background: #faf6ee !important;
+  background-color: #faf6ee !important;
   background-image: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -878,7 +989,7 @@ section,
 }
 
 :root:not([data-theme="dark"]) .slim-footer {
-  background: #ffffff !important;
+  background: #f7efdd !important;
   border-top: 1px solid #e8dcc8 !important;
 }
 
@@ -954,15 +1065,15 @@ section,
 :root:not([data-theme="dark"]) .booking-ornate-card,
 :root:not([data-theme="dark"]) .booking-modal-card,
 :root:not([data-theme="dark"]) .price-pill-btn:not(.is-selected):not(.gold-parchment-ribbon) {
-  background: #ffffff !important;
-  background-color: #ffffff !important;
+  background: #f7efdd !important;
+  background-color: #f7efdd !important;
   background-image: none !important;
   border-color: #e8dcc8 !important;
   box-shadow: 0 6px 22px rgba(61, 40, 23, 0.05) !important;
 }
 
 :root:not([data-theme="dark"]) .gallery-img-wrap {
-  background: #ffffff !important;
+  background: #f7efdd !important;
 }
 
 /* Small teal text that must meet 4.5:1 on white (e.g. rate badge text, price costs) */
@@ -1080,4 +1191,45 @@ section,
     font-size: 1.25rem !important;
     padding: 0 2rem !important;
   }
+}
+
+/* ── Step 5: Teal Diamond Motifs & Section Dividers ── */
+.teal-diamond {
+  display: inline-block;
+  color: #0e7c7b !important;
+  font-style: normal !important;
+  font-weight: 600 !important;
+  font-size: 0.85em;
+  line-height: 1;
+  vertical-align: middle;
+  margin: 0 0.4em;
+  transition: color 0.2s ease;
+}
+
+[data-theme="dark"] .teal-diamond {
+  color: #4de0d2 !important;
+}
+
+.section-ornament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1.5rem auto 1.75rem;
+  max-width: 480px;
+}
+
+.ornament-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--brand-gold-border, rgba(197, 155, 39, 0.42)), transparent);
+}
+
+.ornament-gem {
+  color: var(--brand-teal, #0e7c7b);
+  font-size: 0.95rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }

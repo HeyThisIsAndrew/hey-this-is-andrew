@@ -1,0 +1,182 @@
+---
+/**
+ * HennaSideBorders.astro
+ * Full-height ornate henna mandala side borders extracted from Netta's flyer.
+ * Fixed to the viewport edges, drawing in from top to bottom on scroll,
+ * with subtle parallax drift (0.3x speed) and full prefers-reduced-motion support.
+ * Positioned behind content, pointer-events: none, zero impact on text/touch targets.
+ */
+import borderLeftImg from '../assets/henna-border-left.png';
+import borderRightImg from '../assets/henna-border-right.png';
+---
+
+<div class="henna-borders-layer" aria-hidden="true" data-henna-borders>
+  <div class="henna-border-side henna-border-left henna-side-border-left" data-border-left>
+    <img
+      src={borderLeftImg.src}
+      width={borderLeftImg.width}
+      height={borderLeftImg.height}
+      alt=""
+      loading="eager"
+      decoding="async"
+    />
+  </div>
+  <div class="henna-border-side henna-border-right henna-side-border-right" data-border-right>
+    <img
+      src={borderRightImg.src}
+      width={borderRightImg.width}
+      height={borderRightImg.height}
+      alt=""
+      loading="eager"
+      decoding="async"
+    />
+  </div>
+</div>
+
+<style>
+  .henna-borders-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none !important;
+    overflow: hidden;
+    z-index: 0;
+  }
+
+  .henna-border-side {
+    position: absolute;
+    top: 0;
+    height: 100vh;
+    pointer-events: none !important;
+    will-change: clip-path, transform;
+    opacity: 0.75;
+    /* Default initial clip-path: top 20% visible */
+    clip-path: inset(0 0 80% 0);
+    transition: opacity 0.3s ease;
+  }
+
+  .henna-border-side img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    pointer-events: none !important;
+  }
+
+  /* ── Desktop Default (>= 1025px, e.g. 1440px) ── */
+  .henna-border-left {
+    left: 0;
+    width: clamp(90px, 10vw, 180px);
+  }
+
+  .henna-border-right {
+    right: 0;
+    width: clamp(90px, 10vw, 180px);
+  }
+
+  /* ── Tablet (641px - 1024px, e.g. 820px) ── */
+  @media (max-width: 1024px) {
+    .henna-border-side {
+      opacity: 0.58;
+    }
+    .henna-border-left,
+    .henna-border-right {
+      width: clamp(75px, 9vw, 120px);
+    }
+  }
+
+  /* ── Mobile (<= 640px, e.g. 390px) ── */
+  @media (max-width: 640px) {
+    .henna-border-side {
+      opacity: 0.42;
+    }
+    .henna-border-left,
+    .henna-border-right {
+      width: clamp(55px, 13vw, 85px);
+    }
+  }
+
+  /* ── Dark Mode ── */
+  :global([data-theme="dark"]) .henna-border-side {
+    opacity: 0.55;
+    filter: drop-shadow(0 0 10px rgba(244, 208, 135, 0.22));
+  }
+
+  @media (max-width: 640px) {
+    :global([data-theme="dark"]) .henna-border-side {
+      opacity: 0.38;
+    }
+  }
+
+  /* ── Prefers-reduced-motion: fully static ── */
+  @media (prefers-reduced-motion: reduce) {
+    .henna-border-side {
+      clip-path: none !important;
+      transform: none !important;
+      opacity: 0.6 !important;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const bordersLayer = document.querySelector('[data-henna-borders]');
+    if (!bordersLayer) return;
+
+    const leftBorder = bordersLayer.querySelector('[data-border-left]') as HTMLElement | null;
+    const rightBorder = bordersLayer.querySelector('[data-border-right]') as HTMLElement | null;
+    if (!leftBorder && !rightBorder) return;
+
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) return;
+
+    let ticking = false;
+
+    function updateBorders() {
+      ticking = false;
+      const scrollY = window.scrollY;
+      const docHeight = Math.max(
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight,
+        window.innerHeight + 1
+      );
+      const winHeight = window.innerHeight;
+      const maxScroll = Math.max(1, docHeight - winHeight);
+      const progress = Math.min(1, Math.max(0, scrollY / maxScroll));
+
+      // Draw-in: At top (progress=0), 20% visible. At bottom (progress=1), 100% visible.
+      const visiblePercent = 20 + progress * 80;
+      const insetBottom = Math.max(0, 100 - visiblePercent);
+
+      // Parallax: subtle drift slower than page scroll (~0.12 to 0.15 factor)
+      const driftY = (scrollY * 0.12).toFixed(1);
+      const clipValue = `inset(0 0 ${insetBottom.toFixed(2)}% 0)`;
+      const transformValue = `translate3d(0, -${driftY}px, 0)`;
+
+      if (leftBorder) {
+        leftBorder.style.clipPath = clipValue;
+        leftBorder.style.transform = transformValue;
+      }
+      if (rightBorder) {
+        rightBorder.style.clipPath = clipValue;
+        rightBorder.style.transform = transformValue;
+      }
+    }
+
+    window.addEventListener(
+      'scroll',
+      () => {
+        if (!ticking) {
+          window.requestAnimationFrame(updateBorders);
+          ticking = true;
+        }
+      },
+      { passive: true }
+    );
+
+    // Initial positioning
+    updateBorders();
+
+    window.addEventListener('resize', updateBorders, { passive: true });
+  })();
+</script>
