@@ -1,7 +1,5 @@
 ---
 import { Image } from 'astro:assets';
-import Accordion from '@andrew/ui/Accordion.astro';
-import AccordionRow from '@andrew/ui/AccordionRow.astro';
 import portraitImg from '../assets/hero-media/portrait.jpg';
 import { SUBSTACK_URL } from '../lib/latest-content';
 import { NOW_MONTH, NOW_ITEMS } from '../data/now';
@@ -13,9 +11,8 @@ interface Props {
 const { full = false } = Astro.props;
 
 /* Andrew's own words (2026-10-29), word for word: change them only with
-   him. The About page tells it in full; the homepage keeps one line
-   visible and folds these into panels (What I'm building, How I work), so
-   the two can never disagree. */
+   him. The About page tells it in full; the homepage shows an open editorial
+   dossier (What I'm building, How I work, Now), so the two never disagree. */
 const STORY = {
   building: "Hey, I'm building three brands: my personal brand, a small press outlet called BE Unconventional HQ, and Capture Create Caffeinate, photo and video for bars, restaurants, and events. My goal is to turn my passions into my career, and I want to do it in public. This is the site where you can follow my journey and see the messy reality of trying to become a full-time content creator.",
   how: [
@@ -26,7 +23,7 @@ const STORY = {
 <section id="about" aria-labelledby="about-heading" class="section-hairline about-section">
   <div class="container">
     <!-- BE-style section bar: icon + title + categories + rule, one line.
-         No link here: "More about me" below is the one read-more. -->
+         No link here: Read the Substack below is the primary CTA. -->
     <div class="about-bar">
       <span class="about-bar-icon" aria-hidden="true">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -54,9 +51,6 @@ const STORY = {
       <div class="about-copy">
         <h3 class="display about-headline">The reality of it all.</h3>
         {full && (
-          /* The fuller telling (About page). The homepage has no preview
-             line here: it repeated What I'm building, the panel just below,
-             nearly word for word (Andrew, 2026-10-30). */
           <>
             <p class="about-body">{STORY.building}</p>
             {STORY.how.map((para) => <p class="about-body">{para}</p>)}
@@ -64,32 +58,32 @@ const STORY = {
         )}
         <p class="about-punchline">BUILDING IN PUBLIC.</p>
         {!full && (
-          /* The intro, folded: each panel opens in place. The Now panel is
-             the former Now band and keeps its #now anchor (the /now
-             redirect lands on #about). */
           <div class="about-panels">
-            <Accordion>
-              <AccordionRow id="about-building" title="What I'm building" level={3} size="md">
+            <div class="about-dossier-grid">
+              <article class="about-dossier-col" id="about-building">
+                <p class="about-dossier-kicker font-mono">01 / What I'm building</p>
                 <p class="about-body">{STORY.building}</p>
-              </AccordionRow>
-              <AccordionRow id="about-how" title="How I work" level={3} size="md">
+              </article>
+              <article class="about-dossier-col" id="about-how">
+                <p class="about-dossier-kicker font-mono">02 / How I work</p>
                 {STORY.how.map((para) => <p class="about-body">{para}</p>)}
-              </AccordionRow>
-              <AccordionRow id="now" kicker={NOW_MONTH} title="Now" level={3} size="md">
-                <ul class="about-now-list">
-                  {NOW_ITEMS.map((n) => (
-                    <li class="about-now-item">
-                      <span class="about-now-key">{n.label}</span>
-                      <span class="about-now-val">{n.value.replace(/\.$/, '')}</span>
-                    </li>
-                  ))}
-                </ul>
-              </AccordionRow>
-            </Accordion>
+              </article>
+            </div>
+            <div class="about-now-ledger" id="now">
+              <p class="about-dossier-kicker font-mono">03 / Now &middot; {NOW_MONTH}</p>
+              <ul class="about-now-list">
+                {NOW_ITEMS.map((n) => (
+                  <li class="about-now-item">
+                    <span class="about-now-key">{n.label}</span>
+                    <span class="about-now-val">{n.value.replace(/\.$/, '')}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
 
-        <div class="about-ctas btn-group">
+        <div class:list={['about-ctas', { 'btn-group': full }]}>
           {full ? (
             <>
               <a class="btn btn-primary" href={SUBSTACK_URL} target="_blank" rel="noopener">
@@ -101,51 +95,35 @@ const STORY = {
               <a class="btn btn-ghost" href="#writing">Latest articles</a>
             </>
           ) : (
-            <>
-              
-              {/* One primary next step (More about me); the Substack is the
-                  quieter, external one. */}
-              <a class="btn btn-ghost" href={SUBSTACK_URL} target="_blank" rel="noopener">
-                Read the Substack
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                  <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </a>
-            </>
+            <a class="btn btn-primary" href={SUBSTACK_URL} target="_blank" rel="noopener">
+              Read the Substack
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
           )}
         </div>
       </div>
     </div>
+
+    {!full && (
+      <p class="section-handoff font-mono">
+        <a href="#photos">Next: Shot on the job <span aria-hidden="true">&darr;</span></a>
+      </p>
+    )}
   </div>
 </section>
 
 <style>
   /* Spacing and type scale: BE Unconventional HQ's "Inside the HQ"
-     (home.css .ihq-*, .hsh-*), measured at 1512 and 390. HQ's root is
-     12.8px from 768 up and this site's is not (16px to 1099, 12px to 1919,
-     then scaled with the window), so from 768 up the values are HQ's own
-     pixels times --u: 1px, growing above 1920 as the rest of this site does.
-     Below 768 both roots are 16px and HQ's rem values carry over as they are.
-     Monochrome: no HQ red. */
+     (home.css .ihq-*, .hsh-*), measured at 1512 and 390. */
   .about-section {
     --u: 1px;
-    /* The site's one section rhythm (--space-section), like every other
-       section: HQ's 96 to 128px left the lower half of this section empty
-       on a laptop (Andrew, 2026-10-02). */
-    --about-gap: var(--space-section);
-    padding: var(--about-gap) 0;
-    border-top: 1px solid var(--line);
     position: relative;
     z-index: 2;
     clear: both;
   }
 
-  /* BE-style section bar: icon, title, categories, rule.
-     Single horizontal line, HQ's "INSIDE THE HQ" pattern in monochrome.
-     The personal wordmark is artwork, independent of the section typeface. */
-  @media (min-width: 768px) {
-    .about-section { --about-gap: var(--space-section); }
-  }
   @media (min-width: 1920px) {
     .about-section { --u: calc(100vw / 1512); }
   }
@@ -156,14 +134,6 @@ const STORY = {
     row-gap: calc(5.12 * var(--u));
     margin-bottom: clamp(calc(19.2 * var(--u)), 3vw, calc(32 * var(--u)));
     flex-wrap: wrap;
-  }
-  .about-logo {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.05rem;
-    letter-spacing: 0.02em;
-    color: var(--ink);
-    white-space: nowrap;
   }
   .about-bar-title {
     font-family: var(--font-display);
@@ -191,8 +161,6 @@ const STORY = {
     background: var(--border);
     min-width: 2rem;
   }
-  /* Phones, as HQ: icon and title on the first row, the categories on the
-     second, no rule. */
   @media (max-width: 767px) {
     .about-bar {
       margin-bottom: 24px;
@@ -205,8 +173,6 @@ const STORY = {
       row-gap: 0.55rem;
     }
     .about-bar-icon { grid-area: icon; }
-    /* HQ's 1.15rem, held to the row on a 375 phone ("Meet The Creator" is
-       longer than "Inside the HQ"), and free to wrap if it ever must. */
     .about-bar-title { grid-area: title; font-size: min(1.15rem, 4.4vw); letter-spacing: 0.06em; white-space: normal; }
     .about-bar-cats { grid-area: cats; font-size: 0.62rem; letter-spacing: 0.18em; white-space: normal; }
     .about-bar-rule { display: none; }
@@ -222,20 +188,17 @@ const STORY = {
     height: calc(30 * var(--u));
   }
 
-  /* The portrait and the copy, side by side from 768 up. */
   .about-grid {
     display: grid;
     grid-template-columns: minmax(0, calc(320 * var(--u))) minmax(0, 1fr);
     gap: clamp(calc(25.6 * var(--u)), 5vw, calc(64 * var(--u)));
-    align-items: center;
+    align-items: start;
   }
   @media (max-width: 767px) {
     .about-grid {
       grid-template-columns: 1fr;
       gap: 2.25rem;
     }
-    /* .about-grid prefix: the base .about-portrait rule further down sets
-       width: 100% and used to win, so the phone size never applied. */
     .about-grid .about-portrait {
       width: min(60vw, 260px);
       max-width: none;
@@ -249,12 +212,10 @@ const STORY = {
     .about-grid .about-portrait figcaption span { font-size: 0.7rem; }
   }
 
-  /* Taped portrait frame, HQ style: vertical portrait format.
-     Shows Andrew's head, shoulders, and hands in perspective with dramatic
-     cinematic lighting — authentic composition matching BE HQ. */
+  /* Taped portrait frame, HQ style: vertical portrait format. */
   .about-portrait {
     position: relative;
-    margin: 0;
+    margin: 0.5rem 0 0;
     max-width: calc(320 * var(--u));
     width: 100%;
     transform: rotate(-2deg);
@@ -312,6 +273,9 @@ const STORY = {
     color: var(--muted);
   }
 
+  .about-copy {
+    min-width: 0;
+  }
   .about-headline {
     font-size: clamp(calc(21.76 * var(--u)), 2.6vw, calc(40.96 * var(--u)));
     font-weight: 800;
@@ -323,8 +287,6 @@ const STORY = {
     max-width: 24ch;
     text-wrap: balance;
   }
-  /* Body: HQ's .ihq-body. Scales with the window like the headline does
-     (16px at 1512, 16.8px on a phone), in a 78ch column. */
   .about-body {
     margin: calc(17.92 * var(--u)) 0 0;
     max-width: 78ch;
@@ -332,8 +294,6 @@ const STORY = {
     line-height: 1.7;
     color: rgba(255, 255, 255, 0.68);
   }
-  /* The tagline: HQ's motto, set the same size and weight, in white. It had
-     been losing to the body paragraph rule and rendering as body text. */
   .about-punchline {
     display: flex;
     flex-wrap: wrap;
@@ -348,7 +308,6 @@ const STORY = {
     text-transform: uppercase;
     color: var(--ink);
   }
-  /* Phones: HQ's rem values, both roots being 16px here. */
   @media (max-width: 767px) {
     .about-headline { font-size: clamp(1.6rem, 7.5vw, 2.2rem); }
     .about-body { margin-top: 1.4rem; font-size: 1.05rem; }
@@ -356,13 +315,58 @@ const STORY = {
     .about-portrait figcaption { padding-top: 1rem; }
     .about-portrait figcaption span { margin-top: 0.25rem; }
   }
-  /* The intro panels (homepage). They sit in the copy column, under the
-     tagline; the shared rows bring their own rules and chevrons. */
+
+  /* Open editorial dossier (homepage) */
   .about-panels {
     margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
   }
-  .about-panels .about-body:first-child {
-    margin-top: 0;
+  .about-dossier-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem 2rem;
+  }
+  @media (max-width: 759px) {
+    .about-dossier-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .about-dossier-col {
+    border-top: 1px solid var(--hairline-strong);
+    padding-top: 1rem;
+    min-width: 0;
+    scroll-margin-top: calc(var(--nav-bar-h, 76px) + 1rem);
+  }
+  .about-dossier-kicker {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .about-dossier-col .about-body {
+    margin-top: 0.75rem;
+    font-size: 0.94rem;
+    line-height: 1.65;
+  }
+  @media (max-width: 767px) {
+    .about-dossier-col .about-body {
+      margin-top: 0.65rem;
+      font-size: 0.96rem;
+    }
+  }
+
+  .about-now-ledger {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    padding: 1.25rem 1.5rem;
+    scroll-margin-top: calc(var(--nav-bar-h, 76px) + 1rem);
+  }
+  .about-now-ledger .about-dossier-kicker {
+    margin-bottom: 1rem;
   }
   .about-now-list {
     list-style: none;
@@ -383,6 +387,9 @@ const STORY = {
     border-top: 0;
     padding-top: 0;
   }
+  .about-now-item:last-child {
+    padding-bottom: 0;
+  }
   .about-now-key {
     color: var(--ink);
     font-family: var(--font-mono);
@@ -392,6 +399,9 @@ const STORY = {
     padding-top: 0.15rem;
   }
   @media (max-width: 480px) {
+    .about-now-ledger {
+      padding: 1.1rem 1.15rem;
+    }
     .about-now-item {
       grid-template-columns: 1fr;
       gap: 0.2rem;
@@ -401,13 +411,4 @@ const STORY = {
     --btn-group-gap: 1rem;
     margin-top: 2rem;
   }
-
-  @media (max-width: 640px) {
-    .about-kicker-tags { display: none; }
-    .about-kicker-title { font-size: 0.95rem; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .about-kicker-link { transition: none; }
-  }
 </style>
-
