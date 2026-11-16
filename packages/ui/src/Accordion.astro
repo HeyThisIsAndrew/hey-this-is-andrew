@@ -156,9 +156,19 @@ const { exclusive = false } = Astro.props;
   }
 
   function initAccordions() {
-    document.querySelectorAll<HTMLElement>('[data-accordion-group]').forEach(initGroup);
+    const groups = document.querySelectorAll<HTMLElement>('[data-accordion-group]');
+    if (groups.length) document.documentElement.classList.add('acc-js');
+    groups.forEach(initGroup);
     openFromHash(location.hash);
   }
+
+  // Astro replaces the root attributes and caches the inline bootstrap.
+  // Restore the incoming page's collapse styles before the swap can paint.
+  document.addEventListener('astro:before-swap', (event) => {
+    if (event.newDocument.querySelector('[data-accordion-group]')) {
+      event.newDocument.documentElement.classList.add('acc-js');
+    }
+  });
 
   initAccordions();
   document.addEventListener('astro:page-load', initAccordions);
