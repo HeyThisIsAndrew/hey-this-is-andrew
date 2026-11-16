@@ -71,12 +71,8 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
         <span class="footer-v-line"></span>
       </div>
 
-      <!-- Right Column: Visit My Website (Smooth scrolls back to top) -->
-      <a
-        href="#overview"
-        class="footer-col-card footer-col-web"
-        aria-label="Back to top of page"
-      >
+      <!-- Right Column: Visit My Website (Tap-to-Copy plain text, NOT a hyperlink) -->
+      <div class="footer-col-card footer-col-web">
         <div class="footer-icon-circle">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -97,8 +93,33 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
         </div>
         <div class="footer-col-text">
           <span class="footer-script-label">Visit My Website</span>
-          <span class="footer-sub-interactive">
-            <span class="footer-sub-label footer-domain-text">nettahennaandfeatheredsoul.com</span>
+          <div class="footer-domain-copy-wrap footer-sub-interactive">
+            <span
+              class="footer-sub-label footer-domain-text footer-plain-domain"
+              role="button"
+              tabindex="0"
+              aria-label="Copy website address"
+              title="Tap to copy"
+              data-domain-copy="nettahennaandfeatheredsoul.com"
+            >
+              <span>nettahennaandfeatheredsoul.com</span>
+              <svg
+                class="footer-copy-icon"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+              </svg>
+            </span>
+            <span class="footer-copied-badge" role="status" aria-live="polite">Copied</span>
             <svg class="footer-henna-underline" viewBox="0 0 220 12" fill="none" aria-hidden="true">
               <path
                 class="henna-underline-path"
@@ -109,9 +130,9 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
               />
               <circle class="henna-underline-dot" cx="215" cy="6" r="2.8" fill="#0e7c7b" />
             </svg>
-          </span>
+          </div>
         </div>
-      </a>
+      </div>
     </div>
 
     <!-- Centered Book a Date Feathered Ribbon Button -->
@@ -162,13 +183,33 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
       }
     }
 
-    const webBtn = document.querySelector<HTMLAnchorElement>('.footer-col-web');
-    if (webBtn && !webBtn.dataset.scrollWired) {
-      webBtn.dataset.scrollWired = '1';
-      webBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
+    const domainEl = document.querySelector<HTMLElement>('[data-domain-copy]');
+    if (domainEl && !domainEl.dataset.copyWired) {
+      domainEl.dataset.copyWired = '1';
+      const badgeEl = domainEl.parentElement?.querySelector<HTMLElement>('.footer-copied-badge');
+      let fadeTimer = 0;
+
+      const handleCopy = (e: Event) => {
+        if (e.type === 'keydown') {
+          const ke = e as KeyboardEvent;
+          if (ke.key !== 'Enter' && ke.key !== ' ') return;
+          ke.preventDefault();
+        }
+        const domain = domainEl.getAttribute('data-domain-copy') || 'nettahennaandfeatheredsoul.com';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(domain).catch(() => {});
+        }
+        if (badgeEl) {
+          window.clearTimeout(fadeTimer);
+          badgeEl.classList.add('is-visible');
+          fadeTimer = window.setTimeout(() => {
+            badgeEl.classList.remove('is-visible');
+          }, 2000);
+        }
+      };
+
+      domainEl.addEventListener('click', handleCopy);
+      domainEl.addEventListener('keydown', handleCopy);
     }
   }
 
@@ -362,11 +403,52 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
     color: var(--ink, #3d2817);
     font-weight: 500;
     letter-spacing: 0.02em;
-    outline: none !important;
+    cursor: pointer;
+    user-select: all;
   }
 
   [data-theme="dark"] .footer-domain-text {
     color: var(--ink, #f7efe4);
+  }
+
+  .footer-copy-icon {
+    opacity: 0.65;
+    color: var(--brand-gold-heading, #a8821d);
+    flex-shrink: 0;
+  }
+
+  [data-theme="dark"] .footer-copy-icon {
+    color: var(--brand-gold, #f4d087);
+  }
+
+  .footer-copied-badge {
+    position: absolute;
+    left: calc(100% + 0.5rem);
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--brand-gold-heading, #a8821d);
+    background: rgba(197, 155, 39, 0.14);
+    border: 1px solid var(--brand-gold, #c59b27);
+    padding: 0.12rem 0.5rem;
+    border-radius: 999px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    white-space: nowrap;
+  }
+
+  [data-theme="dark"] .footer-copied-badge {
+    color: var(--brand-gold, #f4d087);
+    background: rgba(244, 208, 135, 0.15);
+    border-color: var(--brand-gold, #f4d087);
+  }
+
+  .footer-copied-badge.is-visible {
+    opacity: 1;
   }
 
   /* ── Step 3: Henna Draw-On Underline Under Text Only (0.4s Left-to-Right) ── */
@@ -393,32 +475,32 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
     transition: opacity 0.25s ease 0.25s, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) 0.25s;
   }
 
-  /* Trigger on hover/focus of the handle or domain card */
+  /* Trigger on hover/focus of the handle or domain separately */
   .footer-col-ig:hover .footer-sub-label,
   .footer-col-ig:focus-visible .footer-sub-label,
-  .footer-col-web:hover .footer-sub-label,
-  .footer-col-web:focus-visible .footer-sub-label {
+  .footer-domain-copy-wrap:hover .footer-sub-label,
+  .footer-domain-copy-wrap:focus-within .footer-sub-label {
     color: #0e7c7b !important;
   }
 
   :global([data-theme="dark"]) .footer-col-ig:hover .footer-sub-label,
   :global([data-theme="dark"]) .footer-col-ig:focus-visible .footer-sub-label,
-  :global([data-theme="dark"]) .footer-col-web:hover .footer-sub-label,
-  :global([data-theme="dark"]) .footer-col-web:focus-visible .footer-sub-label {
+  :global([data-theme="dark"]) .footer-domain-copy-wrap:hover .footer-sub-label,
+  :global([data-theme="dark"]) .footer-domain-copy-wrap:focus-within .footer-sub-label {
     color: #4de0d2 !important;
   }
 
   .footer-col-ig:hover .henna-underline-path,
   .footer-col-ig:focus-visible .henna-underline-path,
-  .footer-col-web:hover .henna-underline-path,
-  .footer-col-web:focus-visible .henna-underline-path {
+  .footer-domain-copy-wrap:hover .henna-underline-path,
+  .footer-domain-copy-wrap:focus-within .henna-underline-path {
     stroke-dashoffset: 0;
   }
 
   .footer-col-ig:hover .henna-underline-dot,
   .footer-col-ig:focus-visible .henna-underline-dot,
-  .footer-col-web:hover .henna-underline-dot,
-  .footer-col-web:focus-visible .henna-underline-dot {
+  .footer-domain-copy-wrap:hover .henna-underline-dot,
+  .footer-domain-copy-wrap:focus-within .henna-underline-dot {
     opacity: 1;
     transform: scale(1);
   }

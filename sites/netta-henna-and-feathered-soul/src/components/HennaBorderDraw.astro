@@ -452,31 +452,6 @@ buildPaisley(1478, 1, 96);
 buildLotusFlower(1582, 108);
 buildPaisley(1686, -1, 96);
 buildMandalaRosette(1780, 82);
-
-// Assemble high-performance compound paths grouped by stroke & width
-const strokeGroups: Record<string, { stroke: string; width: number; d: string; delay: number }> = {};
-paths.forEach((p) => {
-  const key = `${p.stroke}|${p.width}`;
-  if (!strokeGroups[key]) {
-    strokeGroups[key] = { stroke: p.stroke, width: p.width, d: p.d, delay: p.delay };
-  } else {
-    strokeGroups[key].d += ' ' + p.d;
-    strokeGroups[key].delay = Math.min(strokeGroups[key].delay, p.delay);
-  }
-});
-const compoundPaths = Object.values(strokeGroups);
-
-// Assemble compound dots grouped by fill color
-const dotGroups: Record<string, { fill: string; d: string }> = {};
-dots.forEach((d) => {
-  const circleD = `M ${(d.cx - d.radius).toFixed(2)} ${d.cy.toFixed(2)} A ${d.radius} ${d.radius} 0 1 0 ${(d.cx + d.radius).toFixed(2)} ${d.cy.toFixed(2)} A ${d.radius} ${d.radius} 0 1 0 ${(d.cx - d.radius).toFixed(2)} ${d.cy.toFixed(2)} Z`;
-  if (!dotGroups[d.fill]) {
-    dotGroups[d.fill] = { fill: d.fill, d: circleD };
-  } else {
-    dotGroups[d.fill].d += ' ' + circleD;
-  }
-});
-const compoundDots = Object.values(dotGroups);
 ---
 
 <svg
@@ -488,7 +463,7 @@ const compoundDots = Object.values(dotGroups);
   aria-hidden="true"
 >
   <g transform={side === 'right' ? 'translate(120, 0) scale(-1, 1)' : undefined}>
-    {compoundPaths.map((p) => (
+    {paths.map((p) => (
       <path
         class="henna-path"
         d={p.d}
@@ -499,10 +474,12 @@ const compoundDots = Object.values(dotGroups);
         style={`transition-delay: ${p.delay}s;`}
       />
     ))}
-    {compoundDots.map((d) => (
-      <path
+    {dots.map((d) => (
+      <circle
         class="henna-dot"
-        d={d.d}
+        cx={d.cx}
+        cy={d.cy}
+        r={d.radius}
         fill={d.fill}
       />
     ))}
