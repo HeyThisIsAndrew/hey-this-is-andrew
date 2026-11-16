@@ -1,332 +1,27 @@
 ---
 /**
  * HennaSideBorders.astro
- * Pass 28: True SVG stroke-drawn henna mandala side borders.
- * Replaces the sliced PNG clip-path curtain reveal with real pen-drawn SVG vector paths.
- * - Left and right ornate henna vines with lotus petals, paisley flourishes, and cabochon dots.
- * - Drawn along their own paths via stroke-dasharray and stroke-dashoffset (HennaDraw style).
- * - Triggered once via IntersectionObserver when entering the viewport.
- * - Full prefers-reduced-motion support (rendered statically, no animation).
- * - Fixed position behind page content, pointer-events: none, zero click interception.
+ * Meticulous original SVG henna (mehndi) side tapestries (left and right mirrored).
+ * Uses HennaBorderDraw.astro and the exact HennaDraw.astro pen-stroke draw technique:
+ * - SVG paths with stroke-dasharray and stroke-dashoffset (no PNGs, no clip-path slices).
+ * - Dots fade and scale in (opacity 0 -> 1, scale 0.5 -> 1, 1.2s ease 1s).
+ * - Triggered once via IntersectionObserver (threshold: 0.2) adding .is-drawn.
+ * - Full prefers-reduced-motion static support.
  */
+import HennaBorderDraw from './HennaBorderDraw.astro';
 ---
 
-<div class="henna-borders-layer" aria-hidden="true" data-henna-borders>
-  <!-- Left Side Ornate Henna Vine -->
-  <div class="henna-border-side henna-border-left henna-side-border-left" data-border-left>
-    <svg
-      class="henna-vine-svg"
-      viewBox="0 0 140 1200"
-      preserveAspectRatio="xMinYMin meet"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <!-- Main undulating vine stem -->
-      <path
-        class="henna-path vine-stem"
-        d="M12 0 C28 80, 56 140, 34 220 C14 290, 48 370, 26 450 C8 520, 52 610, 28 700 C10 780, 54 870, 24 960 C8 1030, 42 1120, 18 1200"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.8"
-        stroke-linecap="round"
-      />
-
-      <!-- Unit 1 (y: 60 - 220): Lotus Half-Mandala & Tendril Flourish -->
-      <path
-        class="henna-path"
-        d="M32 100 C64 92, 104 112, 122 144 C98 152, 60 146, 30 134"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.5"
-      />
-      <path
-        class="henna-path"
-        d="M30 118 C58 114, 92 126, 102 144 C82 150, 52 144, 28 138"
-        stroke="var(--brand-teal, #0e7c7b)"
-        stroke-width="1.3"
-      />
-      <path
-        class="henna-path"
-        d="M122 144 C132 124, 114 96, 88 104 C72 108, 92 136, 122 144 Z"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <path
-        class="henna-path"
-        d="M34 160 C56 182, 88 194, 116 180 C88 206, 52 198, 32 182"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <circle class="henna-dot" cx="128" cy="144" r="3.2" fill="var(--brand-teal, #0e7c7b)" />
-      <circle class="henna-dot" cx="106" cy="112" r="2.2" fill="var(--brand-gold, #c59b27)" />
-      <circle class="henna-dot" cx="118" cy="180" r="2.4" fill="var(--brand-gold, #c59b27)" />
-      <circle class="henna-dot" cx="64" cy="130" r="1.8" fill="var(--brand-teal, #0e7c7b)" />
-
-      <!-- Unit 2 (y: 280 - 460): Paisley Blossom & Spiraling Leaves -->
-      <path
-        class="henna-path"
-        d="M26 310 C62 300, 108 324, 128 360 C106 376, 68 364, 28 344"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.5"
-      />
-      <path
-        class="henna-path"
-        d="M128 360 C138 336, 116 304, 88 316 C76 322, 98 350, 128 360 Z"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <path
-        class="henna-path"
-        d="M28 332 C58 330, 94 346, 106 364 C84 372, 54 362, 26 352"
-        stroke="var(--brand-teal, #0e7c7b)"
-        stroke-width="1.3"
-      />
-      <path
-        class="henna-path"
-        d="M26 372 C58 394, 96 406, 124 390 C96 418, 56 410, 24 394"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <circle class="henna-dot" cx="134" cy="360" r="3.2" fill="var(--brand-teal, #0e7c7b)" />
-      <circle class="henna-dot" cx="112" cy="326" r="2.2" fill="var(--brand-gold, #c59b27)" />
-      <circle class="henna-dot" cx="126" cy="390" r="2.4" fill="var(--brand-gold, #c59b27)" />
-      <circle class="henna-dot" cx="68" cy="344" r="1.8" fill="var(--brand-teal, #0e7c7b)" />
-
-      <!-- Unit 3 (y: 520 - 710): Lotus Half-Mandala & Tendril Flourish -->
-      <path
-        class="henna-path"
-        d="M28 550 C64 542, 106 564, 124 596 C98 606, 62 598, 26 584"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.5"
-      />
-      <path
-        class="henna-path"
-        d="M26 568 C56 564, 92 576, 104 596 C82 602, 52 596, 26 588"
-        stroke="var(--brand-teal, #0e7c7b)"
-        stroke-width="1.3"
-      />
-      <path
-        class="henna-path"
-        d="M124 596 C134 574, 114 546, 88 554 C72 558, 92 586, 124 596 Z"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <path
-        class="henna-path"
-        d="M28 612 C56 634, 92 646, 120 632 C92 658, 54 650, 26 634"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <circle class="henna-dot" cx="130" cy="596" r="3.2" fill="var(--brand-teal, #0e7c7b)" />
-      <circle class="henna-dot" cx="108" cy="562" r="2.2" fill="var(--brand-gold, #c59b27)" />
-      <circle class="henna-dot" cx="122" cy="632" r="2.4" fill="var(--brand-gold, #c59b27)" />
-      <circle class="henna-dot" cx="66" cy="580" r="1.8" fill="var(--brand-teal, #0e7c7b)" />
-
-      <!-- Unit 4 (y: 770 - 970): Paisley Blossom & Spiraling Leaves -->
-      <path
-        class="henna-path"
-        d="M24 800 C60 790, 106 814, 126 850 C104 866, 66 854, 24 834"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.5"
-      />
-      <path
-        class="henna-path"
-        d="M126 850 C136 826, 114 794, 86 806 C74 812, 96 840, 126 850 Z"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <path
-        class="henna-path"
-        d="M24 822 C56 820, 92 836, 104 854 C82 862, 52 852, 24 842"
-        stroke="var(--brand-teal, #0e7c7b)"
-        stroke-width="1.3"
-      />
-      <path
-        class="henna-path"
-        d="M24 862 C56 884, 94 896, 122 880 C94 908, 54 900, 22 884"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <circle class="henna-dot" cx="132" cy="850" r="3.2" fill="var(--brand-teal, #0e7c7b)" />
-      <circle class="henna-dot" cx="110" cy="816" r="2.2" fill="var(--brand-gold, #c59b27)" />
-      <circle class="henna-dot" cx="124" cy="880" r="2.4" fill="var(--brand-gold, #c59b27)" />
-      <circle class="henna-dot" cx="66" cy="834" r="1.8" fill="var(--brand-teal, #0e7c7b)" />
-
-      <!-- Unit 5 (y: 1020 - 1180): Terminal Lotus Petal -->
-      <path
-        class="henna-path"
-        d="M18 1040 C48 1034, 88 1052, 108 1080 C84 1090, 52 1082, 18 1070"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.5"
-      />
-      <path
-        class="henna-path"
-        d="M108 1080 C116 1060, 98 1036, 76 1044 C64 1048, 80 1072, 108 1080 Z"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <circle class="henna-dot" cx="112" cy="1080" r="2.8" fill="var(--brand-teal, #0e7c7b)" />
-      <circle class="henna-dot" cx="90" cy="1052" r="2.0" fill="var(--brand-gold, #c59b27)" />
-    </svg>
+<div class="henna-sides-layer" aria-hidden="true" data-henna-side-draw>
+  <div class="henna-side-panel henna-side-left" data-side-left>
+    <HennaBorderDraw side="left" />
   </div>
-
-  <!-- Right Side Ornate Henna Vine (Mirrored) -->
-  <div class="henna-border-side henna-border-right henna-side-border-right" data-border-right>
-    <svg
-      class="henna-vine-svg"
-      viewBox="0 0 140 1200"
-      preserveAspectRatio="xMaxYMin meet"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <!-- Main undulating vine stem -->
-      <path
-        class="henna-path vine-stem"
-        d="M128 0 C112 80, 84 140, 106 220 C126 290, 92 370, 114 450 C132 520, 88 610, 112 700 C130 780, 86 870, 116 960 C132 1030, 98 1120, 122 1200"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.8"
-        stroke-linecap="round"
-      />
-
-      <!-- Unit 1 (y: 60 - 220): Lotus Half-Mandala & Tendril Flourish -->
-      <path
-        class="henna-path"
-        d="M108 100 C76 92, 36 112, 18 144 C42 152, 80 146, 110 134"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.5"
-      />
-      <path
-        class="henna-path"
-        d="M110 118 C82 114, 48 126, 38 144 C58 150, 88 144, 112 138"
-        stroke="var(--brand-teal, #0e7c7b)"
-        stroke-width="1.3"
-      />
-      <path
-        class="henna-path"
-        d="M18 144 C8 124, 26 96, 52 104 C68 108, 48 136, 18 144 Z"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <path
-        class="henna-path"
-        d="M106 160 C84 182, 52 194, 24 180 C52 206, 88 198, 108 182"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <circle class="henna-dot" cx="12" cy="144" r="3.2" fill="var(--brand-teal, #0e7c7b)" />
-      <circle class="henna-dot" cx="34" cy="112" r="2.2" fill="var(--brand-gold, #c59b27)" />
-      <circle class="henna-dot" cx="22" cy="180" r="2.4" fill="var(--brand-gold, #c59b27)" />
-      <circle class="henna-dot" cx="76" cy="130" r="1.8" fill="var(--brand-teal, #0e7c7b)" />
-
-      <!-- Unit 2 (y: 280 - 460): Paisley Blossom & Spiraling Leaves -->
-      <path
-        class="henna-path"
-        d="M114 310 C78 300, 32 324, 12 360 C34 376, 72 364, 112 344"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.5"
-      />
-      <path
-        class="henna-path"
-        d="M12 360 C2 336, 24 304, 52 316 C64 322, 42 350, 12 360 Z"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <path
-        class="henna-path"
-        d="M112 332 C82 330, 46 346, 34 364 C56 372, 86 362, 114 352"
-        stroke="var(--brand-teal, #0e7c7b)"
-        stroke-width="1.3"
-      />
-      <path
-        class="henna-path"
-        d="M114 372 C82 394, 44 406, 16 390 C44 418, 84 410, 116 394"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <circle class="henna-dot" cx="6" cy="360" r="3.2" fill="var(--brand-teal, #0e7c7b)" />
-      <circle class="henna-dot" cx="28" cy="326" r="2.2" fill="var(--brand-gold, #c59b27)" />
-      <circle class="henna-dot" cx="14" cy="390" r="2.4" fill="var(--brand-gold, #c59b27)" />
-      <circle class="henna-dot" cx="72" cy="344" r="1.8" fill="var(--brand-teal, #0e7c7b)" />
-
-      <!-- Unit 3 (y: 520 - 710): Lotus Half-Mandala & Tendril Flourish -->
-      <path
-        class="henna-path"
-        d="M112 550 C76 542, 34 564, 16 596 C42 606, 78 598, 114 584"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.5"
-      />
-      <path
-        class="henna-path"
-        d="M114 568 C84 564, 48 576, 36 596 C58 602, 88 596, 114 588"
-        stroke="var(--brand-teal, #0e7c7b)"
-        stroke-width="1.3"
-      />
-      <path
-        class="henna-path"
-        d="M16 596 C6 574, 26 546, 52 554 C68 558, 48 586, 16 596 Z"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <path
-        class="henna-path"
-        d="M112 612 C84 634, 48 646, 20 632 C48 658, 86 650, 114 634"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <circle class="henna-dot" cx="10" cy="596" r="3.2" fill="var(--brand-teal, #0e7c7b)" />
-      <circle class="henna-dot" cx="32" cy="562" r="2.2" fill="var(--brand-gold, #c59b27)" />
-      <circle class="henna-dot" cx="18" cy="632" r="2.4" fill="var(--brand-gold, #c59b27)" />
-      <circle class="henna-dot" cx="74" cy="580" r="1.8" fill="var(--brand-teal, #0e7c7b)" />
-
-      <!-- Unit 4 (y: 770 - 970): Paisley Blossom & Spiraling Leaves -->
-      <path
-        class="henna-path"
-        d="M116 800 C80 790, 34 814, 14 850 C36 866, 74 854, 116 834"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.5"
-      />
-      <path
-        class="henna-path"
-        d="M14 850 C4 826, 26 794, 54 806 C66 812, 44 840, 14 850 Z"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <path
-        class="henna-path"
-        d="M116 822 C84 820, 48 836, 36 854 C58 862, 88 852, 116 842"
-        stroke="var(--brand-teal, #0e7c7b)"
-        stroke-width="1.3"
-      />
-      <path
-        class="henna-path"
-        d="M116 862 C84 884, 46 896, 18 880 C46 908, 86 900, 118 884"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <circle class="henna-dot" cx="8" cy="850" r="3.2" fill="var(--brand-teal, #0e7c7b)" />
-      <circle class="henna-dot" cx="30" cy="816" r="2.2" fill="var(--brand-gold, #c59b27)" />
-      <circle class="henna-dot" cx="16" cy="880" r="2.4" fill="var(--brand-gold, #c59b27)" />
-      <circle class="henna-dot" cx="74" cy="834" r="1.8" fill="var(--brand-teal, #0e7c7b)" />
-
-      <!-- Unit 5 (y: 1020 - 1180): Terminal Lotus Petal -->
-      <path
-        class="henna-path"
-        d="M122 1040 C92 1034, 52 1052, 32 1080 C56 1090, 88 1082, 122 1070"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.5"
-      />
-      <path
-        class="henna-path"
-        d="M32 1080 C24 1060, 42 1036, 64 1044 C76 1048, 60 1072, 32 1080 Z"
-        stroke="var(--brand-gold, #c59b27)"
-        stroke-width="1.4"
-      />
-      <circle class="henna-dot" cx="28" cy="1080" r="2.8" fill="var(--brand-teal, #0e7c7b)" />
-      <circle class="henna-dot" cx="50" cy="1052" r="2.0" fill="var(--brand-gold, #c59b27)" />
-    </svg>
+  <div class="henna-side-panel henna-side-right" data-side-right>
+    <HennaBorderDraw side="right" />
   </div>
 </div>
 
 <style>
-  .henna-borders-layer {
+  .henna-sides-layer {
     position: fixed;
     inset: 0;
     pointer-events: none !important;
@@ -334,7 +29,7 @@
     z-index: 0;
   }
 
-  .henna-border-side {
+  .henna-side-panel {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -344,96 +39,89 @@
     transition: opacity 0.4s ease;
   }
 
-  .henna-vine-svg {
+  .henna-side-panel :global(.henna-art-svg) {
     display: block;
     width: 100%;
     height: 100%;
     pointer-events: none !important;
-    filter: drop-shadow(0 2px 8px rgba(197, 155, 39, 0.22));
+    filter: drop-shadow(0 2px 6px rgba(197, 155, 39, 0.2));
   }
 
-  /* ── Desktop Default (>= 1025px, e.g. 1440px) ── */
-  .henna-border-left {
+  /* Desktop (>= 1025px, e.g. 1440px) */
+  .henna-side-left {
     left: 0;
     width: clamp(90px, 10vw, 180px);
   }
 
-  .henna-border-right {
+  .henna-side-right {
     right: 0;
     width: clamp(90px, 10vw, 180px);
   }
 
-  /* ── Tablet (641px - 1024px, e.g. 820px) ── */
+  /* Tablet / iPad (641px - 1024px, e.g. 820px) */
   @media (max-width: 1024px) {
-    .henna-border-side {
+    .henna-side-panel {
       opacity: 0.58;
     }
-    .henna-border-left,
-    .henna-border-right {
+    .henna-side-left,
+    .henna-side-right {
       width: clamp(75px, 9vw, 120px);
     }
   }
 
-  /* ── Mobile (<= 640px, e.g. 390px) ── */
+  /* Mobile (<= 640px, e.g. 390px) */
   @media (max-width: 640px) {
-    .henna-border-side {
+    .henna-side-panel {
       opacity: 0.42;
     }
-    .henna-border-left,
-    .henna-border-right {
+    .henna-side-left,
+    .henna-side-right {
       width: clamp(60px, 14vw, 85px);
     }
   }
 
-  /* ── Dark Mode ── */
-  :global([data-theme="dark"]) .henna-border-side {
+  /* Dark Mode */
+  :global([data-theme="dark"]) .henna-side-panel {
     opacity: 0.55;
     filter: drop-shadow(0 0 10px rgba(244, 208, 135, 0.25));
   }
 
   @media (max-width: 640px) {
-    :global([data-theme="dark"]) .henna-border-side {
-      opacity: 0.38;
+    :global([data-theme="dark"]) .henna-side-panel {
+      opacity: 0.4;
     }
   }
 
-  /* ── SVG Stroke-Draw Animation (Pen draw along path, exactly like HennaDraw) ── */
-  .henna-path {
-    stroke-dasharray: 260;
-    stroke-dashoffset: 260;
+  /* SVG Stroke-Draw Animation (exact HennaDraw.astro technique) */
+  .henna-sides-layer :global(.henna-path) {
+    stroke-dasharray: 320;
+    stroke-dashoffset: 320;
     transition: stroke-dashoffset 2s cubic-bezier(0.25, 1, 0.5, 1);
   }
 
-  .henna-path.vine-stem {
-    stroke-dasharray: 1400;
-    stroke-dashoffset: 1400;
-    transition: stroke-dashoffset 2.4s cubic-bezier(0.25, 1, 0.5, 1);
-  }
-
-  .henna-dot {
+  .henna-sides-layer :global(.henna-dot) {
     opacity: 0;
     transform: scale(0.5);
     transition: opacity 1.2s ease 1s, transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) 1s;
+    transform-box: fill-box;
     transform-origin: center;
   }
 
-  /* On is-drawn: lines draw themselves smoothly from top to bottom */
-  .henna-borders-layer.is-drawn .henna-path {
+  .henna-sides-layer.is-drawn :global(.henna-path) {
     stroke-dashoffset: 0;
   }
 
-  .henna-borders-layer.is-drawn .henna-dot {
+  .henna-sides-layer.is-drawn :global(.henna-dot) {
     opacity: 1;
     transform: scale(1);
   }
 
-  /* ── Prefers-reduced-motion: fully static ── */
   @media (prefers-reduced-motion: reduce) {
-    .henna-path {
+    .henna-sides-layer :global(.henna-path) {
       stroke-dashoffset: 0 !important;
       transition: none !important;
     }
-    .henna-dot {
+    .henna-sides-layer :global(.henna-dot) {
       opacity: 1 !important;
       transform: scale(1) !important;
       transition: none !important;
@@ -442,28 +130,34 @@
 </style>
 
 <script>
-  (() => {
-    const bordersLayer = document.querySelector('[data-henna-borders]');
-    if (!bordersLayer) return;
+  function setupHennaSideDraw() {
+    const elements = document.querySelectorAll<HTMLElement>('[data-henna-side-draw]');
+    if (!elements.length) return;
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      bordersLayer.classList.add('is-drawn');
+      elements.forEach((el) => el.classList.add('is-drawn'));
       return;
     }
 
-    // Trigger stroke draw-in once when borders layer mounts/enters view
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            bordersLayer.classList.add('is-drawn');
-            observer.disconnect();
+            entry.target.classList.add('is-drawn');
+            observer.unobserve(entry.target);
           }
         });
       },
-      { threshold: 0.1 }
+      { threshold: 0.2 }
     );
 
-    observer.observe(bordersLayer);
-  })();
+    elements.forEach((el) => observer.observe(el));
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupHennaSideDraw, { once: true });
+  } else {
+    setupHennaSideDraw();
+  }
+  document.addEventListener('astro:page-load', setupHennaSideDraw);
 </script>

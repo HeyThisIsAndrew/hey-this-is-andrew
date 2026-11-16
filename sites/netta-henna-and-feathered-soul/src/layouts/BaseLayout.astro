@@ -13,10 +13,9 @@ import '../styles/global.css';
 import '@andrew/ui/styles/cta.css';
 import Nav from '@andrew/ui/Nav.astro';
 import SlimFooter from '../components/SlimFooter.astro';
+import HennaBorderDraw from '../components/HennaBorderDraw.astro';
 import ChromeMeta from '@andrew/ui/ChromeMeta.astro';
 import logo from '../assets/netta-logo.png';
-import curtainLeftImg from '../assets/henna-curtain-left.png';
-import curtainRightImg from '../assets/henna-curtain-right.png';
 import { SITE, NAV_LINKS, homeUrl } from '../data/site';
 
 interface Props {
@@ -82,11 +81,20 @@ const logoAsset = { src: logo.src, width: logo.width, height: logo.height, alt: 
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Great+Vibes&family=Parisienne&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <div class="nav-henna-curtains" aria-hidden="true">
-      <img src={curtainLeftImg.src} width={curtainLeftImg.width} height={curtainLeftImg.height} alt="" class="nav-henna-curtain nav-henna-curtain-left" loading="eager" decoding="async" />
-      <img src={curtainRightImg.src} width={curtainRightImg.width} height={curtainRightImg.height} alt="" class="nav-henna-curtain nav-henna-curtain-right" loading="eager" decoding="async" />
-    </div>
-    <Nav logo={logoAsset} homeHref={homeUrl} links={NAV_LINKS} labels={{ menu: '', close: 'Close' }} />
+    <Nav logo={logoAsset} homeHref={homeUrl} links={NAV_LINKS} labels={{ menu: '', close: 'Close' }}>
+      <div class="nav-drape-wrap" data-nav-henna-draw aria-hidden="true">
+        <div class="nav-drape-panel nav-drape-left">
+          <div class="nav-drape-svg-holder">
+            <HennaBorderDraw side="left" />
+          </div>
+        </div>
+        <div class="nav-drape-panel nav-drape-right">
+          <div class="nav-drape-svg-holder">
+            <HennaBorderDraw side="left" />
+          </div>
+        </div>
+      </div>
+    </Nav>
     <main id="main-content">
       <slot />
     </main>
@@ -97,8 +105,22 @@ const logoAsset = { src: logo.src, width: logo.width, height: logo.height, alt: 
 
       // Theme toggle mounting and handling
       function setupThemeToggle() {
+        const navDrapes = document.querySelectorAll<HTMLElement>('[data-nav-henna-draw]');
+        navDrapes.forEach((el) => {
+          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            el.classList.add('is-drawn');
+          } else {
+            requestAnimationFrame(() => el.classList.add('is-drawn'));
+          }
+        });
+
         const rightActions = document.querySelector('.nav-right-actions');
-        if (!rightActions || document.getElementById('theme-toggle-btn')) return;
+        if (!rightActions) return;
+        const menuBtn = rightActions.querySelector('.menu-btn');
+        if (menuBtn && !menuBtn.getAttribute('aria-label')) {
+          menuBtn.setAttribute('aria-label', 'Menu');
+        }
+        if (document.getElementById('theme-toggle-btn')) return;
 
         const btn = document.createElement('button');
         btn.type = 'button';
