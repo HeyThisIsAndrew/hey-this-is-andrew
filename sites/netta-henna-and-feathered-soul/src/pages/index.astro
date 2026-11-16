@@ -36,6 +36,7 @@ import logoImg from '../assets/netta-logo.png';
 import { getImage } from 'astro:assets';
 import HennaSideBorders from '../components/HennaSideBorders.astro';
 import HennaBorderDraw from '../components/HennaBorderDraw.astro';
+import HennaHeroFrame from '../components/HennaHeroFrame.astro';
 
 // Pass 32: the 680px PNG logo (781 KB) was the largest paint on mobile. The hero
 // shows it at 230 to 320px, so serve WebP at 1x and 2x of that instead.
@@ -52,6 +53,7 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
       <!-- 1. Centered Circular Logo Emblem. Not a link or button: Netta asked that
            tapping her logo does nothing (it used to jump to the Price List). -->
       <div class="hero-logo-static">
+        <HennaHeroFrame />
         <div class="hero-logo-frame">
           <img
             src={heroLogo.src}
@@ -370,11 +372,20 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
   }
 
   .hero-logo-static {
+    --hero-logo-size: clamp(230px, 24vw, 320px);
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
     cursor: default;
+    /* was the frame's margin-bottom; moved here so this box is exactly the logo
+       and the henna frame centres on it */
+    margin-bottom: 1.25rem;
+  }
+
+  .hero-logo-frame {
+    position: relative;
   }
 
   .hero-logo-frame {
@@ -394,7 +405,7 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 1.25rem;
+    margin-bottom: 0;
     box-sizing: border-box;
     transition: transform 0.3s ease-in-out;
   }
@@ -442,6 +453,13 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
 
   [data-theme="dark"] .hero-descriptor-line {
     color: var(--brand-gold, #f4d087);
+  }
+
+  /* Pass 32: the hero henna halo runs behind her titles; a soft glow in the page
+     colour lifts the words off the linework so they stay fully legible. */
+  .hero-descriptor-line {
+    position: relative;
+    text-shadow: 0 0 4px var(--page-bg, #faf6ee), 0 0 10px var(--page-bg, #faf6ee), 0 0 18px var(--page-bg, #faf6ee), 0 0 28px var(--page-bg, #faf6ee);
   }
 
   .hero-actions-row {
@@ -946,6 +964,7 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
       width: min(100% - clamp(2rem, 4vw, 5rem), 900px) !important;
     }
 
+    .hero-logo-static,
     .hero-logo-frame {
       --hero-logo-size: 320px;
     }
@@ -1058,6 +1077,7 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
       width: min(100% - clamp(2rem, 4vw, 5rem), 1100px) !important;
     }
 
+    .hero-logo-static,
     .hero-logo-frame {
       --hero-logo-size: 380px;
     }
@@ -1170,6 +1190,7 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
       width: min(100% - clamp(2rem, 4vw, 5rem), 1300px) !important;
     }
 
+    .hero-logo-static,
     .hero-logo-frame {
       --hero-logo-size: 450px;
     }

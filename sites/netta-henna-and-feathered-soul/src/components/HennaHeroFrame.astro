@@ -1,0 +1,118 @@
+---
+/**
+ * HennaHeroFrame.astro (Pass 32, Andrew's request, Nov 16, 2026)
+ * A henna frame drawn behind Netta's round logo: a full mandala halo hugging the
+ * logo, and henna vines that draw outward to the left and right with paisley
+ * pairs, lotus flowers, small rosettes and hanging drops. It fills the empty
+ * space beside the logo without touching the nav, her titles or the buttons.
+ *
+ * Sizing: the viewBox puts the logo centre at (0, 0) with the logo radius at 100
+ * units. On desktop the art scale is locked to the logo size; on phones it shrinks
+ * so the halo stays inside the screen (min() below). The SVG box is the full
+ * viewport width and only ever shows what fits, with a soft fade at both ends so
+ * the arms melt into the side borders and never sit on the feathers.
+ *
+ * Draw-in: same technique as every border (src/styles/henna.css): one transition
+ * per motif, centre first, then outward like ink, 2s each; dots pop in after.
+ */
+import { HALO_GROUPS, ARM_GROUPS, HALO_DOT_GROUPS, ARM_DOT_GROUPS, type HeroPath } from '../lib/henna-hero';
+
+const pathAttrs = (p: HeroPath) => ({ d: p.d, stroke: p.stroke, 'stroke-width': p.width, pathLength: 1 });
+---
+
+<div class="hero-henna-frame" data-hero-henna-draw aria-hidden="true">
+  <svg
+    class="henna-art-svg hero-henna-svg"
+    viewBox="-800 -300 1600 600"
+    preserveAspectRatio="xMidYMid slice"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    focusable="false"
+  >
+    <g stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <g id="hero-henna-arm">
+        {ARM_GROUPS.map((g) => (
+          <g class="hb-m" style={`--d:${g.delay}`}>{g.paths.map((p) => <path {...pathAttrs(p)} />)}</g>
+        ))}
+        {ARM_DOT_GROUPS.map((g) => (
+          <g class="hb-dots" style={`--td:${g.td}`}>
+            <g class="hb-dg" style={`--sw:${g.radius}`}>
+              {g.dots.map((d) => <circle cx={d.cx} cy={d.cy} r={Math.round(d.radius * 50) / 100} fill={d.fill} stroke={d.fill} />)}
+            </g>
+          </g>
+        ))}
+      </g>
+      <use href="#hero-henna-arm" transform="scale(-1, 1)" />
+      {HALO_GROUPS.map((g) => (
+        <g class="hb-m" style={`--d:${g.delay}`}>{g.paths.map((p) => <path {...pathAttrs(p)} />)}</g>
+      ))}
+      <g class="hb-dots">
+        {HALO_DOT_GROUPS.map((g) => (
+          <g class="hb-dg" style={`--sw:${g.radius}`}>
+            {g.dots.map((d) => <circle cx={d.cx} cy={d.cy} r={Math.round(d.radius * 50) / 100} fill={d.fill} stroke={d.fill} />)}
+          </g>
+        ))}
+      </g>
+    </g>
+  </svg>
+</div>
+
+<script>
+  function drawHeroHenna() {
+    document.querySelectorAll<HTMLElement>('[data-hero-henna-draw]').forEach((el) => {
+      // Two frames so the undrawn state is painted first and the transition runs.
+      requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('is-drawn')));
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', drawHeroHenna, { once: true });
+  } else {
+    drawHeroHenna();
+  }
+</script>
+
+<style>
+  .hero-henna-frame {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 100vw;
+    /* 600 units tall = 3 logo diameters; on narrow screens the halo (r 152) must
+       fit half the screen width, so the scale is capped there. */
+    height: min(calc(var(--hero-logo-size, 320px) * 3), calc((100vw - 8px) * 600 / 304));
+    transform: translate(-50%, -50%);
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.6;
+    /* Horizontal: arms fade out before the side borders and feathers.
+       Vertical: below the logo (from 66% of the box) the halo softens to 30%
+       so it sits quietly behind her titles instead of crossing them. */
+    -webkit-mask-image:
+      linear-gradient(90deg, transparent 0%, transparent 11%, #000 24%, #000 76%, transparent 89%, transparent 100%),
+      linear-gradient(180deg, #000 0%, #000 66%, rgba(0, 0, 0, 0.3) 71%, rgba(0, 0, 0, 0.3) 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(90deg, transparent 0%, transparent 11%, #000 24%, #000 76%, transparent 89%, transparent 100%),
+      linear-gradient(180deg, #000 0%, #000 66%, rgba(0, 0, 0, 0.3) 71%, rgba(0, 0, 0, 0.3) 100%);
+    mask-composite: intersect;
+  }
+
+  .hero-henna-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  :global([data-theme="dark"]) .hero-henna-frame {
+    opacity: 0.5;
+  }
+
+  /* Phones: the arms have no room, only the halo shows, so no edge fade needed. */
+  @media (max-width: 640px) {
+    .hero-henna-frame {
+      -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 67%, rgba(0, 0, 0, 0.3) 72%, rgba(0, 0, 0, 0.3) 100%);
+      mask-image: linear-gradient(180deg, #000 0%, #000 67%, rgba(0, 0, 0, 0.3) 72%, rgba(0, 0, 0, 0.3) 100%);
+      opacity: 0.55;
+    }
+  }
+</style>
