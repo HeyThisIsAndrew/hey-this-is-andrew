@@ -10,12 +10,15 @@ import '../styles/theme.css';
 import '@andrew/ui/styles/base.css';
 import '@andrew/ui/styles/chips.css';
 import '../styles/global.css';
+import '../styles/henna.css';
 import '@andrew/ui/styles/cta.css';
 import Nav from '@andrew/ui/Nav.astro';
 import SlimFooter from '../components/SlimFooter.astro';
 import HennaBorderDraw from '../components/HennaBorderDraw.astro';
+import HennaSprite from '../components/HennaSprite.astro';
 import ChromeMeta from '@andrew/ui/ChromeMeta.astro';
 import logo from '../assets/netta-logo.png';
+import { getImage } from 'astro:assets';
 import { SITE, NAV_LINKS } from '../data/site';
 
 interface Props {
@@ -26,7 +29,9 @@ interface Props {
 const { title, description = SITE.description } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
-const logoAsset = { src: logo.src, width: logo.width, height: logo.height, alt: SITE.name };
+// The nav shows the logo at 50px; a 120px WebP covers 2x screens (was the 781 KB PNG).
+const navLogo = await getImage({ src: logo, format: 'webp', quality: 86, width: 120, height: 120 });
+const logoAsset = { src: navLogo.src, width: logo.width, height: logo.height, alt: SITE.name };
 ---
 <!doctype html>
 <html lang="en">
@@ -61,6 +66,13 @@ const logoAsset = { src: logo.src, width: logo.width, height: logo.height, alt: 
           document.head.appendChild(meta);
         }
         window.__applyNettaTheme = applyNettaTheme;
+        // Henna draw-in: only animate when JS runs and motion is welcome.
+        // Without this class every henna border renders fully drawn (henna.css).
+        try {
+          if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            document.documentElement.classList.add('henna-anim');
+          }
+        } catch (e) {}
         try {
           var stored = localStorage.getItem('netta-theme');
           var initialTheme = (stored === 'dark' || stored === 'light') ? stored : 'light';
@@ -81,6 +93,7 @@ const logoAsset = { src: logo.src, width: logo.width, height: logo.height, alt: 
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Great+Vibes&family=Parisienne&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   </head>
   <body>
+    <HennaSprite />
     <Nav logo={logoAsset} homeHref="#price-list" homeLabel="Go to Price List" links={NAV_LINKS} labels={{ menu: '', close: 'Close' }}>
       <div class="nav-drape-wrap" data-nav-henna-draw aria-hidden="true">
         <div class="nav-drape-panel nav-drape-left">

@@ -1,0 +1,60 @@
+---
+/**
+ * HennaSprite.astro
+ * Renders Netta's henna strip ONCE per page, hidden, so every border can show it
+ * through <use href="#hb-strip">. Before Pass 32 the page inlined 44 full copies
+ * (15,488 paths and 18,216 circles, about 5 MB of HTML).
+ *
+ * Groups, in Pass 30 paint order (frame lines, motifs, then dots on top):
+ *   #hb-frame   36 frame rail and scallop paths
+ *   #hb-motifs  mandalas, paisleys and lotus flowers
+ *   #hb-dots    414 dots and gems (real circles, never converted to paths),
+ *               grouped by radius for a cheap scale-in (see henna-art.ts DOT_GROUPS)
+ *   #hb-strip       frame + motifs + dots (side borders, boxes, dividers, nav drape)
+ *   #hb-strip-open  motifs + dots, no straight rails (footer mandala bar)
+ *
+ * Every path has pathLength="1", so the draw-in dash works for any path length.
+ */
+import { FRAME_GROUPS, MOTIF_GROUPS, DOT_GROUPS, type PathItem } from '../lib/henna-art';
+
+const pathAttrs = (p: PathItem) => ({
+  d: p.d,
+  stroke: p.stroke,
+  'stroke-width': p.width,
+  pathLength: 1,
+});
+---
+
+<svg class="henna-sprite" width="0" height="0" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <g id="hb-frame" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      {FRAME_GROUPS.map((g) => (
+        <g class="hb-m" style={`--d:${g.delay}`}>{g.paths.map((p) => <path {...pathAttrs(p)} />)}</g>
+      ))}
+    </g>
+    <g id="hb-motifs" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      {MOTIF_GROUPS.map((g) => (
+        <g class="hb-m" style={`--d:${g.delay}`}>{g.paths.map((p) => <path {...pathAttrs(p)} />)}</g>
+      ))}
+    </g>
+    <g id="hb-dots" class="hb-dots">
+      {DOT_GROUPS.map((g) => (
+        <g class="hb-dg" style={`--sw:${g.radius}`}>
+          {g.dots.map((d) => <circle cx={d.cx} cy={d.cy} r={Math.round(d.radius * 50) / 100} fill={d.fill} stroke={d.fill} />)}
+        </g>
+      ))}
+    </g>
+    <g id="hb-strip"><use href="#hb-frame" /><use href="#hb-motifs" /><use href="#hb-dots" /></g>
+    <g id="hb-strip-open"><use href="#hb-motifs" /><use href="#hb-dots" /></g>
+  </defs>
+</svg>
+
+<style is:global>
+  .henna-sprite {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+</style>
