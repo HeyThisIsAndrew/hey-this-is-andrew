@@ -4,7 +4,7 @@
  * Netta Henna and Feathered Soul - Landing Page
  * 
  * Ornate Boho Luxury Design honoring Netta's flyer + functional mobile-first UX:
- * - Hero in CCC rhythm: Centered Logo Emblem -> "Netta" in gold script -> "Henna Art · Hair Feathers · Hair Tinsel" -> Two Equal Buttons
+ * - Hero in CCC rhythm: Centered Logo Emblem (not clickable) -> her titles "Henna Tattoo Artist · Feather and Tinsel Hair Artist" -> Two Equal Buttons
  * - Three large circular gold-ringed service medallions on parchment with overlapping cursive ribbon banners & Netta's exact copy
  * - Ornate Price List section with horizontal gold scrollwork, turquoise cabochon gems, soft teal watercolor category banners, and selectable pricing pills
  * - Real photo gallery organized across the 3 categories (Henna Art, Hair Feathers, Hair Tinsel)
@@ -39,7 +39,7 @@ import HennaBorderDraw from '../components/HennaBorderDraw.astro';
 
 // Pass 32: the 680px PNG logo (781 KB) was the largest paint on mobile. The hero
 // shows it at 230 to 320px, so serve WebP at 1x and 2x of that instead.
-const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, widths: [320, 640], sizes: '(max-width: 958px) 240px, 320px' });
+const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, widths: [320, 480, 680] });
 ---
 
 <BaseLayout title={`${SITE.name} · Santa Barbara, CA`}>
@@ -49,13 +49,14 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
   <!-- 1. Hero Section (CCC Order: Logo Emblem, Headline, One Descriptor Line, Two Equal Buttons) -->
   <header class="hero-section" id="overview">
     <div class="container hero-container">
-      <!-- 1. Centered Circular Logo Emblem (Clickable link to #price-list) -->
-      <a href="#price-list" class="hero-logo-link" aria-label="Go to Price List">
+      <!-- 1. Centered Circular Logo Emblem. Not a link or button: Netta asked that
+           tapping her logo does nothing (it used to jump to the Price List). -->
+      <div class="hero-logo-static">
         <div class="hero-logo-frame">
           <img
             src={heroLogo.src}
             srcset={heroLogo.srcSet.attribute}
-            sizes="(max-width: 958px) 240px, 320px"
+            sizes="(min-width: 3840px) 450px, (min-width: 2560px) 380px, (max-width: 958px) 240px, 320px"
             width={logoImg.width}
             height={logoImg.height}
             alt="Netta Henna and Feathered Soul Emblem"
@@ -64,14 +65,14 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
             decoding="async"
           />
         </div>
-      </a>
+      </div>
 
       <!-- 2. One Headline: Netta Henna and Feathered Soul (Visually hidden for screen readers/SEO) -->
       <h1 class="sr-only">Netta Henna and Feathered Soul</h1>
 
-      <!-- 3. One Descriptor Line: Gold italic serif trio -->
+      <!-- 3. Her titles, in Netta's own words (Nov 16, 2026), in the gold italic serif line -->
       <p class="hero-descriptor-line">
-        Henna Art <span class="teal-diamond" aria-hidden="true">◆</span> Hair Feathers <span class="teal-diamond" aria-hidden="true">◆</span> Hair Tinsel
+        <span class="hero-title">Henna Tattoo Artist</span> <span class="teal-diamond hero-title-sep" aria-hidden="true">◆</span> <span class="hero-title">Feather and Tinsel Hair Artist</span>
       </p>
 
       <!-- 4. Two Equal Buttons: Identical width, height, and shape -->
@@ -98,7 +99,7 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
   </header>
 
   <!-- 2. Services Section (Three Large Circular Gold-Ringed Medallions with Overlapping Parchment Banner) -->
-  <section id="services" aria-labelledby="services-heading" class="services-section">
+  <section id="services" aria-label="Services" class="services-section">
     <div class="container">
       <div class="section-title-wrap text-center">
         <p class="sec-kicker">
@@ -112,7 +113,6 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
             <span class="teal-diamond" aria-hidden="true">◆</span>
           </span>
         </p>
-        <h2 id="services-heading" class="sec-title gold-script-text">What She Does</h2>
       </div>
 
       <div class="services-cards-grid">
@@ -369,19 +369,12 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
     overflow: visible;
   }
 
-  .hero-logo-link {
+  .hero-logo-static {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    text-decoration: none;
-    color: inherit;
     border-radius: 50%;
-    cursor: pointer;
-  }
-
-  .hero-logo-link:focus-visible {
-    outline: 2px solid var(--brand-teal);
-    outline-offset: 6px;
+    cursor: default;
   }
 
   .hero-logo-frame {
@@ -404,11 +397,6 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
     margin-bottom: 1.25rem;
     box-sizing: border-box;
     transition: transform 0.3s ease-in-out;
-  }
-
-  .hero-logo-link:hover .hero-logo-frame,
-  .hero-logo-frame:hover {
-    transform: scale(1.02);
   }
 
   .hero-logo-img {
@@ -934,6 +922,18 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
 
     .service-medallion-item {
       padding: 0.25rem 0;
+    }
+
+    /* Her two titles stack on phones, one per line, so neither is squeezed. */
+    .hero-descriptor-line {
+      white-space: normal;
+    }
+    .hero-title {
+      display: block;
+      white-space: nowrap;
+    }
+    .hero-title-sep {
+      display: none;
     }
   }
 
