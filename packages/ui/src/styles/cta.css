@@ -1,7 +1,8 @@
 /* Unified CTA system: the site's button grammar.
    Monochrome, zero-radius, cinematic. Syne for the label, uppercase,
    wide tracking. Three tiers:
-     .btn-primary   : hollow by default, fills white with glow on hover.
+     .btn-primary   : solid white-on-black at rest, subtle lift/glow on hover
+                      (hollow-at-rest exception inside .hero-statement).
      .btn-secondary : outline. Supporting actions beside a primary.
      .btn-ghost     : text only. Tertiary links that must not shout.
    Usage: <a class="btn btn-primary" href="...">Label</a>
@@ -25,6 +26,8 @@
   /* Block padding only matters when a long label wraps; one line sits in
      the min-height. */
   padding: calc(8 * var(--ui-u)) var(--btn-px-md);
+  background-color: transparent;
+  color: var(--ink);
   font-family: var(--font-display);
   font-weight: 700;
   font-size: var(--btn-fs-md);
@@ -51,19 +54,30 @@
   outline-offset: 3px;
 }
 
-/* Primary: hollow by default, fills white with glow on hover. */
+/* Primary: solid white-on-black at rest, subtle lift/glow on hover. */
 .btn-primary {
-  background-color: transparent;
-  color: var(--ink);
+  background-color: var(--ink);
+  color: var(--color-black);
   border-color: var(--ink);
 }
 .btn-primary:hover,
 .btn-primary:focus-visible {
-  background-color: var(--ink);
+  background-color: var(--color-accent-hover, #ffffff);
   color: var(--color-black);
-  border-color: var(--ink);
+  border-color: var(--color-accent-hover, #ffffff);
   transform: translateY(-2px);
   box-shadow: 0 0 28px rgba(240, 240, 240, 0.35);
+}
+
+/* Preserve the Hero's hollow-at-rest look without raising specificity. */
+:where(.hero-statement) .btn-primary {
+  background-color: transparent;
+  color: var(--ink);
+}
+:where(.hero-statement) .btn-primary:hover,
+:where(.hero-statement) .btn-primary:focus-visible {
+  background-color: var(--ink);
+  color: var(--color-black);
 }
 
 /* Secondary: outline. Hollow by default, fills white on hover. */

@@ -71,7 +71,7 @@ const pad = (v: number) => String(v).padStart(2, '0');
   <div class="gc-tabs" role="group" aria-label="Choose a gear section">
     {sections.map((s, i) => (
       <button type="button" class:list={['gc-tab', 'font-mono', { 'is-active': i === 0 }]} data-gc-tab={i} aria-current={i === 0 ? 'true' : undefined}>
-        {s.chip}
+        <span class="gc-tab-num">{pad(i + 1)}</span> {s.chip}
       </button>
     ))}
   </div>
@@ -110,33 +110,38 @@ const pad = (v: number) => String(v).padStart(2, '0');
 
   <div class="gc-controls">
     <button type="button" class="gc-step" data-gc-prev aria-label="Previous gear section">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      <span>Prev</span>
     </button>
     <span class="gc-counter font-mono" data-gc-counter aria-hidden="true">{pad(1)} / {pad(n)}</span>
     <button type="button" class="gc-step" data-gc-next aria-label="Next gear section">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      <span>Next</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
     </button>
   </div>
 </div>
 
 <style>
   .gear-carousel {
-    margin-top: 2.5rem;
+    margin-top: 0;
   }
 
-  /* The section tabs: every section by name, the current one filled. They
-     wrap on a phone rather than scroll, so all seven are always in sight. */
+  /* Flush numbered editorial chapter tabs, underlined when active. */
   .gc-tabs {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
+    gap: 0.25rem 1.25rem;
+    margin-bottom: 1.25rem;
   }
   .gc-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
     min-height: 44px;
-    padding: 0 1rem;
+    padding: 0 0.25rem 1px;
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    border: 0;
+    border-bottom: 1px solid var(--hairline-strong, rgba(255, 255, 255, 0.15));
     color: var(--muted);
     font-size: 0.72rem;
     letter-spacing: 0.14em;
@@ -144,16 +149,23 @@ const pad = (v: number) => String(v).padStart(2, '0');
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
-    transition: color 0.25s ease, border-color 0.25s ease, background-color 0.25s ease;
+    transition: color 0.25s ease, border-color 0.25s ease;
+  }
+  .gc-tab-num {
+    opacity: 0.55;
   }
   .gc-tab:hover {
     color: var(--ink);
-    border-color: rgba(255, 255, 255, 0.5);
+    border-bottom-color: rgba(255, 255, 255, 0.45);
   }
   .gc-tab.is-active {
-    background: var(--ink);
-    border-color: var(--ink);
-    color: var(--bg, #000);
+    background: transparent;
+    color: var(--ink);
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 0;
+  }
+  .gc-tab.is-active .gc-tab-num {
+    opacity: 1;
   }
 
   .gc-track {
@@ -270,52 +282,68 @@ const pad = (v: number) => String(v).padStart(2, '0');
   .gc-go {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.45rem;
     min-height: 44px;
-    margin-top: 0.4rem;
-    padding: 0 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.35);
+    margin-top: 0.25rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
     font-size: 0.72rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: var(--hairline-strong);
+    transition: color 0.25s ease, text-decoration-color 0.25s ease;
   }
   @media (hover: hover) {
     .gc-card:hover .gc-media img {
       transform: scale(1.04);
     }
     .gc-card:hover .gc-go {
-      background: var(--ink);
-      border-color: var(--ink);
-      color: var(--bg, #000);
+      background: transparent;
+      border: 0;
+      color: var(--color-accent-hover, #ffffff);
+      text-decoration-color: var(--ink);
     }
   }
 
   .gc-controls {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     gap: 0.75rem;
-    margin-top: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--line);
+    background: transparent;
   }
   .gc-step {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    color: var(--ink);
+    gap: 0.4rem;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 0.25rem;
+    background: transparent;
+    border: 0;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
+    transition: color 0.2s ease;
   }
-  .gc-step:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.45);
+  .gc-step:hover,
+  .gc-step:focus-visible {
+    background: transparent;
+    border: 0;
+    color: var(--ink);
   }
   .gc-counter {
     min-width: 5.5em;
@@ -326,9 +354,11 @@ const pad = (v: number) => String(v).padStart(2, '0');
   }
 
   @media (max-width: 720px) {
+    .gc-tabs {
+      gap: 0.25rem 0.9rem;
+    }
     .gc-tab {
-      flex: 1 1 auto;
-      padding: 0 0.75rem;
+      padding: 0 0.2rem;
     }
     .gc-card {
       grid-template-columns: minmax(0, 1fr);

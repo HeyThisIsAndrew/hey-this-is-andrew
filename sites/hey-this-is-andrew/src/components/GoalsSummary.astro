@@ -1,132 +1,147 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
-import Accordion from '@andrew/ui/Accordion.astro';
-import AccordionRow from '@andrew/ui/AccordionRow.astro';
 
 interface Props { groups: CollectionEntry<'goals'>[] }
 const { groups } = Astro.props;
 
 const count = (g: CollectionEntry<'goals'>) => {
   const done = g.data.items.filter((i) => i.status === 'done').length;
-  return { done, total: g.data.items.length, pct: Math.round((done / Math.max(1, g.data.items.length)) * 100) };
+  return { done, total: g.data.items.length };
 };
+
+const rawBase = import.meta.env.BASE_URL;
+const buildUrl = rawBase === '/' ? '/build/' : `${rawBase.replace(/\/$/, '')}/build/`;
 ---
 <section class="section-hairline" id="goals" aria-labelledby="goals-heading">
   <div class="container">
     <SectionHeader id="goals-heading" kicker="Building in public" title="Goals" />
-    
-    <div class="goals-accordion-wrapper">
-      <Accordion>
-        {groups.map((group) => {
-          const { done, total } = count(group);
-          return (
-            <AccordionRow
-              id={`home-goal-${group.id}`}
-              kicker="Goal Group"
-              title={group.data.title}
-              progressCount={done}
-              progressTotal={total}
-            >
-              <ul class="checklist-container" style="padding-top: 1.5rem;">
-                {group.data.items.map(item => (
-                  <li class:list={['checklist-card', { completed: item.status === 'done' }]}>
-                    <div class="checklist-left">
-                      <span class:list={['checklist-mark', { 'is-done': item.status === 'done' }]} aria-hidden="true">
-                        {item.status === 'done' && (
-                          <svg viewBox="0 0 16 16" width="12" height="12" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="square" /></svg>
-                        )}
-                      </span>
-                      <div class="checklist-info">
-                        <h3 class="checklist-title">{item.label}</h3>
-                        {item.note && <p class="checklist-desc">{item.note}</p>}
-                      </div>
+
+    <div class="goals-board">
+      {groups.map((group, idx) => {
+        const { done, total } = count(group);
+        return (
+          <article class="goal-ledger-col" id={`home-goal-${group.id}`}>
+            <header class="goal-ledger-head">
+              <div class="goal-ledger-meta font-mono">
+                <span class="goal-ledger-index">{String(idx + 1).padStart(2, '0')} / Goal group</span>
+                <span class="goal-ledger-count">{done} of {total} done</span>
+              </div>
+              <h3 class="goal-ledger-title">{group.data.title}</h3>
+            </header>
+
+            <ul class="goal-ledger-list">
+              {group.data.items.map((item) => {
+                const statusKey = item.status === 'next' ? 'queued' : item.status;
+                const statusText = item.status === 'done' ? 'Done' : item.status === 'in-progress' ? 'In Progress' : 'Queued';
+                return (
+                  <li class:list={['goal-ledger-item', { 'is-done': item.status === 'done' }]}>
+                    <span class:list={['checklist-mark', { 'is-done': item.status === 'done', 'is-active': item.status === 'in-progress' }]} aria-hidden="true">
+                      {item.status === 'done' && (
+                        <svg viewBox="0 0 16 16" width="11" height="11" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="square" /></svg>
+                      )}
+                    </span>
+                    <div class="goal-ledger-info">
+                      <span class="goal-ledger-label">{item.label}</span>
+                      {item.note && <span class="goal-ledger-note">{item.note}</span>}
                     </div>
-                    <div class:list={['status-badge', item.status === 'done' ? 'achieved' : item.status === 'next' ? 'queued' : item.status]}>
-                      {item.status === 'in-progress' && <span class="pulse-indicator"></span>}
-                      <span class="badge-text">{item.status === 'done' ? 'Done' : item.status === 'in-progress' ? 'In Progress' : 'Queued'}</span>
-                    </div>
+                    <span class="goal-status-badge font-mono" data-status={statusKey}>
+                      {statusText}
+                    </span>
                   </li>
-                ))}
-              </ul>
-            </AccordionRow>
-          );
-        })}
-      </Accordion>
+                );
+              })}
+            </ul>
+          </article>
+        );
+      })}
     </div>
 
-    <div class="view-all-wrapper">
-      <a href={import.meta.env.BASE_URL === "/" ? "/build/" : import.meta.env.BASE_URL.replace(/\/$/, "") + "/build/"} class="btn view-all-btn">View all goals</a>
+    <div class="goals-actions">
+      <a href={buildUrl} class="btn btn-primary">View all goals <span aria-hidden="true">&rarr;</span></a>
     </div>
+
+    <p class="section-handoff font-mono">
+      <a href="#gear">Next: The kit <span aria-hidden="true">&darr;</span></a>
+    </p>
   </div>
 </section>
 
 <style>
-  .goals-accordion-wrapper {
-    margin-top: 2rem;
-    margin-bottom: 3rem;
+  .goals-board {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
   }
-  .view-all-wrapper {
-    display: flex;
-    justify-content: center;
-    margin-top: 2rem;
+  @media (min-width: 960px) {
+    .goals-board {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
-  .view-all-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.8rem 1.5rem;
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink);
-    background: transparent;
-    border: 1px solid var(--border);
-    text-decoration: none;
-    transition: all 0.2s ease;
-  }
-  .view-all-btn:hover {
-    background: var(--ink);
-    color: var(--surface);
-  }
-  
-  /* Reuse checklist styles for consistency */
-  .checklist-container {
+  .goal-ledger-col {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    padding: 1.5rem;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.25rem;
+    min-width: 0;
+    scroll-margin-top: calc(var(--nav-bar-h, 76px) + 1rem);
+  }
+  .goal-ledger-head {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 1rem;
+  }
+  .goal-ledger-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+  .goal-ledger-count {
+    color: var(--ink);
+  }
+  .goal-ledger-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.2rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .goal-ledger-list {
+    list-style: none;
     margin: 0;
     padding: 0;
-    list-style: none;
-  }
-  .checklist-card {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1.5rem;
-    padding: 1.25rem 1.5rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
+    flex-direction: column;
+    gap: 0.85rem;
   }
-  .checklist-card.completed {
-    border-color: rgba(255, 255, 255, 0.4);
-    background: rgba(255, 255, 255, 0.03);
-  }
-  .checklist-left {
+  .goal-ledger-item {
     display: flex;
     align-items: flex-start;
-    gap: 1.25rem;
-    flex: 1 1 auto;
+    gap: 0.75rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--hairline);
+  }
+  .goal-ledger-item:first-child {
+    padding-top: 0;
+    border-top: 0;
   }
   .checklist-mark {
     display: inline-grid;
     place-items: center;
     margin-top: 0.2rem;
-    width: 1.2rem;
-    height: 1.2rem;
-    flex-shrink: 0;
+    width: 1.05rem;
+    height: 1.05rem;
+    flex: 0 0 auto;
     border: 1px solid rgba(255, 255, 255, 0.35);
     color: #080808;
   }
@@ -134,31 +149,53 @@ const count = (g: CollectionEntry<'goals'>) => {
     background: var(--ink);
     border-color: var(--ink);
   }
-  .checklist-title {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.05rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+  .checklist-mark.is-active {
+    border-color: var(--ink);
+  }
+  .checklist-mark.is-active::after {
+    content: '';
+    width: 5px;
+    height: 5px;
+    background: var(--ink);
+  }
+  .goal-ledger-info {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .goal-ledger-label {
+    font-size: 0.94rem;
+    font-weight: 500;
+    line-height: 1.4;
     color: var(--ink);
-    margin: 0;
   }
-  .checklist-desc {
-    font-size: 0.92rem;
+  .goal-ledger-item.is-done .goal-ledger-label {
     color: var(--muted);
-    margin: 0.35rem 0 0;
-    line-height: 1.5;
   }
-  .status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.75rem;
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.14em;
+  .goal-ledger-note {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+  .goal-status-badge {
+    flex: 0 0 auto;
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    border: 1px solid var(--border);
+    padding: 0.2rem 0.45rem;
+    border: 1px solid var(--hairline-strong);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .goal-status-badge[data-status="done"],
+  .goal-status-badge[data-status="in-progress"] {
+    color: var(--ink);
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+  .goals-actions {
+    margin-top: 2rem;
   }
 </style>

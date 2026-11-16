@@ -1,24 +1,17 @@
 ---
 /**
  * Selected Work (homepage): the latest video as the featured card (it opens
- * the fullscreen player), then the archive as a list of rows that open in
- * place. A video row plays inline (InlineVideo: nothing from YouTube loads
- * until the reader presses play); a project row shows its write-up, and its
- * video if its link is one. The workflow strip is the last row.
+ * the fullscreen player), a 2-column visual grid of remaining videos and
+ * projects, and the visible production workflow strip below.
  */
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
-import Accordion from '@andrew/ui/Accordion.astro';
-import AccordionRow from '@andrew/ui/AccordionRow.astro';
 import LatestCard from './LatestCard.astro';
 import ProjectCard from './ProjectCard.astro';
-import InlineVideo from './InlineVideo.astro';
 import WorkflowStrip from './WorkflowStrip.astro';
 import { getCollection } from 'astro:content';
 import { getLatestVideos } from '../lib/latest-content';
 import { getHomeFeatured } from '../lib/home-featured';
 import { youtubeId } from '../lib/youtube-id';
-import { image as resolveImage } from '../data/images';
-import { NETWORK_BRANDS } from '../lib/network';
 
 const { latestVideo, projects: featuredProjects } = await getHomeFeatured();
 
@@ -26,23 +19,15 @@ const videos = await getLatestVideos(3);
 const allProjects = (await getCollection('projects'))
   .sort((a, b) => Number(b.data.featured) - Number(a.data.featured) || +b.data.date - +a.data.date);
 
-// The featured items lead; everything else is the archive.
+// The featured items lead; remaining videos and projects display directly below.
 const restVideos = videos.filter((v) => v.url !== latestVideo?.url);
 const restProjects = allProjects.filter((p) => !featuredProjects.some((fp) => fp.id === p.id));
-
-const monthYear = (d: string | Date) => new Date(d).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-const thumbFor = (id: string) => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
 
 const videoRows = restVideos.flatMap((v) => {
   const id = youtubeId(v.url);
   return id ? [{ v, id }] : [];
 });
-const projectRows = restProjects.map((p) => {
-  const vid = youtubeId(p.data.link);
-  const img = p.data.image ? resolveImage(p.data.image, `projects.json ${p.id}.image`) : undefined;
-  const credit = [p.data.role, p.data.brand ? NETWORK_BRANDS[p.data.brand] : null].filter(Boolean).join(' \u00b7 ');
-  return { p, vid, img, credit };
-});
+const projectRows = restProjects.map((p) => ({ p }));
 ---
 <section id="work" aria-labelledby="work-heading" class="section-hairline selected-work">
   <div class="container">
@@ -62,51 +47,28 @@ const projectRows = restProjects.map((p) => {
       )}
     </div>
 
-    
-    <div class="sw-archive">
-      <p class="sw-archive-label font-mono">Archive</p>
-      <Accordion>
+    {(videoRows.length > 0 || projectRows.length > 0) && (
+      <div class="sw-grid">
         {videoRows.map(({ v, id }) => (
-          <AccordionRow id={`work-${id}`} kicker={`Video \u00b7 ${monthYear(v.date)}`} title={v.title} level={3} size="md">
-            <img slot="media" src={thumbFor(id)} alt="" width="320" height="180" loading="lazy" decoding="async" referrerpolicy="no-referrer" />
-            <div class="sw-row">
-              <InlineVideo videoId={id} title={v.title} poster={v.image} posterSrcset={v.imageSrcset} />
-              <div class="sw-row-copy">
-                {v.description && <p class="sw-row-desc">{v.description}</p>}
-                <a class="sw-row-link" href={v.url} target="_blank" rel="noopener">Watch on YouTube <span aria-hidden="true">&nearr;</span></a>
-              </div>
-            </div>
-          </AccordionRow>
+          <div id={`work-${id}`} class="sw-card-slot">
+            <LatestCard item={v} compact />
+          </div>
         ))}
-
-        {projectRows.map(({ p, vid, img, credit }) => (
-          <AccordionRow id={`work-${p.id}`} kicker={[monthYear(p.data.date), ...p.data.tools].join(' \u00b7 ')} title={p.data.title} level={3} size="md">
-            {(vid || img) && <img slot="media" src={vid ? thumbFor(vid) : img?.src} alt="" width="320" height="180" loading="lazy" decoding="async" referrerpolicy="no-referrer" />}
-            <div class="sw-row">
-              {vid ? (
-                <InlineVideo videoId={vid} title={p.data.title} />
-              ) : img ? (
-                <img class="sw-row-image" src={img.src} alt="" loading="lazy" decoding="async" />
-              ) : null}
-              <div class="sw-row-copy">
-                {credit && <p class="sw-row-credit font-mono">{credit}</p>}
-                <p class="sw-row-desc">{p.data.description}</p>
-                {p.data.link && !vid && (
-                  <a class="sw-row-link" href={p.data.link} target="_blank" rel="noopener">View the project <span aria-hidden="true">&nearr;</span></a>
-                )}
-                {p.data.link && vid && (
-                  <a class="sw-row-link" href={p.data.link} target="_blank" rel="noopener">Watch on YouTube <span aria-hidden="true">&nearr;</span></a>
-                )}
-              </div>
-            </div>
-          </AccordionRow>
+        {projectRows.map(({ p }) => (
+          <div id={`work-${p.id}`} class="sw-card-slot">
+            <ProjectCard project={p} />
+          </div>
         ))}
+      </div>
+    )}
 
-        <AccordionRow id="workflow" kicker="How it gets made" title="Current workflow" level={3} size="md">
-          <WorkflowStrip />
-        </AccordionRow>
-      </Accordion>
+    <div id="workflow" class="sw-workflow">
+      <WorkflowStrip />
     </div>
+
+    <p class="section-handoff font-mono">
+      <a href="#latest">Next: Across the network <span aria-hidden="true">&darr;</span></a>
+    </p>
   </div>
 </section>
 
@@ -117,7 +79,6 @@ const projectRows = restProjects.map((p) => {
   .sw-feature {
     display: grid;
     gap: var(--gap);
-    margin-top: 2.5rem;
   }
   .sw-projects {
     display: grid;
@@ -125,68 +86,23 @@ const projectRows = restProjects.map((p) => {
     gap: var(--gap);
     margin-top: var(--gap);
   }
-  .sw-archive {
-    margin-top: calc(var(--gap) * 1.5);
-  }
-  .sw-archive-label {
-    margin: 0 0 0.9rem;
-    font-size: 0.72rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  /* An open row: the video (or image) and its copy, side by side on a wide
-     screen, stacked on a phone. */
-  .sw-row {
+  .sw-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-    gap: clamp(1.25rem, 2.5vw, 2.5rem);
-    align-items: start;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--gap);
+    margin-top: var(--gap);
   }
-  @media (max-width: 860px) {
-    .sw-row {
+  @media (max-width: 759px) {
+    .sw-grid {
       grid-template-columns: 1fr;
     }
   }
-  .sw-row-image {
-    display: block;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    border: 1px solid var(--line);
+  .sw-card-slot {
+    display: grid;
+    min-width: 0;
+    scroll-margin-top: calc(var(--nav-bar-h, 76px) + 1rem);
   }
-  .sw-row-credit {
-    margin: 0 0 0.6rem;
-    font-size: 0.72rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink);
-  }
-  .sw-row-desc {
-    margin: 0 0 1.25rem;
-    color: var(--muted);
-    line-height: 1.65;
-  }
-  .sw-row-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    min-height: var(--tap-min, 44px);
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--ink);
-    text-decoration: underline;
-    text-underline-offset: 4px;
-    text-decoration-color: var(--hairline-strong);
-  }
-  .sw-row-link:hover,
-  .sw-row-link:focus-visible {
-    text-decoration-color: currentColor;
-  }
-  /* The strip brings its own top margin for a standalone placement. */
-  .sw-archive :global(.workflow) {
-    margin-top: 0;
+  .sw-workflow {
+    scroll-margin-top: calc(var(--nav-bar-h, 76px) + 1rem);
   }
 </style>
