@@ -104,7 +104,7 @@ You are finishing "Netta Change Pass 32" on the Netta Henna and Feathered Soul l
 - The hero logo is a plain `div.hero-logo-static`: no link, no aria label, default cursor, no hover zoom. Clicking it leaves the scroll at 0, light and dark.
 - The hero descriptor line now reads "Henna Tattoo Artist ◆ Feather and Tinsel Hair Artist", her exact words, stacked one per line at ≤640px.
 - The service and gallery descriptions and the "Bohemian Beauty ◆ Body Art ◆ Hair Adornments" kicker are UNCHANGED. They are an open item: Netta supplies her own wording.
-- The nav wordmark (`BaseLayout.astro`, `homeHref="#price-list"`, "Go to Price List") still jumps to the Price List. Ask Andrew whether to remove that too; Netta may have tapped this one on her phone.
+- Updated November 17, 2026: the nav wordmark returns to `#overview`, with the accessible label "Netta Henna and Feathered Soul, back to top". The hero emblem remains noninteractive.
 
 ## What is left for you
 
