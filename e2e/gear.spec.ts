@@ -100,7 +100,7 @@ test.describe('Gear page', () => {
     await expect(lenses).toBeVisible();
     await expect(lenses).toHaveClass(/is-expanded/);
     await expect(page.locator('.gear-accordion-section:visible')).toHaveCount(1);
-    await expect(lenses.locator('[data-deck-counter]')).toHaveText('01 / 01');
+    await expect(lenses.locator('[data-deck-counter]')).toHaveCount(0);
     await expect(activeTitle(lenses)).toContainText('90mm');
     await expect(lenses.locator('.deck-card.next-1:not(.is-filtered-out)')).toHaveCount(0);
 
@@ -109,7 +109,7 @@ test.describe('Gear page', () => {
     await expect(cafe).toBeVisible();
     await expect(cafe).toHaveClass(/is-expanded/);
     await expect(page.locator('.gear-accordion-section:visible')).toHaveCount(1);
-    await expect(cafe.locator('[data-deck-counter]')).toHaveText('01 / 01');
+    await expect(cafe.locator('[data-deck-counter]')).toHaveCount(0);
     await expect(activeTitle(cafe)).toContainText('Ascaso');
 
     await page.locator('#gear-search-clear').click();

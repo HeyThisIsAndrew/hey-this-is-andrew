@@ -65,6 +65,7 @@ const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_UR
 // carries the base path on the production build).
 const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href;
 const isCcc = Astro.url.pathname.includes('/ccc');
+const isClientWork = Astro.url.pathname.replace(/\/+$/, '').endsWith('/work-with-me');
 ---
 <!doctype html>
 <html lang="en" data-theme="dark">
@@ -219,7 +220,7 @@ const isCcc = Astro.url.pathname.includes('/ccc');
     {/* Outside the camera stage: it is fixed to the screen, and the stage is
         transformed during a route zoom. */}
     {!minimal && <PageNav heading={paneHeading} topLabel={topLabel} headerFallback />}
-    {!minimal && <div class="client-work-footer-contact" aria-label="Contact Andrew">
+    {!minimal && !isClientWork && <div class="client-work-footer-contact" aria-label="Contact Andrew">
       <a class="btn btn-secondary" href={WORK_WITH_ME_HREF}>Work With Me</a>
     </div>}
     {!minimal && <Footer
@@ -238,6 +239,7 @@ const isCcc = Astro.url.pathname.includes('/ccc');
       // Page-owned effects rebind after Astro navigation.
       import { initReveals, forceReveal } from '../lib/spatial.ts';
       import { initParallaxFallback } from '../lib/parallax.ts';
+      import { initKeyboardJumpClearance } from '../lib/keyboard-jump-clearance';
       import { initSectionAnchors } from '@andrew/ui/scripts/section-anchors.ts';
       import { createPageScope } from '@andrew/ui/scripts/page-scope.ts';
       function initPageChrome() {
@@ -247,6 +249,7 @@ const isCcc = Astro.url.pathname.includes('/ccc');
         const { on, timeout } = createPageScope(mainRoot);
       initReveals();
       initSectionAnchors();
+      initKeyboardJumpClearance(mainRoot);
       // CSS view() timelines drive parallax where supported; this is the
       // rAF fallback for older browsers. No-op when native support exists.
       initParallaxFallback();

@@ -7,7 +7,6 @@
 import { Image } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
-import { SOCIAL_LINE_ICONS } from '@andrew/ui/icons';
 import {
   SERVICES,
   SERVICES_LEDE,
@@ -29,7 +28,6 @@ interface ServiceVisual {
   src?: ImageMetadata;
   alt?: string;
   objectPosition?: string;
-  slateLabel?: string;
 }
 
 const SERVICE_VISUALS: Record<string, ServiceVisual> = {
@@ -48,9 +46,6 @@ const SERVICE_VISUALS: Record<string, ServiceVisual> = {
     alt: 'Cut crystal bar glassware and spirits bottle in studio lighting',
     objectPosition: 'center 72%',
   },
-  'Video editing': {
-    slateLabel: 'POST-PRODUCTION',
-  },
   'Event photo & video coverage': {
     src: desertDjImg,
     alt: 'Live DJ set and crowd at Desert Escape Palm Springs',
@@ -62,12 +57,10 @@ const widthsFor = (src: ImageMetadata) =>
   [...new Set([320, 480, 640].filter((w) => w < src.width).concat(src.width))];
 
 const serviceCards = SERVICES.map((service, index) => {
-  const num = String(index + 1).padStart(2, '0');
   const visual = SERVICE_VISUALS[service.title] ?? {};
   const isWide = index >= 3;
   return {
     ...service,
-    num,
     isWide,
     visual,
   };
@@ -111,20 +104,9 @@ const logisticsItems = [
                 style={s.visual.objectPosition ? `object-position: ${s.visual.objectPosition};` : undefined}
               />
             </div>
-          ) : (
-            <div class="work-media work-media--slate" aria-hidden="true">
-              <div class="work-slate">
-                <div class="work-slate-lockup">
-                  <span class="work-slate-num">{s.num}</span>
-                  <span class="work-slate-icon" set:html={SOCIAL_LINE_ICONS.YouTube} />
-                </div>
-                <span class="work-slate-label font-mono">{s.visual.slateLabel ?? 'POST-PRODUCTION'}</span>
-              </div>
-            </div>
-          )}
+          ) : null}
 
           <div class="work-body">
-            <p class="work-index font-mono">{s.num}</p>
             <h3 class="work-title">{s.title}</h3>
             <p class="work-desc">{s.desc}</p>
           </div>
@@ -223,63 +205,6 @@ const logisticsItems = [
     object-fit: cover;
   }
 
-  .work-media--slate {
-    display: grid;
-    place-items: center;
-    width: 100%;
-    aspect-ratio: 16 / 10;
-    background: radial-gradient(ellipse at center, #202020, #080808 75%);
-  }
-
-  .work-slate {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.65rem;
-    padding: 1.25rem;
-    text-align: center;
-  }
-
-  .work-slate-lockup {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.85rem;
-  }
-
-  .work-slate-num {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: clamp(2.25rem, 3.5vw, 3.5rem);
-    line-height: 0.9;
-    letter-spacing: 0.02em;
-    color: rgba(240, 240, 240, 0.25);
-  }
-
-  .work-slate-icon {
-    display: block;
-    width: clamp(2.25rem, 3vw, 2.75rem);
-    height: clamp(2.25rem, 3vw, 2.75rem);
-    padding-left: 0.85rem;
-    box-sizing: content-box;
-    border-left: 1px solid var(--hairline-strong);
-    color: var(--ink);
-    opacity: 0.85;
-  }
-
-  .work-slate-icon :global(svg) {
-    display: block;
-    width: 100%;
-    height: 100%;
-  }
-
-  .work-slate-label {
-    font-size: 0.68rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-
   .work-body {
     min-width: 0;
     padding: 1.35rem 1.5rem 1.5rem;
@@ -320,13 +245,6 @@ const logisticsItems = [
     }
   }
 
-  .work-index {
-    margin: 0 0 0.5rem;
-    font-size: 0.72rem;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
 
   .work-title {
     font-family: var(--font-display);

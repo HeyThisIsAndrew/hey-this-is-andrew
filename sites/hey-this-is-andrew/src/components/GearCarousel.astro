@@ -65,13 +65,12 @@ const sections = (
   )
 ).filter((s): s is NonNullable<typeof s> => s !== null);
 const n = sections.length;
-const pad = (v: number) => String(v).padStart(2, '0');
 ---
 <div class="gear-carousel" data-gear-carousel role="region" aria-roledescription="carousel" aria-label="Gear sections">
   <div class="gc-tabs" role="group" aria-label="Choose a gear section">
     {sections.map((s, i) => (
       <button type="button" class:list={['gc-tab', 'font-mono', { 'is-active': i === 0 }]} data-gc-tab={i} aria-current={i === 0 ? 'true' : undefined}>
-        <span class="gc-tab-num">{pad(i + 1)}</span> {s.chip}
+        {s.chip}
       </button>
     ))}
   </div>
@@ -113,7 +112,6 @@ const pad = (v: number) => String(v).padStart(2, '0');
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
       <span>Prev</span>
     </button>
-    <span class="gc-counter font-mono" data-gc-counter aria-hidden="true">{pad(1)} / {pad(n)}</span>
     <button type="button" class="gc-step" data-gc-next aria-label="Next gear section">
       <span>Next</span>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -126,7 +124,7 @@ const pad = (v: number) => String(v).padStart(2, '0');
     margin-top: 0;
   }
 
-  /* Flush numbered editorial chapter tabs, underlined when active. */
+  /* Editorial chapter tabs, underlined when active. */
   .gc-tabs {
     display: flex;
     flex-wrap: wrap;
@@ -151,9 +149,6 @@ const pad = (v: number) => String(v).padStart(2, '0');
     touch-action: manipulation;
     transition: color 0.25s ease, border-color 0.25s ease;
   }
-  .gc-tab-num {
-    opacity: 0.55;
-  }
   .gc-tab:hover {
     color: var(--ink);
     border-bottom-color: rgba(255, 255, 255, 0.45);
@@ -163,9 +158,6 @@ const pad = (v: number) => String(v).padStart(2, '0');
     color: var(--ink);
     border-bottom: 2px solid var(--ink);
     padding-bottom: 0;
-  }
-  .gc-tab.is-active .gc-tab-num {
-    opacity: 1;
   }
 
   .gc-track {
@@ -345,13 +337,6 @@ const pad = (v: number) => String(v).padStart(2, '0');
     border: 0;
     color: var(--ink);
   }
-  .gc-counter {
-    min-width: 5.5em;
-    text-align: center;
-    font-size: 0.78rem;
-    letter-spacing: 0.12em;
-    color: var(--muted);
-  }
 
   @media (max-width: 720px) {
     .gc-tabs {
@@ -399,10 +384,8 @@ const pad = (v: number) => String(v).padStart(2, '0');
       const slides = Array.from(track.querySelectorAll<HTMLElement>('.gc-slide'));
       const links = slides.map((s) => s.querySelector<HTMLAnchorElement>('.gc-card'));
       const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-gc-tab]'));
-      const counter = root.querySelector<HTMLElement>('[data-gc-counter]');
       const n = slides.length;
       if (n < 2) return;
-      const pad = (v: number) => String(v).padStart(2, '0');
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
 
       let current = 0;
@@ -422,7 +405,6 @@ const pad = (v: number) => String(v).padStart(2, '0');
           if (k === i) a.removeAttribute('tabindex');
           else a.tabIndex = -1;
         });
-        if (counter) counter.textContent = `${pad(i + 1)} / ${pad(n)}`;
       };
       const leftOf = (i: number) => slides[i].offsetLeft;
       const indexFromScroll = () => Math.max(0, Math.min(n - 1, Math.round(track.scrollLeft / Math.max(1, track.clientWidth))));

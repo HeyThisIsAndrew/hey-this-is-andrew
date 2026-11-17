@@ -93,7 +93,6 @@ const sections = await Promise.all(
     })
 ).then((all) => all.filter((s) => s.items.length > 0));
 
-const pad = (n: number) => String(n).padStart(2, '0');
 const ctaLabel = (s: Store) => `View on ${s.store}`;
 /** Positions in the deck, as the HQ deck names them. */
 const stateOf = (i: number, n: number) =>
@@ -262,7 +261,6 @@ const stateOf = (i: number, n: number) =>
                           <span class="card-badge font-mono">{it.tag || 'In the kit'}</span>
                           <span class="card-brand font-mono">{it.brand}</span>
                         </span>
-                        <span class="card-counter font-mono" data-card-counter>{pad(i + 1)} / {pad(n)}</span>
                       </div>
 
                       <div class="card-visual">
@@ -348,7 +346,6 @@ const stateOf = (i: number, n: number) =>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
                   <span class="font-mono">Prev item</span>
                 </button>
-                <span class="deck-counter font-mono" data-deck-counter aria-live="polite">{pad(1)} / {pad(n)}</span>
                 <button type="button" class="deck-step" data-deck-next aria-label={`Next ${sec.title} item`}>
                   <span class="font-mono">Next item</span>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -864,14 +861,6 @@ const stateOf = (i: number, n: number) =>
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .card-counter {
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    color: rgb(var(--accent));
-    transition: color 0.5s ease;
-    white-space: nowrap;
-  }
 
   /* The picture gets its own row: nothing overlays it, so it is never
      clipped by the top bar, the plate, or the page's sticky header. */
@@ -1084,15 +1073,6 @@ const stateOf = (i: number, n: number) =>
   .store-cta:focus-visible {
     outline: 2px solid #fff;
     outline-offset: 2px;
-  }
-  .deck-counter {
-    min-width: 5.5em;
-    text-align: center;
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.16em;
-    color: rgb(var(--accent));
-    transition: color 0.5s ease;
   }
 
   .deck-thumb-track {
@@ -1553,13 +1533,11 @@ const stateOf = (i: number, n: number) =>
         const cards = Array.from(section.querySelectorAll<HTMLElement>('.deck-card'));
         const thumbs = Array.from(section.querySelectorAll<HTMLElement>('.deck-thumb-tile'));
         const glows = Array.from(section.querySelectorAll<HTMLElement>('.deck-glow-layer'));
-        const counter = section.querySelector<HTMLElement>('[data-deck-counter]');
         const deck = section.querySelector<HTMLElement>('.gear-deck');
         if (!stage || !cards.length) return;
 
         let active = 0;
         let visible = cards.map((_, i) => i);
-        const pad = (n: number) => String(n).padStart(2, '0');
 
         function render(focusThumb = false) {
           if (!visible.includes(active)) active = visible[0] ?? 0;
@@ -1583,8 +1561,6 @@ const stateOf = (i: number, n: number) =>
                 else el.removeAttribute('tabindex');
               } else el.tabIndex = -1;
             });
-            const c = card.querySelector('[data-card-counter]');
-            if (c && isActive) c.textContent = `${pad(pos + 1)} / ${pad(count)}`;
           });
 
           thumbs.forEach((t, i) => {
@@ -1604,7 +1580,6 @@ const stateOf = (i: number, n: number) =>
 
           const accent = cards[active]?.dataset.accent;
           if (accent) section.style.setProperty('--accent', accent);
-          if (counter) counter.textContent = `${pad(pos + 1)} / ${pad(count)}`;
 
           const thumb = thumbs[active];
           const track = thumb?.parentElement;

@@ -73,7 +73,7 @@ for (const vp of viewports) {
 
       const cards = page.locator('.event-card');
       const cardCount = await cards.count();
-      expect(cardCount).toBe(21);
+      expect(cardCount).toBe(20);
 
       for (let i = 0; i < cardCount; i++) {
         const card = cards.nth(i);
@@ -137,7 +137,7 @@ test.describe('Events page content and sections audit', () => {
     const upcomingSection = page.locator('section[aria-labelledby="upcoming-heading"]');
     await expect(upcomingSection).toBeVisible();
     const upcomingCards = upcomingSection.locator('.event-card');
-    await expect(upcomingCards).toHaveCount(13);
+    await expect(upcomingCards).toHaveCount(12);
 
     // Section 2: Capture Create Caffeinate (2 items)
     const cccSection = page.locator('section[aria-labelledby="ccc-heading"]');
@@ -151,13 +151,8 @@ test.describe('Events page content and sections audit', () => {
     const pastCards = pastSection.locator('.event-card');
     await expect(pastCards).toHaveCount(6);
 
-    // Cohley Summit under Upcoming with Attending badge
-    const cohleyCard = upcomingCards.filter({ hasText: 'Cohley Summit' });
-    await expect(cohleyCard).toHaveCount(1);
-    await expect(cohleyCard.locator('.event-badge')).toHaveText('Attending');
-    await expect(cohleyCard.locator('.event-meta')).toContainText('Nov 12, 2026');
-    await expect(cohleyCard.locator('.event-meta')).toContainText('Fairmont Miramar Hotel, Santa Monica, CA');
-    await expect(cohleyCard.locator('a.event-link')).toHaveAttribute('href', 'https://www.cohley.com/');
+    // Removed event stays absent; the remaining event cards retain their details.
+    await expect(upcomingCards.filter({ hasText: 'Cohley Summit' })).toHaveCount(0);
 
     // CCC coverage entries
     const desertEscapeCard = cccCards.filter({ hasText: 'Desert Escape at Ace Hotel Palm Springs' });
@@ -211,10 +206,10 @@ test.describe('Reduced motion emulation', () => {
     await expect(page.locator('section[aria-labelledby="ccc-heading"]')).toBeVisible();
     await expect(page.locator('section[aria-labelledby="past-heading"]')).toBeVisible();
 
-    // All 21 cards are visible
+    // All 20 remaining cards are visible
     const cards = page.locator('.event-card');
-    await expect(cards).toHaveCount(21);
-    for (let i = 0; i < 21; i++) {
+    await expect(cards).toHaveCount(20);
+    for (let i = 0; i < 20; i++) {
       await expect(cards.nth(i)).toBeVisible();
     }
 
