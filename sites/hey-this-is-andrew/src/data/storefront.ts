@@ -40,29 +40,29 @@ export const REFERRALS: StorefrontPick[] = [
   {
     title: 'Mint Mobile',
     desc: 'Switch to Mint Mobile and stop spending so much on your wireless plan. Use my referral link to get $15 in renewal credit. Then use the money you save to buy me lunch or something (as a thank you).',
-    cta: 'Check out Mint Mobile',
+    cta: 'Check out',
     url: 'https://my.mintmobile.com/refer/pHvGFQz',
   },
   {
     title: 'inKind',
     desc: "Hey! Join inKind and we'll both get $25 to spend at amazing restaurants!",
-    cta: 'Check out inKind',
+    cta: 'Check out',
     url: 'https://app.inkind.com/refer/YMEZOONP',
   },
   {
     title: 'Fetch',
-    desc: "Stop tossing your receipts. 🧾 They're worth gift cards on Fetch! Use my code FJ6MX and we'll both get a bonus when you join and complete any point-earning action.",
-    cta: 'Check out Fetch',
+    desc: "Stop tossing your receipts. They're worth gift cards on Fetch! Use my code FJ6MX and we'll both get a bonus when you join and complete any point-earning action.",
+    cta: 'Check out',
     url: 'https://referral.fetch.com/vvv3/share?code=FJ6MX',
   },
   {
     title: 'Instacart',
-    cta: 'Check out Instacart',
+    cta: 'Check out',
     url: 'https://inst.cr/t/c821eab27',
   },
   {
     title: 'Rakuten',
-    cta: 'Check out Rakuten',
+    cta: 'Check out',
     url: 'https://www.rakuten.com/r/HEYTHI34?eeid=44971',
   },
 ];
