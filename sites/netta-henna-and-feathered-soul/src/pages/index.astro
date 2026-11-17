@@ -44,6 +44,21 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
 const heroSizes = '(min-width: 3840px) 450px, (min-width: 2560px) 380px, (max-width: 958px) 240px, 320px';
 const photoSources = { henna1Img, henna2Img, henna3Img, henna4Img, feathers1Img, feathers2Img, feathers3Img, tinsel1Img, tinsel2Img, tinsel3Img };
 const photos = Object.fromEntries(await Promise.all(Object.entries(photoSources).map(async ([key, src]) => [key, await getImage({ src, format: 'webp', quality: 86, width: Math.min(src.width, 760) })])));
+// Original lightweight vines connect the three photo rings through the gaps.
+const pyramidPaths = [
+  'M337 173 C350 150 366 150 379 173',
+  'M260 308 C310 347 273 369 245 438',
+  'M456 308 C406 347 443 369 471 438',
+  'M295 343 C319 362 338 366 358 351 C378 366 397 362 421 343',
+  'M358 351 C346 334 348 322 358 312 C368 322 370 334 358 351 Z',
+  'M355 350 C334 346 330 330 333 320 C347 326 354 336 355 350 Z',
+  'M361 350 C382 346 386 330 383 320 C369 326 362 336 361 350 Z',
+  'M285 361 C257 342 250 365 263 373 C275 380 287 371 285 361 Z',
+  'M431 361 C459 342 466 365 453 373 C441 380 429 371 431 361 Z',
+  'M252 404 Q221 384 230 372 Q249 376 252 404 Z',
+  'M464 404 Q495 384 486 372 Q467 376 464 404 Z',
+];
+const pyramidDots = [[358, 299], [347, 157], [369, 157], [291, 382], [425, 382], [240, 365], [476, 365]];
 ---
 
 <BaseLayout title={`${SITE.name} · Santa Barbara, CA`} heroPreload={{ src: heroLogo.src, srcset: heroLogo.srcSet.attribute, sizes: heroSizes }}>
@@ -224,7 +239,7 @@ const photos = Object.fromEntries(await Promise.all(Object.entries(photoSources)
           <h3 class="gallery-cat-title">Hair Feather Extensions</h3>
           <span class="gallery-cat-gem" aria-hidden="true">✦</span>
         </div>
-        <div class="gallery-photo-grid three-col">
+        <div class="gallery-photo-grid three-col" data-pyramid-art>
           <figure class="gallery-item">
             <div class="gallery-img-wrap">
               <img src={photos.feathers1Img.src} width={feathers1Img.width} height={feathers1Img.height} decoding="async" alt="Grizzly hair feather extensions selfie" loading="lazy" />
@@ -242,6 +257,10 @@ const photos = Object.fromEntries(await Promise.all(Object.entries(photoSources)
               <img src={photos.feathers3Img.src} width={feathers3Img.width} height={feathers3Img.height} decoding="async" alt="Turquoise hair feather extensions in braid" loading="lazy" />
             </div>
           </figure>
+          <svg class="pyramid-henna" viewBox="0 0 716 722" preserveAspectRatio="none" aria-hidden="true" focusable="false" fill="none">
+            {pyramidPaths.map(d => <path class="henna-path" d={d} pathLength="200" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke" />)}
+            {pyramidDots.map(([cx, cy]) => <circle class="henna-dot" cx={cx} cy={cy} r="3" fill="var(--brand-teal)" />)}
+          </svg>
         </div>
       </div>
 
@@ -252,7 +271,7 @@ const photos = Object.fromEntries(await Promise.all(Object.entries(photoSources)
           <h3 class="gallery-cat-title">Hair Tinsel Extensions</h3>
           <span class="gallery-cat-gem" aria-hidden="true">✦</span>
         </div>
-        <div class="gallery-photo-grid three-col">
+        <div class="gallery-photo-grid three-col" data-pyramid-art>
           <figure class="gallery-item">
             <div class="gallery-img-wrap">
               <img src={photos.tinsel1Img.src} width={tinsel1Img.width} height={tinsel1Img.height} decoding="async" alt="Copper hair tinsel curls profile" loading="lazy" />
@@ -270,6 +289,10 @@ const photos = Object.fromEntries(await Promise.all(Object.entries(photoSources)
               <img src={photos.tinsel3Img.src} width={tinsel3Img.width} height={tinsel3Img.height} decoding="async" alt="Copper hair tinsel strands shimmering in dark wavy hair" loading="lazy" />
             </div>
           </figure>
+          <svg class="pyramid-henna" viewBox="0 0 716 722" preserveAspectRatio="none" aria-hidden="true" focusable="false" fill="none">
+            {pyramidPaths.map(d => <path class="henna-path" d={d} pathLength="200" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke" />)}
+            {pyramidDots.map(([cx, cy]) => <circle class="henna-dot" cx={cx} cy={cy} r="3" fill="var(--brand-teal)" />)}
+          </svg>
         </div>
       </div>
 
@@ -283,6 +306,26 @@ const photos = Object.fromEntries(await Promise.all(Object.entries(photoSources)
     </div>
   </section>
 </BaseLayout>
+
+<script>
+  function initializePyramidArt() {
+    const groups = document.querySelectorAll<HTMLElement>('[data-pyramid-art]:not([data-art-ready])');
+    if (!groups.length) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      groups.forEach(group => { group.dataset.artReady = 'true'; group.classList.add('is-drawn'); });
+      return;
+    }
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) { entry.target.classList.add('is-drawn'); observer.unobserve(entry.target); }
+      });
+    }, { threshold: 0.2 });
+    groups.forEach(group => { group.dataset.artReady = 'true'; group.classList.add('pyramid-pending'); observer.observe(group); });
+    document.addEventListener('astro:before-swap', () => observer.disconnect(), { once: true });
+  }
+  initializePyramidArt();
+  document.addEventListener('astro:page-load', initializePyramidArt);
+</script>
 
 <style>
   /* ── 1. Hero Section ── */
@@ -797,6 +840,28 @@ const photos = Object.fromEntries(await Promise.all(Object.entries(photoSources)
     box-shadow: 0 6px 18px rgba(61, 40, 23, 0.14);
     text-align: center;
   }
+  .gallery-photo-grid.three-col {
+    position: relative;
+    isolation: isolate;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 28px 22px;
+    max-width: 716px;
+  }
+  .three-col > .gallery-item { grid-column: span 2; z-index: 1; }
+  .three-col > .gallery-item:last-of-type { grid-column: 2 / span 2; }
+  .pyramid-henna { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; color: #a8821d; z-index: 0; }
+  :global([data-theme="dark"]) .pyramid-henna { color: #c59b27; }
+  .pyramid-henna .henna-path { stroke-dasharray: 200; stroke-dashoffset: 0; transition: stroke-dashoffset 2s cubic-bezier(0.25, 1, 0.5, 1); }
+  .pyramid-henna .henna-dot { opacity: 1; transform: scale(1); transform-box: fill-box; transform-origin: center; transition: opacity 1.2s ease, transform 1.2s ease; }
+  .pyramid-pending .henna-path { stroke-dashoffset: 200; }
+  .pyramid-pending .henna-dot { opacity: 0; transform: scale(0.5); }
+  .three-col.is-drawn .henna-path { stroke-dashoffset: 0; }
+  .three-col.is-drawn .henna-dot { opacity: 1; transform: scale(1); }
+  @media (max-width: 640px) { .gallery-photo-grid.three-col { column-gap: 18px; } }
+  @media (prefers-reduced-motion: reduce) {
+    .pyramid-henna .henna-path { stroke-dashoffset: 0 !important; transition: none !important; }
+    .pyramid-henna .henna-dot { opacity: 1 !important; transform: scale(1) !important; transition: none !important; }
+  }
   .gallery-item::before {
     content: '';
     position: absolute;
@@ -809,6 +874,10 @@ const photos = Object.fromEntries(await Promise.all(Object.entries(photoSources)
     transform: translateX(-50%) rotate(45deg);
     z-index: 1;
     pointer-events: none;
+  }
+  :global([data-theme="light"]) .gallery-item {
+    border-color: #a8821d !important;
+    box-shadow: 0 6px 18px rgba(61, 40, 23, 0.20), 0 0 0 1px #a8821d !important;
   }
 
   .gallery-img-wrap {
@@ -826,12 +895,18 @@ const photos = Object.fromEntries(await Promise.all(Object.entries(photoSources)
     object-fit: cover;
     object-position: top;
     display: block;
-    transform: scale(1.08);
+    transform: scale(var(--photo-rest-scale, 1.08));
     transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1);
   }
 
   .gallery-item:hover .gallery-img-wrap img {
     transform: scale(1);
+  }
+  .gallery-img-wrap img[alt="LV monogram custom henna design"],
+  .gallery-img-wrap img[alt="Grizzly hair feather extensions selfie"],
+  .gallery-img-wrap img[alt="Turquoise hair feather extensions in braid"] {
+    --photo-rest-scale: 1;
+    object-position: center;
   }
   @media (prefers-reduced-motion: reduce) {
     .gallery-img-wrap img { transform: scale(1); transition: none; }
