@@ -102,6 +102,18 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
         </div>
       </div>
     </Nav>
+    <template id="netta-nav-henna-underline">
+      <svg class="nav-henna-underline" viewBox="0 0 220 12" preserveAspectRatio="none" fill="none" aria-hidden="true" focusable="false">
+        <path
+          class="nav-henna-underline-path"
+          d="M 2 6 C 45 2, 95 10, 145 5 C 175 2, 195 8, 208 6"
+          stroke="#a8821d"
+          stroke-width="1.8"
+          stroke-linecap="round"
+        />
+        <circle class="nav-henna-underline-dot" cx="215" cy="6" r="2.2" fill="#0e7c7b" />
+      </svg>
+    </template>
     <main id="main-content">
       <slot />
     </main>
@@ -109,6 +121,18 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
     <script>
       import { initSectionAnchors } from '@andrew/ui/scripts/section-anchors.ts';
       initSectionAnchors();
+      function mountNavHennaUnderline() {
+        const template = document.querySelector<HTMLTemplateElement>('#netta-nav-henna-underline');
+        if (!template) return;
+        document.querySelectorAll('.site-nav :is(.nav-link, .mobile-main-link)').forEach((link) => {
+          if (!link.querySelector('.nav-henna-underline')) link.append(template.content.cloneNode(true));
+        });
+      }
+
+      // The homepage mounts the Book Now label and sparkles before decoration.
+      document.addEventListener('DOMContentLoaded', mountNavHennaUnderline, { once: true });
+      document.addEventListener('astro:page-load', mountNavHennaUnderline);
+
       // Theme toggle mounting and handling
       function setupThemeToggle() {
         const rightActions = document.querySelector('.nav-right-actions');

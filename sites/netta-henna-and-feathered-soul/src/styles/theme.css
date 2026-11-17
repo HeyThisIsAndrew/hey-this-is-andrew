@@ -264,8 +264,6 @@ section,
 
 .site-nav .mobile-main-link.active {
   color: var(--brand-gold-heading) !important;
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
 }
 
 /* Hide side Contents panel entirely */
@@ -424,20 +422,74 @@ html.gallery-modal-open #sticky-book-wrap {
   }
 }
 
-/* Underline only on hover or keyboard focus */
+/* Footer-style henna underline, without the shared Nav's gradient/scale underline. */
 :root .site-nav .nav-link::after {
-  height: 1px !important;
-  background: linear-gradient(90deg, var(--gold-border), transparent) !important;
-  box-shadow: none !important;
-  border: 0 !important;
-  transform: scaleX(0) !important;
-  transform-origin: left !important;
-  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1) !important;
+  content: none !important;
 }
 
-:root .site-nav .nav-link:hover::after,
-:root .site-nav .nav-link:focus-visible::after {
-  transform: scaleX(1) !important;
+.site-nav .nav-henna-underline {
+  --nav-henna-inset: 0.35rem;
+  position: absolute;
+  inset-inline-start: var(--nav-henna-inset);
+  bottom: 0.35rem;
+  width: calc(100% - 2 * var(--nav-henna-inset));
+  height: 8px;
+  margin-top: 1px;
+  display: block;
+  pointer-events: none;
+}
+
+@media (max-width: 1099px) {
+  .site-nav .nav-henna-underline { --nav-henna-inset: 0.25rem; }
+}
+
+.site-nav .mobile-main-link {
+  position: relative;
+}
+
+.site-nav .mobile-main-link .nav-henna-underline {
+  --nav-henna-inset: 0px;
+  bottom: -6px;
+}
+
+.site-nav .nav-henna-underline-path {
+  stroke-dasharray: 220;
+  stroke-dashoffset: 220;
+  transition: stroke-dashoffset 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.site-nav .nav-henna-underline-dot {
+  /* Keep the teal dot legible when the viewBox is compressed to short labels. */
+  stroke: #0e7c7b;
+  stroke-width: 0.8px;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+  transform: scale(0.4);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: opacity 0.25s ease 0.25s, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) 0.25s;
+}
+
+[data-theme="dark"] .site-nav .nav-henna-underline-dot {
+  fill: #4de0d2;
+  stroke: #4de0d2;
+}
+
+.site-nav :is(.nav-link, .mobile-main-link):is(:hover, :focus-visible, .active, [aria-current="location"]) .nav-henna-underline-path {
+  stroke-dashoffset: 0;
+}
+
+.site-nav :is(.nav-link, .mobile-main-link):is(:hover, :focus-visible, .active, [aria-current="location"]) .nav-henna-underline-dot {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.site-nav :is(.nav-link, .mobile-main-link):is(.active, [aria-current="location"]) :is(.nav-henna-underline-path, .nav-henna-underline-dot) {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-nav :is(.nav-henna-underline-path, .nav-henna-underline-dot) { transition: none; }
 }
 
 .site-nav .nav-link:hover,
