@@ -41,9 +41,12 @@ import HennaHeroFrame from '../components/HennaHeroFrame.astro';
 // Pass 32: the 680px PNG logo (781 KB) was the largest paint on mobile. The hero
 // shows it at 230 to 320px, so serve WebP at 1x and 2x of that instead.
 const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, widths: [320, 480, 680] });
+const heroSizes = '(min-width: 3840px) 450px, (min-width: 2560px) 380px, (max-width: 958px) 240px, 320px';
+const photoSources = { henna1Img, henna2Img, henna3Img, henna4Img, feathers1Img, feathers2Img, feathers3Img, tinsel1Img, tinsel2Img, tinsel3Img };
+const photos = Object.fromEntries(await Promise.all(Object.entries(photoSources).map(async ([key, src]) => [key, await getImage({ src, format: 'webp', quality: 86, width: Math.min(src.width, 760) })])));
 ---
 
-<BaseLayout title={`${SITE.name} · Santa Barbara, CA`}>
+<BaseLayout title={`${SITE.name} · Santa Barbara, CA`} heroPreload={{ src: heroLogo.src, srcset: heroLogo.srcSet.attribute, sizes: heroSizes }}>
   <HennaSideBorders />
   <FeatherParallax />
 
@@ -58,7 +61,7 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
           <img
             src={heroLogo.src}
             srcset={heroLogo.srcSet.attribute}
-            sizes="(min-width: 3840px) 450px, (min-width: 2560px) 380px, (max-width: 958px) 240px, 320px"
+            sizes={heroSizes}
             width={logoImg.width}
             height={logoImg.height}
             alt="Netta Henna and Feathered Soul Emblem"
@@ -108,7 +111,7 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
         <article class="service-medallion-item" id="service-henna">
           <div class="medallion-visual">
             <div class="gold-ring-frame medallion-circle">
-              <img src={henna3Img.src} alt="Natural Henna Art lotus design" loading="lazy" />
+              <img src={photos.henna3Img.src} width={henna3Img.width} height={henna3Img.height} decoding="async" alt="Natural Henna Art lotus design" loading="lazy" />
             </div>
             <div class="medallion-ribbon">
               <h3 class="service-name gold-script-text">Henna Art</h3>
@@ -126,7 +129,7 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
         <article class="service-medallion-item" id="service-feathers">
           <div class="medallion-visual">
             <div class="gold-ring-frame medallion-circle">
-              <img src={feathers2Img.src} alt="Netta styling real hair feather extensions" loading="lazy" />
+              <img src={photos.feathers2Img.src} width={feathers2Img.width} height={feathers2Img.height} decoding="async" alt="Netta styling real hair feather extensions" loading="lazy" />
             </div>
             <div class="medallion-ribbon">
               <h3 class="service-name gold-script-text">Hair Feathers</h3>
@@ -144,7 +147,7 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
         <article class="service-medallion-item" id="service-tinsel">
           <div class="medallion-visual">
             <div class="gold-ring-frame medallion-circle">
-              <img src={tinsel1Img.src} alt="Sparkling Hair Tinsel Extensions" loading="lazy" />
+              <img src={photos.tinsel1Img.src} width={tinsel1Img.width} height={tinsel1Img.height} decoding="async" alt="Sparkling Hair Tinsel Extensions" loading="lazy" />
             </div>
             <div class="medallion-ribbon">
               <h3 class="service-name gold-script-text">Hair Tinsel</h3>
@@ -190,25 +193,25 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
         <div class="gallery-photo-grid four-col">
           <figure class="gallery-item">
             <div class="gallery-img-wrap">
-              <img src={henna1Img.src} alt="LV monogram custom henna design" loading="lazy" />
+              <img src={photos.henna1Img.src} width={henna1Img.width} height={henna1Img.height} decoding="async" alt="LV monogram custom henna design" loading="lazy" />
             </div>
           </figure>
 
           <figure class="gallery-item">
             <div class="gallery-img-wrap">
-              <img src={henna2Img.src} alt="Mandala hand henna design" loading="lazy" />
+              <img src={photos.henna2Img.src} width={henna2Img.width} height={henna2Img.height} decoding="async" alt="Mandala hand henna design" loading="lazy" />
             </div>
           </figure>
 
           <figure class="gallery-item">
             <div class="gallery-img-wrap">
-              <img src={henna3Img.src} alt="Lotus hand henna design" loading="lazy" />
+              <img src={photos.henna3Img.src} width={henna3Img.width} height={henna3Img.height} decoding="async" alt="Lotus hand henna design" loading="lazy" />
             </div>
           </figure>
 
           <figure class="gallery-item">
             <div class="gallery-img-wrap">
-              <img src={henna4Img.src} alt="Full stained henna hand" loading="lazy" />
+              <img src={photos.henna4Img.src} width={henna4Img.width} height={henna4Img.height} decoding="async" alt="Full stained henna hand" loading="lazy" />
             </div>
           </figure>
         </div>
@@ -224,19 +227,19 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
         <div class="gallery-photo-grid three-col">
           <figure class="gallery-item">
             <div class="gallery-img-wrap">
-              <img src={feathers1Img.src} alt="Grizzly hair feather extensions selfie" loading="lazy" />
+              <img src={photos.feathers1Img.src} width={feathers1Img.width} height={feathers1Img.height} decoding="async" alt="Grizzly hair feather extensions selfie" loading="lazy" />
             </div>
           </figure>
 
           <figure class="gallery-item">
             <div class="gallery-img-wrap">
-              <img src={feathers2Img.src} alt="Netta styled with natural hair feather extensions" loading="lazy" />
+              <img src={photos.feathers2Img.src} width={feathers2Img.width} height={feathers2Img.height} decoding="async" alt="Netta styled with natural hair feather extensions" loading="lazy" />
             </div>
           </figure>
 
           <figure class="gallery-item">
             <div class="gallery-img-wrap">
-              <img src={feathers3Img.src} alt="Turquoise hair feather extensions in braid" loading="lazy" />
+              <img src={photos.feathers3Img.src} width={feathers3Img.width} height={feathers3Img.height} decoding="async" alt="Turquoise hair feather extensions in braid" loading="lazy" />
             </div>
           </figure>
         </div>
@@ -252,19 +255,19 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
         <div class="gallery-photo-grid three-col">
           <figure class="gallery-item">
             <div class="gallery-img-wrap">
-              <img src={tinsel1Img.src} alt="Copper hair tinsel curls profile" loading="lazy" />
+              <img src={photos.tinsel1Img.src} width={tinsel1Img.width} height={tinsel1Img.height} decoding="async" alt="Copper hair tinsel curls profile" loading="lazy" />
             </div>
           </figure>
 
           <figure class="gallery-item">
             <div class="gallery-img-wrap">
-              <img src={tinsel2Img.src} alt="Iridescent hair tinsel profile" loading="lazy" />
+              <img src={photos.tinsel2Img.src} width={tinsel2Img.width} height={tinsel2Img.height} decoding="async" alt="Iridescent hair tinsel profile" loading="lazy" />
             </div>
           </figure>
 
           <figure class="gallery-item">
             <div class="gallery-img-wrap">
-              <img src={tinsel3Img.src} alt="Copper hair tinsel strands shimmering in dark wavy hair" loading="lazy" />
+              <img src={photos.tinsel3Img.src} width={tinsel3Img.width} height={tinsel3Img.height} decoding="async" alt="Copper hair tinsel strands shimmering in dark wavy hair" loading="lazy" />
             </div>
           </figure>
         </div>
@@ -774,24 +777,35 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
   }
 
   .gallery-item {
+    position: relative;
+    aspect-ratio: 1;
     background: var(--surface);
-    border: 1.5px solid var(--brand-gold);
-    border-radius: 18px;
-    overflow: hidden;
+    border: 2.5px solid #c59b27;
+    border-radius: 50%;
+    overflow: visible;
     margin: 0;
-    box-shadow: 0 6px 20px rgba(61, 40, 23, 0.08);
-    transition: transform 0.25s ease, border-color 0.25s ease;
+    box-shadow: 0 6px 18px rgba(61, 40, 23, 0.14);
     text-align: center;
   }
-
-  .gallery-item:hover {
-    transform: translateY(-3px);
-    border-color: var(--brand-gold);
+  .gallery-item::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    width: 7px;
+    height: 7px;
+    border: 1px solid #c59b27;
+    background: var(--brand-teal);
+    transform: translateX(-50%) rotate(45deg);
+    z-index: 1;
+    pointer-events: none;
   }
 
   .gallery-img-wrap {
     width: 100%;
-    aspect-ratio: 1;
+    height: auto !important;
+    aspect-ratio: 1 !important;
+    border-radius: 50%;
     overflow: hidden;
     background: var(--brand-cream-surface);
   }
@@ -802,11 +816,15 @@ const heroLogo = await getImage({ src: logoImg, format: 'webp', quality: 86, wid
     object-fit: cover;
     object-position: top;
     display: block;
-    transition: transform 0.35s ease;
+    transform: scale(1.08);
+    transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1);
   }
 
   .gallery-item:hover .gallery-img-wrap img {
-    transform: scale(1.05);
+    transform: scale(1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .gallery-img-wrap img { transform: scale(1); transition: none; }
   }
 
   .gallery-caption {

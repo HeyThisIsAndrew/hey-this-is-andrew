@@ -24,9 +24,10 @@ import { SITE, NAV_LINKS } from '../data/site';
 interface Props {
   title: string;
   description?: string;
+  heroPreload?: { src: string; srcset: string; sizes: string };
 }
 
-const { title, description = SITE.description } = Astro.props;
+const { title, description = SITE.description, heroPreload } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
 // The nav shows the logo at 50px; a 120px WebP covers 2x screens (was the 781 KB PNG).
@@ -83,7 +84,9 @@ const logoAsset = { src: navLogo.src, width: logo.width, height: logo.height, al
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Great+Vibes&family=Parisienne&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Great+Vibes&family=Parisienne&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Great+Vibes&family=Parisienne&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" /></noscript>
+    {heroPreload && <link rel="preload" as="image" href={heroPreload.src} imagesrcset={heroPreload.srcset} imagesizes={heroPreload.sizes} fetchpriority="high" />}
   </head>
   <body>
     <HennaSprite />
