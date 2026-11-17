@@ -67,14 +67,6 @@ const sections = (
 const n = sections.length;
 ---
 <div class="gear-carousel" data-gear-carousel role="region" aria-roledescription="carousel" aria-label="Gear sections">
-  <div class="gc-tabs" role="group" aria-label="Choose a gear section">
-    {sections.map((s, i) => (
-      <button type="button" class:list={['gc-tab', 'font-mono', { 'is-active': i === 0 }]} data-gc-tab={i} aria-current={i === 0 ? 'true' : undefined}>
-        {s.chip}
-      </button>
-    ))}
-  </div>
-
   <ul class="gc-track" data-gc-track>
     {sections.map((s, i) => (
       <li class="gc-slide" role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${n}: ${s.title}`}>
@@ -122,42 +114,6 @@ const n = sections.length;
 <style>
   .gear-carousel {
     margin-top: 0;
-  }
-
-  /* Editorial chapter tabs, underlined when active. */
-  .gc-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 1.25rem;
-    margin-bottom: 1.25rem;
-  }
-  .gc-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    min-height: 44px;
-    padding: 0 0.25rem 1px;
-    background: transparent;
-    border: 0;
-    border-bottom: 1px solid var(--hairline-strong, rgba(255, 255, 255, 0.15));
-    color: var(--muted);
-    font-size: 0.72rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-    transition: color 0.25s ease, border-color 0.25s ease;
-  }
-  .gc-tab:hover {
-    color: var(--ink);
-    border-bottom-color: rgba(255, 255, 255, 0.45);
-  }
-  .gc-tab.is-active {
-    background: transparent;
-    color: var(--ink);
-    border-bottom: 2px solid var(--ink);
-    padding-bottom: 0;
   }
 
   .gc-track {
@@ -383,23 +339,15 @@ const n = sections.length;
       if (!track) return;
       const slides = Array.from(track.querySelectorAll<HTMLElement>('.gc-slide'));
       const links = slides.map((s) => s.querySelector<HTMLAnchorElement>('.gc-card'));
-      const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-gc-tab]'));
       const n = slides.length;
       if (n < 2) return;
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
 
       let current = 0;
-      /** The index a programmatic scroll is heading to; scroll positions on
-       *  the way there do not move the tabs. */
       let heading: number | null = null;
 
       const mark = (i: number) => {
         current = i;
-        tabs.forEach((t, k) => {
-          t.classList.toggle('is-active', k === i);
-          if (k === i) t.setAttribute('aria-current', 'true');
-          else t.removeAttribute('aria-current');
-        });
         links.forEach((a, k) => {
           if (!a) return;
           if (k === i) a.removeAttribute('tabindex');
@@ -460,17 +408,12 @@ const n = sections.length;
         takeOver();
         go(current + 1);
       });
-      tabs.forEach((tab, i) => tab.addEventListener('click', () => {
-        takeOver();
-        go(i);
-      }));
       root.addEventListener('keydown', (e) => {
         if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
         e.preventDefault();
         takeOver();
         go(current + (e.key === 'ArrowRight' ? 1 : -1));
-        const onTab = (e.target as HTMLElement).closest('[data-gc-tab]');
-        (onTab ? tabs[current] : links[current])?.focus({ preventScroll: true });
+        links[current]?.focus({ preventScroll: true });
       });
 
       // Any hand on it, before a click lands: a touch or a press.
