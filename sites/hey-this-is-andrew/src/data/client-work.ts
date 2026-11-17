@@ -22,7 +22,7 @@ export const CLIENT_WORK_TIERS = [
     price: '$1,000',
     billing: 'one time',
     deposit: '$500 before build, $500 before launch.',
-    timeline: '2 weeks from wording list approved to live.',
+    timeline: '2 weeks from wording approval to live.',
     revisions: '2 revision rounds included, extra round $100.',
     included: [
       '1 page',
