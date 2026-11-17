@@ -1,9 +1,11 @@
 ---
 /**
  * SlimFooter.astro
- * Pass 30: Transparent floating footer with feathered top/bottom mandala SVG bar (no straight bottom baseline),
+ * Pass 30 / Pass 34: Transparent floating footer pinned to the bottom of the page
+ * with feathered top/bottom mandala SVG bar (0px empty void below),
  * henna draw-on hover underline under the handle/domain text only (no whole-card lift),
- * domain links back to the top of the page (not to the unowned domain), and feathered ribbon "Book a date" button.
+ * domain links back to the top of the page (not to the unowned domain),
+ * and duplicate footer "Book a date" button hidden per Andrew (2026-11-17).
  */
 import { SITE } from '../data/site';
 import HennaBorderDraw from './HennaBorderDraw.astro';
@@ -117,10 +119,11 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
       </div>
     </div>
 
-    <div class="footer-group-divider" aria-hidden="true"><span>❧</span><span>◆</span><span>☙</span></div>
+    <!-- 2026-11-17: Andrew asked to hide duplicate footer Book a date button, restore by removing the hidden flag and display:none style on the divider and .footer-cta-wrap below -->
+    <div class="footer-group-divider footer-cta-divider" hidden style="display: none !important;" aria-hidden="true"><span>❧</span><span>◆</span><span>☙</span></div>
 
-    <!-- Centered Book a Date Feathered Ribbon Button -->
-    <div class="footer-cta-wrap">
+    <!-- 2026-11-17: Andrew asked to hide duplicate footer Book a date button, restore by removing the hidden flag and display:none style on .footer-cta-wrap -->
+    <div class="footer-cta-wrap" hidden style="display: none !important;">
       <button type="button" class="footer-book-btn brush-ribbon-btn" data-action="book-date">
         Book a date
       </button>
@@ -193,11 +196,14 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
 </script>
 
 <style>
-  /* ── Transparent Floating Footer (Floats directly on #faf6ee light / #181310 dark) ── */
+  /* ── Transparent Floating Footer (Pinned to bottom of page, 0px empty void below mandala strip) ── */
   .slim-footer {
     position: relative !important;
     z-index: 10 !important;
-    padding: 2rem 0 0.5rem 0;
+    margin-top: auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 1.5rem 0 0 0 !important;
     text-align: center;
     background: transparent !important;
     background-color: transparent !important;
@@ -257,12 +263,12 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 1.5rem;
-    padding: 2rem 1rem 1rem;
+    gap: 1.75rem;
+    padding: 0 1rem;
   }
 
   .footer-group-divider {
-    display: flex;
+    display: none;
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
@@ -273,7 +279,7 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
   }
   .footer-group-divider span:nth-child(2) { color: var(--brand-teal); font-size: 0.8rem; }
 
-  /* ── Flyer Columns (Desktop Symmetric 3-Col Grid: 1fr | auto | 1fr, Mobile Stacked) ── */
+  /* ── Flyer Columns (Desktop Symmetric 3-Col Grid: 1fr | auto | 1fr, Mobile/Tablet Stacked) ── */
   .footer-flyer-cols {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
@@ -311,8 +317,8 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
   }
 
   .footer-icon-circle {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     border: 1.5px solid var(--brand-gold, #c59b27);
     background: var(--surface, #faf6ee);
@@ -346,8 +352,8 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
     line-height: 1.4 !important;
     white-space: nowrap;
     overflow: visible !important;
-    margin-bottom: 0.35rem !important;
-    padding-bottom: 0.15rem;
+    margin-bottom: 0.25rem !important;
+    padding-bottom: 0.1rem;
   }
 
   [data-theme="dark"] .footer-script-label {
@@ -363,10 +369,10 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
   }
 
   .footer-sub-label {
-    font-family: var(--font-body, 'Inter', sans-serif);
-    font-size: 0.95rem;
-    font-weight: 500;
-    line-height: 1.5 !important;
+    font-family: var(--font-display, 'Cormorant Garamond', Georgia, serif);
+    font-size: 1.12rem;
+    font-weight: 600;
+    line-height: 1.45 !important;
     letter-spacing: 0.02em;
     color: var(--ink, #3d2817);
     white-space: nowrap;
@@ -374,7 +380,7 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    padding-top: 0.25rem !important;
+    padding-top: 0.15rem !important;
     transition: color 0.25s ease;
   }
 
@@ -384,7 +390,7 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
 
   .footer-domain-text {
     color: var(--ink, #3d2817);
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: 0.02em;
     cursor: pointer;
     text-decoration: none;
@@ -484,24 +490,27 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
     text-shadow: 0 0 8px rgba(77, 224, 210, 0.4);
   }
 
-  /* CTA Button Wrap */
-  .footer-cta-wrap {
-    margin-top: 0.25rem;
+  /* CTA Button Wrap (Hidden per Job 2) */
+  .footer-cta-wrap[hidden],
+  .footer-group-divider[hidden] {
+    display: none !important;
   }
 
   .footer-copyright {
-    font-family: var(--font-body, 'Inter', sans-serif);
-    font-size: 0.82rem;
+    font-family: var(--font-display, 'Cormorant Garamond', Georgia, serif);
+    font-size: 1.02rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
     color: var(--muted, #6e5540);
     margin: 0;
-    opacity: 0.85;
+    opacity: 0.9;
   }
 
   [data-theme="dark"] .footer-copyright {
-    color: #a89484;
+    color: #d8c6b4;
   }
 
-  /* ── Step 2: Bottom Floating Henna Mandala SVG Border (Transparent, Feathered Top & Bottom, No Baseline) ── */
+  /* ── Step 2: Bottom Floating Henna Mandala SVG Border (Flush with bottom of page, 0px void below) ── */
   .footer-mandala-bar {
     flex-shrink: 0;
     width: 100%;
@@ -511,7 +520,8 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
     pointer-events: none !important;
     background: transparent !important;
     opacity: 0.82;
-    margin-top: 0.35rem;
+    margin-top: 1.75rem;
+    margin-bottom: 0 !important;
     -webkit-mask-image:
       linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.78) 18%, #000 48%, rgba(0, 0, 0, 0.65) 78%, transparent 98%),
       linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
@@ -557,17 +567,19 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
     display: block !important;
   }
 
-  /* The footer bar uses HennaBorderDraw variant="open" (no straight rails); draw-in lives in src/styles/henna.css. */
-
-  /* ── Mobile Stacked (<= 640px, e.g. 390px) ── */
-  @media (max-width: 640px) {
+  /* ── Mobile & Tablet Stacked (<= 860px, e.g. 390px and 820px) ── */
+  @media (max-width: 860px) {
     .slim-footer {
-      padding: 1.5rem 0 0.35rem 0;
+      padding: 1.5rem 0 0 0 !important;
     }
 
     .footer-top-divider {
       margin-bottom: 1.5rem;
       padding: 0 1rem;
+    }
+
+    .slim-footer-inner {
+      gap: 1.5rem;
     }
 
     .footer-flyer-cols {
@@ -577,6 +589,10 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
     .footer-col-ig,
     .footer-col-web {
       justify-self: center;
+    }
+
+    .footer-group-divider:not([hidden]) {
+      display: flex;
     }
 
     .footer-center-divider {
@@ -610,19 +626,21 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
     .footer-script-label {
       font-size: 1.7rem;
       line-height: 1.4 !important;
-      margin-bottom: 0.4rem !important;
+      margin-bottom: 0.25rem !important;
       overflow: visible !important;
     }
 
     .footer-sub-label {
-      font-size: 0.95rem;
-      line-height: 1.5 !important;
-      padding-top: 0.25rem !important;
+      font-size: 1.08rem;
+      line-height: 1.45 !important;
+      padding-top: 0.15rem !important;
       overflow: visible !important;
     }
 
     .footer-mandala-bar {
       height: 38px;
+      margin-top: 1.5rem;
+      margin-bottom: 0 !important;
     }
 
     .footer-mandala-half {

@@ -1,6 +1,8 @@
 /* Netta Henna and Feathered Soul Theme: Ornate Boho Luxury.
-   Pass 13: Consolidated Near-White Light Mode (#ffffff), Solid Nav with Zero Scroll Shift,
-   and Responsive Feather Parallax on Mobile (390px), iPad (820px), and Desktop (1440px). */
+   Pass 13 / Pass 34: Warm Cream Parchment (#faf6ee) Light Mode & Deep Espresso (#181310) Dark Mode,
+   Solid Nav with Brand Text at All Widths (No Logo Image, Zero Henna Drape Overlap),
+   Pinned Bottom Footer with 0px Empty Void Below Mandala Strip,
+   Gold Cormorant Garamond Pricing, and Responsive Feather Parallax. */
 
 html:root:not([data-theme="dark"]),
 html[data-theme="light"],
@@ -9,30 +11,30 @@ html:root[data-theme="light"] {
 
   /* ── Light Mode: Warm Cream Parchment (#faf6ee) Page Tokens ── */
   --page-bg: #faf6ee;
-  --brand-cream: #faf6ee; /* Light page color */
+  --brand-cream: #faf6ee;
   --nav-bg: #faf6ee;
   --chrome: #faf6ee !important;
   --surface: #faf6ee;
-  --surface-2: #f7efdd; /* Warm parchment card tint */
+  --surface-2: #f7efdd;
   --brand-cream-card: #faf6ee;
   --brand-cream-surface: #f7efdd;
   --bg: #faf6ee;
 
   /* ── Light Mode Typography Tokens ── */
-  --ink: #3d2817; /* Dark brown for high readability on white */
+  --ink: #3d2817;
   --text: #3d2817;
-  --muted: #6e5540; /* Restored #6e5540 for secondary text */
+  --muted: #6e5540;
   --text-muted: #6e5540;
 
-  /* ── Light Mode Accents (Restored Bright Values per Pass 13) ── */
-  --brand-teal: #1a999d; /* Restored #1a999d for large accents, buttons, and icons */
+  /* ── Light Mode Accents ── */
+  --brand-teal: #1a999d;
   --brand-teal-hover: #147d81;
   --brand-teal-light: #e6f4f4;
   --brand-teal-glow: rgba(26, 153, 157, 0.25);
-  --brand-teal-dark: #0f686b; /* For small text that must meet 4.5:1 on white */
+  --brand-teal-dark: #0f686b;
 
-  --brand-gold: #c59b27; /* Restored #c59b27 for borders, rings, decorative gold */
-  --brand-gold-heading: #a8821d; /* Warm gold for large script headings >= 2rem */
+  --brand-gold: #c59b27;
+  --brand-gold-heading: #a8821d;
   --brand-gold-hover: #b0871d;
   --brand-gold-light: #faf2e1;
   --brand-gold-border: rgba(197, 155, 39, 0.42);
@@ -68,13 +70,12 @@ html:root[data-theme="light"] {
   --btn-radius: 9999px;
   --card-shadow: 0 8px 28px rgba(61, 40, 23, 0.06);
 
-  /* Shared strict CTA measurements: identical across mobile and desktop */
   --cta-height: 48px;
   --cta-padding-x: 1.25rem;
   --cta-font-size: 0.95rem;
 }
 
-/* ── Dark Mode Tokens: Deep Espresso Mocha with Solid Cream & Warm Gold (Pass 9/10 Unchanged) ── */
+/* ── Dark Mode Tokens: Deep Espresso Mocha with Solid Cream & Warm Gold ── */
 [data-theme="dark"],
 html[data-theme="dark"],
 html:root[data-theme="dark"] {
@@ -143,8 +144,7 @@ html:root[data-theme="dark"] {
   --cta-font-size: 0.95rem;
 }
 
-/* ── Pass 14: Strong Specificity Overrides for Chrome and Page Colors ──
-   Overrides ChromeMeta's inline <style> and base tokens regardless of system setting */
+/* ── Strong Specificity Overrides for Chrome and Page Colors ── */
 html:root:not([data-theme="dark"]),
 html:root[data-theme="light"] {
   --chrome: #faf6ee !important;
@@ -158,15 +158,26 @@ html:root[data-theme="dark"] {
   --page-bg: #181310 !important;
 }
 
-/* ── Section 3C: Base Body and HTML are Solid; Main and Sections are Transparent ──
-   Body and HTML are warm cream parchment (#faf6ee) in light mode, #181310 in dark mode.
-   Main and sections are transparent so the fixed feather parallax shows through everywhere. */
+/* ── Full-Height Flex Column Page so Footer Sits at the Very Bottom with 0px Void Below ── */
 html,
 body {
   background: var(--page-bg) !important;
   background-color: var(--page-bg) !important;
   color: var(--ink) !important;
   transition: none !important;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+main#main-content {
+  flex: 1 0 auto;
+  width: 100%;
 }
 
 :root:not([data-theme="dark"]) body,
@@ -195,35 +206,62 @@ section,
   z-index: 1;
 }
 
-/* Anchor jumping fix: generous clearance so sticky header never covers titles */
+/* ── Job 6: Nav Link Scroll Clearance (16 to 24px below sticky navbar) ── */
+:root { --netta-nav-height: 76.8px; }
+@media (max-width: 860px) { :root { --netta-nav-height: 70px; } }
+@media (max-width: 640px) { :root { --netta-nav-height: 58px; } }
+
+.site-nav-spacer {
+  height: calc(var(--netta-nav-height) + 20px) !important;
+  flex-shrink: 0;
+}
+
 [id],
 .sec-title,
 .price-title,
 .booking-title {
-  scroll-margin-top: 115px;
-  scroll-margin-bottom: 120px;
+  scroll-margin-top: calc(var(--netta-nav-height) + 20px);
+  scroll-margin-bottom: 0;
 }
 
-/* Landing clearance is measured from the first visible section content (16 to 24px below navbar). */
-:root { --netta-nav-height: 76.8px; }
-@media (max-width: 860px) { :root { --netta-nav-height: 71px; } }
-@media (max-width: 640px) { :root { --netta-nav-height: 59px; } }
-#services, #price-list, #gallery, #booking, #site-footer {
+#services,
+#price-list,
+#gallery,
+#booking,
+#site-footer {
   scroll-margin-top: calc(var(--netta-nav-height) + 20px) !important;
   scroll-margin-bottom: 0 !important;
   padding-top: 0 !important;
 }
+
 #overview {
-  scroll-margin-top: var(--netta-nav-height) !important;
-  /* The existing halo extends 26.55% of the logo diameter above its box. */
-  padding-top: calc(clamp(230px, 24vw, 320px) * 0.2655 + 18px) !important;
+  scroll-margin-top: calc(var(--netta-nav-height) + 20px) !important;
+  scroll-margin-bottom: 0 !important;
+  /* The existing halo extends 26.55% of the logo diameter above its box; the 20px top clearance is held by .site-nav-spacer so #overview itself lands 20px below the navbar. */
+  padding-top: calc(clamp(230px, 24vw, 320px) * 0.2655) !important;
 }
+
+/* ── Job 1: Footer Pinned to Bottom of Page, Compact Natural Height, 0px Void Below Mandala Strip ── */
 #site-footer {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - var(--netta-nav-height) - 20px);
+  justify-content: flex-end;
+  margin-top: auto !important;
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 1.5rem 0 0 !important;
 }
-#site-footer .footer-mandala-bar { margin-top: 0; }
+#site-footer .footer-mandala-bar {
+  margin-top: 1.75rem !important;
+  margin-bottom: 0 !important;
+}
+@media (max-width: 860px) {
+  #site-footer .footer-mandala-bar {
+    margin-top: 1.5rem !important;
+    margin-bottom: 0 !important;
+  }
+}
+
 .site-nav .mobile-main-link.active {
   color: var(--brand-gold-heading) !important;
   text-decoration: underline;
@@ -235,6 +273,16 @@ section,
 [data-page-nav],
 #page-nav {
   display: none !important;
+}
+
+/* ── Job 7: Hide Fixed Chrome Layers When Category Gallery Overlay is Open ── */
+html.gallery-modal-open .site-nav,
+html.gallery-modal-open .henna-sides-layer,
+html.gallery-modal-open .feather-layer,
+html.gallery-modal-open #sticky-book-wrap {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 /* ── Section 2: Fixed Nav Header (Solid Color, No Change on Scroll, Identical Across All Sizes) ── */
@@ -273,7 +321,7 @@ section,
 .site-nav .nav-inner {
   display: flex !important;
   align-items: center !important;
-  justify-content: space-between !important;
+  justify-content: center !important;
   overflow: visible !important;
   background: var(--nav-bg) !important;
   background-color: var(--nav-bg) !important;
@@ -283,293 +331,9 @@ section,
   transition: none !important;
 }
 
-/* Wordmark lockup: Crisp circular logo with unclipped script typography */
-.site-nav .wordmark {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 0.65rem !important;
-  height: auto !important;
-  min-height: 54px !important;
-  padding: 2px 0 !important;
-  text-decoration: none !important;
-  border-radius: 9999px !important;
-  flex-shrink: 0 !important;
-  overflow: visible !important;
-}
-
-.site-nav .wordmark-logo {
-  width: 50px !important;
-  height: 50px !important;
-  min-width: 50px !important;
-  max-width: 50px !important;
-  min-height: 50px !important;
-  max-height: 50px !important;
-  aspect-ratio: 1 / 1 !important;
-  flex-shrink: 0 !important;
-  border-radius: 50% !important;
-  object-fit: cover !important;
-  display: block !important;
-  border: 1.5px solid var(--brand-gold) !important;
-  box-shadow: 0 3px 12px rgba(61, 40, 23, 0.16) !important;
-  background-color: var(--surface) !important;
-}
-
-.site-nav .wordmark::before {
-  content: 'Netta';
-  font-family: 'Parisienne', 'Cormorant Garamond', cursive;
-  font-size: 1.45rem;
-  color: var(--brand-gold-heading, #a8821d) !important;
-  white-space: nowrap;
-  line-height: 1.05 !important;
-  display: block;
-  text-align: center;
-}
-
-.site-nav .wordmark-label,
-.site-nav .wordmark::after {
-  content: 'Henna and Feathered Soul';
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-style: italic;
-  font-weight: 600;
-  font-size: 1.08rem;
-  color: var(--ink) !important;
-  white-space: nowrap;
-  line-height: 1.12 !important;
-  padding: 0 !important;
-  display: block;
-  text-align: center;
-  overflow: visible !important;
-}
-
-@media (max-width: 640px) {
-  :root .site-nav .nav-inner {
-    padding: 0.45rem 0.5rem !important;
-    gap: 0.35rem !important;
-  }
-
-  .site-nav .wordmark {
-    height: auto !important;
-    min-height: 48px !important;
-    gap: 0 !important;
-    overflow: visible !important;
-  }
-
-  .site-nav .wordmark-logo {
-    width: 46px !important;
-    height: 46px !important;
-    min-width: 46px !important;
-    max-width: 46px !important;
-    min-height: 46px !important;
-    max-height: 46px !important;
-    aspect-ratio: 1 / 1 !important;
-    flex-shrink: 0 !important;
-  }
-
-  .site-nav .wordmark::before {
-    font-size: 1.32rem !important;
-    line-height: 1.02 !important;
-  }
-
-  .site-nav .wordmark-label,
-  .site-nav .wordmark::after {
-    content: 'Henna and Feathered Soul';
-    font-size: 1rem !important;
-    line-height: 1.1 !important;
-  }
-
-  .nav-right-actions {
-    gap: 0.4rem !important;
-    flex-shrink: 0 !important;
-  }
-
-  .theme-toggle-btn {
-    width: 34px !important;
-    height: 34px !important;
-  }
-
-  .site-nav .menu-btn {
-    padding: 0 !important;
-    font-size: 0.78rem !important;
-    min-height: 34px !important;
-  }
-}
-
-@media (max-width: 390px) {
-  .site-nav .wordmark::before {
-    font-size: 1.3rem !important;
-    line-height: 1.02 !important;
-  }
-
-  .site-nav .wordmark-label,
-  .site-nav .wordmark::after {
-    font-size: 1rem !important;
-    line-height: 1.08 !important;
-  }
-}
-
-/* ── Desktop Centered Links & Mobile/Tablet Centered Whole Brand Name ── */
-@media (min-width: 861px) {
-  :root .site-nav a.wordmark,
-  html .site-nav .wordmark,
-  .site-nav .wordmark {
-    display: none !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-    width: 0 !important;
-    height: 0 !important;
-    overflow: hidden !important;
-    position: absolute !important;
-    clip: rect(0, 0, 0, 0) !important;
-  }
-
-  :root .site-nav .nav-inner {
-    justify-content: center !important;
-    position: relative !important;
-    z-index: auto !important;
-  }
-
-  :root .site-nav .desktop-nav {
-    margin: 0 !important;
-    display: flex !important;
-    justify-content: center !important;
-    position: relative !important;
-    z-index: 104 !important;
-  }
-
-  :root .site-nav .nav-links {
-    justify-content: center !important;
-    margin: 0 !important;
-  }
-
-  :root .site-nav .nav-right-actions {
-    position: relative !important;
-    right: auto !important;
-    top: auto !important;
-    transform: none !important;
-    margin-left: 1.5rem !important;
-    z-index: 106 !important;
-  }
-}
-
-@media (max-width: 860px) {
-  /* On mobile/tablet: Remove word "Menu" and replace with sleek circular icon button */
-  .site-nav .menu-btn-label {
-    display: none !important;
-  }
-
-  .site-nav .menu-btn {
-    width: 34px !important;
-    height: 34px !important;
-    min-height: 34px !important;
-    padding: 0 !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    border-radius: 50% !important;
-    border: 1px solid var(--gold-border, rgba(197, 155, 39, 0.42)) !important;
-    background: var(--surface) !important;
-    color: var(--ink) !important;
-    position: relative !important;
-    cursor: pointer !important;
-  }
-
-  .site-nav .menu-btn::before {
-    content: '' !important;
-    display: block !important;
-    width: 15px !important;
-    height: 2px !important;
-    background: currentColor !important;
-    box-shadow: 0 -5px 0 0 currentColor, 0 5px 0 0 currentColor !important;
-    border-radius: 1px !important;
-  }
-
-  /* Centered whole brand name ("Netta" + "Henna and Feathered Soul") in flyer script fonts */
-  :root .site-nav a.wordmark {
-    display: inline-flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    visibility: visible !important;
-    pointer-events: auto !important;
-    position: absolute !important;
-    left: 50% !important;
-    top: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    width: auto !important;
-    height: auto !important;
-    min-height: 0 !important;
-    padding: 2px 0 !important;
-    gap: 0 !important;
-    overflow: visible !important;
-    clip: auto !important;
-    text-decoration: none !important;
-    z-index: 104 !important;
-  }
-
-  :root .site-nav .wordmark-logo {
-    display: none !important;
-  }
-
-  :root .site-nav .wordmark::before {
-    content: 'Netta' !important;
-    font-family: 'Parisienne', 'Cormorant Garamond', cursive !important;
-    font-size: 1.52rem !important;
-    font-weight: 400 !important;
-    color: var(--brand-gold-heading, #a8821d) !important;
-    line-height: 1.04 !important;
-    display: block !important;
-    text-align: center !important;
-    letter-spacing: 0.02em !important;
-  }
-
-  :root .site-nav .wordmark::after {
-    content: 'Henna and Feathered Soul' !important;
-    font-family: 'Cormorant Garamond', Georgia, serif !important;
-    font-style: italic !important;
-    font-weight: 600 !important;
-    font-size: 1.1rem !important;
-    color: var(--ink, #3d2817) !important;
-    line-height: 1.1 !important;
-    display: block !important;
-    text-align: center !important;
-    letter-spacing: 0.01em !important;
-    padding: 0 !important;
-  }
-
-  [data-theme="dark"] .site-nav .wordmark::before {
-    color: var(--brand-gold, #f4d087) !important;
-  }
-
-  [data-theme="dark"] .site-nav .wordmark::after {
-    color: #f7efe4 !important;
-  }
-
-  :root .site-nav .nav-inner {
-    justify-content: flex-end !important;
-    position: relative !important;
-    min-height: 58px !important;
-    z-index: auto !important;
-  }
-
-  :root .site-nav .nav-right-actions {
-    margin-left: auto !important;
-    margin-right: 0 !important;
-    position: relative !important;
-    z-index: 106 !important;
-    gap: 0.35rem !important;
-  }
-}
-
-@media (max-width: 640px) {
-  :root .site-nav .wordmark::before {
-    font-size: 1.32rem !important;
-    line-height: 1.02 !important;
-  }
-
-  :root .site-nav .wordmark::after {
-    font-size: 1rem !important;
-    line-height: 1.08 !important;
-  }
+/* Never show logo image in navbar per Andrew (2026-11-17) */
+:root .site-nav .wordmark-logo {
+  display: none !important;
 }
 
 /* ── Step 1: Argon SVG Nav Curtains Draping from Top Corners ── */
@@ -626,24 +390,29 @@ section,
   display: block !important;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1180px) and (min-width: 861px) {
+  .nav-drape-panel {
+    --drape-scale: 0.42;
+    opacity: 0.68 !important;
+  }
+}
+
+@media (max-width: 860px) {
   :root[data-theme] .site-nav .nav-inner[class] { z-index: 11 !important; background: transparent !important; }
   .nav-drape-panel {
-    --drape-scale: 0.55;
+    --drape-scale: 0.52;
     opacity: 0.68 !important;
   }
 }
 
 @media (max-width: 640px) {
   .nav-drape-panel {
-    --drape-scale: 0.45;
+    --drape-scale: 0.21;
     opacity: 0.6 !important;
   }
 }
 
-/* Pass 32: nav links in the cinematic display font, the same values as the shared
-   Nav default (packages/ui/src/Nav.astro, not edited): Cormorant Garamond, 0.75rem,
-   700, 0.2em, uppercase. The old plain Inter override is gone. */
+/* Pass 32: nav links in the cinematic display font: Cormorant Garamond, 0.75rem, 700, 0.2em, uppercase. */
 :root .site-nav .nav-link {
   color: var(--ink) !important;
   font-family: var(--font-display);
@@ -662,9 +431,7 @@ section,
   }
 }
 
-/* Underline only on hover or keyboard focus: a thin 1px gold line, styled like
-   the booking .method-separator, drawing on left to right in 0.4s. No underline
-   by default, and none for the active section or a link that keeps mouse focus. */
+/* Underline only on hover or keyboard focus */
 :root .site-nav .nav-link::after {
   height: 1px !important;
   background: linear-gradient(90deg, var(--gold-border), transparent) !important;
@@ -691,12 +458,6 @@ section,
   align-items: center !important;
   gap: 0.75rem !important;
   margin-left: 1.5rem !important;
-}
-
-@media (max-width: 1099px) {
-  .nav-right-actions {
-    margin-left: 1.25rem !important;
-  }
 }
 
 /* Theme Toggle Button */
@@ -746,6 +507,38 @@ section,
   background: var(--brand-teal-light) !important;
   border-color: var(--brand-teal) !important;
   color: var(--brand-teal) !important;
+}
+
+@media (max-width: 860px) {
+  .site-nav .menu-btn-label {
+    display: none !important;
+  }
+
+  .site-nav .menu-btn {
+    width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+    border: 1px solid var(--gold-border, rgba(197, 155, 39, 0.42)) !important;
+    background: var(--surface) !important;
+    color: var(--ink) !important;
+    position: relative !important;
+    cursor: pointer !important;
+  }
+
+  .site-nav .menu-btn::before {
+    content: '' !important;
+    display: block !important;
+    width: 15px !important;
+    height: 2px !important;
+    background: currentColor !important;
+    box-shadow: 0 -5px 0 0 currentColor, 0 5px 0 0 currentColor !important;
+    border-radius: 1px !important;
+  }
 }
 
 .mobile-menu {
@@ -850,23 +643,7 @@ section,
   transition: none !important;
 }
 
-:root:not([data-theme="dark"]) .site-nav .theme-toggle-btn,
-:root:not([data-theme="dark"]) .site-nav .menu-btn {
-  background: #faf6ee !important;
-  background-color: #faf6ee !important;
-  box-shadow: 0 0 8px 4px #faf6ee !important;
-}
-
-[data-theme="dark"] .site-nav .theme-toggle-btn,
-[data-theme="dark"] .site-nav .menu-btn {
-  background: #231b15 !important;
-  background-color: #231b15 !important;
-  box-shadow: 0 0 8px 4px #181310 !important;
-}
-
-:root:not([data-theme="dark"]) .site-nav .wordmark,
-:root:not([data-theme="dark"]) .site-nav .wordmark-label,
-:root:not([data-theme="dark"]) .site-nav .wordmark::after,
+:root:not([data-theme="dark"]) .site-nav .wordmark-subtitle,
 :root:not([data-theme="dark"]) .site-nav .theme-toggle-btn,
 :root:not([data-theme="dark"]) .site-nav .menu-btn,
 :root:not([data-theme="dark"]) .site-nav .menu-btn-label {
@@ -906,9 +683,7 @@ section,
   transition: none !important;
 }
 
-[data-theme="dark"] .site-nav .wordmark,
-[data-theme="dark"] .site-nav .wordmark-label,
-[data-theme="dark"] .site-nav .wordmark::after,
+[data-theme="dark"] .site-nav .wordmark-subtitle,
 [data-theme="dark"] .site-nav .theme-toggle-btn,
 [data-theme="dark"] .site-nav .menu-btn,
 [data-theme="dark"] .site-nav .menu-btn-label {
@@ -966,40 +741,7 @@ section,
   line-height: 1.6 !important;
 }
 
-/* ── STRICT SHARED BUTTON SYSTEM ──
-   Every CTA button has identical height (48px) and border radius on mobile and desktop.
-   Text CTAs have identical padding (1.25rem) and font-size (0.95rem).
-   Instagram buttons use the official Instagram logo at matching 48px x 48px dimensions. */
-.btn,
-.btn-primary,
-.btn-secondary,
-.hero-btn,
-.bacc-cta,
-.bacc-primary-btn,
-.sticky-book-btn,
-.footer-book-btn {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  height: 48px !important;
-  min-height: 48px !important;
-  max-height: 48px !important;
-  padding: 0 1.25rem !important;
-  font-family: var(--font-body) !important;
-  font-size: 0.95rem !important;
-  font-weight: 500 !important;
-  line-height: 1 !important;
-  border-radius: 9999px !important;
-  text-transform: none !important;
-  letter-spacing: 0.02em !important;
-  white-space: nowrap !important;
-  text-decoration: none !important;
-  box-sizing: border-box !important;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-
-/* Dedicated Instagram Logo Button (48px x 48px circle, matching 48px height) */
+/* Dedicated Instagram Logo Button (48px x 48px circle) */
 .btn-instagram {
   display: inline-flex !important;
   align-items: center !important;
@@ -1035,66 +777,6 @@ section,
   height: 22px;
   fill: currentColor;
   display: block;
-}
-
-/* Primary Button Appearance: Teal fill #1a999d in light mode with crisp white text */
-:root:not([data-theme="dark"]) .btn-primary,
-:root:not([data-theme="dark"]) .bacc-primary-btn,
-:root:not([data-theme="dark"]) .sticky-book-btn,
-:root:not([data-theme="dark"]) .footer-book-btn,
-:root:not([data-theme="dark"]) .hero-btn {
-  background: #1a999d !important;
-  border: 1px solid #1a999d !important;
-  color: #ffffff !important;
-  box-shadow: 0 4px 16px rgba(26, 153, 157, 0.25) !important;
-}
-
-:root:not([data-theme="dark"]) .btn-primary:hover,
-:root:not([data-theme="dark"]) .bacc-primary-btn:hover,
-:root:not([data-theme="dark"]) .sticky-book-btn:hover,
-:root:not([data-theme="dark"]) .footer-book-btn:hover,
-:root:not([data-theme="dark"]) .hero-btn:hover {
-  background: #147d81 !important;
-  border-color: #147d81 !important;
-  box-shadow: 0 6px 20px rgba(26, 153, 157, 0.35) !important;
-  transform: translateY(-1.5px);
-}
-
-[data-theme="dark"] .btn-primary,
-[data-theme="dark"] .bacc-primary-btn,
-[data-theme="dark"] .sticky-book-btn,
-[data-theme="dark"] .footer-book-btn,
-[data-theme="dark"] .hero-btn {
-  background: #4de0d2 !important;
-  border: 1px solid #4de0d2 !important;
-  color: #14100c !important;
-  box-shadow: 0 4px 16px rgba(77, 224, 210, 0.3) !important;
-}
-
-[data-theme="dark"] .btn-primary:hover,
-[data-theme="dark"] .bacc-primary-btn:hover,
-[data-theme="dark"] .sticky-book-btn:hover,
-[data-theme="dark"] .footer-book-btn:hover,
-[data-theme="dark"] .hero-btn:hover {
-  background: #6beae0 !important;
-  border-color: #6beae0 !important;
-  box-shadow: 0 6px 20px rgba(77, 224, 210, 0.45) !important;
-  transform: translateY(-1.5px);
-}
-
-/* Secondary Button Appearance */
-.btn-secondary {
-  background: var(--surface) !important;
-  border: 1px solid var(--gold-border) !important;
-  color: var(--ink) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
-}
-
-.btn-secondary:hover {
-  background: var(--brand-teal-light) !important;
-  border-color: var(--brand-teal) !important;
-  color: var(--brand-teal) !important;
-  transform: translateY(-1.5px);
 }
 
 /* ── Section 1B: Boho Typography & Gold Script (Warm Gold #a8821d in Light Mode, #f4d087 in Dark Mode) ── */
@@ -1161,134 +843,7 @@ section,
   .gold-ring-frame img { transform: scale(1); transition: none; }
 }
 
-/* ── Brand Accordion Theme Overrides ── */
-.bacc {
-  border-radius: 20px !important;
-  overflow: hidden !important;
-  box-shadow: var(--card-shadow) !important;
-}
-
-.bacc-panel {
-  border-radius: 16px !important;
-}
-
-[data-accent="brand"] {
-  --accordion-edge: var(--brand-teal);
-  --accordion-progress: var(--brand-teal);
-  --accordion-frame: var(--gold-border);
-  --accordion-frame-glow: var(--brand-teal-glow);
-  --accordion-label-glow: 0 0 18px var(--brand-teal-glow);
-  --accordion-cta-border: var(--brand-teal);
-  --accordion-cta-hover-bg: var(--brand-teal-hover);
-  --accordion-cta-hover-ink: #ffffff;
-  --accordion-cta-glow: 0 0 20px var(--brand-teal-glow);
-}
-
-.bacc-panel.is-open {
-  background: var(--surface) !important;
-}
-
-.bacc-teaser {
-  background:
-    radial-gradient(ellipse 70% 70% at 70% 45%, var(--brand-teal-light), transparent 70%),
-    var(--page-bg) !important;
-  color: var(--muted) !important;
-}
-
-.bacc-chip--brand {
-  background: var(--brand-teal-light) !important;
-  color: var(--brand-teal) !important;
-  border-radius: 9999px !important;
-}
-
-/* Force visible buttons on phone portrait for services */
-@media (max-width: 767px) and (orientation: portrait) {
-  .bacc .bacc-panel.is-open .bacc-primary-btn,
-  .bacc .bacc-primary-btn {
-    display: inline-flex !important;
-    margin-top: 1rem !important;
-    width: auto !important;
-  }
-}
-
-/* ── Slim Landing Page Footer ── */
-.slim-footer {
-  position: relative !important;
-  z-index: 10 !important;
-  padding: 2.5rem 0 3.25rem;
-  text-align: center;
-  transition: none !important;
-}
-
-:root:not([data-theme="dark"]) .slim-footer {
-  background: transparent !important;
-  background-color: transparent !important;
-  border-top: none !important;
-}
-
-[data-theme="dark"] .slim-footer {
-  background: transparent !important;
-  background-color: transparent !important;
-  border-top: none !important;
-}
-
-.slim-footer-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 1.25rem;
-}
-
-.slim-footer-brand {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  text-decoration: none;
-  margin: 0 auto;
-}
-
-.slim-footer-logo {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  max-width: 48px;
-  min-height: 48px;
-  max-height: 48px;
-  aspect-ratio: 1 / 1;
-  flex-shrink: 0;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1.5px solid var(--brand-gold);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.slim-footer-name {
-  font-family: var(--font-script, 'Great Vibes', cursive);
-  font-size: 1.55rem;
-  color: var(--ink);
-  line-height: 1.45;
-  padding-top: 0.25em;
-  padding-bottom: 0.2em;
-  display: inline-block;
-  overflow: visible;
-}
-
-.slim-footer-actions {
-  display: inline-flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 0.85rem !important;
-  flex-wrap: nowrap !important;
-  margin: 0 auto;
-}
-
-/* ── Global Utility & Card Surface Consistency Rules (Section 1A & 3C) ──
-   In light mode, all cards, pricing pills, gallery items, and modals are solid #ffffff
-   with thin gold border #e8dcc8 (1px) and soft warm shadow. Zero beige (#f4ecdf) or taupe fill. */
+/* ── Global Utility & Card Surface Consistency Rules ── */
 .text-center {
   text-align: center !important;
 }
@@ -1310,11 +865,15 @@ section,
   background: #f7efdd !important;
 }
 
-/* Small Price List text that must meet 4.5:1 on the light background. */
-
+/* ── Job 5: Price List Gold Cormorant Garamond Prices (#a8821d Light / #c59b27 Dark) ── */
 :root:not([data-theme="dark"]) .tier-price,
 :root:not([data-theme="dark"]) .rate-cost {
-  color: #0f686b !important;
+  color: #a8821d !important;
+}
+
+[data-theme="dark"] .tier-price,
+[data-theme="dark"] .rate-cost {
+  color: #c59b27 !important;
 }
 
 [data-theme="dark"] .medallion-ribbon,
@@ -1340,31 +899,14 @@ section,
   }
 }
 
-/* ── Large Screen Breakpoints (Pass 22: > 1440px container & layout scaling) ── */
+/* ── Large Screen Breakpoints (> 1440px container scaling) ── */
 @media (min-width: 1920px) {
   :root {
     --page-max: 1600px;
     --maxw: 1600px;
-    --cta-height: 52px;
-    --cta-font-size: 1rem;
-    --cta-padding-x: 1.5rem;
   }
   .container {
     max-width: 1600px;
-  }
-  .btn,
-  .btn-primary,
-  .btn-secondary,
-  .hero-btn,
-  .bacc-cta,
-  .bacc-primary-btn,
-  .sticky-book-btn,
-  .footer-book-btn {
-    height: 52px !important;
-    min-height: 52px !important;
-    max-height: 52px !important;
-    font-size: 1.02rem !important;
-    padding: 0 1.5rem !important;
   }
 }
 
@@ -1372,26 +914,9 @@ section,
   :root {
     --page-max: 2000px;
     --maxw: 2000px;
-    --cta-height: 58px;
-    --cta-font-size: 1.1rem;
-    --cta-padding-x: 1.75rem;
   }
   .container {
     max-width: 2000px;
-  }
-  .btn,
-  .btn-primary,
-  .btn-secondary,
-  .hero-btn,
-  .bacc-cta,
-  .bacc-primary-btn,
-  .sticky-book-btn,
-  .footer-book-btn {
-    height: 58px !important;
-    min-height: 58px !important;
-    max-height: 58px !important;
-    font-size: 1.12rem !important;
-    padding: 0 1.75rem !important;
   }
 }
 
@@ -1399,26 +924,9 @@ section,
   :root {
     --page-max: 2600px;
     --maxw: 2600px;
-    --cta-height: 68px;
-    --cta-font-size: 1.25rem;
-    --cta-padding-x: 2rem;
   }
   .container {
     max-width: 2600px;
-  }
-  .btn,
-  .btn-primary,
-  .btn-secondary,
-  .hero-btn,
-  .bacc-cta,
-  .bacc-primary-btn,
-  .sticky-book-btn,
-  .footer-book-btn {
-    height: 68px !important;
-    min-height: 68px !important;
-    max-height: 68px !important;
-    font-size: 1.25rem !important;
-    padding: 0 2rem !important;
   }
 }
 
@@ -1463,23 +971,24 @@ section,
   justify-content: center;
 }
 
-/* Consistent crisp gold and teal calls to action. */
+/* ── Job 3: Unified Gold Pill CTA Buttons & Symmetric Sparkles ── */
 :root :is(.brush-ribbon-btn, .footer-book-btn, .btn-primary, .hero-btn, .btn-secondary)[class] {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
+  gap: 0.35rem !important;
   height: 56px !important;
   min-height: 56px !important;
   max-height: 56px !important;
-  padding: 0 1.5rem !important;
+  padding: 0 1.25rem !important;
   border: 1.5px solid #c59b27 !important;
   border-radius: 9999px !important;
   background: linear-gradient(125deg, #e3ba6b, #a8821d, #d4a34b) !important;
   color: #14100c !important;
   font-family: var(--font-display) !important;
-  font-size: 1rem !important;
+  font-size: 0.95rem !important;
   font-weight: 700 !important;
-  letter-spacing: 0.12em !important;
+  letter-spacing: 0.1em !important;
   text-transform: uppercase !important;
   text-decoration: none !important;
   white-space: nowrap !important;
@@ -1510,37 +1019,127 @@ section,
   color: #14100c !important;
   border: 1.5px solid #c59b27 !important;
 }
-.brush-ribbon-btn, .footer-book-btn { min-width: 260px !important; }
+
+.btn-sparkle {
+  display: inline-block;
+  font-style: normal;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* Hero button: 345px x 56px desktop, symmetric sparkles */
+:root .hero-actions-row .hero-btn[class] {
+  flex: none !important;
+  width: min(100%, 345px) !important;
+  min-width: min(100%, 345px) !important;
+  max-width: 345px !important;
+  margin: 0 auto !important;
+  height: 56px !important;
+  min-height: 56px !important;
+  max-height: 56px !important;
+  font-size: 0.88rem !important;
+  letter-spacing: 0.08em !important;
+  padding: 0 1.15rem !important;
+}
+
+/* Service cards & Booking card buttons: 260px x 56px */
+:root :is(.service-medallion-item, .booking-card-content, .footer-cta-wrap) .brush-ribbon-btn[class] {
+  width: 260px !important;
+  min-width: 260px !important;
+  max-width: 260px !important;
+  height: 56px !important;
+  min-height: 56px !important;
+  max-height: 56px !important;
+}
+
+/* Price List top button: stays 260px x 56px with reduced font-size so "✨ Book an Appointment ✨" fits with >= 12px side padding */
+:root .price-list-section .price-top-book-btn[class] {
+  width: 260px !important;
+  min-width: 260px !important;
+  max-width: 260px !important;
+  height: 56px !important;
+  min-height: 56px !important;
+  max-height: 56px !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.05em !important;
+  gap: 0.28rem !important;
+  padding: 0 0.85rem !important;
+}
+
+/* Price List bottom button: widened to 312px x 56px so "✨ Book an Appointment ✨" fits with generous side padding */
+:root .price-list-section .price-bottom-book-btn[class] {
+  width: min(100%, 312px) !important;
+  min-width: min(100%, 312px) !important;
+  max-width: 312px !important;
+  height: 56px !important;
+  min-height: 56px !important;
+  max-height: 56px !important;
+  font-size: 0.84rem !important;
+  letter-spacing: 0.07em !important;
+  gap: 0.35rem !important;
+  padding: 0 1.15rem !important;
+}
+
+:root .booking-modal .modal-submit-btn[class],
+:root #booking-submit-btn {
+  width: 100% !important;
+  height: 56px !important;
+  min-height: 56px !important;
+  max-height: 56px !important;
+}
+
 @media (max-width: 640px) {
   :root :is(.brush-ribbon-btn, .footer-book-btn, .btn-primary, .hero-btn, .btn-secondary)[class] {
     height: 52px !important;
     min-height: 52px !important;
     max-height: 52px !important;
-    font-size: 0.95rem !important;
+    font-size: 0.88rem !important;
     padding: 0 1rem !important;
   }
-  .brush-ribbon-btn, .footer-book-btn { min-width: 240px !important; max-width: 100% !important; }
-  .hero-brush-btn, .teal-brush-banner.brush-ribbon-btn { width: 90% !important; }
+  :root .hero-actions-row .hero-btn[class] {
+    width: min(100%, 334px) !important;
+    min-width: min(100%, 334px) !important;
+    max-width: 334px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    max-height: 52px !important;
+    font-size: 0.82rem !important;
+    letter-spacing: 0.06em !important;
+  }
+  :root .price-list-section .price-top-book-btn[class] {
+    width: 260px !important;
+    min-width: 260px !important;
+    max-width: 260px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    max-height: 52px !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.05em !important;
+    gap: 0.28rem !important;
+    padding: 0 0.85rem !important;
+  }
+  :root .price-list-section .price-bottom-book-btn[class] {
+    width: min(100%, 304px) !important;
+    min-width: min(100%, 304px) !important;
+    max-width: 304px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    max-height: 52px !important;
+    font-size: 0.8rem !important;
+    letter-spacing: 0.06em !important;
+    gap: 0.3rem !important;
+    padding: 0 1rem !important;
+  }
 }
-/* Diamonds are omitted from buttons to preserve space for mobile labels. */
-@media (max-width: 860px) {
-  :root .site-nav .nav-right-actions { top: -4px !important; }
-  :root .site-nav a.wordmark { margin-top: -5px !important; }
-  :root .site-nav .wordmark::before { font-size: 22px !important; line-height: 1 !important; }
-  :root .site-nav .wordmark::after { font-size: 16px !important; line-height: 1 !important; }
-}
-@media (max-width: 640px) {
-  :root .site-nav .wordmark::before { font-size: 18px !important; }
-  :root .site-nav .wordmark::after { font-size: 14px !important; }
-}
-/* Each CTA group has one size, independent of label length. */
-/* Text-only home link; preserve the centered links and action positions. */
+
+/* ── Job 6: Navbar Brand Text Visible at All Widths (390, 820, 1440, 1919), No Logo Image, Zero Drape Overlap ── */
 :root .site-nav a.wordmark[class] {
   display: grid !important;
   grid-template-columns: auto;
   grid-template-rows: 1fr 1fr;
   column-gap: 0 !important;
   align-items: center !important;
+  justify-items: center !important;
   position: relative !important;
   left: auto !important;
   top: auto !important;
@@ -1557,8 +1156,9 @@ section,
   flex-shrink: 0 !important;
   background: transparent !important;
   filter: none !important;
+  text-decoration: none !important;
 }
-/* One navbar background, then the artwork, then transparent content. */
+
 :root .site-nav .nav-link[class],
 :root .site-nav .nav-right-actions[class],
 :root .site-nav #theme-toggle-btn,
@@ -1567,103 +1167,172 @@ section,
   background-image: none !important;
   box-shadow: none !important;
 }
+
 :root .site-nav a.wordmark[class]::before,
-:root .site-nav a.wordmark[class]::after { content: none !important; display: none !important; }
-.site-nav .wordmark-text { display: grid; grid-template-rows: 1fr 1fr; grid-column: 1; grid-row: 1 / span 2; height: 100%; width: max-content; }
-.site-nav .wordmark-title { align-self: end; font-family: 'Parisienne', cursive; font-size: 23.2px; font-weight: 400; line-height: 1; color: var(--brand-gold-heading); white-space: nowrap; text-align: center; }
-.site-nav .wordmark-subtitle { align-self: start; font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-size: 17.28px; font-weight: 600; line-height: 1; color: var(--ink); white-space: nowrap; text-align: center; }
+:root .site-nav a.wordmark[class]::after {
+  content: none !important;
+  display: none !important;
+}
+
+.site-nav .wordmark-text {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  height: 100%;
+  width: max-content;
+  justify-items: center;
+}
+
+.site-nav .wordmark-title {
+  align-self: end;
+  font-family: 'Parisienne', cursive;
+  font-size: 23.2px;
+  font-weight: 400;
+  line-height: 1.05;
+  color: var(--brand-gold-heading, #a8821d) !important;
+  white-space: nowrap;
+  text-align: center;
+}
+
+[data-theme="dark"] .site-nav .wordmark-title {
+  color: var(--brand-gold, #f4d087) !important;
+}
+
+.site-nav .wordmark-subtitle {
+  align-self: start;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 17.28px;
+  font-weight: 600;
+  line-height: 1.08;
+  color: var(--ink) !important;
+  white-space: nowrap;
+  text-align: center;
+}
+
 :root .site-nav .nav-inner[class] {
   justify-content: center !important;
   height: 75.8px !important;
   min-height: 0 !important;
   padding: 0 1.5rem !important;
 }
-:root .site-nav .desktop-nav { margin: 0 !important; }
-/* Keep the navigation in the middle, with the original drapes at the edges. */
+
+:root .site-nav .desktop-nav {
+  margin: 0 !important;
+}
+
+/* Desktop (min-width: 861px, e.g. 1440 and 1919): 3-col centered grid [wordmark] [nav-links] [theme-toggle] between the edge drapes */
 @media (min-width: 861px) {
   :root .site-nav .nav-inner[class] {
     display: grid !important;
-    grid-template-columns: auto 38px;
-    column-gap: 1.5rem !important;
+    grid-template-columns: max-content auto 38px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    column-gap: clamp(1rem, 2vw, 2rem) !important;
     position: relative !important;
     z-index: 11 !important;
     background: transparent !important;
   }
+
   :root .site-nav a.wordmark[class] {
-    display: none !important;
+    display: grid !important;
+    grid-column: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
   }
-  :root .site-nav .desktop-nav { grid-column: 1; }
-  .site-nav .wordmark-title { font-size: clamp(13.8px, 1.6111vw, 23.2px); }
-  .site-nav .wordmark-subtitle { font-size: clamp(10.3px, 1.2vw, 17.28px); }
+
+  :root .site-nav .desktop-nav {
+    grid-column: 2 !important;
+    display: flex !important;
+    justify-content: center !important;
+  }
+
+  :root .site-nav .nav-links {
+    justify-content: center !important;
+    margin: 0 !important;
+  }
+
   :root .site-nav .nav-right-actions {
-    grid-column: 2;
-    width: 38px;
+    grid-column: 3 !important;
+    width: 38px !important;
     margin: 0 !important;
     justify-content: center !important;
   }
 }
-@media (max-width: 1099px) and (min-width: 861px) {
-  :root .site-nav a.wordmark[class]::before { font-size: 20px !important; }
-  :root .site-nav a.wordmark[class]::after { font-size: 14px !important; }
-  :root .site-nav .nav-links { gap: 0.8rem !important; }
+
+@media (max-width: 1180px) and (min-width: 861px) {
+  .site-nav .wordmark-title { font-size: 20px; }
+  .site-nav .wordmark-subtitle { font-size: 15px; }
+  :root .site-nav .nav-links { gap: 0.75rem !important; }
 }
+
+/* Tablet & Mobile (max-width: 860px, e.g. 820 and 390): centered brand text, right actions inset inside right drape */
 @media (max-width: 860px) {
   :root .site-nav .nav-inner[class] {
     display: flex !important;
     height: 70px !important;
     justify-content: flex-end !important;
+    padding: 0 124px !important;
   }
+
   :root .site-nav a.wordmark[class] {
     position: absolute !important;
     left: 50% !important;
     top: 50% !important;
     transform: translate(-50%, -50%) !important;
   }
+
   :root .site-nav .nav-right-actions[class] {
     display: flex !important;
     top: auto !important;
     margin: 0 !important;
+    gap: 0.4rem !important;
     background: transparent !important;
   }
-  :root .site-nav #theme-toggle-btn,
-  :root .site-nav button.menu-btn[class] { background: transparent !important; background-image: none !important; }
-  .site-nav .wordmark-title { letter-spacing: .02em; }
-  .site-nav .wordmark-subtitle { letter-spacing: .01em; }
-}
-@media (max-width: 640px) {
-  :root .site-nav .nav-inner[class] { height: 58px !important; padding: 0 0.5rem !important; }
-  :root .site-nav a.wordmark[class] { height: 46px !important; }
-  .site-nav .wordmark-title { font-size: 18px; }
-  .site-nav .wordmark-subtitle { font-size: 14px; }
-}
-:root .hero-actions-row .hero-btn[class] {
-  flex: none !important;
-  width: min(100%, 345px) !important;
-  max-width: 345px !important;
-  margin: 0 auto !important;
-  height: 56px !important;
-  min-height: 56px !important;
-  max-height: 56px !important;
-}
-:root :is(.service-medallion-item, .price-list-section, .booking-card-content, .footer-cta-wrap) .brush-ribbon-btn[class] {
-  width: 260px !important;
-  min-width: 260px !important;
-  max-width: 260px !important;
-  height: 56px !important;
-  min-height: 56px !important;
-  max-height: 56px !important;
-}
-:root .booking-modal .modal-submit-btn[class], :root #booking-submit-btn {
-  width: 100% !important;
-  height: 56px !important;
-  min-height: 56px !important;
-  max-height: 56px !important;
-}
-@media (max-width: 680px) {
-  :root .hero-actions-row .hero-btn[class] { flex: none !important; width: 100% !important; }
+
+  .site-nav .wordmark-title {
+    font-size: 22px;
+    letter-spacing: 0.02em;
+  }
+
+  .site-nav .wordmark-subtitle {
+    font-size: 16px;
+    letter-spacing: 0.01em;
+  }
 }
 
-/* ── Job 5: 500ms Circular View Transition Theme Bleed ── */
+@media (max-width: 640px) {
+  :root .site-nav .nav-inner[class] {
+    height: 58px !important;
+    padding: 0 48px !important;
+  }
+
+  :root .site-nav a.wordmark[class] {
+    height: 46px !important;
+  }
+
+  .site-nav .wordmark-title {
+    font-size: 18px;
+  }
+
+  .site-nav .wordmark-subtitle {
+    font-size: 14px;
+  }
+
+  .theme-toggle-btn,
+  .site-nav .menu-btn {
+    width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+
+  :root .site-nav .nav-right-actions[class] {
+    gap: 0.3rem !important;
+  }
+}
+
+/* ── Job 8: 500ms Circular View Transition Theme Bleed ── */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
