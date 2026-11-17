@@ -1,14 +1,11 @@
 ---
 /**
- * Storefront picks or referrals (src/data/storefront.ts), all shown at once,
- * each with its own button. Nothing rotates: it used to be a one-at-a-time
- * rotator whose only control was a row of thin dot bars, and with two gear
- * picks there is nothing to rotate through.
- *
- * - Default: the gear picks (the homepage Gear section, /gear/).
- * - picks={REFERRALS} with an eyebrow (/about/): referrals, which are not gear.
+ * Storefront picks or referrals (src/data/storefront.ts).
+ * - Default (2 items, /gear/): rendered as 3D flip cards with unified button sizing.
+ * - picks={REFERRALS} (5 items, /about/): rendered as balanced 5-column grid with equal-height cards and CTA at bottom.
  */
 import { GEAR_PICKS, type StorefrontPick } from '../data/storefront';
+import FlipCard from '@andrew/ui/FlipCard.astro';
 
 interface Props {
   picks?: StorefrontPick[];
@@ -16,26 +13,47 @@ interface Props {
   label?: string;
   /** Optional small heading above the picks. */
   eyebrow?: string;
+  flipCards?: boolean;
 }
-const { picks = GEAR_PICKS, label = 'Featured picks and recommendations', eyebrow } = Astro.props;
+const { picks = GEAR_PICKS, label = 'Featured picks and recommendations', eyebrow, flipCards } = Astro.props;
+const useFlipCards = flipCards ?? picks.length <= 2;
 ---
 <aside class="storefront" aria-label={label} data-count={picks.length}>
   {eyebrow && <p class="storefront-eyebrow font-mono">{eyebrow}</p>}
-  <ul class="storefront-picks">
-    {picks.map((pick) => (
-      <li class="storefront-pick">
-        {pick.kicker && <p class="kicker font-mono">{pick.kicker}</p>}
-        <h3 class="display storefront-pick-title">{pick.title}</h3>
-        {pick.desc && <p class="storefront-pick-desc">{pick.desc}</p>}
-        <a class="btn btn-primary storefront-cta" href={pick.url} target="_blank" rel="noopener">
-          {pick.cta}
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-            <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </a>
-      </li>
-    ))}
-  </ul>
+  {useFlipCards ? (
+    <div class="storefront-picks-grid">
+      {picks.map((pick, idx) => (
+        <FlipCard
+          value={pick.title}
+          label={pick.kicker ?? ''}
+          kickerFirst={true}
+          desc={pick.frontDesc ?? pick.desc ?? ''}
+          backText={pick.desc ?? ''}
+          actionLabel={pick.cta}
+          actionHref={pick.url}
+          idPrefix="storefront-pick"
+          index={idx}
+          class="storefront-flip-card"
+        />
+      ))}
+    </div>
+  ) : (
+    <ul class="storefront-picks">
+      {picks.map((pick) => (
+        <li class="storefront-pick">
+          {pick.kicker && <p class="kicker font-mono">{pick.kicker}</p>}
+          <h3 class="display storefront-pick-title">{pick.title}</h3>
+          {pick.desc && <p class="storefront-pick-desc">{pick.desc}</p>}
+          <a class="btn btn-primary storefront-cta" href={pick.url} target="_blank" rel="noopener">
+            {pick.cta}
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </a>
+        </li>
+      ))}
+    </ul>
+  )}
 </aside>
 
 <style>
@@ -52,6 +70,28 @@ const { picks = GEAR_PICKS, label = 'Featured picks and recommendations', eyebro
     text-transform: uppercase;
     color: var(--ink);
   }
+  .storefront-picks-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem 2.5rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  @media (min-width: 768px) {
+    .storefront-picks-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .storefront-flip-card {
+    min-height: 200px;
+  }
+  :global(#site .storefront-flip-card .flip-action-btn) {
+    width: 240px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    box-sizing: border-box !important;
+  }
+
   .storefront-picks {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));

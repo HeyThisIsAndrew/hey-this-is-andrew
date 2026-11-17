@@ -1,4 +1,7 @@
 ---
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
 /**
  * Shared 3D Flip Card component (@andrew/ui/FlipCard.astro).
  *
@@ -23,9 +26,9 @@
  */
 interface Props {
   value: string;
-  label: string;
-  desc: string;
-  backText: string;
+  label?: string;
+  desc?: string;
+  backText?: string;
   idPrefix?: string;
   index?: number;
   longValue?: boolean;
@@ -33,13 +36,23 @@ interface Props {
   delay?: number;
   dataCccPackage?: string;
   actionLabel?: string;
+  actionHref?: string;
+  actionTarget?: string;
+  actionRel?: string;
+  image?: ImageMetadata | string;
+  imageAlt?: string;
+  imagePosition?: string;
+  isLogo?: boolean;
+  slateLabel?: string;
+  imageSide?: 'front' | 'back';
+  kickerFirst?: boolean;
 }
 
 const {
   value,
-  label,
-  desc,
-  backText,
+  label = '',
+  desc = '',
+  backText = '',
   idPrefix = 'pillar-back',
   index = 0,
   longValue = false,
@@ -47,6 +60,16 @@ const {
   delay,
   dataCccPackage,
   actionLabel,
+  actionHref,
+  actionTarget,
+  actionRel,
+  image,
+  imageAlt,
+  imagePosition,
+  isLogo = false,
+  slateLabel,
+  imageSide = 'front',
+  kickerFirst = false,
 } = Astro.props;
 
 const backId = `${idPrefix}-${index}`;
@@ -60,17 +83,69 @@ const backId = `${idPrefix}-${index}`;
   <button
     type="button"
     class="flip-card-toggle"
-    aria-label={`${label}: ${value}. ${desc}`}
+    aria-label={`${label ? `${label}: ` : ''}${value}. ${desc}`}
     aria-describedby={backId}
     aria-pressed="false"
   ></button>
   <div class="flip-card-inner">
-    <div class="flip-card-front">
-      <span class:list={['stat-value', longValue && 'stat-value-long']}>
-        {value}
-      </span>
-      <span class="stat-label">{label}</span>
-      <p class="pillar-desc">{desc}</p>
+    <div class:list={['flip-card-front', image && imageSide === 'front' && 'flip-card-front--has-media']}>
+      {image && imageSide === 'front' && (
+        <div class:list={['flip-card-media', isLogo && 'flip-card-media--slate']}>
+          {isLogo ? (
+            <div class="flip-card-slate">
+              <div class="flip-card-slate-lockup">
+                {typeof image === 'string' ? (
+                  <img src={image} alt={imageAlt ?? ''} width="80" height="80" class="flip-card-slate-logo" />
+                ) : (
+                  <Image
+                    src={image}
+                    alt={imageAlt ?? ''}
+                    width={80}
+                    height={80}
+                    format="webp"
+                    quality={92}
+                    class="flip-card-slate-logo"
+                  />
+                )}
+              </div>
+              {slateLabel && (
+                <span class="flip-card-slate-label font-mono">{slateLabel}</span>
+              )}
+            </div>
+          ) : (
+            <>
+              {typeof image === 'string' ? (
+                <img
+                  src={image}
+                  alt={imageAlt ?? ''}
+                  class="flip-card-img"
+                  style={imagePosition ? `object-position: ${imagePosition};` : undefined}
+                />
+              ) : (
+                <Image
+                  src={image}
+                  alt={imageAlt ?? ''}
+                  widths={[320, 480, 640]}
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  format="webp"
+                  quality={82}
+                  class="flip-card-img"
+                  style={imagePosition ? `object-position: ${imagePosition};` : undefined}
+                />
+              )}
+              <div class="flip-card-media-overlay" aria-hidden="true" />
+            </>
+          )}
+        </div>
+      )}
+      <div class="flip-card-content">
+        {kickerFirst && label && <span class="stat-label">{label}</span>}
+        <span class:list={['stat-value', longValue && 'stat-value-long']}>
+          {value}
+        </span>
+        {!kickerFirst && label && <span class="stat-label">{label}</span>}
+        {desc && <p class="pillar-desc">{desc}</p>}
+      </div>
       <span class="flip-hint" aria-hidden="true">
         <svg
           viewBox="0 0 24 24"
@@ -87,21 +162,85 @@ const backId = `${idPrefix}-${index}`;
         </svg>
       </span>
     </div>
-    <div class="flip-card-back">
-      <p id={backId}>{backText}</p>
-      {actionLabel && (
-        <button
-          type="button"
-          class="btn btn-primary flip-action-btn"
-          data-open-ccc-modal
-          data-ccc-package={dataCccPackage}
-          tabindex="-1"
-          aria-hidden="true"
-        >
-          {actionLabel} <span aria-hidden="true">&rarr;</span>
-        </button>
+    <div class:list={['flip-card-back', image && imageSide === 'back' && 'flip-card-back--has-media']}>
+      {image && imageSide === 'back' && (
+        <div class:list={['flip-card-media', isLogo && 'flip-card-media--slate']}>
+          {isLogo ? (
+            <div class="flip-card-slate">
+              <div class="flip-card-slate-lockup">
+                {typeof image === 'string' ? (
+                  <img src={image} alt={imageAlt ?? ''} width="80" height="80" class="flip-card-slate-logo" />
+                ) : (
+                  <Image
+                    src={image}
+                    alt={imageAlt ?? ''}
+                    width={80}
+                    height={80}
+                    format="webp"
+                    quality={92}
+                    class="flip-card-slate-logo"
+                  />
+                )}
+              </div>
+              {slateLabel && (
+                <span class="flip-card-slate-label font-mono">{slateLabel}</span>
+              )}
+            </div>
+          ) : (
+            <>
+              {typeof image === 'string' ? (
+                <img
+                  src={image}
+                  alt={imageAlt ?? ''}
+                  class="flip-card-img"
+                  style={imagePosition ? `object-position: ${imagePosition};` : undefined}
+                />
+              ) : (
+                <Image
+                  src={image}
+                  alt={imageAlt ?? ''}
+                  widths={[320, 480, 640]}
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  format="webp"
+                  quality={82}
+                  class="flip-card-img"
+                  style={imagePosition ? `object-position: ${imagePosition};` : undefined}
+                />
+              )}
+              <div class="flip-card-media-overlay" aria-hidden="true" />
+            </>
+          )}
+        </div>
       )}
-      <slot name="back-action" />
+      <div class="flip-card-back-content">
+        {backText && <p id={backId}>{backText}</p>}
+        {actionHref ? (
+          <a
+            href={actionHref}
+            target={actionTarget ?? '_blank'}
+            rel={actionRel ?? 'noopener'}
+            class="btn btn-primary flip-action-btn font-mono"
+            tabindex="-1"
+            aria-hidden="true"
+            data-no-flip
+          >
+            {actionLabel} <span aria-hidden="true">&rarr;</span>
+          </a>
+        ) : actionLabel ? (
+          <button
+            type="button"
+            class="btn btn-primary flip-action-btn"
+            data-open-ccc-modal
+            data-ccc-package={dataCccPackage}
+            tabindex="-1"
+            aria-hidden="true"
+            data-no-flip
+          >
+            {actionLabel} <span aria-hidden="true">&rarr;</span>
+          </button>
+        ) : null}
+        <slot name="back-action" />
+      </div>
     </div>
   </div>
 </div>
@@ -322,6 +461,88 @@ const backId = `${idPrefix}-${index}`;
     box-shadow: var(--flip-accent-shadow, 0 8px 30px rgba(204, 0, 0, 0.1));
   }
 
+  .flip-card-content,
+  .flip-card-back-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .flip-card-media {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .flip-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .flip-card-media-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.55) 55%, rgba(0, 0, 0, 0.35) 100%);
+    pointer-events: none;
+  }
+
+  .flip-card-media--slate {
+    background: radial-gradient(ellipse at center, #202020, #080808 75%);
+    display: grid;
+    place-items: center;
+  }
+
+  .flip-card-slate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 1rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .flip-card-slate-logo {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+  }
+
+  .flip-card-slate-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
+    color: var(--muted, #9a9a95);
+    text-transform: uppercase;
+  }
+
+  .flip-card-front--has-media .flip-card-content {
+    padding: 0 0.5rem;
+  }
+
+  .flip-card-front--has-media .stat-value {
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    white-space: normal;
+    text-wrap: balance;
+  }
+
+  .flip-card-front--has-media .pillar-desc {
+    color: rgba(255, 255, 255, 0.85);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+    max-width: 44ch;
+  }
+
   .stat-value {
     display: block;
     font-family: var(--flip-font-value, var(--font-display));
@@ -390,16 +611,34 @@ const backId = `${idPrefix}-${index}`;
   .flip-action-btn {
     position: relative;
     z-index: 4;
-    margin-top: calc(0.25 * var(--flip-rem));
-    padding: calc(0.35 * var(--flip-rem)) calc(0.95 * var(--flip-rem));
-    min-height: 36px;
-    font-size: calc(0.68 * var(--flip-rem));
-    letter-spacing: 0.14em;
+    margin-top: calc(0.5 * var(--flip-rem));
+    padding: 0 1.25rem;
+    width: 240px;
+    max-width: 100%;
+    min-height: 46px;
+    height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font: 700 13px / 1.15 var(--font-display, inherit);
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    font-family: var(--flip-font-label, inherit);
+    background: #000000;
+    color: #ffffff;
+    border: 1px solid #ffffff;
+    border-radius: 0;
     cursor: pointer;
     box-sizing: border-box;
+    text-decoration: none;
+    transition: background 0.2s ease-in-out, color 0.2s ease-in-out, border-color 0.2s ease-in-out;
     pointer-events: none;
+  }
+
+  .flip-action-btn:is(:hover, :focus-visible) {
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
   }
 
   .flip-card.is-flipped .flip-action-btn {
@@ -469,7 +708,7 @@ const backId = `${idPrefix}-${index}`;
     const fineHoverMq = window.matchMedia('(hover: hover) and (pointer: fine)');
 
     function syncActionAccessibility(card: HTMLElement) {
-      const actionBtn = card.querySelector<HTMLButtonElement>('.flip-action-btn');
+      const actionBtn = card.querySelector<HTMLElement>('.flip-action-btn');
       if (!actionBtn) return;
       const isFlipped = card.classList.contains('is-flipped');
       const isHoverShown =
@@ -542,8 +781,8 @@ const backId = `${idPrefix}-${index}`;
       const isHoverShown =
         fineHoverMq.matches && card.matches(':hover') && !card.classList.contains('is-dismissed');
 
-      // If the user clicked the back-face action button while the back face is shown, let the modal trigger handle it
-      if ((wasFlipped || isHoverShown) && target?.closest('[data-open-ccc-modal], [data-no-flip]')) {
+      // If the user clicked the back-face action button while the back face is shown, let the action handle it
+      if ((wasFlipped || isHoverShown) && target?.closest('[data-open-ccc-modal], [data-no-flip], .flip-action-btn')) {
         return;
       }
 

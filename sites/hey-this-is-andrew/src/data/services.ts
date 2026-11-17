@@ -3,6 +3,7 @@ import data from './services.json';
 export interface Service {
   title: string;
   desc: string;
+  frontDesc?: string;
 }
 
 export interface ClientResult {
