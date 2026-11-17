@@ -204,6 +204,32 @@ section,
   scroll-margin-bottom: 120px;
 }
 
+/* Landing clearance is measured from the first visible section content (16 to 24px below navbar). */
+:root { --netta-nav-height: 76.8px; }
+@media (max-width: 860px) { :root { --netta-nav-height: 71px; } }
+@media (max-width: 640px) { :root { --netta-nav-height: 59px; } }
+#services, #price-list, #gallery, #booking, #site-footer {
+  scroll-margin-top: calc(var(--netta-nav-height) + 20px) !important;
+  scroll-margin-bottom: 0 !important;
+  padding-top: 0 !important;
+}
+#overview {
+  scroll-margin-top: var(--netta-nav-height) !important;
+  /* The existing halo extends 26.55% of the logo diameter above its box. */
+  padding-top: calc(clamp(230px, 24vw, 320px) * 0.2655 + 18px) !important;
+}
+#site-footer {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - var(--netta-nav-height) - 20px);
+}
+#site-footer .footer-mandala-bar { margin-top: 0; }
+.site-nav .mobile-main-link.active {
+  color: var(--brand-gold-heading) !important;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
 /* Hide side Contents panel entirely */
 .page-nav,
 [data-page-nav],
@@ -1637,23 +1663,15 @@ section,
   :root .hero-actions-row .hero-btn[class] { flex: none !important; width: 100% !important; }
 }
 
-/* Measured content heights at 1440, 820, and 390px. Remember actual heights
-   after a section has rendered. Booking is excluded: it owns the fixed modal. */
-.services-section, .price-list-section, .gallery-section { content-visibility: auto; }
-.services-section { contain-intrinsic-block-size: auto 423px; }
-.price-list-section { contain-intrinsic-block-size: auto 1903px; }
-.gallery-section { contain-intrinsic-block-size: auto 2272px; }
-@media (max-width: 958px) {
-  .services-section { contain-intrinsic-block-size: auto 1357px; }
-  .price-list-section { contain-intrinsic-block-size: auto 2053px; }
+/* ── Job 5: 500ms Circular View Transition Theme Bleed ── */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }
-@media (max-width: 900px) {
-  .gallery-section { contain-intrinsic-block-size: auto 2730px; }
+::view-transition-old(root) {
+  z-index: 1;
 }
-@media (max-width: 640px) {
-  .services-section { contain-intrinsic-block-size: auto 1309px; }
-  .price-list-section { contain-intrinsic-block-size: auto 2189px; }
-}
-@media (max-width: 500px) {
-  .gallery-section { contain-intrinsic-block-size: auto 2768px; }
+::view-transition-new(root) {
+  z-index: 2147483646;
 }

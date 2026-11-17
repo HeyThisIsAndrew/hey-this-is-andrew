@@ -13,7 +13,7 @@ export const SITE = {
   location: 'Santa Barbara, CA',
   bookingLine: 'DM to Book',
   instagramHandle: '@nettahennaandfeatheredsoul',
-  instagramUrl: 'https://www.instagram.com/nettahennaandfeatheredsoul',
+  instagramUrl: 'https://www.instagram.com/nettahennaandfeatheredsoul/',
   copyright: '© 2026 Netta Henna and Feathered Soul. All rights reserved.',
 };
 
@@ -105,5 +105,5 @@ export const FOOTER_EXPLORE: FooterLink[] = [
 ];
 
 export const SOCIALS: SocialLink[] = [
-  { label: 'Instagram', href: 'https://www.instagram.com/nettahennaandfeatheredsoul', icon: SOCIAL_LINE_ICONS.Instagram },
+  { label: 'Instagram', href: 'https://www.instagram.com/nettahennaandfeatheredsoul/', icon: SOCIAL_LINE_ICONS.Instagram },
 ];

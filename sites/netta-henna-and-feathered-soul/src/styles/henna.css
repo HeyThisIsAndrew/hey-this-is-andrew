@@ -1,5 +1,5 @@
 /*
- * henna.css: the henna draw-in, Pass 32.
+ * henna.css: the henna draw-in, Pass 32 & Pass 33.
  *
  * The art is defined once (HennaSprite.astro) and every border shows it with
  * <use>. CSS cannot select one <use> copy's paths on their own, but custom
@@ -14,14 +14,6 @@
  *   dots   opacity 1.2s ease 1s, scale 0.5 to 1 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) 1s.
  *
  * Nothing changes per frame except the elements actually transitioning.
- *
- * The defaults are the finished art (offset 0, opacity 1, scale 1). Pass 33 ships
- * that completed state for every visitor so no border is delayed on first paint.
- *
- * Tried first and rejected: animating one registered number (--ht) on each <svg>
- * and computing every path's progress with calc(). It looked identical, but every
- * frame restyled every path and dot in every drawing copy (about 200ms long tasks
- * on a 4x slowed phone CPU), so scrolling stuttered while borders drew.
  */
 /* One transition per motif: stroke-dasharray and stroke-dashoffset are inherited
    SVG properties, so every path in the motif draws with its group. */
@@ -59,4 +51,49 @@
   --hoff: 0;
   --hdo: 1;
   --hds: 1;
+}
+
+/* Job 6: Section dividers draw in around the central teal diamond over 2s on scroll
+   into view, and the diamond pops in after the henna reaches it (delay 1.8s). */
+@media (prefers-reduced-motion: no-preference) {
+  .section-ornament[data-henna-box-draw]:not(.is-drawn) .henna-art-svg,
+  .cat-gallery-henna-frame:not(.is-drawn) .henna-art-svg {
+    --hoff: 1;
+    --hdo: 0;
+    --hds: 0;
+  }
+
+  .section-ornament[data-henna-box-draw].is-drawn .henna-art-svg,
+  .cat-gallery-henna-frame.is-drawn .henna-art-svg {
+    --hoff: 0;
+    --hdo: 1;
+    --hds: 1;
+  }
+
+  .section-ornament[data-henna-box-draw] .ornament-gem {
+    opacity: 0;
+    transform: scale(0.5);
+    transform-origin: center;
+    transition: opacity 0.6s ease 1.8s, transform 0.6s ease 1.8s;
+  }
+
+  .section-ornament[data-henna-box-draw].is-drawn .ornament-gem {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-ornament[data-henna-box-draw] .henna-art-svg,
+  .cat-gallery-henna-frame .henna-art-svg {
+    --hoff: 0 !important;
+    --hdo: 1 !important;
+    --hds: 1 !important;
+  }
+
+  .section-ornament[data-henna-box-draw] .ornament-gem {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+    transition: none !important;
+  }
 }

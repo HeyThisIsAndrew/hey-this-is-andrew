@@ -54,7 +54,7 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
       <span class="booking-kicker"><span class="teal-diamond" aria-hidden="true">◆</span> Santa Barbara, CA <span class="teal-diamond" aria-hidden="true">◆</span></span>
       <h2 id="booking-heading" class="booking-title gold-script-text">Book an Appointment</h2>
       <p class="booking-desc">
-        Ready for a little boho magic? Book your henna, hair feathers, or hair tinsel appointment today!
+        Ready for a little boho magic?<br />Book your henna, hair feathers, or hair tinsel appointment today!
       </p>
 
       <div class="booking-actions-row">
@@ -62,7 +62,7 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
           Book Now
         </button>
       </div>
-      <p class="booking-note">Pricing per official price list. Custom group bookings welcomed.</p>
+      <p class="booking-note">Pricing per official price list.<br />Custom group bookings welcomed.</p>
     </div>
 
     <div class="corner-filigree bottom-left" aria-hidden="true">
@@ -350,13 +350,13 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
               type="text"
               id="book-preferred-time"
               name="preferred_time"
-              placeholder="For example: Saturday afternoon, or Nov 22 at 2pm"
+              placeholder="e.g. Saturday at 2pm"
             />
           </div>
 
           <div class="form-group">
             <label for="book-message">Notes or design ideas</label>
-            <input type="text" id="book-message" name="message" placeholder="Placement, colors, or preferred timing" />
+            <input type="text" id="book-message" name="message" placeholder="Design or placement notes" />
           </div>
         </div>
 
@@ -561,7 +561,7 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.65rem;
+    gap: 10px;
     height: 56px;
     margin: 0 auto 0.85rem;
     max-width: 520px;
@@ -569,22 +569,26 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
     opacity: 0.85;
   }
 
+  .booking-henna-divider .ornament-gem :global(.teal-diamond) {
+    margin: 0 !important;
+  }
+
   .b-divider-wing {
     flex: 1;
     height: 48px;
     position: relative;
     overflow: hidden;
-    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 18%, #000 88%, transparent 100%);
-    mask-image: linear-gradient(90deg, transparent 0%, #000 18%, #000 88%, transparent 100%);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 14%, #000 100%);
+    mask-image: linear-gradient(90deg, transparent 0%, #000 14%, #000 100%);
   }
 
   .b-divider-wing :global(.henna-art-svg) {
     width: 44px !important;
     height: 440px !important;
     position: absolute !important;
-    left: 50% !important;
+    left: calc(100% - 220px + 6px) !important;
     top: 50% !important;
-    transform: translate(-50%, -50%) rotate(-90deg) !important;
+    transform: translate(-50%, -50%) rotate(-90deg) scaleY(-1) !important;
   }
 
   /* Henna draw-in now lives in src/styles/henna.css (shared sprite + <use>). */
@@ -599,6 +603,11 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
     }
     .booking-henna-divider {
       height: 42px;
+    }
+    .b-divider-wing :global(.henna-art-svg) {
+      width: 38px !important;
+      height: 380px !important;
+      left: calc(100% - 190px + 5px) !important;
     }
   }
 
@@ -631,8 +640,7 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
     color: var(--ink);
     line-height: 1.6;
     margin: 0 auto 1.75rem;
-    max-width: 44ch;
-    text-wrap: balance;
+    max-width: 58ch;
     text-align: center;
   }
 
@@ -941,7 +949,7 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
     justify-content: center;
     width: 100%;
     gap: 0.65rem;
-    margin: 1.35rem 0;
+    margin: 1rem 0;
     color: var(--brand-gold);
     font-size: 0.74rem;
     font-weight: 600;
@@ -949,20 +957,21 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
     text-align: center;
   }
   .method-separator > span { flex: 0 0 auto; white-space: nowrap; }
-  .method-separator::before {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(270deg, var(--gold-border), transparent);
-  }
+  .method-separator::before,
   .method-separator::after {
     content: '';
-    flex: 1;
+    flex: 0 0 64px;
+    width: 64px;
     height: 1px;
-    background: linear-gradient(90deg, var(--gold-border), transparent);
+    background: var(--gold-border);
   }
   @media (max-width: 640px) {
     .method-separator { font-size: 0.64rem; letter-spacing: 0.06em; gap: 0.4rem; }
+    .method-separator::before,
+    .method-separator::after {
+      flex: 0 0 28px;
+      width: 28px;
+    }
   }
 
   /* ── Form & A La Carte Multi-Select Styles (Spacious & Left-Aligned) ── */
@@ -1681,9 +1690,13 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
       const restoreY = savedScrollY;
       isLocked = false;
 
+      const root = document.documentElement;
+      const prevBehavior = root.style.scrollBehavior;
+      root.style.scrollBehavior = 'auto';
+
       document.querySelectorAll('[inert]').forEach((el) => el.removeAttribute('inert'));
 
-      document.documentElement.classList.remove('modal-open');
+      root.classList.remove('modal-open');
       document.body.classList.remove('modal-open');
       document.body.style.position = '';
       document.body.style.top = '';
@@ -1692,13 +1705,29 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
       document.body.style.width = '';
       document.body.style.overflow = '';
 
-      window.scrollTo({ top: restoreY, left: 0, behavior: 'instant' });
-      updateStickyVisibility();
+      window.scrollTo(0, restoreY);
+      requestAnimationFrame(() => {
+        window.scrollTo(0, restoreY);
+        root.style.scrollBehavior = prevBehavior;
+        updateStickyVisibility();
+      });
     }
 
     let modalCloseTimer: number | null = null;
     const prefersReducedMotion = () =>
       window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function finishModalClose() {
+      if (!modal) return;
+      const restoreY = savedScrollY;
+      const root = document.documentElement;
+      root.style.scrollBehavior = 'auto';
+      if (modal.open) {
+        modal.close();
+      }
+      unlockPageBackground();
+      window.scrollTo(0, restoreY);
+    }
 
     function closeModal() {
       if (!modal || !modal.open) {
@@ -1714,8 +1743,7 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
 
       if (prefersReducedMotion()) {
         modal.classList.remove('is-closing');
-        modal.close();
-        unlockPageBackground();
+        finishModalClose();
         return;
       }
 
@@ -1723,10 +1751,7 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
       modalCloseTimer = window.setTimeout(() => {
         modalCloseTimer = null;
         modal.classList.remove('is-closing');
-        if (modal.open) {
-          modal.close();
-        }
-        unlockPageBackground();
+        finishModalClose();
       }, 280);
     }
 
