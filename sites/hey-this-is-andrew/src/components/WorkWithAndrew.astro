@@ -19,7 +19,8 @@ import { CCC_TURNAROUND } from '../data/ccc';
 import drinksPourImg from '../assets/ccc/s05-work-drinks-1-pour.jpg';
 import desertMarqueeImg from '../assets/ccc/s08-video-desert-2-marquee.jpg';
 import workDetailImg from '../assets/ccc/s07-work-detail.jpg';
-import desertDjImg from '../assets/ccc/s08-video-desert-3-dj.jpg';
+import davinciResolveImg from '../assets/brand-logos/davinci-resolve.png';
+import laComicConImg from '../assets/brands/hq/la-comic-con-2026.jpg';
 
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
@@ -28,6 +29,8 @@ interface ServiceVisual {
   src?: ImageMetadata;
   alt?: string;
   objectPosition?: string;
+  isLogo?: boolean;
+  slateLabel?: string;
 }
 
 const SERVICE_VISUALS: Record<string, ServiceVisual> = {
@@ -46,10 +49,16 @@ const SERVICE_VISUALS: Record<string, ServiceVisual> = {
     alt: 'Cut crystal bar glassware and spirits bottle in studio lighting',
     objectPosition: 'center 72%',
   },
+  'Video editing': {
+    src: davinciResolveImg,
+    alt: 'DaVinci Resolve studio editing and color grading software',
+    isLogo: true,
+    slateLabel: 'POST-PRODUCTION',
+  },
   'Event photo & video coverage': {
-    src: desertDjImg,
-    alt: 'Live DJ set and crowd at Desert Escape Palm Springs',
-    objectPosition: '35% center',
+    src: laComicConImg,
+    alt: 'L.A. Comic Con event coverage by BE Unconventional HQ',
+    objectPosition: 'center center',
   },
 };
 
@@ -86,23 +95,42 @@ const logisticsItems = [
     <ul class="work-grid">
       {serviceCards.map((s, i) => (
         <li
-          class:list={['work-card', 'reveal', { 'work-card--wide': s.isWide }]}
+          class:list={['work-card', 'reveal', { 'work-card--wide': s.isWide, 'work-card--text': !s.visual.src }]}
           style={`--rd: ${i * 70}ms`}
         >
           {s.visual.src ? (
-            <div class="work-media">
-              <Image
-                src={s.visual.src}
-                alt={s.visual.alt ?? ''}
-                widths={widthsFor(s.visual.src)}
-                sizes={s.isWide ? '(max-width: 759px) 100vw, (max-width: 959px) 50vw, 25vw' : '(max-width: 759px) 100vw, 33vw'}
-                format="webp"
-                quality={82}
-                loading="lazy"
-                decoding="async"
-                class="work-img cinematic-img"
-                style={s.visual.objectPosition ? `object-position: ${s.visual.objectPosition};` : undefined}
-              />
+            <div class:list={['work-media', { 'work-media--slate': s.visual.isLogo }]}>
+              {s.visual.isLogo ? (
+                <div class="work-slate">
+                  <div class="work-slate-lockup">
+                    <Image
+                      src={s.visual.src}
+                      alt={s.visual.alt ?? 'DaVinci Resolve'}
+                      width={100}
+                      height={100}
+                      format="webp"
+                      quality={92}
+                      class="work-slate-logo"
+                    />
+                  </div>
+                  {s.visual.slateLabel && (
+                    <span class="work-slate-label font-mono">{s.visual.slateLabel}</span>
+                  )}
+                </div>
+              ) : (
+                <Image
+                  src={s.visual.src}
+                  alt={s.visual.alt ?? ''}
+                  widths={widthsFor(s.visual.src)}
+                  sizes={s.isWide ? '(max-width: 759px) 100vw, (max-width: 959px) 50vw, 25vw' : '(max-width: 759px) 100vw, 33vw'}
+                  format="webp"
+                  quality={82}
+                  loading="lazy"
+                  decoding="async"
+                  class="work-img cinematic-img"
+                  style={s.visual.objectPosition ? `object-position: ${s.visual.objectPosition};` : undefined}
+                />
+              )}
             </div>
           ) : null}
 
@@ -205,6 +233,46 @@ const logisticsItems = [
     object-fit: cover;
   }
 
+  .work-media--slate {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    background: radial-gradient(ellipse at center, #202020, #080808 75%);
+  }
+
+  .work-slate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.85rem;
+    padding: 1.25rem;
+    text-align: center;
+  }
+
+  .work-slate-lockup {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .work-slate-logo {
+    display: block;
+    width: clamp(3.75rem, 5.5vw, 5rem);
+    height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.7));
+  }
+
+  .work-slate-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
   .work-body {
     min-width: 0;
     padding: 1.35rem 1.5rem 1.5rem;
@@ -237,6 +305,14 @@ const logisticsItems = [
       padding: 1.35rem 1.5rem;
     }
   }
+
+  .work-card--text .work-body {
+    justify-content: center;
+    padding: clamp(2rem, 4vw, 4rem);
+    border-top: 3px solid var(--ink);
+  }
+  .work-card--text .work-title { max-width: 12ch; font-size: clamp(2rem, 4vw, 4rem); }
+  .work-card--text .work-desc { max-width: 46ch; }
 
   @media (min-width: 760px) and (max-width: 1120px) {
     .work-body,
