@@ -116,12 +116,19 @@ const stateOf = (i: number, n: number) =>
       />
       <button type="button" id="gear-search-clear" class="gear-search-clear" aria-label="Clear search" hidden>×</button>
     </div>
-    <button type="button" class="btn-all-toggle font-mono" data-all-toggle aria-expanded="false" aria-controls="gear-all-products">Show all products</button>
-    <div class="gear-category-chips" role="group" aria-label="Gear categories">
-      {sections.map((sec) => (
-        <button type="button" class="gear-chip" data-cat={sec.chipKey} aria-pressed="false">{sec.chip}</button>
-      ))}
+    <div class="gear-category-select-wrap">
+      <label for="gear-category-select" class="vh">Filter by category</label>
+      <select id="gear-category-select" class="gear-category-select font-mono" aria-label="Filter by category">
+        <option value="">All categories</option>
+        {sections.map((sec) => (
+          <option value={sec.chipKey}>{sec.chip}</option>
+        ))}
+      </select>
+      <svg class="gear-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
     </div>
+    <button type="button" class="btn-all-toggle font-mono" data-all-toggle aria-expanded="false" aria-controls="gear-all-products">Show all products</button>
   </div>
 
   <div id="gear-empty-state" class="gear-empty-state" hidden>
@@ -438,46 +445,71 @@ const stateOf = (i: number, n: number) =>
   .gear-search-clear:hover {
     color: #fff;
   }
-  /* Every chip the same size (the house rule for buttons that sit
-     together): equal columns at least as wide as the longest label,
-     wrapping whole chips on a phone. Em of the chips' own type. */
-  .gear-category-chips {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 1fr;
-    width: max-content;
+  .gear-category-select-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 220px;
     max-width: 100%;
-    gap: 0.4rem;
-    font-size: 0.68rem;
   }
-  @media (max-width: 600px) {
-    .gear-category-chips {
-      grid-auto-flow: row;
-      grid-template-columns: repeat(auto-fill, minmax(9em, 1fr));
-      width: 100%;
-    }
-  }
-  .gear-chip {
+  .gear-category-select {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
     min-height: 44px;
-    padding: 0.4rem 0.85rem;
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    color: var(--muted, #888);
+    height: 44px;
+    padding: 0.4rem 2.2rem 0.4rem 0.85rem;
+    background: #000000;
+    border: 1px solid #ffffff;
+    color: #ffffff;
     font-family: var(--font-mono);
-    font-size: 0.68rem;
-    letter-spacing: 0.12em;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     cursor: pointer;
-    transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    box-sizing: border-box;
+    border-radius: 0;
+    color-scheme: dark;
+    transition: background 0.2s ease-in-out, color 0.2s ease-in-out, border-color 0.2s ease-in-out;
   }
-  .gear-chip:hover {
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.4);
+  .gear-category-select:is(:hover, :focus-visible) {
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+    outline: none;
   }
-  .gear-chip.active {
-    background: #fff;
-    border-color: #fff;
-    color: #000;
+  .gear-category-select option {
+    background: #000000;
+    color: #ffffff;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+  .gear-select-arrow {
+    position: absolute;
+    right: 0.85rem;
+    pointer-events: none;
+    color: #ffffff;
+    transition: color 0.2s ease-in-out;
+  }
+  .gear-category-select-wrap:hover .gear-select-arrow,
+  .gear-category-select:focus-visible + .gear-select-arrow {
+    color: #000000;
+  }
+  @media (max-width: 768px) {
+    .gear-filter-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+    }
+    .gear-search-wrap,
+    .gear-category-select-wrap,
+    .btn-all-toggle {
+      width: 100%;
+      max-width: 100%;
+    }
+    .btn-all-toggle {
+      justify-content: center;
+    }
   }
   .gear-empty-state {
     padding: 3rem 1rem;
@@ -1299,6 +1331,10 @@ const stateOf = (i: number, n: number) =>
       padding: 0 0.75rem 0.75rem 0;
       gap: 0.25rem 0.5rem;
     }
+    .gear-accordion-heading {
+      flex: 0 0 100%;
+      width: 100%;
+    }
     .gear-accordion-header {
       padding: 0.95rem 0.25rem 0.5rem 1rem;
     }
@@ -1823,7 +1859,7 @@ const stateOf = (i: number, n: number) =>
       const clear = document.getElementById('gear-search-clear') as HTMLButtonElement | null;
       const empty = document.getElementById('gear-empty-state');
       const reset = document.getElementById('gear-reset-btn');
-      const chips = Array.from(document.querySelectorAll<HTMLButtonElement>('.gear-chip'));
+      const select = document.getElementById('gear-category-select') as HTMLSelectElement | null;
       let cat = '';
       let query = '';
 
@@ -1870,24 +1906,10 @@ const stateOf = (i: number, n: number) =>
         }
       }
 
-      chips.forEach((chip) =>
-        chip.addEventListener('click', () => {
-          const isCurrentlyActive = chip.classList.contains('active');
-          if (isCurrentlyActive) {
-            chip.classList.remove('active');
-            chip.setAttribute('aria-pressed', 'false');
-            cat = '';
-          } else {
-            chips.forEach((c) => {
-              const on = c === chip;
-              c.classList.toggle('active', on);
-              c.setAttribute('aria-pressed', String(on));
-            });
-            cat = chip.dataset.cat || '';
-          }
-          apply();
-        })
-      );
+      select?.addEventListener('change', () => {
+        cat = select.value;
+        apply();
+      });
       input?.addEventListener('input', () => {
         query = input.value.trim().toLowerCase();
         apply();
@@ -1902,10 +1924,7 @@ const stateOf = (i: number, n: number) =>
         if (input) input.value = '';
         query = '';
         cat = '';
-        chips.forEach((c) => {
-          c.classList.remove('active');
-          c.setAttribute('aria-pressed', 'false');
-        });
+        if (select) select.value = '';
         apply();
       });
 
