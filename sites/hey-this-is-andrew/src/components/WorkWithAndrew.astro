@@ -7,6 +7,7 @@
 import { Image } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
+import FlipCard from '@andrew/ui/FlipCard.astro';
 import {
   SERVICES,
   SERVICES_LEDE,
@@ -92,55 +93,31 @@ const logisticsItems = [
       lede={SERVICES_LEDE}
     />
 
-    <ul class="work-grid">
+    <div class="work-grid">
       {serviceCards.map((s, i) => (
-        <li
-          class:list={['work-card', 'reveal', { 'work-card--wide': s.isWide, 'work-card--text': !s.visual.src }]}
+        <div
+          class:list={['work-card-wrap', 'reveal', { 'work-card-wrap--wide': s.isWide }]}
           style={`--rd: ${i * 70}ms`}
         >
-          {s.visual.src ? (
-            <div class:list={['work-media', { 'work-media--slate': s.visual.isLogo }]}>
-              {s.visual.isLogo ? (
-                <div class="work-slate">
-                  <div class="work-slate-lockup">
-                    <Image
-                      src={s.visual.src}
-                      alt={s.visual.alt ?? 'DaVinci Resolve'}
-                      width={100}
-                      height={100}
-                      format="webp"
-                      quality={92}
-                      class="work-slate-logo"
-                    />
-                  </div>
-                  {s.visual.slateLabel && (
-                    <span class="work-slate-label font-mono">{s.visual.slateLabel}</span>
-                  )}
-                </div>
-              ) : (
-                <Image
-                  src={s.visual.src}
-                  alt={s.visual.alt ?? ''}
-                  widths={widthsFor(s.visual.src)}
-                  sizes={s.isWide ? '(max-width: 759px) 100vw, (max-width: 959px) 50vw, 25vw' : '(max-width: 759px) 100vw, 33vw'}
-                  format="webp"
-                  quality={82}
-                  loading="lazy"
-                  decoding="async"
-                  class="work-img cinematic-img"
-                  style={s.visual.objectPosition ? `object-position: ${s.visual.objectPosition};` : undefined}
-                />
-              )}
-            </div>
-          ) : null}
-
-          <div class="work-body">
-            <h3 class="work-title">{s.title}</h3>
-            <p class="work-desc">{s.desc}</p>
-          </div>
-        </li>
+          <FlipCard
+            value={s.title}
+            label={`SERVICE 0${i + 1}`}
+            kickerFirst={true}
+            desc={s.frontDesc ?? s.desc}
+            backText={s.desc}
+            image={s.visual.src}
+            imageAlt={s.visual.alt}
+            imagePosition={s.visual.objectPosition}
+            isLogo={s.visual.isLogo}
+            slateLabel={s.visual.slateLabel}
+            imageSide="front"
+            idPrefix="service-card"
+            index={i}
+            class="work-flip-card"
+          />
+        </div>
       ))}
-    </ul>
+    </div>
 
     {logisticsItems.length > 0 && (
       <div class="client-block reveal" data-client-block>
@@ -199,155 +176,30 @@ const logisticsItems = [
     .work-grid {
       grid-template-columns: repeat(6, minmax(0, 1fr));
     }
-    .work-card {
+    .work-card-wrap {
       grid-column: span 2;
     }
-    .work-card--wide {
+    .work-card-wrap--wide {
       grid-column: span 3;
     }
   }
 
-  .work-card {
+  .work-card-wrap {
     display: flex;
-    flex-direction: column;
     min-width: 0;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: var(--surface);
-    overflow: clip;
-  }
-
-  .work-media {
     width: 100%;
-    min-width: 0;
-    background: var(--surface-2);
-    border-bottom: 1px solid var(--line);
-    overflow: clip;
   }
 
-  .work-img {
-    display: block;
+  .work-flip-card {
+    min-height: 220px;
+    height: 100%;
     width: 100%;
-    height: auto;
-    aspect-ratio: 16 / 10;
-    object-fit: cover;
   }
 
-  .work-media--slate {
-    display: grid;
-    place-items: center;
-    width: 100%;
-    aspect-ratio: 16 / 10;
-    background: radial-gradient(ellipse at center, #202020, #080808 75%);
-  }
-
-  .work-slate {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.85rem;
-    padding: 1.25rem;
-    text-align: center;
-  }
-
-  .work-slate-lockup {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .work-slate-logo {
-    display: block;
-    width: clamp(3.75rem, 5.5vw, 5rem);
-    height: auto;
-    aspect-ratio: 1 / 1;
-    object-fit: contain;
-    filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.7));
-  }
-
-  .work-slate-label {
-    font-size: 0.72rem;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-
-  .work-body {
-    min-width: 0;
-    padding: 1.35rem 1.5rem 1.5rem;
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-  }
-
-  @media (min-width: 960px) {
-    .work-card--wide {
-      display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-      grid-template-rows: 1fr;
+  @media (min-width: 760px) {
+    .work-flip-card {
+      min-height: 250px;
     }
-    .work-card--wide .work-media {
-      height: 100%;
-      border-bottom: none;
-      border-right: 1px solid var(--line);
-    }
-    .work-card--wide .work-img {
-      height: 100%;
-    }
-    .work-card--wide .work-media--slate {
-      aspect-ratio: auto;
-      width: 100%;
-      min-height: 100%;
-    }
-    .work-card--wide .work-body {
-      justify-content: center;
-      padding: 1.35rem 1.5rem;
-    }
-  }
-
-  .work-card--text .work-body {
-    justify-content: center;
-    padding: clamp(2rem, 4vw, 4rem);
-    border-top: 3px solid var(--ink);
-  }
-  .work-card--text .work-title { max-width: 12ch; font-size: clamp(2rem, 4vw, 4rem); }
-  .work-card--text .work-desc { max-width: 46ch; }
-
-  @media (min-width: 760px) and (max-width: 1120px) {
-    .work-body,
-    .work-card--wide .work-body {
-      padding: 1.15rem 1.25rem;
-    }
-  }
-
-
-  .work-title {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: calc(14 * var(--ui-u));
-    line-height: 1.25;
-    margin: 0 0 0.6rem;
-    letter-spacing: 0.02em;
-  }
-
-  @media (max-width: 759px) {
-    .work-title {
-      font-size: 1rem;
-    }
-  }
-
-  @media (min-width: 1100px) {
-    .work-title {
-      font-size: calc(14.5 * var(--ui-u));
-    }
-  }
-
-  .work-desc {
-    margin: 0;
-    color: var(--muted);
-    font-size: 0.92rem;
-    line-height: 1.6;
   }
 
   /* How projects run: unified specification ledger matching WorkflowStrip. */

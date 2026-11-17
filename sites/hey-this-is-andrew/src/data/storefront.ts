@@ -7,6 +7,8 @@ export interface StorefrontPick {
   /** Optional small label above the title. */
   kicker?: string;
   title: string;
+  /** Front description (fits in at most 2 lines). */
+  frontDesc?: string;
   /** Optional; left out rather than written for the owner. */
   desc?: string;
   cta: string;
@@ -18,6 +20,7 @@ export const GEAR_PICKS: StorefrontPick[] = [
   {
     kicker: 'Production Stack',
     title: 'Full kit',
+    frontDesc: 'Active studio cameras, lenses, lighting, and audio gear.',
     desc: 'The complete inventory of cameras, lenses, lighting, and audio gear actively deployed in the studio.',
     cta: 'Browse complete kit',
     url: AMAZON_STOREFRONT,
@@ -25,6 +28,7 @@ export const GEAR_PICKS: StorefrontPick[] = [
   {
     kicker: 'Post-production',
     title: 'DaVinci Resolve',
+    frontDesc: 'Professional editing, color grading, and audio post.',
     desc: 'Professional editing, color grading, and audio post for all long-form and commercial deliverables.',
     cta: 'Explore DaVinci Resolve',
     url: 'https://www.blackmagicdesign.com/products/davinciresolve',
