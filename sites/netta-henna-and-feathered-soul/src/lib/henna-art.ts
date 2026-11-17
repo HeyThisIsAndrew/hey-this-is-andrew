@@ -420,9 +420,15 @@ function buildLotusFlower(yc: number, reachX: number) {
   }
 }
 
+// Capture the existing corner's dots before assembling the rest of the strip.
+const frameDotCount = dots.length;
+const cornerFrameDots = dots.filter((dot) => dot.cy < 200);
+
 // Assemble the Complete Non-Overlapping Henna Tapestry down y = 0..1800:
 // Band 1 (y: 15 -> 495): Mandala 1 -> Paisley 1 -> Lotus 1 -> Paisley 2
 buildMandalaRosette(112, 86);
+/** Original first rounded mandala, complete, plus the first frame segment. */
+export const NAV_CORNER_DOTS: DotItem[] = [...cornerFrameDots, ...dots.slice(frameDotCount)];
 buildPaisley(214, 1, 96);
 buildLotusFlower(318, 108);
 buildPaisley(422, -1, 96);

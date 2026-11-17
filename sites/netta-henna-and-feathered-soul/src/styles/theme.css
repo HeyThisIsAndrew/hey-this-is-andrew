@@ -560,18 +560,16 @@ section,
 }
 
 .nav-drape-panel {
-  --drape-fade: 64px;
+  --drape-scale: 0.6833333333;
   position: absolute !important;
   top: 0 !important;
-  width: clamp(174px, 15vw, 224px) !important;
-  height: 112px !important;
-  overflow: hidden !important;
+  width: calc(218px * var(--drape-scale)) !important;
+  height: calc(124px * var(--drape-scale)) !important;
+  overflow: visible !important;
   pointer-events: none !important;
   opacity: 0.78 !important;
-  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - var(--drape-fade)), transparent calc(100% - 5px)), linear-gradient(180deg, #000 calc(100% - 14px), transparent 100%) !important;
-  mask-image: linear-gradient(90deg, #000 calc(100% - var(--drape-fade)), transparent calc(100% - 5px)), linear-gradient(180deg, #000 calc(100% - 14px), transparent 100%) !important;
-  -webkit-mask-composite: source-in !important;
-  mask-composite: intersect !important;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
 }
 
 [data-theme="dark"] .nav-drape-panel {
@@ -589,64 +587,31 @@ section,
 }
 
 .nav-drape-svg-holder {
-  width: 1200px !important;
-  height: 82px !important;
+  width: 100% !important;
+  height: 100% !important;
   position: relative !important;
   pointer-events: none !important;
 }
 
-.nav-drape-svg-holder .henna-art-svg {
-  width: 82px !important;
-  height: 1200px !important;
-  position: absolute !important;
-  left: 50% !important;
-  top: 50% !important;
-  transform: translate(-12%, -50%) rotate(90deg) scaleY(-1) !important;
+.nav-drape-art {
+  width: 100% !important;
+  height: 100% !important;
+  overflow: visible !important;
   display: block !important;
 }
 
-/* Nav drape henna draw-in now lives in src/styles/henna.css. */
-
 @media (max-width: 1024px) {
-  /* Keep the corner artwork out of the compact navigation controls. */
-  :root .site-nav .nav-right-actions {
-    background: var(--nav-bg);
-  }
   :root[data-theme] .site-nav .nav-inner[class] { z-index: 11 !important; background: transparent !important; }
   .nav-drape-panel {
-    --drape-fade: 40px;
-    width: 136px !important;
-    height: 84px !important;
+    --drape-scale: 0.55;
     opacity: 0.68 !important;
-  }
-
-  .nav-drape-svg-holder {
-    width: 990px !important;
-    height: 66px !important;
-  }
-
-  .nav-drape-svg-holder .henna-art-svg {
-    width: 66px !important;
-    height: 990px !important;
   }
 }
 
 @media (max-width: 640px) {
   .nav-drape-panel {
-    --drape-fade: 32px;
-    width: 96px !important;
-    height: 58px !important;
+    --drape-scale: 0.45;
     opacity: 0.6 !important;
-  }
-
-  .nav-drape-svg-holder {
-    width: 810px !important;
-    height: 54px !important;
-  }
-
-  .nav-drape-svg-holder .henna-art-svg {
-    width: 54px !important;
-    height: 810px !important;
   }
 }
 
@@ -1564,10 +1529,18 @@ section,
   pointer-events: auto !important;
   overflow: visible !important;
   flex-shrink: 0 !important;
-  background: var(--nav-bg) !important;
+  background: transparent !important;
   filter: none !important;
 }
-:root .site-nav .nav-link[class], :root .site-nav .nav-right-actions[class] { background: var(--nav-bg) !important; }
+/* One navbar background, then the artwork, then transparent content. */
+:root .site-nav .nav-link[class],
+:root .site-nav .nav-right-actions[class],
+:root .site-nav #theme-toggle-btn,
+:root .site-nav button.menu-btn[class] {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
 :root .site-nav a.wordmark[class]::before,
 :root .site-nav a.wordmark[class]::after { content: none !important; display: none !important; }
 .site-nav .wordmark-text { display: grid; grid-template-rows: 1fr 1fr; grid-column: 1; grid-row: 1 / span 2; height: 100%; width: max-content; }
@@ -1584,7 +1557,7 @@ section,
 @media (min-width: 861px) {
   :root .site-nav .nav-inner[class] {
     display: grid !important;
-    grid-template-columns: 50px auto 50px;
+    grid-template-columns: auto 38px;
     column-gap: 1.5rem !important;
     position: relative !important;
     z-index: 11 !important;
@@ -1593,12 +1566,12 @@ section,
   :root .site-nav a.wordmark[class] {
     display: none !important;
   }
-  :root .site-nav .desktop-nav { grid-column: 2; }
+  :root .site-nav .desktop-nav { grid-column: 1; }
   .site-nav .wordmark-title { font-size: clamp(13.8px, 1.6111vw, 23.2px); }
   .site-nav .wordmark-subtitle { font-size: clamp(10.3px, 1.2vw, 17.28px); }
   :root .site-nav .nav-right-actions {
-    grid-column: 3;
-    width: 50px;
+    grid-column: 2;
+    width: 38px;
     margin: 0 !important;
     justify-content: center !important;
   }
@@ -1609,20 +1582,31 @@ section,
   :root .site-nav .nav-links { gap: 0.8rem !important; }
 }
 @media (max-width: 860px) {
-  :root .site-nav .nav-inner[class] { height: 70px !important; justify-content: flex-end !important; }
+  :root .site-nav .nav-inner[class] {
+    display: flex !important;
+    height: 70px !important;
+    justify-content: flex-end !important;
+  }
   :root .site-nav a.wordmark[class] {
     position: absolute !important;
-    left: calc(50% + 29px) !important;
+    left: 50% !important;
     top: 50% !important;
     transform: translate(-50%, -50%) !important;
   }
-  :root .site-nav .nav-right-actions { top: auto !important; margin: 0 !important; }
+  :root .site-nav .nav-right-actions[class] {
+    display: flex !important;
+    top: auto !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }
+  :root .site-nav #theme-toggle-btn,
+  :root .site-nav button.menu-btn[class] { background: transparent !important; background-image: none !important; }
   .site-nav .wordmark-title { letter-spacing: .02em; }
   .site-nav .wordmark-subtitle { letter-spacing: .01em; }
 }
 @media (max-width: 640px) {
   :root .site-nav .nav-inner[class] { height: 58px !important; padding: 0 0.5rem !important; }
-  :root .site-nav a.wordmark[class] { height: 46px !important; left: calc(50% + 27px) !important; }
+  :root .site-nav a.wordmark[class] { height: 46px !important; }
   .site-nav .wordmark-title { font-size: 18px; }
   .site-nav .wordmark-subtitle { font-size: 14px; }
 }

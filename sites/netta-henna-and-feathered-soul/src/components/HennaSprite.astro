@@ -15,7 +15,7 @@
  *
  * Every path has pathLength="1", so the draw-in dash works for any path length.
  */
-import { FRAME_GROUPS, MOTIF_GROUPS, DOT_GROUPS, type PathItem } from '../lib/henna-art';
+import { FRAME_GROUPS, MOTIF_GROUPS, DOT_GROUPS, NAV_CORNER_DOTS, type PathItem } from '../lib/henna-art';
 
 const pathAttrs = (p: PathItem) => ({
   d: p.d,
@@ -28,13 +28,13 @@ const pathAttrs = (p: PathItem) => ({
 <svg class="henna-sprite" width="0" height="0" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <g id="hb-frame" stroke-linecap="round" stroke-linejoin="round" fill="none">
-      {FRAME_GROUPS.map((g) => (
-        <g class="hb-m" style={`--d:${g.delay}`}>{g.paths.map((p) => <path {...pathAttrs(p)} />)}</g>
+      {FRAME_GROUPS.map((g, i) => (
+        <g id={`hb-frame-${i}`} class="hb-m" style={`--d:${g.delay}`}>{g.paths.map((p) => <path {...pathAttrs(p)} />)}</g>
       ))}
     </g>
     <g id="hb-motifs" stroke-linecap="round" stroke-linejoin="round" fill="none">
-      {MOTIF_GROUPS.map((g) => (
-        <g class="hb-m" style={`--d:${g.delay}`}>{g.paths.map((p) => <path {...pathAttrs(p)} />)}</g>
+      {MOTIF_GROUPS.map((g, i) => (
+        <g id={`hb-motif-${i}`} class="hb-m" style={`--d:${g.delay}`}>{g.paths.map((p) => <path {...pathAttrs(p)} />)}</g>
       ))}
     </g>
     <g id="hb-dots" class="hb-dots">
@@ -46,6 +46,11 @@ const pathAttrs = (p: PathItem) => ({
     </g>
     <g id="hb-strip"><use href="#hb-frame" /><use href="#hb-motifs" /><use href="#hb-dots" /></g>
     <g id="hb-strip-open"><use href="#hb-motifs" /><use href="#hb-dots" /></g>
+    <!-- Reuse complete original motifs instead of clipping the long strip. -->
+    <g id="hb-nav-corner" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <use href="#hb-frame-0" /><use href="#hb-motif-0" />
+      {NAV_CORNER_DOTS.map((d) => <circle cx={d.cx} cy={d.cy} r={d.radius} fill={d.fill} />)}
+    </g>
   </defs>
 </svg>
 
