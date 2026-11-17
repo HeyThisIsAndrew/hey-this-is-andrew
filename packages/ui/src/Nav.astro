@@ -12,7 +12,8 @@
 import type { LogoAsset, NavItem } from './types';
 
 interface Props {
-  logo: LogoAsset;
+  logo?: LogoAsset;
+  brand?: { title: string; subtitle?: string };
   homeHref: string;
   links: NavItem[];
   /** Accessible name for the logo link. */
@@ -25,7 +26,7 @@ interface Props {
   labels?: { menu?: string; close?: string; sections?: string; sectionsMenu?: string };
 }
 
-const { logo, homeHref, links, homeLabel = `${logo.alt}, home`, search, labels = {} } = Astro.props;
+const { logo, brand, homeHref, links, homeLabel = `${logo?.alt ?? brand?.title ?? 'Home'}, home`, search, labels = {} } = Astro.props;
 const L = { menu: 'Menu', close: 'Close', sections: 'Sections', sectionsMenu: 'Sections menu', ...labels };
 const homePath = homeHref.replace(/\/$/, '');
 const currentPath = Astro.url.pathname.replace(/\/$/, '');
@@ -50,10 +51,15 @@ const hasCurrentSub = (item: NavItem) =>
 <header class:list={['site-nav', { 'site-nav--home': isHome, 'at-top': isHome }]} id="site-header" data-home-path={homePath}>
   <div class="nav-inner">
     <a class="wordmark" href={homeHref} aria-label={homeLabel} data-logo-home={isHome ? true : undefined}>
-      {logo.darkSrc ? (
+      {logo ? (logo.darkSrc ? (
         <picture class="logo-picture"><source media="(prefers-color-scheme: dark)" srcset={logo.darkSrc} /><img src={logo.src} width={logo.width} height={logo.height} alt={logo.alt} class="wordmark-logo" /></picture>
       ) : (
         <img src={logo.src} width={logo.width} height={logo.height} alt={logo.alt} class="wordmark-logo" />
+      )) : brand && (
+        <span class="wordmark-text">
+          <span class="wordmark-title">{brand.title}</span>
+          {brand.subtitle && <span class="wordmark-subtitle">{brand.subtitle}</span>}
+        </span>
       )}
     </a>
     <nav aria-label={L.sections} class="desktop-nav">

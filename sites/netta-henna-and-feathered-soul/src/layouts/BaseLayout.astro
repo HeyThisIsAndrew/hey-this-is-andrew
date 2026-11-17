@@ -17,8 +17,6 @@ import SlimFooter from '../components/SlimFooter.astro';
 import HennaBorderDraw from '../components/HennaBorderDraw.astro';
 import HennaSprite from '../components/HennaSprite.astro';
 import ChromeMeta from '@andrew/ui/ChromeMeta.astro';
-import logo from '../assets/netta-logo.png';
-import { getImage } from 'astro:assets';
 import { SITE, NAV_LINKS } from '../data/site';
 
 interface Props {
@@ -30,9 +28,6 @@ interface Props {
 const { title, description = SITE.description, heroPreload } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
-// The nav shows the logo at 50px; a 120px WebP covers 2x screens (was the 781 KB PNG).
-const navLogo = await getImage({ src: logo, format: 'webp', quality: 86, width: 120, height: 120 });
-const logoAsset = { src: navLogo.src, width: logo.width, height: logo.height, alt: SITE.name };
 ---
 <!doctype html>
 <html lang="en">
@@ -90,7 +85,7 @@ const logoAsset = { src: navLogo.src, width: logo.width, height: logo.height, al
   </head>
   <body>
     <HennaSprite />
-    <Nav logo={logoAsset} homeHref="#overview" homeLabel="Netta Henna and Feathered Soul, back to top" links={NAV_LINKS} labels={{ menu: '', close: 'Close' }}>
+    <Nav brand={{ title: 'Netta', subtitle: 'Henna and Feathered Soul' }} homeHref="#overview" homeLabel="Netta Henna and Feathered Soul, back to top" links={NAV_LINKS} labels={{ menu: '', close: 'Close' }}>
       <div class="nav-drape-wrap" data-nav-henna-draw aria-hidden="true">
         <div class="nav-drape-panel nav-drape-left">
           <div class="nav-drape-svg-holder">
