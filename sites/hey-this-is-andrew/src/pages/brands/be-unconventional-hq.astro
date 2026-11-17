@@ -340,19 +340,48 @@ const standards = [
           <p class="hq-founder-bio">
             Andrew spent more than a decade in games and technology, including time at Sony Interactive Entertainment as a software engineer and in quality assurance. That working knowledge of how products are built, tested, and shipped shapes every piece of coverage at the HQ.
           </p>
-          <div class="hq-platform-strip">
-            <a href={HQ_SITE_URL} target="_blank" rel="noopener" class="hq-platform-pill">
-              <span class="hq-platform-name">WEB</span>
-              <span class="hq-platform-sub">Articles &amp; Reviews &#8599;</span>
-            </a>
-            <a href={HQ_YOUTUBE_URL} target="_blank" rel="noopener" class="hq-platform-pill">
-              <span class="hq-platform-name">YOUTUBE</span>
-              <span class="hq-platform-sub">4K Essays &amp; Shorts &#8599;</span>
-            </a>
-            <a href={HQ_SUBSTACK_URL} target="_blank" rel="noopener" class="hq-platform-pill">
-              <span class="hq-platform-name">SUBSTACK</span>
-              <span class="hq-platform-sub">Written Criticism &#8599;</span>
-            </a>
+          <div class="hq-platform-strip" data-platform-strip>
+            <div class="hq-flip-card" tabindex="0" role="region" aria-label="Web platform: Articles &amp; Reviews">
+              <div class="hq-flip-inner">
+                <div class="hq-flip-front" aria-hidden="true">
+                  <span class="hq-flip-platform font-mono">WEB</span>
+                </div>
+                <div class="hq-flip-back">
+                  <a href={HQ_SITE_URL} target="_blank" rel="noopener" class="hq-flip-link">
+                    <span class="hq-flip-label">Articles &amp; Reviews</span>
+                    <span class="hq-flip-arrow" aria-hidden="true">&#8599;</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div class="hq-flip-card" tabindex="0" role="region" aria-label="YouTube platform: 4K Essays &amp; Shorts">
+              <div class="hq-flip-inner">
+                <div class="hq-flip-front" aria-hidden="true">
+                  <span class="hq-flip-platform font-mono">YOUTUBE</span>
+                </div>
+                <div class="hq-flip-back">
+                  <a href={HQ_YOUTUBE_URL} target="_blank" rel="noopener" class="hq-flip-link">
+                    <span class="hq-flip-label">4K Essays &amp; Shorts</span>
+                    <span class="hq-flip-arrow" aria-hidden="true">&#8599;</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div class="hq-flip-card" tabindex="0" role="region" aria-label="Substack platform: Written Criticism">
+              <div class="hq-flip-inner">
+                <div class="hq-flip-front" aria-hidden="true">
+                  <span class="hq-flip-platform font-mono">SUBSTACK</span>
+                </div>
+                <div class="hq-flip-back">
+                  <a href={HQ_SUBSTACK_URL} target="_blank" rel="noopener" class="hq-flip-link">
+                    <span class="hq-flip-label">Written Criticism</span>
+                    <span class="hq-flip-arrow" aria-hidden="true">&#8599;</span>
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1167,36 +1196,106 @@ const standards = [
     padding-top: 0.4rem;
   }
 
-  .hq-platform-pill {
+  .hq-flip-card {
+    position: relative;
+    perspective: 1000px;
+    height: 52px;
+    min-height: 52px;
+    cursor: pointer;
+    outline: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .hq-flip-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+
+  @media (hover: hover) {
+    .hq-flip-card:is(:hover, :focus-within) .hq-flip-inner {
+      transform: rotateY(180deg);
+    }
+  }
+
+  .hq-flip-card.is-flipped .hq-flip-inner,
+  .hq-flip-card:focus-within .hq-flip-inner {
+    transform: rotateY(180deg);
+  }
+
+  .hq-flip-front,
+  .hq-flip-back {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     display: flex;
-    flex-direction: column;
+    align-items: center;
     justify-content: center;
-    min-height: 48px;
-    padding: 0.55rem 0.65rem;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    box-sizing: border-box;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .hq-flip-front {
     background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    text-decoration: none;
-    transition: border-color 0.2s ease, background-color 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    transition: border-color 0.2s ease, background 0.2s ease;
   }
 
-  .hq-platform-pill:hover,
-  .hq-platform-pill:focus-visible {
-    border-color: var(--hq-red);
-    background: rgba(204, 0, 0, 0.08);
+  .hq-flip-card:hover .hq-flip-front {
+    border-color: rgba(255, 255, 255, 0.3);
   }
 
-  .hq-platform-name {
+  .hq-flip-platform {
     font-family: var(--font-display);
-    font-size: 0.74rem;
+    font-size: 0.8rem;
     font-weight: 800;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     color: #ffffff;
+    text-transform: uppercase;
   }
 
-  .hq-platform-sub {
-    font-size: 0.68rem;
-    color: var(--hq-muted);
-    margin-top: 0.15rem;
+  .hq-flip-back {
+    transform: rotateY(180deg);
+    background: #141414;
+    border: 1px solid var(--hq-red, #cc0000);
+    pointer-events: none;
+  }
+
+  .hq-flip-card:is(:hover, :focus-within, .is-flipped) .hq-flip-back {
+    pointer-events: auto;
+  }
+
+  .hq-flip-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    width: 100%;
+    height: 100%;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-align: center;
+    outline: none;
+  }
+
+  .hq-flip-link:hover,
+  .hq-flip-link:focus-visible {
+    color: #ffffff !important;
+    text-decoration: none !important;
+  }
+
+  .hq-flip-card:focus-visible {
+    outline: 2px solid var(--focus-ring, #ffffff);
+    outline-offset: 2px;
   }
 
   .hq-steps {
@@ -1817,9 +1916,23 @@ const standards = [
     }
   }
 
+  function initPlatformFlipCards() {
+    const cards = document.querySelectorAll<HTMLElement>('.hq-flip-card');
+    cards.forEach((card) => {
+      if (card.dataset.flipWired === '1') return;
+      card.dataset.flipWired = '1';
+      card.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('.hq-flip-link')) return;
+        card.classList.toggle('is-flipped');
+      });
+    });
+  }
+
   function initAll() {
     initHqParallax();
     initPublicationParallax();
+    initPlatformFlipCards();
   }
 
   initAll();
