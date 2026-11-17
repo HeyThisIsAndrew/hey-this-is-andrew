@@ -359,6 +359,15 @@ const galleryPayload = Object.fromEntries(
     hidden
     data-gallery-payload={JSON.stringify(galleryPayload)}
   >
+    <div class="cat-gallery-henna-frame" id="cat-gallery-henna-frame" aria-hidden="true">
+      <div class="cat-gallery-henna-side cat-gallery-henna-left">
+        <HennaBorderDraw side="left" />
+      </div>
+      <div class="cat-gallery-henna-side cat-gallery-henna-right">
+        <HennaBorderDraw side="right" />
+      </div>
+    </div>
+
     <header class="cat-gallery-header">
       <p id="cat-gallery-heading" class="cat-gallery-label" aria-live="polite">
         {[0, 1, 2].map((part) => part === 1 ? <span>{galleryCategories.henna.title}</span> :
@@ -535,6 +544,8 @@ const galleryPayload = Object.fromEntries(
     const nextBtn = document.getElementById('cat-gallery-next') as HTMLButtonElement | null;
     const imgEl = document.getElementById('cat-gallery-img') as HTMLImageElement | null;
     const stageEl = document.getElementById('cat-gallery-stage');
+    const hennaFrame = document.getElementById('cat-gallery-henna-frame');
+
     let activeKey = 'henna';
     let activeIndex = 0;
     let isGalleryOpen = false;
@@ -622,11 +633,21 @@ const galleryPayload = Object.fromEntries(
       activeIndex = 0;
       updateGalleryView();
 
+      hennaFrame?.classList.remove('is-drawn');
       lockGalleryScroll();
       modal.hidden = false;
       void modal.offsetWidth;
       modal.classList.add('is-open');
 
+      if (prefersReducedMotion()) {
+        hennaFrame?.classList.add('is-drawn');
+      } else {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            hennaFrame?.classList.add('is-drawn');
+          });
+        });
+      }
       closeBtn?.focus({ preventScroll: true });
     }
 
@@ -640,12 +661,14 @@ const galleryPayload = Object.fromEntries(
 
       if (prefersReducedMotion()) {
         modal.hidden = true;
+        hennaFrame?.classList.remove('is-drawn');
         return;
       }
 
       closeTimeout = window.setTimeout(() => {
         closeTimeout = null;
         modal.hidden = true;
+        hennaFrame?.classList.remove('is-drawn');
       }, 240);
     }
 
@@ -1299,6 +1322,38 @@ const galleryPayload = Object.fromEntries(
     stroke-width: 1.2;
   }
 
+  .cat-gallery-henna-frame {
+    position: absolute;
+    inset: 0;
+    pointer-events: none !important;
+    overflow: hidden;
+    z-index: 1;
+  }
+
+  .cat-gallery-henna-side {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: clamp(44px, 7vw, 110px);
+    opacity: 0.65;
+    pointer-events: none !important;
+  }
+
+  .cat-gallery-henna-left {
+    left: 0;
+  }
+
+  .cat-gallery-henna-right {
+    right: 0;
+  }
+
+  .cat-gallery-henna-side :global(.henna-art-svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none !important;
+  }
+
   .cat-gallery-header {
     position: relative;
     z-index: 20;
@@ -1387,6 +1442,7 @@ const galleryPayload = Object.fromEntries(
     max-width: min(74vw, 820px) !important;
     max-height: calc(100dvh - 120px) !important;
     object-fit: contain !important;
+    border-radius: 8px;
     border: 2px solid #c59b27;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75);
     background: #181310;
