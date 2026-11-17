@@ -1,0 +1,112 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SectionHeader from '@andrew/ui/SectionHeader.astro';
+import { CLIENT_WORK, CLIENT_WORK_TIERS } from '../data/client-work';
+import { CONTACT } from '../data/contact';
+---
+
+<BaseLayout title="Work With Me · HEY_THISISANDREW" description={CLIENT_WORK.paragraph} pane="Work With Me">
+  <div class="container client-work">
+    <header class="client-work-header" id="overview">
+      <p class="mono-tag client-work-brand">HEY_THISISANDREW</p>
+      <h1 class="display" data-pn-top data-pn-label="Overview">Work With Me</h1>
+      <p class="client-work-lede">{CLIENT_WORK.paragraph}</p>
+    </header>
+
+    <section class="client-work-tiers" id="website-builds" aria-label="Website build tiers" data-pn-label="Website builds">
+      {CLIENT_WORK_TIERS.map((tier, index) => (
+        <article class="client-work-card" aria-labelledby={`tier-${index + 1}`}>
+          <div class="tier-heading">
+            <p class="tier-index font-mono">Tier {index + 1}</p>
+            <h2 id={`tier-${index + 1}`}>{tier.name}</h2>
+            <p class="tier-example">{tier.example}</p>
+            <p class="tier-price">{String(tier.price) === 'TBD' ? 'Get a quote' : tier.price}</p>
+            <p class="tier-billing">{tier.billing}</p>
+          </div>
+          <dl class="tier-logistics">
+            <div><dt>Deposit</dt><dd>{tier.deposit}</dd></div>
+            <div><dt>Timeline</dt><dd>{tier.timeline}</dd></div>
+            <div><dt>Revisions</dt><dd>{tier.revisions}</dd></div>
+          </dl>
+          <div class="tier-list">
+            <h3>{'monthlyIncluded' in tier ? 'Included in the build' : 'Included'}</h3>
+            <ul>{tier.included.map((item) => <li>{item}</li>)}</ul>
+          </div>
+          {'monthlyIncluded' in tier && (
+            <div class="tier-list">
+              <h3>Monthly retainer</h3>
+              <p>{tier.retainer}</p>
+              <ul>{tier.monthlyIncluded.map((item) => <li>{item}</li>)}</ul>
+            </div>
+          )}
+          <div class="tier-list tier-exclusions">
+            <h3>Not included</h3>
+            <ul>{tier.notIncluded.map((item) => <li>{item}</li>)}</ul>
+          </div>
+          {'extras' in tier && <div class="tier-list"><h3>Extras</h3><p>{tier.extras}</p></div>}
+        </article>
+      ))}
+    </section>
+
+    <div class="client-work-terms" aria-label="Terms for all tiers">
+      <div><h3>Payment methods</h3><p>{CLIENT_WORK.paymentMethods}</p></div>
+      <div><h3>Wording changes after sign-off</h3><p>{CLIENT_WORK.wordingChanges}</p></div>
+    </div>
+
+    <section id="how-it-works" class="client-work-process" aria-labelledby="process-heading">
+      <SectionHeader id="process-heading" kicker="The process" title="How it works" />
+      <ol class="client-work-steps">
+        {CLIENT_WORK.steps.map((step) => <li>{step}</li>)}
+      </ol>
+    </section>
+
+    <section id="get-started" class="client-work-start" aria-labelledby="start-heading">
+      <SectionHeader id="start-heading" kicker="Intake, then approval" title="Get started" />
+      <div class="btn-group client-work-actions">
+        <a class="btn btn-primary" href={CLIENT_WORK.intakeUrl} target="_blank" rel="noopener noreferrer">Fill Out The Sign Up Form</a>
+        <a class="btn btn-secondary" href={CLIENT_WORK.wordingListUrl} target="_blank" rel="noopener noreferrer">Start With The Wording List</a>
+      </div>
+      <p class="client-work-intake-note">{CLIENT_WORK.intakeNote}</p>
+      <a class="btn btn-secondary client-work-email" href={`mailto:${CONTACT.personal}`}>Email Andrew</a>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .client-work { padding-block: clamp(3rem, 7vw, 7rem) 0; }
+  .client-work-header { max-width: 76rem; margin-bottom: clamp(3rem, 6vw, 6rem); }
+  .client-work-brand { white-space: nowrap; margin: 0 0 1.5rem; }
+  .client-work h1 { font-size: clamp(1.7rem, 5.5vw, 5rem); }
+  .client-work-lede { max-width: 66ch; margin: 1.75rem 0 0; color: var(--muted); font-size: clamp(1.05rem, 1.5vw, 1.35rem); }
+  .client-work-tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; padding: 0; align-items: start; }
+  .client-work-card { min-width: 0; padding: clamp(1.5rem, 2.4vw, 2.75rem); border: 1px solid var(--line); background: var(--surface); }
+  .tier-index { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.18em; margin: 0 0 1rem; }
+  .tier-heading h2 { font-family: var(--font-display); font-size: clamp(1rem, 1.25vw, 1.65rem); font-weight: 800; line-height: 1.15; text-transform: uppercase; margin: 0; }
+  .tier-example { color: var(--muted); margin: 1rem 0 1.75rem; }
+  .tier-price { font-family: var(--font-display); font-size: clamp(2.4rem, 3.8vw, 4rem); font-weight: 800; line-height: 1.1; margin: 0; }
+  .tier-billing { margin: 0.5rem 0 0; color: var(--muted); }
+  .tier-logistics { display: grid; gap: 1.25rem; padding-block: 1.75rem; margin: 1.75rem 0 0; border-top: 1px solid var(--line); }
+  .client-work h3, .tier-logistics dt { margin: 0 0 0.5rem; font: 700 0.8rem / 1.5 var(--font-display); letter-spacing: 0.1em; text-transform: uppercase; }
+  .tier-logistics dd { margin: 0; color: var(--muted); }
+  .tier-list { border-top: 1px solid var(--line); padding-top: 1.5rem; margin-top: 1.5rem; }
+  .tier-list ul { padding-left: 1.1rem; margin: 0; }
+  .tier-list li + li { margin-top: 0.65rem; }
+  .tier-list p { margin: 0 0 1rem; }
+  .tier-exclusions { color: var(--muted); }
+  .tier-exclusions h3 { color: var(--ink); }
+  .client-work-terms { display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; padding-block: 2rem; margin-top: 2rem; border-bottom: 1px solid var(--line); }
+  .client-work-terms p { color: var(--muted); margin: 0; max-width: 75ch; }
+  .client-work-process, .client-work-start { padding-block: clamp(3rem, 6vw, 5rem); }
+  .client-work-steps { list-style: decimal-leading-zero; margin: 0; padding-left: 2.5rem; max-width: 75ch; }
+  .client-work-steps li { padding: 1rem 0 1rem 1rem; border-bottom: 1px solid var(--line); }
+  .client-work-steps li::marker { font-family: var(--font-mono); color: var(--muted); }
+  .client-work-start { border-top: 1px solid var(--line); }
+  .client-work-intake-note { max-width: 70ch; color: var(--muted); margin: 1.5rem 0 0; }
+  .client-work-email { margin-top: 2rem; }
+  @media (max-width: 1099px) { .client-work-tiers { grid-template-columns: 1fr; } }
+  @media (min-width: 600px) and (max-width: 1099px) { .tier-heading h2 { font-size: 1.7rem; } }
+  @media (max-width: 600px) {
+    .client-work-terms { grid-template-columns: 1fr; }
+    .client-work-actions { width: 100%; }
+  }
+</style>

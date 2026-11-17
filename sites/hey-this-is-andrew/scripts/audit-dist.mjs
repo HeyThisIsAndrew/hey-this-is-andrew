@@ -166,7 +166,7 @@ for (const page of pages) {
       const mainLinks = [...mainHtml.matchAll(/href="([^"]+)"/g)].map(m => m[1]);
       for (const link of mainLinks) {
         if (!link.startsWith('http') && !link.startsWith('#') && !link.startsWith(base + '#')) {
-          const allowed = [base + 'about/#press', base + 'gear/', base + 'rss.xml'];
+          const allowed = [base + 'about/#press', base + 'gear/', base + 'rss.xml', base + 'work-with-me/'];
           // The goals summary opens its group's row of the /build accordion
           // (the full checklists live there, by Andrew's call).
           const isBuildRow = link === base + 'build/' || link.startsWith(base + 'build/#');

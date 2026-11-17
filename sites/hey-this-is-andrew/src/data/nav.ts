@@ -6,6 +6,7 @@ const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 export const homeUrl = base ? `${base}/` : '/';
 const page = (slug: string) => `${base}/${slug}/`;
+export const WORK_WITH_ME_HREF = page('work-with-me');
 
 const toSubsections = (sections: { id: string; label: string; kicker?: string }[], baseUrl: string) =>
   sections.map((s) => ({
@@ -61,6 +62,7 @@ export const NAV_LINKS: NavItem[] = [
       { label: 'Events', href: page('events'), kicker: '' },
     ],
   },
+  { label: 'Work With Me', href: WORK_WITH_ME_HREF, section: 'client-work', subsections: [] },
 ];
 
 export const FOOTER_EXPLORE: FooterLink[] = [
