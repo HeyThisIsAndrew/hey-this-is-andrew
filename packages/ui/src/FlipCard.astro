@@ -90,29 +90,8 @@ const backId = `${idPrefix}-${index}`;
   <div class="flip-card-inner">
     <div class:list={['flip-card-front', image && imageSide === 'front' && 'flip-card-front--has-media']}>
       {image && imageSide === 'front' && (
-        <div class:list={['flip-card-media', isLogo && 'flip-card-media--slate']}>
-          {isLogo ? (
-            <div class="flip-card-slate">
-              <div class="flip-card-slate-lockup">
-                {typeof image === 'string' ? (
-                  <img src={image} alt={imageAlt ?? ''} width="80" height="80" class="flip-card-slate-logo" />
-                ) : (
-                  <Image
-                    src={image}
-                    alt={imageAlt ?? ''}
-                    width={80}
-                    height={80}
-                    format="webp"
-                    quality={92}
-                    class="flip-card-slate-logo"
-                  />
-                )}
-              </div>
-              {slateLabel && (
-                <span class="flip-card-slate-label font-mono">{slateLabel}</span>
-              )}
-            </div>
-          ) : (
+        <div class:list={['flip-card-media', isLogo && 'flip-card-media--slate']} aria-hidden="true">
+          {!isLogo && (
             <>
               {typeof image === 'string' ? (
                 <img
@@ -133,12 +112,32 @@ const backId = `${idPrefix}-${index}`;
                   style={imagePosition ? `object-position: ${imagePosition};` : undefined}
                 />
               )}
-              <div class="flip-card-media-overlay" aria-hidden="true" />
+              <div class="flip-card-media-overlay" />
             </>
           )}
         </div>
       )}
       <div class="flip-card-content">
+        {isLogo && image && (
+          <div class="flip-card-logo-lockup">
+            {typeof image === 'string' ? (
+              <img src={image} alt={imageAlt ?? ''} width="50" height="50" class="flip-card-slate-logo" />
+            ) : (
+              <Image
+                src={image}
+                alt={imageAlt ?? ''}
+                width={50}
+                height={50}
+                format="webp"
+                quality={92}
+                class="flip-card-slate-logo"
+              />
+            )}
+            {slateLabel && (
+              <span class="flip-card-slate-label font-mono">{slateLabel}</span>
+            )}
+          </div>
+        )}
         {kickerFirst && label && <span class="stat-label">{label}</span>}
         <span class:list={['stat-value', longValue && 'stat-value-long']}>
           {value}
@@ -164,29 +163,8 @@ const backId = `${idPrefix}-${index}`;
     </div>
     <div class:list={['flip-card-back', image && imageSide === 'back' && 'flip-card-back--has-media']}>
       {image && imageSide === 'back' && (
-        <div class:list={['flip-card-media', isLogo && 'flip-card-media--slate']}>
-          {isLogo ? (
-            <div class="flip-card-slate">
-              <div class="flip-card-slate-lockup">
-                {typeof image === 'string' ? (
-                  <img src={image} alt={imageAlt ?? ''} width="80" height="80" class="flip-card-slate-logo" />
-                ) : (
-                  <Image
-                    src={image}
-                    alt={imageAlt ?? ''}
-                    width={80}
-                    height={80}
-                    format="webp"
-                    quality={92}
-                    class="flip-card-slate-logo"
-                  />
-                )}
-              </div>
-              {slateLabel && (
-                <span class="flip-card-slate-label font-mono">{slateLabel}</span>
-              )}
-            </div>
-          ) : (
+        <div class:list={['flip-card-media', isLogo && 'flip-card-media--slate']} aria-hidden="true">
+          {!isLogo && (
             <>
               {typeof image === 'string' ? (
                 <img
@@ -207,12 +185,32 @@ const backId = `${idPrefix}-${index}`;
                   style={imagePosition ? `object-position: ${imagePosition};` : undefined}
                 />
               )}
-              <div class="flip-card-media-overlay" aria-hidden="true" />
+              <div class="flip-card-media-overlay" />
             </>
           )}
         </div>
       )}
       <div class="flip-card-back-content">
+        {isLogo && image && imageSide === 'back' && (
+          <div class="flip-card-logo-lockup">
+            {typeof image === 'string' ? (
+              <img src={image} alt={imageAlt ?? ''} width="50" height="50" class="flip-card-slate-logo" />
+            ) : (
+              <Image
+                src={image}
+                alt={imageAlt ?? ''}
+                width={50}
+                height={50}
+                format="webp"
+                quality={92}
+                class="flip-card-slate-logo"
+              />
+            )}
+            {slateLabel && (
+              <span class="flip-card-slate-label font-mono">{slateLabel}</span>
+            )}
+          </div>
+        )}
         {backText && <p id={backId}>{backText}</p>}
         {actionHref ? (
           <a
@@ -324,6 +322,7 @@ const backId = `${idPrefix}-${index}`;
     border: none;
     padding: 0;
     perspective: 1000px;
+    -webkit-perspective: 1000px;
     width: 100%;
     font-family: inherit;
     line-height: 1.5;
@@ -383,23 +382,28 @@ const backId = `${idPrefix}-${index}`;
     grid-template-columns: minmax(0, 1fr);
     text-align: center;
     transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    -webkit-transition: -webkit-transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
     pointer-events: none;
   }
 
   @media (hover: hover) and (pointer: fine) {
     .flip-card:hover:not(.is-dismissed) .flip-card-inner {
       transform: rotateY(180deg);
+      -webkit-transform: rotateY(180deg);
     }
   }
 
   .flip-card.is-flipped .flip-card-inner {
     transform: rotateY(180deg);
+    -webkit-transform: rotateY(180deg);
   }
 
   @media (prefers-reduced-motion: reduce) {
     .flip-card-inner {
       transition: none !important;
+      -webkit-transition: none !important;
     }
   }
 
@@ -410,8 +414,10 @@ const backId = `${idPrefix}-${index}`;
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden !important;
+    backface-visibility: hidden !important;
+    transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
     border-radius: 0;
     padding: var(--flip-padding, calc(2.5 * var(--flip-rem)) calc(1.5 * var(--flip-rem)));
     display: flex;
@@ -427,7 +433,80 @@ const backId = `${idPrefix}-${index}`;
   }
 
   .flip-card-front {
-    container-type: inline-size;
+    transform: rotateY(0deg) translateZ(1px);
+    -webkit-transform: rotateY(0deg) translateZ(1px);
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    transition:
+      visibility 0s linear 0s,
+      opacity 0.15s ease 0s,
+      border-color 0.3s ease,
+      box-shadow 0.3s ease;
+  }
+
+  .flip-card-back {
+    transform: rotateY(180deg) translateZ(1px);
+    -webkit-transform: rotateY(180deg) translateZ(1px);
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    background: var(--flip-bg-back, rgba(25, 25, 25, 0.95));
+    text-align: center;
+    transition:
+      visibility 0s linear 0.3s,
+      opacity 0.15s ease 0.3s,
+      border-color 0.3s ease,
+      box-shadow 0.3s ease;
+  }
+
+  /* When flipped: front face hides at midpoint, back face becomes visible at midpoint */
+  .flip-card.is-flipped .flip-card-front {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      visibility 0s linear 0.3s,
+      opacity 0.15s ease 0.15s;
+  }
+
+  .flip-card.is-flipped .flip-card-back {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    transition:
+      visibility 0s linear 0.3s,
+      opacity 0.15s ease 0.3s;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .flip-card:hover:not(.is-dismissed) .flip-card-front {
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition:
+        visibility 0s linear 0.3s,
+        opacity 0.15s ease 0.15s;
+    }
+
+    .flip-card:hover:not(.is-dismissed) .flip-card-back {
+      visibility: visible;
+      opacity: 1;
+      pointer-events: auto;
+      transition:
+        visibility 0s linear 0.3s,
+        opacity 0.15s ease 0.3s;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flip-card-front,
+    .flip-card-back,
+    .flip-card.is-flipped .flip-card-front,
+    .flip-card.is-flipped .flip-card-back {
+      transition: none !important;
+      -webkit-transition: none !important;
+    }
   }
 
   /* When a card includes a back-face action button + longer paragraph, tighten
@@ -435,12 +514,6 @@ const backId = `${idPrefix}-${index}`;
   .flip-card--has-action .flip-card-back {
     padding: calc(1.25 * var(--flip-rem)) calc(1.25 * var(--flip-rem));
     gap: calc(0.45 * var(--flip-rem));
-  }
-
-  .flip-card-back {
-    transform: rotateY(180deg);
-    background: var(--flip-bg-back, rgba(25, 25, 25, 0.95));
-    text-align: center;
   }
 
   @media (hover: hover) and (pointer: fine) {
@@ -464,12 +537,15 @@ const backId = `${idPrefix}-${index}`;
   .flip-card-content,
   .flip-card-back-content {
     position: relative;
-    z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     width: 100%;
+    -webkit-backface-visibility: hidden !important;
+    backface-visibility: hidden !important;
+    transform: translateZ(2px);
+    -webkit-transform: translateZ(2px);
   }
 
   .flip-card-media {
@@ -478,8 +554,9 @@ const backId = `${idPrefix}-${index}`;
     width: 100%;
     height: 100%;
     overflow: hidden;
-    z-index: 0;
     pointer-events: none;
+    -webkit-backface-visibility: hidden !important;
+    backface-visibility: hidden !important;
   }
 
   .flip-card-img {
@@ -497,27 +574,24 @@ const backId = `${idPrefix}-${index}`;
   }
 
   .flip-card-media--slate {
-    background: radial-gradient(ellipse at center, #202020, #080808 75%);
-    display: grid;
-    place-items: center;
+    background: radial-gradient(ellipse at center, #222222, #0a0a0a 75%);
   }
 
-  .flip-card-slate {
+  .flip-card-logo-lockup {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.6rem;
-    padding: 1rem;
-    position: relative;
-    z-index: 1;
+    gap: 0.35rem;
+    margin-bottom: calc(0.35 * var(--flip-rem));
   }
 
   .flip-card-slate-logo {
-    width: 72px;
-    height: 72px;
+    width: clamp(40px, 4.5vw, 50px);
+    height: auto;
+    aspect-ratio: 1 / 1;
     object-fit: contain;
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+    filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.7));
   }
 
   .flip-card-slate-label {
@@ -548,7 +622,7 @@ const backId = `${idPrefix}-${index}`;
     font-family: var(--flip-font-value, var(--font-display));
     font-size: var(
       --flip-value-size,
-      clamp(calc(0.95 * var(--flip-rem)), min(5.8cqw, calc(0.95 * var(--flip-rem) + 0.6vw)), calc(1.4 * var(--flip-rem)))
+      clamp(calc(0.95 * var(--flip-rem)), calc(0.95 * var(--flip-rem) + 0.6vw), calc(1.4 * var(--flip-rem)))
     );
     font-weight: 800;
     line-height: 1.25;
@@ -564,7 +638,7 @@ const backId = `${idPrefix}-${index}`;
   .stat-value-long {
     font-size: var(
       --flip-value-long-size,
-      clamp(calc(0.85 * var(--flip-rem)), min(4.8cqw, calc(0.6 * var(--flip-rem) + 0.6vw)), calc(1.15 * var(--flip-rem)))
+      clamp(calc(0.85 * var(--flip-rem)), calc(0.6 * var(--flip-rem) + 0.6vw), calc(1.15 * var(--flip-rem)))
     );
     letter-spacing: 0.05em;
     line-height: 1.25;
