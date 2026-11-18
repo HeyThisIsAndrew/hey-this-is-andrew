@@ -140,6 +140,7 @@ const linkAttrs = (href?: string) =>
                       {brand.teaserSvg && <span class="bacc-teaser-art" set:html={brand.teaserSvg} />}
                     </div>
                   )}
+                  <div class="bacc-media-tint" aria-hidden="true" />
                 </div>
 
                 <button
@@ -385,12 +386,31 @@ const linkAttrs = (href?: string) =>
     overflow: hidden;
     background: #111;
     color: var(--text);
+    border: 1px solid transparent;
+    border-radius: 0;
     transition:
       flex-grow var(--acc-duration) var(--acc-ease),
-      flex-basis var(--acc-duration) var(--acc-ease);
+      flex-basis var(--acc-duration) var(--acc-ease),
+      border-color 0.3s ease,
+      box-shadow 0.3s ease;
   }
   .bacc-panel.is-open {
     flex: 1 1 0%;
+  }
+  .bacc-panel[data-brand-id="be"]:hover,
+  .bacc-panel[data-accent="be-red"]:hover {
+    border-color: rgba(230, 0, 0, 0.65);
+    box-shadow: 0 0 30px rgba(230, 0, 0, 0.28);
+  }
+  .bacc-panel[data-brand-id="ccc"]:hover,
+  .bacc-panel[data-accent="ccc-gold"]:hover {
+    border-color: rgba(201, 169, 110, 0.65);
+    box-shadow: 0 0 30px rgba(201, 169, 110, 0.28);
+  }
+  .bacc-panel[data-brand-id="sip-the-magic"]:hover,
+  .bacc-panel[data-accent="slate"]:hover {
+    border-color: rgba(130, 130, 160, 0.65);
+    box-shadow: 0 0 30px rgba(130, 130, 160, 0.28);
   }
   /* The active edge: a pseudo-element, so opening a panel shifts nothing. */
   .bacc-panel::before {
@@ -430,6 +450,30 @@ const linkAttrs = (href?: string) =>
   .bacc-media {
     position: absolute;
     inset: 0;
+    border-radius: 0;
+  }
+  .bacc-media-tint {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.75;
+    transition: opacity 0.4s ease;
+  }
+  .bacc-panel[data-brand-id="be"] .bacc-media-tint,
+  .bacc-panel[data-accent="be-red"] .bacc-media-tint {
+    background: radial-gradient(circle at 50% 100%, rgba(230, 0, 0, 0.28) 0%, transparent 68%);
+  }
+  .bacc-panel[data-brand-id="ccc"] .bacc-media-tint,
+  .bacc-panel[data-accent="ccc-gold"] .bacc-media-tint {
+    background: radial-gradient(circle at 50% 100%, rgba(201, 169, 110, 0.28) 0%, transparent 68%);
+  }
+  .bacc-panel[data-brand-id="sip-the-magic"] .bacc-media-tint,
+  .bacc-panel[data-accent="slate"] .bacc-media-tint {
+    background: radial-gradient(circle at 50% 100%, rgba(130, 130, 160, 0.2) 0%, transparent 68%);
+  }
+  .bacc-panel:hover .bacc-media-tint {
+    opacity: 1;
   }
   .bacc-media > :global(img),
   .bacc-media > .bacc-teaser {
