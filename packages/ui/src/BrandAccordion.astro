@@ -603,32 +603,9 @@ const linkAttrs = (href?: string) =>
   /* ─── METADATA CHIPS (HQ .acc-chips) ────────────────────────────────── */
   /* WHOSE, then WHAT: the brand with the accent tick, then its kicker. One
      row, exactly one chip tall: a chip that does not fit leaves whole. */
+  /* Category 4 removal: hide debug metadata chips/badges above the headline */
   .bacc-chips {
-    --chip-fs: calc(8.704 * var(--u));
-    --chip-py: calc(5.12 * var(--u));
-    position: absolute;
-    top: var(--pad);
-    left: var(--pad);
-    right: calc(var(--pad) + 44.8 * var(--u));
-    z-index: 6;
-    margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: calc(6.4 * var(--u));
-    max-height: calc(var(--chip-fs) * 1.2 + 2 * var(--chip-py) + 2px);
-    overflow: hidden;
-    white-space: nowrap;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s ease-out;
-  }
-  .bacc-panel:not(.is-open) .bacc-chips {
-    display: none;
-  }
-  .bacc-panel.is-open .bacc-chips {
-    display: flex;
-    opacity: 1;
-    transition: opacity 0.4s ease-in 0.2s;
+    display: none !important;
   }
   .bacc-chip {
     display: inline-block;
@@ -892,42 +869,52 @@ const linkAttrs = (href?: string) =>
     position: absolute;
     top: 14px;
     right: 14px;
-    z-index: 8;
+    z-index: 12;
     display: grid;
     place-items: center;
-    /* HQ's 40px subtle circular button */
-    width: 40px;
-    height: 40px;
+    /* HQ's 38px subtle circular button */
+    width: 38px;
+    height: 38px;
+    min-height: 38px;
     padding: 0;
     border: 1px solid rgba(255, 255, 255, 0.22);
-    border-radius: 50%;
-    background: rgba(8, 8, 8, 0.55);
-    color: rgba(255, 255, 255, 0.75);
+    border-radius: 50% !important;
+    background: rgba(10, 10, 10, 0.6) !important;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    color: rgba(245, 245, 245, 0.85) !important;
     cursor: pointer;
     box-shadow: none;
     -webkit-tap-highlight-color: transparent;
-    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.15s ease;
   }
   .bacc-toggle:focus-visible {
-    outline: 2px solid var(--focus-ring);
+    outline: 2px solid var(--focus-ring, #fff);
     outline-offset: 2px;
   }
   .bacc-toggle:hover,
   .bacc-toggle:focus-visible {
     border-color: rgba(255, 255, 255, 0.5);
-    background: rgba(8, 8, 8, 0.85);
-    color: #fff;
+    background: rgba(10, 10, 10, 0.85) !important;
+    color: #fff !important;
     box-shadow: none;
     transform: none;
+  }
+  .bacc-toggle:active {
+    transform: scale(0.94);
   }
   .bacc-toggle[hidden] {
     display: none;
   }
-  .bacc-toggle .bacc-icon-pause,
-  .bacc-toggle.is-paused .bacc-icon-play {
+  /* Inverted fix: When playing, show PAUSE icon. When paused (is-paused), show PLAY icon. */
+  .bacc-toggle .bacc-icon-play,
+  .bacc-toggle.is-paused .bacc-icon-pause {
     display: none;
   }
-  .bacc-toggle.is-paused .bacc-icon-pause {
+  .bacc-toggle.is-paused .bacc-icon-play {
+    display: block;
+  }
+  .bacc-toggle:not(.is-paused) .bacc-icon-pause {
     display: block;
   }
 
@@ -1096,6 +1083,7 @@ const linkAttrs = (href?: string) =>
     .bacc-toggle {
       top: 10px;
       right: 10px;
+      z-index: 12;
     }
   }
   /* Phone portrait (HQ: "way too busy"): no button under the copy. The
