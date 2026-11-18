@@ -1,11 +1,9 @@
 ---
 import type { LatestItem } from '../lib/latest-content';
-import { formatFeedDate } from '../lib/dates';
 import { SOCIAL_ICONS } from '@andrew/ui/icons';
 
 interface Props { item: LatestItem; compact?: boolean }
 const { item, compact = false } = Astro.props;
-const date = formatFeedDate(item.date, { month: 'short', year: 'numeric' });
 const cta = item.kind === 'video' ? 'Watch the video' : 'Read on Substack';
 // Videos open the in-page player with a spatial zoom from the card.
 // Articles still open externally.
@@ -31,7 +29,6 @@ const isVideo = item.kind === 'video';
   )}
   {compact && !item.image && <div class="thumb thumb--platform" aria-hidden="true"><span set:html={SOCIAL_ICONS[item.kind === 'video' ? 'YouTube' : 'Substack']} /></div>}
   <div class="latest-meta">
-    <p class="latest-eyebrow"><span class="live-dot" aria-hidden="true"></span>{item.label} &middot; {date}</p>
     <h3>{item.title}</h3>
     {item.description && <p class="latest-desc">{item.description}</p>}
     <p class="latest-cta">{cta} <span aria-hidden="true">&nearr;</span></p>
@@ -81,20 +78,6 @@ const isVideo = item.kind === 'video';
   .latest-card--compact .latest-meta { padding: 1.1rem; }
   .latest-card--compact .latest-meta h3 { font-size: clamp(1.05rem, 2.6vw, 1.3rem); }
   .latest-card--compact .latest-desc { font-size: 0.85rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .latest-eyebrow {
-    display: flex; align-items: center; gap: 0.5rem;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--key-ink);
-    margin: 0 0 0.75rem;
-  }
-  .live-dot {
-    width: 0.5rem; height: 0.5rem;
-    background: var(--key);
-    display: inline-block;
-  }
   .latest-meta h3 { margin: 0 0 0.75rem; font-size: 1.6rem; line-height: 1.2; overflow-wrap: anywhere; }
   .latest-desc { margin: 0 0 1.25rem; color: var(--muted); font-size: 0.95rem; }
   .latest-cta {
