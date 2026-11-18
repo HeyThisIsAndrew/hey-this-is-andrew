@@ -2,7 +2,7 @@
 import { Image } from 'astro:assets';
 import portraitImg from '../assets/hero-media/portrait.jpg';
 import { SUBSTACK_URL } from '../lib/latest-content';
-import { NOW_MONTH, NOW_ITEMS } from '../data/now';
+import { NOW_ITEMS } from '../data/now';
 
 interface Props {
   /** Full version (About page): the longer telling, Substack kicker link. */
@@ -32,7 +32,6 @@ const STORY = {
         </svg>
       </span>
       <h2 class="about-bar-title" id="about-heading">{full ? 'About Andrew' : 'Meet The Creator'}</h2>
-      <span class="about-bar-cats font-mono">Creator | Photographer | Coffee drinker</span>
       <span class="about-bar-rule" aria-hidden="true"></span>
     </div>
 
@@ -61,16 +60,13 @@ const STORY = {
           <div class="about-panels">
             <div class="about-dossier-grid">
               <article class="about-dossier-col" id="about-building">
-                <p class="about-dossier-kicker font-mono">What I'm building</p>
                 <p class="about-body">{STORY.building}</p>
               </article>
               <article class="about-dossier-col" id="about-how">
-                <p class="about-dossier-kicker font-mono">How I work</p>
                 {STORY.how.map((para) => <p class="about-body">{para}</p>)}
               </article>
             </div>
             <div class="about-now-ledger" id="now">
-              <p class="about-dossier-kicker font-mono">Now &middot; {NOW_MONTH}</p>
               <ul class="about-now-list">
                 {NOW_ITEMS.map((n) => (
                   <li class="about-now-item">
@@ -105,12 +101,6 @@ const STORY = {
         </div>
       </div>
     </div>
-
-    {!full && (
-      <p class="section-handoff font-mono">
-        <a href="#photos">Next: Shot on the job <span aria-hidden="true">&darr;</span></a>
-      </p>
-    )}
   </div>
 </section>
 
@@ -166,15 +156,11 @@ const STORY = {
       margin-bottom: 24px;
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
-      grid-template-areas:
-        'icon title'
-        'cats cats';
+      grid-template-areas: 'icon title';
       column-gap: 0.7rem;
-      row-gap: 0.55rem;
     }
     .about-bar-icon { grid-area: icon; }
     .about-bar-title { grid-area: title; font-size: min(1.15rem, 4.4vw); letter-spacing: 0.06em; white-space: normal; }
-    .about-bar-cats { grid-area: cats; font-size: 0.62rem; letter-spacing: 0.18em; white-space: normal; }
     .about-bar-rule { display: none; }
   }
 
@@ -339,23 +325,21 @@ const STORY = {
     min-width: 0;
     scroll-margin-top: calc(var(--nav-bar-h, 76px) + 1rem);
   }
-  .about-dossier-kicker {
-    margin: 0;
-    font-size: 0.72rem;
-    font-weight: 500;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--ink);
-  }
   .about-dossier-col .about-body {
-    margin-top: 0.75rem;
+    margin-top: 0;
     font-size: 0.94rem;
     line-height: 1.65;
   }
+  .about-dossier-col .about-body + .about-body {
+    margin-top: 0.75rem;
+  }
   @media (max-width: 767px) {
     .about-dossier-col .about-body {
-      margin-top: 0.65rem;
+      margin-top: 0;
       font-size: 0.96rem;
+    }
+    .about-dossier-col .about-body + .about-body {
+      margin-top: 0.65rem;
     }
   }
 
@@ -364,9 +348,6 @@ const STORY = {
     background: var(--surface);
     padding: 1.25rem 1.5rem;
     scroll-margin-top: calc(var(--nav-bar-h, 76px) + 1rem);
-  }
-  .about-now-ledger .about-dossier-kicker {
-    margin-bottom: 1rem;
   }
   .about-now-list {
     list-style: none;
