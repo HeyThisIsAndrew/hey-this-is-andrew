@@ -62,7 +62,7 @@ interface Props {
 }
 const { items = [], heading = 'Contents', selector = 'main h2[id], main [data-pn-entry][id]', topLabel = 'Overview', headerFallback = false } = Astro.props;
 ---
-<nav class="page-nav" id="page-nav" aria-label={heading} data-page-nav data-selector={selector} data-top-label={topLabel} data-mode="rail" data-header-fallback={headerFallback ? '' : undefined} hidden={items.length < 2 ? true : undefined}>
+<nav class="page-nav" id="page-nav" aria-label={heading} data-page-nav data-selector={selector} data-top-label={topLabel} data-mode={headerFallback ? 'header' : 'rail'} data-header-fallback={headerFallback ? '' : undefined} hidden={items.length < 2 ? true : undefined}>
   <button type="button" class="pn-handle" aria-expanded="false" data-pn-handle>
     <span class="pn-sr">Show the sections on this page</span>
   </button>
@@ -706,19 +706,9 @@ const { items = [], heading = 'Contents', selector = 'main h2[id], main [data-pn
         return;
       }
       if (nav.classList.contains('is-open')) setOpen(false);
-      nav.dataset.mode = 'rail';
-      const desktopRail = window.matchMedia('(hover: hover) and (pointer: fine) and (min-width: 1200px)').matches;
-      let edge: number;
-      if (desktopRail) {
-        const ticks = Array.from(nav.querySelectorAll<HTMLElement>('.pn-tick'));
-        const left = Math.min(...ticks.map((t) => t.getBoundingClientRect().left));
-        edge = left + (parseFloat(getComputedStyle(nav).getPropertyValue('--pn-tick-active')) || 26);
-      } else {
-        edge = nav.getBoundingClientRect().right;
-      }
-      const mode = textClearOf(edge + 6) ? 'rail' : 'header';
-      nav.dataset.mode = mode;
-      dockBtn.hidden = mode !== 'header';
+      void textClearOf;
+      nav.dataset.mode = 'header';
+      dockBtn.hidden = false;
     };
     if (dockBtn) {
       decideMode();
