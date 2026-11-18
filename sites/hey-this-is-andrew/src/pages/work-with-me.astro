@@ -1,10 +1,13 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
+import FlipCard from '@andrew/ui/FlipCard.astro';
 import { CLIENT_WORK, CLIENT_WORK_TIERS } from '../data/client-work';
 import { CONTACT } from '../data/contact';
 
 const depositText = '50% before build, 50% before launch.';
+
+const STEP_TERMS = ['Send', 'Wording List', 'Approve', 'Build', 'Deliver'] as const;
 
 function cleanRevisions(revisions: string): string {
   return revisions.replace(/,\s*extra\s+(?:round|page).*$/i, '.');
@@ -34,11 +37,6 @@ const cleanWordingChanges = CLIENT_WORK.wordingChanges.replace(
           <div class="tier-heading">
             <p class="tier-index font-mono">Tier {index + 1}</p>
             <h2 id={`tier-${index + 1}`}>{tier.name}</h2>
-            <p class="tier-example">{tier.example}</p>
-            <div class="tier-actions btn-group">
-              <a class="btn btn-secondary" href={CLIENT_WORK.intakeUrl} target="_blank" rel="noopener noreferrer">Start a Project</a>
-              <a class="btn btn-secondary" href={`mailto:${CONTACT.personal}`}>Email Andrew</a>
-            </div>
           </div>
           <dl class="tier-logistics">
             <div><dt>Deposit</dt><dd>{depositText}</dd></div>
@@ -65,14 +63,33 @@ const cleanWordingChanges = CLIENT_WORK.wordingChanges.replace(
     </section>
 
     <div class="client-work-terms" aria-label="Terms for all tiers">
-      <div><h3>Payment methods</h3><p>{CLIENT_WORK.paymentMethods}</p></div>
-      <div><h3>Wording changes after sign-off</h3><p>{cleanWordingChanges}</p></div>
+      <FlipCard
+        value="Payment"
+        backText={CLIENT_WORK.paymentMethods}
+        idPrefix="term-payment"
+        index={0}
+      />
+      <FlipCard
+        value="Wording Changes"
+        backText={cleanWordingChanges}
+        idPrefix="term-wording"
+        index={1}
+      />
     </div>
 
     <section id="how-it-works" class="client-work-process" aria-labelledby="process-heading">
       <SectionHeader id="process-heading" title="How it works" />
       <ul class="client-work-steps" role="list">
-        {CLIENT_WORK.steps.map((step) => <li>{step}</li>)}
+        {CLIENT_WORK.steps.map((step, index) => (
+          <li class="client-work-step-item">
+            <FlipCard
+              value={STEP_TERMS[index]}
+              backText={step}
+              idPrefix="step-flip"
+              index={index}
+            />
+          </li>
+        ))}
       </ul>
     </section>
 
@@ -89,17 +106,19 @@ const cleanWordingChanges = CLIENT_WORK.wordingChanges.replace(
 </BaseLayout>
 
 <style>
-  .client-work { padding-block: clamp(3rem, 7vw, 7rem) 0; }
-  .client-work-header { max-width: 76rem; margin-bottom: clamp(3rem, 6vw, 6rem); }
-  .client-work h1 { font-size: clamp(1.7rem, 5.5vw, 5rem); }
-  .client-work-lede { max-width: 66ch; margin: 1.75rem 0 0; color: var(--muted); font-size: clamp(1.05rem, 1.5vw, 1.35rem); }
+  .client-work { padding-block: clamp(2rem, 3.5vw, 3.5rem) 0; }
+  .client-work-header { max-width: 76rem; margin-bottom: clamp(2rem, 3.5vw, 3rem); }
+  .client-work h1 { font-size: clamp(2rem, 3.5vw, 3.25rem); }
+  .client-work-lede { max-width: 66ch; margin: 0.85rem 0 0; color: var(--muted); font-size: clamp(1.05rem, 1.35vw, 1.25rem); }
   .client-work-tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; padding: 0; align-items: stretch; grid-auto-rows: 1fr; }
   .client-work-card { min-width: 0; padding: clamp(1.5rem, 2.4vw, 2.75rem); border: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; }
   .tier-index { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.18em; margin: 0 0 1rem; }
   .tier-heading h2 { font-family: var(--font-display); font-size: clamp(1rem, 1.25vw, 1.65rem); font-weight: 800; line-height: 1.15; text-transform: uppercase; margin: 0; }
-  .tier-example { color: var(--muted); margin: 1rem 0 1.5rem; }
-  :global(#site) .tier-actions { display: grid; grid-template-columns: 1fr; grid-auto-flow: row; width: 100%; margin: 0; gap: 0.65rem; }
-  :global(#site) .tier-actions .btn { width: 100%; }
+  @media (min-width: 1100px) {
+    .tier-heading {
+      min-height: 7.5rem;
+    }
+  }
   .tier-logistics { display: grid; gap: 1.25rem; padding-block: 1.75rem; margin: 1.75rem 0 0; border-top: 1px solid var(--line); }
   .client-work h3, .tier-logistics dt { margin: 0 0 0.5rem; font: 700 0.8rem / 1.5 var(--font-display); letter-spacing: 0.1em; text-transform: uppercase; }
   .tier-logistics dd { margin: 0; color: var(--muted); }
@@ -109,21 +128,23 @@ const cleanWordingChanges = CLIENT_WORK.wordingChanges.replace(
   .tier-list p { margin: 0 0 1rem; }
   .tier-exclusions { color: var(--muted); }
   .tier-exclusions h3 { color: var(--ink); }
-  .client-work-terms { display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; padding-block: 2rem; margin-top: 2rem; border-bottom: 1px solid var(--line); }
-  .client-work-terms p { color: var(--muted); margin: 0; max-width: 75ch; }
+  .client-work-terms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; padding-block: clamp(2.5rem, 4vw, 4rem); margin-top: clamp(2.5rem, 4vw, 4rem); border-bottom: 1px solid var(--line); align-items: stretch; }
   .client-work-process, .client-work-start { padding-block: clamp(3rem, 6vw, 5rem); }
-  .client-work-steps { list-style: none; margin: 0; padding: 0; width: 100%; }
-  .client-work-steps li { padding: 1rem 0; border-bottom: 1px solid var(--line); }
+  .client-work-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1.25rem; list-style: none; margin: 2rem 0 0; padding: 0; width: 100%; align-items: stretch; }
+  .client-work-step-item { display: flex; flex-direction: column; height: 100%; min-width: 0; }
   .client-work-start { border-top: 1px solid var(--line); }
   .client-work-intake-note { max-width: 70ch; color: var(--muted); margin: 1.5rem 0 0; }
   .client-work-actions { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
-  @media (max-width: 1099px) { .client-work-tiers { grid-template-columns: 1fr; } }
+  @media (max-width: 1099px) {
+    .client-work-tiers { grid-template-columns: 1fr; }
+    .client-work-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
   @media (min-width: 600px) and (max-width: 1099px) {
     .tier-heading h2 { font-size: 1.7rem; }
-    :global(#site) .tier-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (max-width: 600px) {
-    .client-work-terms { grid-template-columns: 1fr; }
+    .client-work-terms { grid-template-columns: 1fr; gap: 1.25rem; }
+    .client-work-steps { grid-template-columns: 1fr; gap: 1.25rem; }
     .client-work-actions { grid-template-columns: minmax(0, 1fr); grid-auto-flow: row; }
   }
 </style>

@@ -18,7 +18,6 @@ export const CLIENT_WORK = {
 export const CLIENT_WORK_TIERS = [
   {
     name: 'Landing Page',
-    example: 'Like Netta, Netta Henna and Feathered Soul.',
     price: '$1,000',
     billing: 'one time',
     deposit: '$500 before build, $500 before launch.',
@@ -42,7 +41,6 @@ export const CLIENT_WORK_TIERS = [
   },
   {
     name: 'Full Site Build',
-    example: 'Like HEY_THISISANDREW.',
     price: '$4,500',
     billing: 'one time',
     deposit: '$2,250 before build, $2,250 before launch.',
@@ -62,7 +60,6 @@ export const CLIENT_WORK_TIERS = [
   },
   {
     name: 'Full Infrastructure Build',
-    example: 'Like BE Unconventional HQ.',
     price: '$7,000',
     billing: 'one time plus $900 per month',
     deposit: '$3,500 before build, $3,500 before launch.',
