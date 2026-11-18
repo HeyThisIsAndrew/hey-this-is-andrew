@@ -48,8 +48,8 @@ export default defineConfig({
     // in a build (docs/local-cms-plan.md).
     localCms(localCmsConfig),
     sitemap({
-      // Hero concept previews and the 404 are not pages to index.
-      filter: (page) => !page.includes('/preview/') && !page.includes('/404') && !page.includes('/kit/') && !page.includes('/work/') && !page.includes('/goals/') && !page.includes('/services/') && !page.includes('/press/'),
+      // Hero concept previews, unlisted dev pages, and the 404 are not pages to index.
+      filter: (page) => !page.includes('/preview/') && !page.includes('/404') && !page.includes('/kit/') && !page.includes('/work/') && !page.includes('/goals/') && !page.includes('/services/') && !page.includes('/press/') && !page.includes('/brands/sip-the-magic'),
     }),
   ],
 });
