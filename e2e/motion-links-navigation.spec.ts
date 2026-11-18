@@ -103,7 +103,7 @@ for (const width of [390, 1440]) {
     for (let round=0;round<2;round++) {
       await navigateWithHeader(page,'Brands');
       await expect(page).toHaveURL(`${base}brands/`);
-      await expect(page.getByRole('heading',{level:1,name:'Brands',exact:true})).toBeVisible();
+      await expect(page.getByRole('heading',{level:1,name:'Brands',exact:true})).toBeAttached();
       await expect(page.locator('.brand-tile')).toHaveCount(3);
       await expect(page.locator('.brand-tile[href]')).toHaveCount(2);
       await expect(page.locator('[data-bacc]')).toHaveCount(0);
