@@ -1,8 +1,6 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
-import Accordion from '@andrew/ui/Accordion.astro';
-import AccordionRow from '@andrew/ui/AccordionRow.astro';
 
 interface Props { groups: CollectionEntry<'goals'>[] }
 const { groups } = Astro.props;
@@ -19,49 +17,47 @@ const buildUrl = rawBase === '/' ? '/build/' : `${rawBase.replace(/\/$/, '')}/bu
   <div class="container">
     <SectionHeader id="goals-heading" title="Goals" />
 
-    <div class="goals-board">
-      <Accordion exclusive>
-        {groups.map((group) => {
-          const { done, total } = count(group);
-          const firstItem = group.data.items[0];
-          const previewText = firstItem ? firstItem.label : undefined;
-          return (
-            <AccordionRow
-              id={`home-goal-${group.id}`}
-              title={group.data.title}
-              subtitle={previewText}
-              progressCount={done}
-              progressTotal={total}
-              open={false}
-              level={3}
-              size="md"
-            >
-              <ul class="goal-ledger-list">
-                {group.data.items.map((item) => {
-                  const statusKey = item.status === 'next' ? 'queued' : item.status;
-                  const statusText = item.status === 'done' ? 'Done' : item.status === 'in-progress' ? 'In Progress' : 'Queued';
-                  return (
-                    <li class:list={['goal-ledger-item', 'checklist-card', { 'is-done': item.status === 'done', completed: item.status === 'done' }]}>
-                      <span class:list={['checklist-mark', { 'is-done': item.status === 'done', 'is-active': item.status === 'in-progress' }]} aria-hidden="true">
-                        {item.status === 'done' && (
-                          <svg viewBox="0 0 16 16" width="11" height="11" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="square" /></svg>
-                        )}
-                      </span>
-                      <div class="goal-ledger-info">
-                        <span class="goal-ledger-label checklist-title">{item.label}</span>
-                        {item.note && <span class="goal-ledger-note checklist-desc">{item.note}</span>}
-                      </div>
-                      <span class="goal-status-badge font-mono" data-status={statusKey}>
-                        {statusText}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </AccordionRow>
-          );
-        })}
-      </Accordion>
+    <div class="goals-board" role="region" aria-label="Goals by group">
+      {groups.map((group) => {
+        const { done, total } = count(group);
+        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+        return (
+          <article class="goal-card" id={`home-goal-${group.id}`}>
+            <header class="goal-card-head">
+              <h3 class="goal-card-title">{group.data.title}</h3>
+              <div class="goal-card-progress" aria-label={`Progress: ${done} of ${total}`}>
+                <div class="goal-progress-bar" aria-hidden="true">
+                  <div class="goal-progress-fill" style={`width: ${pct}%`}></div>
+                </div>
+                <span class="goal-progress-count font-mono">{done} of {total}</span>
+              </div>
+            </header>
+
+            <ul class="goal-ledger-list">
+              {group.data.items.map((item) => {
+                const statusKey = item.status === 'next' ? 'queued' : item.status;
+                const statusText = item.status === 'done' ? 'Done' : item.status === 'in-progress' ? 'In Progress' : 'Queued';
+                return (
+                  <li class:list={['goal-ledger-item', 'checklist-card', { 'is-done': item.status === 'done', completed: item.status === 'done' }]}>
+                    <span class:list={['checklist-mark', { 'is-done': item.status === 'done', 'is-active': item.status === 'in-progress' }]} aria-hidden="true">
+                      {item.status === 'done' && (
+                        <svg viewBox="0 0 16 16" width="11" height="11" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="square" /></svg>
+                      )}
+                    </span>
+                    <div class="goal-ledger-info">
+                      <span class="goal-ledger-label checklist-title">{item.label}</span>
+                      {item.note && <span class="goal-ledger-note checklist-desc">{item.note}</span>}
+                    </div>
+                    <span class="goal-status-badge font-mono" data-status={statusKey}>
+                      {statusText}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </article>
+        );
+      })}
     </div>
 
     <div class="goals-actions">
@@ -71,54 +67,104 @@ const buildUrl = rawBase === '/' ? '/build/' : `${rawBase.replace(/\/$/, '')}/bu
 </section>
 
 <style>
+  /* Mobile: horizontal swipe row with scroll-snap */
   .goals-board {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: clamp(1rem, 2vw, 2.5rem);
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    gap: 1.25rem;
+    padding-bottom: 0.75rem;
+    scrollbar-width: none;
+    margin-inline: calc(-1 * clamp(1rem, 2vw, 2.5rem));
+    padding-inline: clamp(1rem, 2vw, 2.5rem);
   }
-  @media (min-width: 960px) {
-    .goals-board {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
+  .goals-board::-webkit-scrollbar {
+    display: none;
   }
-  .goal-ledger-col {
-    border: 1px solid var(--line);
-    background: var(--surface);
+  .goal-card {
+    flex: 0 0 min(85vw, 360px);
+    width: min(85vw, 360px);
+    max-width: min(85vw, 360px);
+    scroll-snap-align: start;
+    border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+    background: var(--surface, #101010);
     padding: 1.5rem;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
     min-width: 0;
-    scroll-margin-top: calc(var(--nav-bar-h, 76px) + 1rem);
+    box-sizing: border-box;
   }
-  .goal-ledger-head {
-    border-bottom: 1px solid var(--line);
-    padding-bottom: 1rem;
+
+  /* Desktop (min-width: 960px): 3-column grid, equal height, tops aligned */
+  @media (min-width: 960px) {
+    .goals-board {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.5rem;
+      margin-inline: 0;
+      padding-inline: 0;
+      overflow-x: visible;
+      scroll-snap-type: none;
+      padding-bottom: 0;
+    }
+    .goal-card {
+      flex: initial;
+      width: auto;
+      max-width: none;
+      scroll-snap-align: none;
+    }
   }
-  .goal-ledger-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    font-size: 0.68rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 0.5rem;
+
+  .goal-card-head {
+    border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
   }
-  .goal-ledger-count {
-    color: var(--ink);
-  }
-  .goal-ledger-title {
+  .goal-card-title {
     margin: 0;
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: 1.2rem;
-    letter-spacing: 0.03em;
+    font-size: clamp(0.95rem, 1.35vw, 1.15rem);
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--ink);
+    color: var(--ink, #fff);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
   }
+  .goal-card-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-top: 0.65rem;
+  }
+  .goal-progress-bar {
+    flex: 1 1 auto;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .goal-progress-fill {
+    height: 100%;
+    background: var(--ink, #fff);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+  .goal-progress-count {
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted, rgba(255, 255, 255, 0.6));
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
   .goal-ledger-list {
     list-style: none;
     margin: 0;
@@ -126,13 +172,14 @@ const buildUrl = rawBase === '/' ? '/build/' : `${rawBase.replace(/\/$/, '')}/bu
     display: flex;
     flex-direction: column;
     gap: 0.85rem;
+    flex: 1 1 auto;
   }
   .goal-ledger-item {
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
     padding-top: 0.85rem;
-    border-top: 1px solid var(--hairline);
+    border-top: 1px solid var(--hairline, rgba(255, 255, 255, 0.08));
   }
   .goal-ledger-item:first-child {
     padding-top: 0;
@@ -149,17 +196,17 @@ const buildUrl = rawBase === '/' ? '/build/' : `${rawBase.replace(/\/$/, '')}/bu
     color: #080808;
   }
   .checklist-mark.is-done {
-    background: var(--ink);
-    border-color: var(--ink);
+    background: var(--ink, #fff);
+    border-color: var(--ink, #fff);
   }
   .checklist-mark.is-active {
-    border-color: var(--ink);
+    border-color: var(--ink, #fff);
   }
   .checklist-mark.is-active::after {
     content: '';
     width: 5px;
     height: 5px;
-    background: var(--ink);
+    background: var(--ink, #fff);
   }
   .goal-ledger-info {
     flex: 1 1 auto;
@@ -172,15 +219,15 @@ const buildUrl = rawBase === '/' ? '/build/' : `${rawBase.replace(/\/$/, '')}/bu
     font-size: 0.94rem;
     font-weight: 500;
     line-height: 1.4;
-    color: var(--ink);
+    color: var(--ink, #fff);
   }
   .goal-ledger-item.is-done .goal-ledger-label {
-    color: var(--muted);
+    color: var(--muted, rgba(255, 255, 255, 0.6));
   }
   .goal-ledger-note {
     font-size: 0.82rem;
     line-height: 1.45;
-    color: var(--muted);
+    color: var(--muted, rgba(255, 255, 255, 0.6));
   }
   .goal-status-badge {
     flex: 0 0 auto;
@@ -189,13 +236,13 @@ const buildUrl = rawBase === '/' ? '/build/' : `${rawBase.replace(/\/$/, '')}/bu
     letter-spacing: 0.12em;
     text-transform: uppercase;
     padding: 0.2rem 0.45rem;
-    border: 1px solid var(--hairline-strong);
-    color: var(--muted);
+    border: 1px solid var(--hairline-strong, rgba(255, 255, 255, 0.2));
+    color: var(--muted, rgba(255, 255, 255, 0.6));
     white-space: nowrap;
   }
   .goal-status-badge[data-status="done"],
   .goal-status-badge[data-status="in-progress"] {
-    color: var(--ink);
+    color: var(--ink, #fff);
     border-color: rgba(255, 255, 255, 0.35);
   }
   .goals-actions {
