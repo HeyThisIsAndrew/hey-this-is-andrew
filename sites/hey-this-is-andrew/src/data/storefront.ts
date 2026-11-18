@@ -18,7 +18,6 @@ export interface StorefrontPick {
 /** Gear picks: the homepage Gear section, /gear/ (StorefrontCTA). */
 export const GEAR_PICKS: StorefrontPick[] = [
   {
-    kicker: 'Production Stack',
     title: 'Full kit',
     frontDesc: 'Active studio cameras, lenses, lighting, and audio gear.',
     desc: 'The complete inventory of cameras, lenses, lighting, and audio gear actively deployed in the studio.',
@@ -26,7 +25,6 @@ export const GEAR_PICKS: StorefrontPick[] = [
     url: AMAZON_STOREFRONT,
   },
   {
-    kicker: 'Post-production',
     title: 'DaVinci Resolve',
     frontDesc: 'Professional editing, color grading, and audio post.',
     desc: 'Professional editing, color grading, and audio post for all long-form and commercial deliverables.',
