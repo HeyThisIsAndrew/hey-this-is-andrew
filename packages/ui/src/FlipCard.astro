@@ -15,7 +15,7 @@ import type { ImageMetadata } from 'astro';
  * - Separate semantic flip toggle button (.flip-card-toggle) and optional
  *   back-face action button (.flip-action-btn).
  * - Fine-pointer hover previews the back face and exposes .flip-action-btn
- *   directly to pointer hit-testing and accessibility tree.
+ *   directly to pointer hit-testing and accessibility tree, unless clickOnly is set.
  * - Explicit click/tap/Enter/Space toggles .is-flipped; clicking or tapping
  *   again reverses the flip.
  * - Escape visually closes the card, restores focus to .flip-card-toggle,
@@ -46,6 +46,7 @@ interface Props {
   slateLabel?: string;
   imageSide?: 'front' | 'back';
   kickerFirst?: boolean;
+  clickOnly?: boolean;
 }
 
 const {
@@ -70,13 +71,14 @@ const {
   slateLabel,
   imageSide = 'front',
   kickerFirst = false,
+  clickOnly = false,
 } = Astro.props;
 
 const backId = `${idPrefix}-${index}`;
 ---
 
 <div
-  class:list={['stat-card', 'flip-card', Boolean(actionLabel) && 'flip-card--has-action', className]}
+  class:list={['stat-card', 'flip-card', Boolean(actionLabel) && 'flip-card--has-action', clickOnly && 'flip-card--click-only', className]}
   data-delay={delay}
   data-ccc-package={dataCccPackage}
 >
@@ -389,7 +391,7 @@ const backId = `${idPrefix}-${index}`;
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .flip-card:hover:not(.is-dismissed) .flip-card-inner {
+    .flip-card:hover:not(.is-dismissed, .flip-card--click-only) .flip-card-inner {
       transform: rotateY(180deg);
       -webkit-transform: rotateY(180deg);
     }
@@ -479,7 +481,7 @@ const backId = `${idPrefix}-${index}`;
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .flip-card:hover:not(.is-dismissed) .flip-card-front {
+    .flip-card:hover:not(.is-dismissed, .flip-card--click-only) .flip-card-front {
       visibility: hidden;
       opacity: 0;
       pointer-events: none;
@@ -488,7 +490,7 @@ const backId = `${idPrefix}-${index}`;
         opacity 0.25s ease 0.15s;
     }
 
-    .flip-card:hover:not(.is-dismissed) .flip-card-back {
+    .flip-card:hover:not(.is-dismissed, .flip-card--click-only) .flip-card-back {
       visibility: visible;
       opacity: 1;
       pointer-events: auto;
@@ -516,8 +518,8 @@ const backId = `${idPrefix}-${index}`;
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .flip-card:hover:not(.is-dismissed) .flip-card-front,
-    .flip-card:hover:not(.is-dismissed) .flip-card-back {
+    .flip-card:hover:not(.is-dismissed, .flip-card--click-only) .flip-card-front,
+    .flip-card:hover:not(.is-dismissed, .flip-card--click-only) .flip-card-back {
       border-color: var(--flip-accent-border, var(--color-accent, #cc0000));
       box-shadow: var(--flip-accent-shadow, 0 8px 30px rgba(204, 0, 0, 0.1));
     }
@@ -736,7 +738,7 @@ const backId = `${idPrefix}-${index}`;
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .flip-card:hover:not(.is-dismissed) .flip-action-btn {
+    .flip-card:hover:not(.is-dismissed, .flip-card--click-only) .flip-action-btn {
       pointer-events: auto;
     }
   }
@@ -757,7 +759,7 @@ const backId = `${idPrefix}-${index}`;
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .flip-card:hover:not(.is-dismissed) .flip-hint {
+    .flip-card:hover:not(.is-dismissed, .flip-card--click-only) .flip-hint {
       color: var(--flip-accent-text, var(--color-accent-text, #ef4444));
       opacity: 1;
     }
@@ -796,14 +798,14 @@ const backId = `${idPrefix}-${index}`;
     document.documentElement.dataset.flipDocWired = '1';
 
     const fineHoverMq = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const isHoverPreview = (card: HTMLElement) => fineHoverMq.matches &&
+      card.matches(':hover:not(.is-dismissed, .flip-card--click-only)');
 
     function syncActionAccessibility(card: HTMLElement) {
       const actionBtn = card.querySelector<HTMLElement>('.flip-action-btn');
       if (!actionBtn) return;
       const isFlipped = card.classList.contains('is-flipped');
-      const isHoverShown =
-        fineHoverMq.matches && card.matches(':hover') && !card.classList.contains('is-dismissed');
-      if (isFlipped || isHoverShown) {
+      if (isFlipped || isHoverPreview(card)) {
         actionBtn.removeAttribute('tabindex');
         actionBtn.removeAttribute('aria-hidden');
       } else {
@@ -868,11 +870,8 @@ const backId = `${idPrefix}-${index}`;
       }
 
       const wasFlipped = card.classList.contains('is-flipped');
-      const isHoverShown =
-        fineHoverMq.matches && card.matches(':hover') && !card.classList.contains('is-dismissed');
-
       // If the user clicked the back-face action button while the back face is shown, let the action handle it
-      if ((wasFlipped || isHoverShown) && target?.closest('[data-open-ccc-modal], [data-no-flip], .flip-action-btn')) {
+      if ((wasFlipped || isHoverPreview(card)) && target?.closest('[data-open-ccc-modal], [data-no-flip], .flip-action-btn')) {
         return;
       }
 
@@ -893,9 +892,7 @@ const backId = `${idPrefix}-${index}`;
 
       if (e.key === 'Escape') {
         const isFlipped = card.classList.contains('is-flipped');
-        const isHoverShown =
-          fineHoverMq.matches && card.matches(':hover') && !card.classList.contains('is-dismissed');
-        if (isFlipped || isHoverShown) {
+        if (isFlipped || isHoverPreview(card)) {
           e.preventDefault();
           updateCardState(card, false, true);
           card.querySelector<HTMLButtonElement>('.flip-card-toggle')?.focus();

@@ -1,9 +1,6 @@
 ---
 /**
- * Latest (homepage): merges "Notes from the build" and "Activity
- * across the brands" into one feed with Video / Writing filters (each a
- * toggle; neither pressed shows everything),
- * expanding in-place to show the full archive from the former /latest/ page.
+ * Latest archive: videos and writing from the build and across the brands.
  */
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
 import Accordion from '@andrew/ui/Accordion.astro';
@@ -11,15 +8,12 @@ import AccordionRow from '@andrew/ui/AccordionRow.astro';
 import FilterTabs from '@andrew/ui/FilterTabs.astro';
 import LatestFeed from './LatestFeed.astro';
 import { getNetworkFeed } from '../lib/network';
-import { getHomeFeaturedTitles, isFeatured } from '../lib/home-featured';
 import { SUBSTACK_URL } from '../lib/latest-content';
 
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 
-const featured = await getHomeFeaturedTitles();
-// Full items without the ones featured in SelectedWork
-const allItems = (await getNetworkFeed(60)).filter((i) => !isFeatured(featured, i));
+const allItems = await getNetworkFeed(60);
 
 const previewItems = allItems.slice(0, 3);
 const restItems = allItems.slice(3);
@@ -31,16 +25,15 @@ const restItems = allItems.slice(3);
     <SectionHeader id="latest-heading" title="Latest" lede="Recent videos, articles, and dispatches across BE, CCC, and the build." />
     
     <FilterTabs
-      target="latest-home-list"
+      target="latest-list"
       label="Filter the latest"
       mode="toggle"
       tabs={[{ key: 'video', label: 'Video' }, { key: 'writing', label: 'Writing' }]}
     />
     
-    <div id="latest-home-list">
+    <div id="latest-list">
       <LatestFeed items={previewItems} id="latest-preview" />
-      
-      
+
       <div class="latest-accordion-wrapper" data-avoid-fab>
         <Accordion>
           <AccordionRow id="latest-archive" kicker="Archive" title={`All Latest (${restItems.length})`} level={3} size="md">

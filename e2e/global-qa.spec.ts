@@ -160,24 +160,25 @@ test.describe('Global QA', () => {
   });
 
   test('Latest filters: Video and Writing toggle, equal widths, deep links', async ({ page }) => {
-    await page.goto('./');
+    await page.goto('./latest/');
     const tabs = page.locator('#latest .filter-tab');
     await expect(tabs).toHaveText(['Video', 'Writing']);
     const [a, b] = await tabs.evaluateAll((ts) => ts.map((t) => t.getBoundingClientRect().width));
     expect(Math.abs(a - b)).toBeLessThan(1);
-    const hidden = (kind: string) => page.locator(`#latest-home-list [data-kind="${kind}"]:not([hidden])`).count();
+    const unfiltered = (kind: string) => page.locator(`#latest-list [data-kind="${kind}"]:not([hidden])`).count();
     await expect(tabs.nth(0)).toHaveAttribute('aria-pressed', 'false');
     await expect(tabs.nth(1)).toHaveAttribute('aria-pressed', 'false');
-    const writingCount = await hidden('writing');
+    const writingCount = await unfiltered('writing');
+    expect(writingCount).toBeGreaterThan(0);
     await tabs.nth(0).click();
     await expect(tabs.nth(0)).toHaveAttribute('aria-pressed', 'true');
-    expect(await hidden('writing')).toBe(0);
+    expect(await unfiltered('writing')).toBe(0);
     await tabs.nth(0).click();
     await expect(tabs.nth(0)).toHaveAttribute('aria-pressed', 'false');
-    expect(await hidden('writing')).toBe(writingCount);
-    await page.goto('./?filter=writing#latest');
+    expect(await unfiltered('writing')).toBe(writingCount);
+    await page.goto('./latest/?filter=writing#latest');
     await expect(tabs.nth(1)).toHaveAttribute('aria-pressed', 'true');
-    expect(await hidden('video')).toBe(0);
+    expect(await unfiltered('video')).toBe(0);
   });
 
   test('/build: one accordion row per goal group, one open at a time', async ({ page }) => {
@@ -208,74 +209,65 @@ test.describe('Global QA', () => {
     await expect(page.locator('#content-engine .checklist-card').first()).toBeVisible();
   });
 
-  test('Homepage goals expand in place, without leaving the page', async ({ page }) => {
+  test('Homepage Explore cards flip in place and link to their dedicated pages', async ({ page }) => {
+    const destinations = [
+      { title: 'Goals', path: '/build/' },
+      { title: 'Gear', path: '/gear/' },
+      { title: 'Latest', path: '/latest/' },
+      { title: 'Work With Me', path: '/work-with-me/' },
+    ];
     await page.goto('./');
-    const url = page.url();
-    const header = page.locator('#goals [data-accordion-header]').first();
-    await header.scrollIntoViewIfNeeded();
-    const body = page.locator('#goals [data-accordion-row]').first().locator('.accordion-body');
-    await expect(header).toHaveAttribute('aria-expanded', 'false');
-    // Collapsed content is out of the tab order.
-    expect(await body.evaluate((b) => (b as HTMLElement).inert)).toBe(true);
-    await header.click();
-    await expect(header).toHaveAttribute('aria-expanded', 'true');
-    await expect(body.locator('.checklist-card').first()).toBeVisible();
-    expect(page.url()).toBe(url);
-    await header.click();
-    await expect(header).toHaveAttribute('aria-expanded', 'false');
-    // The one way out is the "View all goals" link.
-    await expect(page.locator('#goals a', { hasText: /View all goals/i })).toHaveAttribute('href', /\/build\/$/);
+    const homepage = page.url();
+    await expect(page.locator('main > :is(#goals, #latest)')).toHaveCount(0);
+    const cards = page.locator('#explore .flip-card');
+    await expect(page.locator('#explore .stat-value')).toHaveText(destinations.map(({ title }) => title));
+    for (const [index, { path }] of destinations.entries()) {
+      const card = cards.nth(index);
+      const toggle = card.locator('.flip-card-toggle');
+      const action = card.locator('.flip-action-btn');
+      await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+      await expect(action).toHaveAttribute('tabindex', '-1');
+      await card.click();
+      await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+      await expect(action).toHaveJSProperty('tabIndex', 0);
+      expect(page.url()).toBe(homepage);
+      await action.click();
+      await expect(page).toHaveURL(new URL(`.${path}`, homepage).href);
+      if (path === '/build/') await expect(page.locator('#goals [data-accordion-row]').first()).toBeVisible();
+      await page.goto(homepage);
+    }
   });
 
-  test('Creator intro: portrait and headline stay, the rest opens in panels', async ({ page }) => {
-    await page.goto('./');
+  test('Creator portrait, headline and story are available on the About page', async ({ page }) => {
+    await page.goto('./about/');
     const about = page.locator('#about');
-    await about.scrollIntoViewIfNeeded();
     await expect(about.locator('.about-portrait')).toBeVisible();
     await expect(about.locator('.about-headline')).toBeVisible();
-    const headers = about.locator('[data-accordion-header]');
-    await expect(headers).toHaveText([/What I.m building/i, /How I work/i, /Now/i]);
-    const url = page.url();
-    for (let i = 0; i < 3; i++) {
-      await expect(headers.nth(i)).toHaveAttribute('aria-expanded', 'false');
-      await headers.nth(i).click();
-      await expect(headers.nth(i)).toHaveAttribute('aria-expanded', 'true');
-      await expect(about.locator('[data-accordion-row]').nth(i).locator('.accordion-body-inner')).toBeVisible();
-    }
-    expect(page.url()).toBe(url);
+    await expect(about.locator('.about-body')).toHaveText([/I'm building three brands/i, /My workflow uses/i]);
+    await expect(page.locator('#goals')).toHaveCount(0);
   });
 
-  test('Selected Work: a video loads nothing from YouTube until play, and unloads on close', async ({ page }) => {
+  test('Work: a video loads nothing from YouTube until play, and unloads on close', async ({ page }) => {
     const embeds: string[] = [];
     page.on('request', (r) => { if (/youtube(-nocookie)?\.com\/embed\//.test(r.url())) embeds.push(r.url()); });
+    await page.route('https://www.youtube-nocookie.com/embed/**', (route) => route.fulfill({ body: '' }));
     await page.goto('./');
-    const row = page.locator('#work [data-accordion-row]:has([data-inline-video])').first();
-    test.skip((await row.count()) === 0, 'no archive video in this build');
-    await row.scrollIntoViewIfNeeded();
-    await expect(page.locator('#work iframe')).toHaveCount(0);
-    await row.locator('[data-accordion-header]').click();
-    await expect(row).toHaveClass(/is-expanded/);
-    await expect(page.locator('#work iframe')).toHaveCount(0);
+    const player = page.locator('#video-player');
+    const frame = player.locator('iframe');
+    await expect(player).toBeHidden();
+    await expect(frame).not.toHaveAttribute('src', /youtube/);
     expect(embeds).toEqual([]);
-    await row.locator('.iv-poster').click();
-    const frame = row.locator('iframe');
-    await expect(frame).toHaveCount(1);
+    const video = page.locator('#work [data-video-player][data-video-url]').first();
+    await video.click();
+    await expect(player).toBeVisible();
+    await expect(frame).toHaveAttribute('src', /^https:\/\/www\.youtube-nocookie\.com\/embed\//);
     const src = await frame.getAttribute('src');
-    expect(src).toMatch(/^https:\/\/www\.youtube-nocookie\.com\/embed\//);
     expect(src).not.toMatch(/autoplay=1/);
-    expect(await frame.getAttribute('allow')).toMatch(/fullscreen/);
-    // Once the row has finished opening, nothing above the frame clips it
-    // (iOS paints a YouTube frame under a clipping ancestor black).
-    await expect(row).toHaveClass(/is-settled/);
-    const clipped = await frame.evaluate((f) => {
-      for (let e = f.parentElement; e && e !== document.body; e = e.parentElement) {
-        if (getComputedStyle(e).overflow !== 'visible') return e.className;
-      }
-      return null;
-    });
-    expect(clipped).toBeNull();
-    await row.locator('[data-accordion-header]').click();
-    await expect(page.locator('#work iframe')).toHaveCount(0);
+    await expect(frame).toHaveAttribute('allow', /fullscreen/);
+    await expect(frame).toBeInViewport();
+    await player.getByRole('button', { name: 'Close video player' }).click();
+    await expect(player).toBeHidden();
+    await expect(frame).toHaveAttribute('src', 'about:blank');
   });
 
   test('Search: the nav button opens it, and the index loads under the base path', async ({ page, isMobile }) => {

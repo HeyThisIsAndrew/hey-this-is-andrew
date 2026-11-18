@@ -8,35 +8,52 @@ import { test, expect, type Page } from '@playwright/test';
 const state = (page: Page) =>
   page.evaluate(() => {
     const track = document.querySelector<HTMLElement>('[data-gc-track]')!;
-    const tabs = [...document.querySelectorAll('[data-gc-tab]')];
+    const slides = [...track.querySelectorAll<HTMLElement>('.gc-slide')];
+    const active = slides.findIndex((slide) => slide.querySelector<HTMLAnchorElement>('.gc-card')?.tabIndex === 0);
+    const activeOffset = slides[active]?.offsetLeft ?? Infinity;
     return {
-      tab: tabs.findIndex((t) => t.classList.contains('is-active')),
-      pos: Math.round((track.scrollLeft / track.clientWidth) * 100) / 100,
+      active,
+      snapped: Math.abs(track.scrollLeft - activeOffset) <= 1,
     };
   });
 
-test('gear carousel: the seven sections, tabs and arrows move it, a pick holds, the card opens the section', async ({ page }) => {
+test('gear carousel: the seven sections, overlaid arrows and keys, a pick holds, the card opens the section', async ({ page }) => {
   await page.goto('./');
   const carousel = page.locator('#gear [data-gear-carousel]');
   await carousel.scrollIntoViewIfNeeded();
-  await expect(carousel.locator('[data-gc-tab]')).toHaveText(['Cameras', 'Lenses', 'Lighting', 'Support', 'Audio', 'Cafe', 'Gaming']);
   await expect(carousel.locator('.gc-title')).toHaveText(['Cameras', 'Lenses', 'Lighting', 'Tools and Support', 'Audio', 'Cafe Bar', 'Gaming']);
+  await expect(carousel.locator('.gc-card img')).toHaveCount(7);
+  await expect(carousel.locator('.gc-media .gc-kicker')).toHaveCount(7);
+  await expect(carousel.locator('.gc-controls')).toHaveCount(0);
+  const track = carousel.locator('[data-gc-track]');
+  const trackBox = (await track.boundingBox())!;
+  const secondSlide = (await track.locator('.gc-slide').nth(1).boundingBox())!;
+  expect(trackBox.x + trackBox.width - secondSlide.x).toBeGreaterThanOrEqual(40);
+  for (const sel of ['[data-gc-prev]', '[data-gc-next]']) {
+    const arrow = carousel.locator(sel);
+    await expect(arrow).toHaveCSS('position', 'absolute');
+    const box = (await arrow.boundingBox())!;
+    expect(Math.abs(box.y + box.height / 2 - trackBox.y - trackBox.height / 2)).toBeLessThanOrEqual(1);
+  }
 
   await carousel.locator('[data-gc-next]').click();
-  await expect.poll(() => state(page)).toEqual({ tab: 1, pos: 1 });
+  await expect.poll(() => state(page)).toEqual({ active: 1, snapped: true });
   await carousel.locator('[data-gc-prev]').click();
-  await expect.poll(() => state(page)).toEqual({ tab: 0, pos: 0 });
-  await carousel.locator('[data-gc-tab="4"]').click();
-  await expect.poll(() => state(page)).toEqual({ tab: 4, pos: 4 });
-  await expect(carousel.locator('[data-gc-tab="4"]')).toHaveAttribute('aria-current', 'true');
+  await expect.poll(() => state(page)).toEqual({ active: 0, snapped: true });
+  for (let index = 1; index <= 4; index++) {
+    await page.keyboard.press('ArrowRight');
+    await expect.poll(() => state(page)).toEqual({ active: index, snapped: true });
+    await expect(carousel.locator('.gc-card').nth(index)).toBeFocused();
+  }
 
-  // Past the auto-advance interval, with the pointer off the card: it stays.
+  // The selection stays past the auto-advance interval with pointer and focus outside the carousel.
   await page.mouse.move(2, 2);
+  await page.locator('#main-content').focus();
   await page.waitForTimeout(8000);
-  expect(await state(page)).toEqual({ tab: 4, pos: 4 });
+  expect(await state(page)).toEqual({ active: 4, snapped: true });
 
   // Gear picks only, static, with the disclosure; Mint Mobile is not gear.
-  await expect(page.locator('#gear .storefront-pick')).toHaveCount(2);
+  await expect(page.locator('#gear .storefront-flip-card')).toHaveCount(2);
   await expect(page.locator('#gear')).not.toContainText('Mint Mobile');
   await expect(page.locator('#gear .kit-disclosure')).toHaveText('As an Amazon Associate, I earn from qualifying purchases.');
 
@@ -61,10 +78,11 @@ test('/gear/ section and item links open their section', async ({ page }) => {
 test('referrals on /about/ (Mint Mobile never in a gear section), Cohley under What I do', async ({ page }) => {
   await page.goto('./about/');
   const referrals = page.getByRole('complementary', { name: 'Referrals' });
-  await expect(referrals.getByRole('link', { name: /Check out Mint Mobile/ })).toHaveAttribute('href', 'https://my.mintmobile.com/refer/pHvGFQz');
+  await expect(referrals.locator('.storefront-pick', { hasText: 'Mint Mobile' }).getByRole('link', { name: 'Check out' }))
+    .toHaveAttribute('href', 'https://my.mintmobile.com/refer/pHvGFQz');
   await expect(referrals.locator('.storefront-pick h3')).toHaveText(['Mint Mobile', 'inKind', 'Fetch', 'Instacart', 'Rakuten']);
   await page.goto('./');
-  await expect(page.locator('#services').getByRole('link', { name: /View my Cohley profile/ }))
+  await expect(page.locator('#services').getByRole('link', { name: 'Cohley profile' }))
     .toHaveAttribute('href', 'https://connect.cohley.com/public/profile/andrew-baxter/');
   await page.goto('./gear/');
   await expect(page.locator('main')).not.toContainText('Mint Mobile');

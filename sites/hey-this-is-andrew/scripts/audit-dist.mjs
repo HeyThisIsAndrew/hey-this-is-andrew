@@ -166,9 +166,8 @@ for (const page of pages) {
       const mainLinks = [...mainHtml.matchAll(/href="([^"]+)"/g)].map(m => m[1]);
       for (const link of mainLinks) {
         if (!link.startsWith('http') && !link.startsWith('#') && !link.startsWith(base + '#')) {
-          const allowed = [base + 'about/#press', base + 'gear/', base + 'rss.xml', base + 'work-with-me/'];
-          // The goals summary opens its group's row of the /build accordion
-          // (the full checklists live there, by Andrew's call).
+          const allowed = [base + 'about/', base + 'about/#press', base + 'gear/', base + 'latest/', base + 'rss.xml', base + 'work-with-me/'];
+          // Explore links to Build, which also supports direct goal links.
           const isBuildRow = link === base + 'build/' || link.startsWith(base + 'build/#');
           // The Gear carousel's cards open their section on /gear/
           // (GearCarousel.astro); /gear/ also opens an item a link names.

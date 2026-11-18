@@ -1,11 +1,11 @@
-// THE NETWORK — unified content layer for the Andrew ecosystem.
+// THE NETWORK, unified content layer for the Andrew ecosystem.
 //
 // Principle: Andrew creates something -> a source publishes it ->
 // Hey, This Is Andrew pulls it in at build time -> the right part of
 // the site surfaces it. Nothing here is hand-duplicated; every remote
 // entry comes from a real feed with a graceful fallback.
 //
-// Content model (kept light on purpose — grow only when a second
+// Content model (kept light on purpose, grow only when a second
 // consumer needs the field):
 export type NetworkBrandId = 'htia' | 'be' | 'ccc' | 'build';
 
@@ -54,7 +54,7 @@ export interface NetworkItem {
   dateEstimated?: boolean;
 }
 
-// ---- Future content models (architecture only — no UI until real items exist) ----
+// ---- Future content models (architecture only, no UI until real items exist) ----
 export interface Product {
   id: string;
   name: string;

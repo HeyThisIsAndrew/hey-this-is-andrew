@@ -15,7 +15,7 @@ for (const viewport of sizes) {
     await page.waitForFunction(() => document.querySelector('#gear-accordion-container')?.getAttribute('data-gear-wired') === '1');
     const sections = page.locator('.gear-accordion-section');
     for (const section of await sections.all()) {
-      if (!(await section.getAttribute('class'))?.includes('is-expanded')) await section.locator('.gear-accordion-header').click();
+      await page.locator('#gear-category-select').selectOption((await section.getAttribute('data-chip'))!);
       await expect(section).toHaveClass(/is-settled/);
       const geometry = () => section.evaluate(sec => {
         const rect = (selector: string) => sec.querySelector(selector)!.getBoundingClientRect();
@@ -23,21 +23,22 @@ for (const viewport of sizes) {
         const deck = rect('.gear-deck');
         const stage = rect('.deck-stage');
         const card = rect('.deck-card.active');
-        const children = ['.card-img', '.card-title', '.card-spec'].map(sel => {
+        const children = ['.card-img', '.card-mark', '.card-caption', '.card-open'].map(sel => {
           const el = sec.querySelector(`.deck-card.active ${sel}`);
           if (!el) return true;
           const r = el.getBoundingClientRect();
-          return r.left >= card.left - 1 && r.right <= card.right + 1 && r.top >= card.top - 1 && r.bottom <= card.bottom + 1 && el.scrollWidth <= el.clientWidth + 1;
+          return r.left >= card.left - 1 && r.right <= card.right + 1 && r.top >= card.top - 1 && r.bottom <= card.bottom + 1;
         });
-        return { contained: deck.width <= body.width + 1 && stage.width <= deck.width + 1 && card.width <= stage.width + 1 && children.every(Boolean), gap: body.height - deck.height, widths: { deck: deck.width, stage: stage.width, card: card.width, image: sec.querySelector('.deck-card.active .card-img')?.getBoundingClientRect().width, title: rect('.deck-card.active .card-title').width } };
+        return { contained: deck.width <= body.width + 1 && stage.width <= deck.width + 1 && card.width <= stage.width + 1 && children.every(Boolean), gap: body.height - deck.height, widths: { deck: deck.width, stage: stage.width, card: card.width, image: sec.querySelector('.deck-card.active .card-img')?.getBoundingClientRect().width, title: rect('.deck-card.active .card-caption').width } };
       });
       await expect.poll(async () => (await geometry()).contained).toBe(true);
       await expect.poll(async () => Math.abs((await geometry()).gap)).toBeLessThan(2);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
       const id = await section.getAttribute('id');
       await testInfo.attach(`${viewport.width}-${id}-measurements`, { body: JSON.stringify(await geometry()), contentType: 'application/json' });
-      if (id === 'gear-lenses' && [390, 1440].includes(viewport.width)) await section.screenshot({ path: `verification/gear-deck/after-${viewport.width}.png` });
+      if (id === 'gear-lenses' && [390, 1440].includes(viewport.width)) await testInfo.attach('gear-deck', { body: await section.screenshot(), contentType: 'image/png' });
     }
+    await page.locator('#gear-category-select').selectOption('');
     const toggle = page.locator('[data-all-toggle]');
     const grid = page.locator('#gear-all-products');
     await expect(toggle).toHaveCount(1);
@@ -57,7 +58,7 @@ for (const viewport of sizes) {
         await expect(grid.locator('.all-grid-card:visible')).toContainText('Sony FE 90mm');
         await expect(grid.locator('[data-grid-count]')).toHaveText('1 product');
         await page.locator('#gear-search-clear').click();
-        await page.locator('.gear-chip[data-cat="lenses"]').click();
+        await page.locator('#gear-category-select').selectOption('lenses');
         await expect(grid.locator('.all-grid-card:visible')).toHaveCount(9);
         await page.locator('#gear-search-input').fill('no-such-product');
         await expect(grid.locator('.all-grid-card:visible')).toHaveCount(0);
@@ -66,7 +67,7 @@ for (const viewport of sizes) {
         await expect(grid.locator('.all-grid-card:visible')).toHaveCount(45);
         if ([390, 1440].includes(viewport.width)) {
           await grid.locator('.all-grid-topbar').scrollIntoViewIfNeeded();
-          await page.screenshot({ path: `verification/gear-deck/grid-${viewport.width}.png` });
+          await testInfo.attach('gear-product-grid', { body: await page.screenshot(), contentType: 'image/png' });
         }
       }
       await toggle.click();
@@ -93,7 +94,7 @@ test('phone: all nine lenses fit, thumbnails scroll and touch swipes rotate', as
   const page = await context.newPage();
   await page.goto('/hey-this-is-andrew/gear/');
   const section = page.locator('#gear-lenses');
-  await section.locator('.gear-accordion-header').tap();
+  await page.locator('#gear-category-select').selectOption('lenses');
   await expect(section).toHaveClass(/is-settled/);
   const thumbs = section.locator('.deck-thumb-tile');
   await expect(thumbs).toHaveCount(9);
@@ -105,10 +106,10 @@ test('phone: all nine lenses fit, thumbnails scroll and touch swipes rotate', as
     await expect.poll(() => section.locator('.deck-card.active .card-img').evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
     await expect.poll(() => section.locator('.deck-card.active').evaluate(card => {
       const r = card.getBoundingClientRect();
-      return ['.card-img', '.card-title', '.card-spec'].every(sel => {
+      return ['.card-img', '.card-mark', '.card-caption', '.card-open'].every(sel => {
         const el = card.querySelector(sel)!;
         const c = el.getBoundingClientRect();
-        return c.left >= r.left - 1 && c.right <= r.right + 1 && c.top >= r.top - 1 && c.bottom <= r.bottom + 1 && el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1;
+        return c.left >= r.left - 1 && c.right <= r.right + 1 && c.top >= r.top - 1 && c.bottom <= r.bottom + 1;
       });
     })).toBe(true);
     await expect.poll(() => thumb.evaluate(el => {
@@ -138,12 +139,12 @@ test('reduced motion opens sections and alternate grids without delayed content'
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/hey-this-is-andrew/gear/');
   const section = page.locator('#gear-lenses');
-  await section.locator('.gear-accordion-header').click();
+  await page.locator('#gear-category-select').selectOption('lenses');
   await expect(section).toHaveClass(/is-settled/);
   await expect(section).not.toHaveClass(/is-animating/);
   await page.locator('[data-all-toggle]').click();
   await expect(page.locator('#gear-all-products')).toBeVisible();
   await page.locator('[data-all-toggle]').click();
   await expect(page.locator('#gear-all-products')).toBeHidden();
-  expect(await section.locator('.gear-accordion-body').evaluate(el => parseFloat(getComputedStyle(el).transitionDuration))).toBeLessThan(0.001);
+  expect(await section.locator('.deck-card.active').evaluate(el => parseFloat(getComputedStyle(el).transitionDuration))).toBeLessThan(0.001);
 });

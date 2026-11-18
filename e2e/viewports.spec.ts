@@ -17,8 +17,9 @@ for (const vp of viewports) {
       // 1. Brand Client block under #services
       const clientBlock = page.locator('#services [data-client-block]');
       await expect(clientBlock).toBeVisible();
-      const cards = clientBlock.locator('.client-card');
-      await expect(cards).toHaveCount(3);
+      const ledger = clientBlock.locator('.logistics-ledger');
+      await expect(ledger.locator('.logistics-item')).toHaveCount(3);
+      expect(await ledger.evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(3);
 
       // 2. UGC CTA on homepage services section (no CCC mailto on homepage)
       const ctaUgc = page.locator('#services a[href^="mailto:heythisisandrewb@gmail.com"]');
@@ -26,10 +27,9 @@ for (const vp of viewports) {
       await expect(page.locator('#work a:has-text("Start a project")')).toHaveCount(0);
       await expect(page.locator('#gear a:has-text("Start a project")')).toHaveCount(0);
 
-      // 3. Section order (#services above #goals)
-      const servicesY = await page.locator('#services').evaluate((el) => el.getBoundingClientRect().top);
-      const goalsY = await page.locator('#goals').evaluate((el) => el.getBoundingClientRect().top);
-      expect(servicesY).toBeLessThan(goalsY);
+      // 3. Homepage section order at this viewport
+      const sections = await page.locator('#main-content > section').evaluateAll(els => els.map(el => el.id));
+      expect(sections).toEqual(['overview', 'directory', 'work', 'services', 'gear', 'explore', 'newsletter']);
 
       // 4. Elevator 4 columns at 1920 / desktop
       if (vp.width >= 1200) {

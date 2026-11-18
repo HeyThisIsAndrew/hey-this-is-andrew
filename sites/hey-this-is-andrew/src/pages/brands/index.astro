@@ -1,5 +1,5 @@
 ---
-/** The three brand cards rendered as full-height cinematic doors into each brand. */
+/** Full-height brand cards in a single viewport deck. */
 import { Image } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { childBrands } from '../../data/brands';
@@ -29,8 +29,8 @@ const sources = (image: ImageMetadata | RemoteImage) =>
     rel="stylesheet"
   />
 
-  <div class="brands-cinematic-wrap">
-    <h1 class="vh">Brands</h1>
+  <div class="brands-cinematic-wrap" data-brand-deck role="region" aria-labelledby="brands-deck-heading" aria-roledescription="carousel">
+    <h1 class="vh" id="brands-deck-heading">Brands</h1>
     <div class="brand-tiles" data-brand-tiles>
       {childBrands.map((brand, i) => {
         const isComingSoon = Boolean(brand.comingSoon);
@@ -41,9 +41,12 @@ const sources = (image: ImageMetadata | RemoteImage) =>
           <Tag
             class:list={['brand-tile', { 'is-link': Tag === 'a', 'is-coming-soon': isComingSoon }]}
             href={Tag === 'a' ? href : undefined}
+            draggable="false"
+            inert={i !== 0}
             aria-label={Tag === 'a' ? `Explore ${brand.name}` : `${brand.name} - Coming Soon`}
             data-accent={brand.accent}
             data-brand-id={brand.id}
+            data-depth={i}
           >
             <div class="brand-tile-visual" aria-hidden="true">
               {visual ? (
@@ -51,7 +54,7 @@ const sources = (image: ImageMetadata | RemoteImage) =>
                   {...sources(visual)}
                   alt=""
                   widths={[640, 960, 1280]}
-                  sizes="(max-width: 899px) 100vw, 33vw"
+                  sizes="(max-width: 480px) 85vw, 450px"
                   class="brand-tile-image"
                   loading={i === 0 ? 'eager' : 'lazy'}
                 />
@@ -96,25 +99,77 @@ const sources = (image: ImageMetadata | RemoteImage) =>
         );
       })}
     </div>
+    <div class="brand-deck-indicators" role="group" aria-label="Choose a brand">
+      {childBrands.map((brand, i) => (
+        <button type="button" class="brand-deck-indicator" data-brand-index={i} aria-label={brand.name} aria-current={i === 0 ? 'true' : undefined}></button>
+      ))}
+    </div>
   </div>
 </BaseLayout>
 
 <style>
   .brands-cinematic-wrap {
-    width: 100%;
+    --peek-room: clamp(34px, 5vw, 56px);
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    justify-items: center;
+    flex: 1 1 0%;
+    min-height: 0;
+    padding: 15px 16px 0;
     box-sizing: border-box;
   }
 
   .brand-tiles {
-    display: grid;
+    position: relative;
+    isolation: isolate;
+    width: min(100%, calc(450px + var(--peek-room)));
+    min-height: 0;
     box-sizing: border-box;
+    touch-action: pan-y pinch-zoom;
+    user-select: none;
+  }
+
+  .brand-deck-indicators {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .brand-deck-indicator {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  .brand-deck-indicator::before {
+    content: '';
+    width: 18px;
+    height: 3px;
+    background: currentColor;
+  }
+
+  .brand-deck-indicator:is([aria-current], :hover, :focus-visible) {
+    color: #fff;
+  }
+
+  .brand-deck-indicator:focus-visible {
+    outline: 2px solid var(--focus-ring, #fff);
+    outline-offset: -4px;
   }
 
   .brand-tile {
-    position: relative;
-    min-width: 0;
+    position: absolute;
+    inset: 0 var(--peek-room) 0 0;
     overflow: hidden;
     border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+    border-radius: 0;
     background: #080808;
     color: #f0f0f0;
     text-decoration: none;
@@ -122,7 +177,31 @@ const sources = (image: ImageMetadata | RemoteImage) =>
     flex-direction: column;
     justify-content: space-between;
     -webkit-tap-highlight-color: transparent;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.45s ease-in-out, opacity 0.45s ease-in-out;
+  }
+
+  .brand-tile[data-depth="0"] {
+    z-index: 3;
+    transform: translateX(var(--drag-x, 0px));
+  }
+
+  .brand-tile[data-depth="1"] {
+    z-index: 2;
+    transform: translateX(calc(var(--peek-room) * 0.65)) scale(0.96);
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  .brand-tile[data-depth="2"] {
+    z-index: 1;
+    transform: translateX(calc(var(--peek-room) + 3%)) scale(0.94);
+    opacity: 0.58;
+    pointer-events: none;
+  }
+
+  .brand-tiles.is-dragging .brand-tile[data-depth="0"] {
+    cursor: grabbing;
+    transition: none;
   }
 
   .brand-tile.is-link {
@@ -153,11 +232,6 @@ const sources = (image: ImageMetadata | RemoteImage) =>
     height: 100%;
     object-fit: cover;
     object-position: center;
-    transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1), filter 0.4s ease;
-  }
-
-  a.brand-tile:hover .brand-tile-image {
-    transform: scale(1.03);
   }
 
   .brand-tile-teaser {
@@ -175,6 +249,15 @@ const sources = (image: ImageMetadata | RemoteImage) =>
     width: clamp(100px, 10vw, 150px);
     height: clamp(100px, 10vw, 150px);
     opacity: 0.45;
+  }
+
+  .brand-tile-image,
+  .brand-tile-teaser {
+    transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1), filter 0.4s ease;
+  }
+
+  .brand-tile[data-depth="0"]:is(:hover, :focus-visible) :is(.brand-tile-image, .brand-tile-teaser) {
+    transform: scale(1.03);
   }
 
   .brand-tile-scrim {
@@ -200,30 +283,30 @@ const sources = (image: ImageMetadata | RemoteImage) =>
     transition: opacity 0.4s ease;
   }
 
-  [data-brand-id="be"] .brand-tile-tint {
-    background: radial-gradient(circle at 50% 100%, rgba(230, 0, 0, 0.28) 0%, transparent 68%);
+  .brand-tile[data-accent="be-red"] {
+    --brand-rgb: 230, 0, 0;
   }
 
-  [data-brand-id="ccc"] .brand-tile-tint {
-    background: radial-gradient(circle at 50% 100%, rgba(201, 169, 110, 0.28) 0%, transparent 68%);
+  .brand-tile[data-accent="ccc-gold"] {
+    --brand-rgb: 201, 169, 110;
   }
 
-  [data-brand-id="sip-the-magic"] .brand-tile-tint {
-    background: radial-gradient(circle at 50% 100%, rgba(130, 130, 160, 0.2) 0%, transparent 68%);
+  .brand-tile[data-accent="slate"] {
+    --brand-rgb: 130, 130, 160;
+    --tint-opacity: 0.2;
   }
 
-  a.brand-tile:hover .brand-tile-tint {
+  .brand-tile-tint {
+    background: radial-gradient(circle at 50% 100%, rgba(var(--brand-rgb, 245, 245, 245), var(--tint-opacity, 0.28)) 0%, transparent 68%);
+  }
+
+  .brand-tile[data-depth="0"]:is(:hover, :focus-visible) .brand-tile-tint {
     opacity: 1;
   }
 
-  a.brand-tile[data-brand-id="be"]:hover {
-    border-color: rgba(230, 0, 0, 0.65);
-    box-shadow: 0 0 30px rgba(230, 0, 0, 0.28);
-  }
-
-  a.brand-tile[data-brand-id="ccc"]:hover {
-    border-color: rgba(201, 169, 110, 0.65);
-    box-shadow: 0 0 30px rgba(201, 169, 110, 0.28);
+  .brand-tile[data-depth="0"]:is(:hover, :focus-visible) {
+    border-color: rgba(var(--brand-rgb, 245, 245, 245), 0.65);
+    box-shadow: 0 0 30px rgba(var(--brand-rgb, 245, 245, 245), 0.28);
   }
 
   /* Metadata tags in upper left corner */
@@ -355,101 +438,200 @@ const sources = (image: ImageMetadata | RemoteImage) =>
     margin-top: 0.25rem;
   }
 
-  /* Remove the Work With Me footer button from the brands page */
-  :global(body:has(.brands-cinematic-wrap) .client-work-footer-contact) {
+  :global(body:has(.brands-cinematic-wrap) .client-work-footer-contact),
+  :global(body:has(.brands-cinematic-wrap) #scroll-progress) {
     display: none !important;
   }
 
-  /* Desktop layout: full height viewport, side by side pillars, no scroll */
-  @media (min-width: 900px) {
-    :global(html:has(.brands-cinematic-wrap)),
-    :global(body:has(.brands-cinematic-wrap)) {
-      height: 100vh;
-      height: 100dvh;
-      max-height: 100dvh;
-      overflow: hidden;
+  :global(html:has(.brands-cinematic-wrap)),
+  :global(body:has(.brands-cinematic-wrap)) {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    scrollbar-gutter: auto;
+  }
+
+  :global(body:has(.brands-cinematic-wrap) .site-camera-stage),
+  :global(body:has(.brands-cinematic-wrap) #main-content) {
+    flex: 1 1 0%;
+    min-height: 0;
+    overflow: clip;
+    display: flex;
+    flex-direction: column;
+  }
+
+  :global(body:has(.brands-cinematic-wrap) .site-footer) {
+    margin-top: 0;
+    padding: 0.75rem clamp(1.5rem, 3vw, 3rem);
+    flex-shrink: 0;
+    border-top: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  }
+
+  :global(body:has(.brands-cinematic-wrap) .footer-inner) {
+    gap: 1.5rem;
+    padding-bottom: 0;
+  }
+
+  :global(body:has(.brands-cinematic-wrap) .footer-bottom) {
+    margin-top: 0.5rem;
+    padding-top: 0.4rem;
+  }
+
+  @media (min-width: 1100px) {
+    .brands-cinematic-wrap {
+      padding-bottom: 15px;
     }
 
-    :global(body:has(.brands-cinematic-wrap) .site-camera-stage) {
-      flex: 1 1 0%;
-      min-height: 0;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
+    .brand-deck-indicator {
+      height: 36px;
+    }
+  }
+
+  @media (max-width: 1099px) {
+    .brands-cinematic-wrap {
+      padding-top: 12px;
     }
 
-    :global(body:has(.brands-cinematic-wrap) #main-content) {
-      flex: 1 1 0%;
-      min-height: 0;
+    .brand-tiles {
+      max-height: clamp(480px, 72dvh, 600px);
+      align-self: center;
       height: 100%;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
     }
 
     :global(body:has(.brands-cinematic-wrap) .site-footer) {
-      margin-top: 0;
-      padding: 0.75rem clamp(1.5rem, 3vw, 3rem);
-      flex-shrink: 0;
-      border-top: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+      padding: 0 10px 8px;
     }
 
     :global(body:has(.brands-cinematic-wrap) .footer-inner) {
-      gap: 1.5rem;
+      display: block;
+    }
+
+    :global(body:has(.brands-cinematic-wrap) :is(.footer-brand, .footer-nav, .footer-label, .footer-bottom > p:nth-child(n + 3))) {
+      display: none;
+    }
+
+    :global(body:has(.brands-cinematic-wrap) .footer-socials-col) {
+      max-width: none;
+      width: 100%;
+    }
+
+    :global(#site:has(.brands-cinematic-wrap) .socials) {
+      gap: 0;
+      max-width: none;
+      width: 100%;
     }
 
     :global(body:has(.brands-cinematic-wrap) .footer-bottom) {
-      margin-top: 0.5rem;
-      padding-top: 0.4rem;
-    }
-
-    .brands-cinematic-wrap {
-      flex: 1 1 0%;
-      min-height: 0;
-      height: 100%;
       display: flex;
-      flex-direction: column;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 4px 12px;
+      margin-top: 0;
+      padding-top: 0;
     }
 
-    .brand-tiles {
-      flex: 1 1 0%;
-      min-height: 0;
-      height: 100%;
-      width: 100%;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 1.25rem;
-      padding: 1.25rem clamp(1.25rem, 3vw, 2.5rem);
-      max-width: 1800px;
-      margin: 0 auto;
-    }
-
-    .brand-tile {
-      height: 100%;
-      min-height: 0;
-      border-radius: 4px;
+    :global(body:has(.brands-cinematic-wrap) .footer-legal-links) {
+      gap: 8px;
     }
   }
 
-  /* Mobile layout: stacked cinematic cards, full width, natural scroll */
-  @media (max-width: 899px) {
-    .brands-cinematic-wrap {
-      width: 100%;
-      padding: 1.25rem 1rem 3rem;
-      max-width: 620px;
-      margin: 0 auto;
-    }
-
-    .brand-tiles {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 1.5rem;
-      width: 100%;
-    }
-
-    .brand-tile {
-      width: 100%;
-      min-height: clamp(480px, 72vh, 600px);
-      height: clamp(480px, 72vh, 600px);
-      border-radius: 6px;
+  @media (prefers-reduced-motion: reduce) {
+    .brand-tile,
+    .brand-tile-image,
+    .brand-tile-teaser,
+    .brand-tile-tint {
+      transition: none;
     }
   }
 </style>
+
+<script>
+  import { createPageScope } from '@andrew/ui/scripts/page-scope.ts';
+
+  function initBrandDeck() {
+    const root = document.querySelector<HTMLElement>('[data-brand-deck]');
+    const stack = root?.querySelector<HTMLElement>('[data-brand-tiles]');
+    if (!root || !stack || root.dataset.ready) return;
+    root.dataset.ready = 'true';
+
+    const cards = Array.from(stack.querySelectorAll<HTMLElement>('.brand-tile'));
+    const indicators = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-brand-index]'));
+    if (cards.length < 2) return;
+
+    const { on } = createPageScope(root);
+    let active = 0;
+    let drag: { id: number; x: number; y: number; started: boolean } | null = null;
+    let suppressClick = false;
+
+    function showCard(index: number) {
+      const next = (index + cards.length) % cards.length;
+      const moveFocus = cards[active].contains(document.activeElement);
+      active = next;
+      cards.forEach((card, i) => {
+        card.dataset.depth = String((i - active + cards.length) % cards.length);
+        card.inert = i !== active;
+      });
+      indicators.forEach((indicator, i) => {
+        if (i === active) indicator.setAttribute('aria-current', 'true');
+        else indicator.removeAttribute('aria-current');
+      });
+      if (moveFocus) indicators[active].focus({ preventScroll: true });
+    }
+
+    indicators.forEach((indicator, i) => on(indicator, 'click', () => showCard(i)));
+
+    on(document, 'keydown', (event) => {
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+      if (document.documentElement.matches('.menu-open, .modal-open')) return;
+      if (!(event.target instanceof HTMLElement)) return;
+      if (!root.contains(event.target) && !event.target.matches('body, #main-content')) return;
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      event.preventDefault();
+      showCard(active + (event.key === 'ArrowRight' ? 1 : -1));
+    });
+
+    on(stack, 'dragstart', (event) => event.preventDefault());
+
+    on(stack, 'pointerdown', (event) => {
+      if (!event.isPrimary || event.button !== 0) return;
+      suppressClick = false;
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY, started: false };
+    });
+
+    on(window, 'pointermove', (event) => {
+      if (!drag || drag.id !== event.pointerId) return;
+      const dx = event.clientX - drag.x;
+      if (!drag.started) {
+        if (Math.abs(dx) < 10 || Math.abs(dx) <= Math.abs(event.clientY - drag.y)) return;
+        drag.started = true;
+        suppressClick = true;
+        stack.setPointerCapture(event.pointerId);
+        stack.classList.add('is-dragging');
+      }
+      stack.style.setProperty('--drag-x', `${Math.max(-80, Math.min(80, dx * 0.55))}px`);
+    });
+
+    const finishDrag = (event: PointerEvent) => {
+      if (!drag || drag.id !== event.pointerId) return;
+      const dx = event.clientX - drag.x;
+      if (event.type === 'pointerup' && drag.started && Math.abs(dx) >= 40) {
+        showCard(active + (dx < 0 ? 1 : -1));
+      }
+      drag = null;
+      stack.classList.remove('is-dragging');
+      stack.style.removeProperty('--drag-x');
+    };
+
+    on(window, 'pointerup', finishDrag);
+    on(window, 'pointercancel', finishDrag);
+    on(stack, 'click', (event) => {
+      if (!suppressClick || event.detail === 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
+  }
+
+  initBrandDeck();
+  document.addEventListener('astro:page-load', initBrandDeck);
+</script>

@@ -354,7 +354,7 @@ const packages = [
                 />
               ))}
             </div>
-            <p class="ccc-price-foot">Rush delivery: full gallery in 48 hours · Events and custom projects quoted by scope</p>
+            <p class="ccc-price-foot">Rush delivery: full gallery in 48 hours</p>
           </div>
           <div class="ccc-pricing-media ccc-crop" data-ccc-crop>
             <CccPhoto src={pricingCoupe} alt="A coupe cocktail with a green garnish, warm light behind it" sizes="(min-width: 2117px) 735px, (min-width: 1512px) 35vw, (min-width: 900px) 530px, 94vw" />
@@ -822,17 +822,22 @@ const packages = [
     .ccc-split > :last-child { grid-area: copy; }
   }
   .ccc-split-media {
-    position: relative;
     max-width: min(735px, calc(520 * var(--ccc-u)));
     width: 100%;
     justify-self: center;
+  }
+
+  .ccc-split-media,
+  .ccc-real-frames > div {
+    position: relative;
     border-radius: 0;
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 18px 45px -10px rgba(0, 0, 0, 0.85);
     overflow: hidden;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
   }
-  .ccc-split-media::before {
+  .ccc-split-media::before,
+  .ccc-real-frames > div::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -842,19 +847,24 @@ const packages = [
     opacity: 0.75;
     transition: opacity 0.4s ease;
   }
-  .ccc-split-media:hover {
+  .ccc-split-media:hover,
+  .ccc-real-frames > div:hover {
     border-color: rgba(201, 169, 110, 0.65);
     box-shadow: 0 0 30px rgba(201, 169, 110, 0.28);
   }
-  .ccc-split-media:hover::before {
+  .ccc-split-media:hover::before,
+  .ccc-real-frames > div:hover::before {
     opacity: 1;
   }
-  .ccc-split-media :global(img) {
+  .ccc-split-media :global(img),
+  .ccc-real-frames :global(img) {
     transform-origin: center center;
+    transform: scale(1);
     transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1), filter 0.4s ease;
   }
-  .ccc-split-media:hover :global(img) {
-    transform: scale(1.03) !important;
+  .ccc-split-media:hover :global(img),
+  .ccc-real-frames > div:hover :global(img) {
+    transform: scale(1.03);
   }
 
   /* Why it matters: Overlapping Parallax Composition */
@@ -1124,7 +1134,7 @@ const packages = [
   }
   .ccc-fig figcaption {
     margin-top: calc(11 * var(--ccc-u));
-    padding-inline: clamp(0.75rem, 1.2vw, 1.25rem);
+    padding-inline: 15px;
     font-family: var(--ccc-font-accent);
     font-style: italic;
     font-size: clamp(1.05rem, 1.1vw, calc(16.2 * var(--ccc-u)));
@@ -1287,6 +1297,9 @@ const packages = [
     align-items: center;
   }
   @media (min-width: 900px) { .ccc-real { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); } }
+  .ccc-real-copy .ccc-subtitle {
+    text-transform: none;
+  }
   .ccc-real-copy p {
     margin: 0 0 calc(15 * var(--ccc-u));
     font-family: var(--ccc-font-serif);
@@ -1301,39 +1314,9 @@ const packages = [
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: clamp(0.5rem, 0.8vw, calc(11 * var(--ccc-u)));
   }
-  .ccc-real-frames > div {
-    position: relative;
-    overflow: hidden;
-    border-radius: 0;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 18px 45px -10px rgba(0, 0, 0, 0.85);
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-  }
-  .ccc-real-frames > div::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-    background: radial-gradient(circle at 50% 100%, rgba(201, 169, 110, 0.28) 0%, transparent 68%);
-    opacity: 0.75;
-    transition: opacity 0.4s ease;
-  }
-  .ccc-real-frames > div:hover {
-    border-color: rgba(201, 169, 110, 0.65);
-    box-shadow: 0 0 30px rgba(201, 169, 110, 0.28);
-  }
-  .ccc-real-frames > div:hover::before {
-    opacity: 1;
-  }
   .ccc-real-frames :global(img) {
     aspect-ratio: 16 / 9;
     object-fit: cover;
-    transform-origin: center center;
-    transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1), filter 0.4s ease;
-  }
-  .ccc-real-frames > div:hover :global(img) {
-    transform: scale(1.03) !important;
   }
   .ccc-real-main { grid-column: 1 / -1; }
 
@@ -1346,7 +1329,7 @@ const packages = [
     font-size: clamp(1.1rem, 1.15vw, calc(17.4 * var(--ccc-u)));
     font-weight: 700;
     letter-spacing: 0.05em;
-    text-transform: uppercase;
+    text-transform: none;
     color: var(--ccc-cream);
   }
   .ccc-steps p {
@@ -1394,6 +1377,7 @@ const packages = [
   }
   .ccc-easy p {
     margin: 0;
+    text-align: left;
     font-family: var(--ccc-font-serif);
     font-size: clamp(1.1rem, 1.15vw, calc(17.4 * var(--ccc-u)));
     line-height: 1.55;
@@ -1783,13 +1767,6 @@ const packages = [
     // Video elements
     const videoSec = document.getElementById('video');
     const videoDesertImgs = Array.from(document.querySelectorAll<HTMLElement>('#video .ccc-grid4 .ccc-crop img'));
-    const videoRealImgs = Array.from(document.querySelectorAll<HTMLElement>('#video .ccc-real-frames img'));
-
-    // How elements
-    const howSec = document.getElementById('how');
-    const howSplits = Array.from(document.querySelectorAll<HTMLElement>('#how .ccc-split'));
-    const howCrewImg = howSplits[0]?.querySelector<HTMLElement>('.ccc-split-media img') ?? null;
-    const howCocktailsImg = howSplits[1]?.querySelector<HTMLElement>('.ccc-split-media img') ?? null;
 
     // Pricing elements
     const pricingSec = document.getElementById('pricing');
@@ -1814,8 +1791,7 @@ const packages = [
       workTrio: [...workItems, ...workItemImgs],
       workNight: [workNightWideImg, ...workTiles, ...workTileImgs].filter(Boolean) as HTMLElement[],
       workRoom: [workRoomWide, workRoomWideImg, workRoomDetail, workRoomDetailImg].filter(Boolean) as HTMLElement[],
-      video: [...videoDesertImgs, ...videoRealImgs],
-      how: [howCrewImg, howCocktailsImg].filter(Boolean) as HTMLElement[],
+      video: videoDesertImgs,
       pricing: [pricingImg].filter(Boolean) as HTMLElement[],
       closer: [closerBgImg, closerLogo, closerTitle, closerInner].filter(Boolean) as HTMLElement[],
     };
@@ -1837,7 +1813,6 @@ const packages = [
       ['workNight', workNight],
       ['workRoom', workRoom],
       ['video', videoSec],
-      ['how', howSec],
       ['pricing', pricingSec],
       ['closer', closerSection],
     ];
@@ -1936,8 +1911,6 @@ const packages = [
         workRoomWideImg,
         workRoomDetail,
         workRoomDetailImg,
-        howCrewImg,
-        howCocktailsImg,
         pricingImg,
         closerBgImg,
         closerLogo,
@@ -1969,9 +1942,6 @@ const packages = [
         img.style.transform = '';
       });
       videoDesertImgs.forEach((img) => {
-        img.style.transform = '';
-      });
-      videoRealImgs.forEach((img) => {
         img.style.transform = '';
       });
     }
@@ -2233,8 +2203,8 @@ const packages = [
         }
       }
 
-      // 04. Video: Four desert frames zoom out 1.10 -> 1.0 staggered, real frames zoom in 1.0 -> 1.08
-      if (videoSec && (videoDesertImgs.length > 0 || videoRealImgs.length > 0)) {
+      // 04. Video: Four desert frames zoom out 1.10 -> 1.0 staggered
+      if (videoSec && videoDesertImgs.length > 0) {
         const pVideo = subjectProgress(videoY);
         if (subjectState.get('video') !== pVideo) {
           subjectState.set('video', pVideo);
@@ -2245,28 +2215,7 @@ const packages = [
             const zoom = desertZoomStart - pDesert * (desertZoomStart - 1.0);
             img.style.transform = `scale(${zoom.toFixed(3)})`;
           });
-          const realZoomTarget = isMobile ? 1.06 : 1.08;
-          const realZoom = 1.0 + pVideo * (realZoomTarget - 1.0);
-          videoRealImgs.forEach((img) => {
-            img.style.transform = `scale(${realZoom.toFixed(3)})`;
-          });
         }
-      }
-
-      // 05. How it works: Two images zoom out 1.10 -> 1.0
-      if (howSplits.length > 0) {
-        const howZoomStart = isMobile ? 1.06 : 1.10;
-        howSplits.forEach((split, idx) => {
-          const splitY = pageTop(split) - scrollY;
-          const pSplit = subjectProgress(splitY);
-          const cacheKey = `howSplit_${idx}`;
-          if (subjectState.get(cacheKey) !== pSplit) {
-            subjectState.set(cacheKey, pSplit);
-            const zoom = howZoomStart - pSplit * (howZoomStart - 1.0);
-            if (idx === 0 && howCrewImg) howCrewImg.style.transform = `scale(${zoom.toFixed(3)})`;
-            if (idx === 1 && howCocktailsImg) howCocktailsImg.style.transform = `scale(${zoom.toFixed(3)})`;
-          }
-        });
       }
 
       // 06. Packages: Coupe image zooms in 1.0 -> 1.08

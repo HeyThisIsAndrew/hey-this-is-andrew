@@ -1,8 +1,7 @@
 ---
 /**
- * Selected Work (homepage): the latest video as the featured card (it opens
- * the fullscreen player), a 2-column visual grid of remaining videos and
- * projects, and the visible production workflow strip below.
+ * Homepage proof: the photography portfolio, featured video and projects,
+ * the remaining work, and the production workflow.
  */
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
 import LatestCard from './LatestCard.astro';
@@ -20,19 +19,26 @@ const allProjects = (await getCollection('projects'))
   .sort((a, b) => Number(b.data.featured) - Number(a.data.featured) || +b.data.date - +a.data.date);
 
 // The featured items lead; remaining videos and projects display directly below.
-const restVideos = videos.filter((v) => v.url !== latestVideo?.url);
 const restProjects = allProjects.filter((p) => !featuredProjects.some((fp) => fp.id === p.id));
 
-const videoRows = restVideos.flatMap((v) => {
+const featuredVideoId = youtubeId(latestVideo?.url);
+const seenVideoIds = new Set(featuredVideoId ? [featuredVideoId] : []);
+const videoRows = videos.flatMap((v) => {
   const id = youtubeId(v.url);
-  return id ? [{ v, id }] : [];
+  if (!id || seenVideoIds.has(id)) return [];
+  seenVideoIds.add(id);
+  return [{ v, id }];
 });
 const projectRows = restProjects.map((p) => ({ p }));
 ---
 <section id="work" aria-labelledby="work-heading" class="section-hairline selected-work">
   <div class="container">
-    <SectionHeader id="work-heading" title="Selected work" lede="Work behind the scenes: shoots, edits, and building in public." />
+    <SectionHeader id="work-heading" title="Work" lede="Work behind the scenes: shoots, edits, and building in public." />
+  </div>
 
+  <slot />
+
+  <div class="container">
     <div class="sw-preview">
       {latestVideo && (
         <div class="sw-feature">

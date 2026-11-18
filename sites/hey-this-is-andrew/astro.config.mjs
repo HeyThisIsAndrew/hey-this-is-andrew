@@ -14,17 +14,15 @@ export default defineConfig({
   adapter: isCloudflare ? cloudflare({ imageService: 'passthrough' }) : undefined,
   site: 'https://heythisisandrew.github.io',
   base,
-  // /feed was a second archive of the same videos and articles; /latest is
-  // the one archive now (Prompt 2). Kept as a redirect so old links work.
+  // Keep legacy paths connected to their current pages or sections.
   redirects: {
-    '/feed': withBase('/#latest'),
+    '/feed': withBase('/latest/'),
     '/work': withBase('/#work'),
-    '/latest': withBase('/#latest'),
     '/goals': withBase('/build/#goals'),
     '/services': withBase('/#services'),
-    '/now': withBase('/#about'),
+    '/now': withBase('/about/'),
     '/cafe': withBase('/gear/#brew'),
-    '/brands/hey-this-is-andrew': withBase('/#about'),
+    '/brands/hey-this-is-andrew': withBase('/about/'),
     '/brands/capture-create-caffeinate': withBase('/ccc/'),
   },
   server: {
@@ -51,7 +49,7 @@ export default defineConfig({
     localCms(localCmsConfig),
     sitemap({
       // Hero concept previews and the 404 are not pages to index.
-      filter: (page) => !page.includes('/preview/') && !page.includes('/404') && !page.includes('/kit/') && !page.includes('/work/') && !page.includes('/latest/') && !page.includes('/goals/') && !page.includes('/services/') && !page.includes('/press/'),
+      filter: (page) => !page.includes('/preview/') && !page.includes('/404') && !page.includes('/kit/') && !page.includes('/work/') && !page.includes('/goals/') && !page.includes('/services/') && !page.includes('/press/'),
     }),
   ],
 });

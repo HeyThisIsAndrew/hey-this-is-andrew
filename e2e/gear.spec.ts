@@ -1,22 +1,26 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
 
 /*
- * /gear: the HQ /featured deck. Every header shows at once; one section is
- * open at a time; the open one is a deck (front card, two peeking, thumbs).
+ * /gear: one category deck at a time, with the HQ featured layout.
  * Data: sites/hey-this-is-andrew/src/data/gear.json.
  */
 
 const activeTitle = (sec: Locator) => sec.locator('.deck-card.active .card-title');
-const cta = (sec: Locator) => sec.locator('.deck-card.active [data-store-cta]');
+const openDetails = async (section: Locator) => {
+  await section.locator('.deck-card.active [data-gear-open]').click();
+  const panel = section.locator('.card-details[data-open="true"]');
+  await expect(panel).toBeVisible();
+  return panel;
+};
+const categorySelect = (page: Page) => page.locator('#gear-category-select');
 
 async function openSection(page: Page, id: string) {
-  const sec = page.locator(`#${id}`);
-  if (!((await sec.getAttribute('class')) || '').includes('is-expanded')) {
-    await sec.locator('.gear-accordion-header').click();
-  }
-  await expect(sec).toHaveClass(/is-expanded/);
-  await expect(sec).toHaveClass(/is-settled/);
-  return sec;
+  const section = page.locator(`#${id}`);
+  const value = await section.getAttribute('data-chip');
+  await categorySelect(page).selectOption(value!);
+  await expect(section).toBeVisible();
+  await expect(section).toHaveClass(/is-settled/);
+  return section;
 }
 
 test.describe('Gear page', () => {
@@ -57,7 +61,7 @@ test.describe('Gear page', () => {
     // Cameras: first item and its link.
     const bodies = page.locator('#gear-bodies');
     await expect(activeTitle(bodies)).toHaveText('Sony a7IV');
-    await expect(cta(bodies)).toHaveAttribute('href', 'https://link.amazon/B0aDbXAM1');
+    await expect((await openDetails(bodies)).locator('[data-store-cta]')).toHaveAttribute('href', 'https://link.amazon/B0aDbXAM1');
     await expect(bodies.locator('.deck-card.active .card-img')).toHaveAttribute('src', /\/gear\/sony-a7iv\.jpg$/);
 
     // Viltrox: Amazon first, Viltrox direct in the picker, no wrong image.
@@ -65,11 +69,13 @@ test.describe('Gear page', () => {
     await expect(bodies).toHaveClass(/is-collapsed/);
     await lenses.locator('.deck-thumb-tile[aria-label="Viltrox AF 85mm f/2.0 EVO"]').evaluate((el) => (el as HTMLElement).click());
     await expect(activeTitle(lenses)).toHaveText('Viltrox AF 85mm f/2.0 EVO');
-    await expect(cta(lenses)).toHaveAttribute('href', 'https://link.amazon/B03iIx6Ml');
-    await expect(cta(lenses)).toContainText('View on Amazon');
-    await lenses.locator('.deck-card.active .store-option', { hasText: 'Viltrox' }).click();
-    await expect(cta(lenses)).toHaveAttribute('href', 'https://viltrox.com/products/af-85mm-f2-0-fe?ref=thisisviltrox');
-    await expect(cta(lenses)).toContainText('View on Viltrox');
+    const viltroxDetails = await openDetails(lenses);
+    const viltroxCta = viltroxDetails.locator('[data-store-cta]');
+    await expect(viltroxCta).toHaveAttribute('href', 'https://link.amazon/B03iIx6Ml');
+    await expect(viltroxCta).toContainText('View on Amazon');
+    await viltroxDetails.locator('.store-option', { hasText: 'Viltrox' }).click();
+    await expect(viltroxCta).toHaveAttribute('href', 'https://viltrox.com/products/af-85mm-f2-0-fe?ref=thisisviltrox');
+    await expect(viltroxCta).toContainText('View on Viltrox');
     // The f/2.0 EVO photo (Andrew's, 2026-11), never the old f/1.8 II file.
     await expect(page.locator('img[src*="viltrox-85-evo"]')).toHaveCount(0);
     await expect(lenses.locator('.deck-card.active .card-img')).toHaveAttribute('src', /\/gear\/viltrox-85-f2-evo\.jpg$/);
@@ -77,12 +83,15 @@ test.describe('Gear page', () => {
 
     // A single-store item has no picker.
     await lenses.locator('.deck-thumb-tile').first().click();
-    await expect(lenses.locator('.deck-card.active .store-picker')).toHaveCount(0);
+    const lensDetails = await openDetails(lenses);
+    await expect(lensDetails.locator('.store-picker')).toHaveCount(0);
 
-    // Disclosures: header line, per-hero line, AFFILIATE NOTICE, CTA kept.
     await expect(page.locator('[data-affiliate-disclosure]')).toContainText('As an Amazon Associate');
-    await expect(lenses.locator('.deck-card.active .card-disclosure')).toContainText('As an Amazon Associate');
-    await expect(page.locator('[data-bottom-disclosure]')).toContainText('AFFILIATE NOTICE');
+    await expect(lensDetails.locator('.card-disclosure')).toContainText('As an Amazon Associate');
+    await page.locator('[data-gear-resources-toggle]').click();
+    await expect(page.locator('[data-bottom-disclosure]')).toHaveAccessibleName('Affiliate Disclosure');
+    await expect(page.locator('[data-bottom-disclosure]')).toContainText('The Viltrox store link is an affiliate link');
+    await expect(page.locator('[data-bottom-disclosure]')).toBeVisible();
     await expect(page.locator('.gear-project-cta')).toHaveCount(0);
 
     // Collections.
@@ -113,7 +122,9 @@ test.describe('Gear page', () => {
     await expect(activeTitle(cafe)).toContainText('Ascaso');
 
     await page.locator('#gear-search-clear').click();
-    await expect(page.locator('.gear-accordion-section:visible')).toHaveCount(7);
+    await expect(page.locator('.gear-accordion-section:visible')).toHaveCount(1);
+    await expect(categorySelect(page).locator('option')).toHaveCount(8);
+    await expect(page.locator('#brew .deck-thumb-tile:not(.is-filtered-out)')).toHaveCount(13);
   });
 
   test('trackpad: a second swipe during the first one\'s momentum moves one more card', async ({ page }) => {
@@ -158,16 +169,19 @@ test.describe('Gear page', () => {
   test('phone: every gear control is at least 44x44', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/hey-this-is-andrew/gear/');
-    await openSection(page, 'gear-lenses');
+    const lenses = await openSection(page, 'gear-lenses');
     const viltrox = page.locator('#gear-lenses .deck-thumb-tile[aria-label="Viltrox AF 85mm f/2.0 EVO"]');
     await viltrox.evaluate((el) => (el as HTMLElement).click());
+    await openDetails(lenses);
+    await page.locator('[data-gear-resources-toggle]').click();
     const sel = [
-      '.gear-chip', '.btn-all-toggle', '.influencer-pill', '.gear-accordion-header',
+      '#gear-category-select', '.btn-all-toggle', '.influencer-pill',
+      '.gear-accordion-section.is-expanded .deck-card.active .card-open',
       '.gear-accordion-section.is-expanded .deck-step',
       '.gear-accordion-section.is-expanded .deck-thumb-tile',
-      '.gear-accordion-section.is-expanded .deck-card.active .store-cta',
-      '.gear-accordion-section.is-expanded .deck-card.active .store-option',
-      '.gear-collection-link',
+      '.gear-accordion-section.is-expanded .card-details .store-cta',
+      '.gear-accordion-section.is-expanded .card-details .store-option',
+      '.gear-collection-link', '.gear-resources-toggle',
     ].join(', ');
     // The card that just came forward scales up for 0.5s: measure once settled.
     await expect
@@ -190,25 +204,13 @@ test.describe('Gear page', () => {
   ];
 
   for (const vp of viewports) {
-    test(`headers toggle, deck rotates, hero unclipped at ${vp.name}`, async ({ page }) => {
+    test(`dropdown switches category, deck rotates, artwork fills the card at ${vp.name}`, async ({ page }) => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
       await page.goto('/hey-this-is-andrew/gear/');
       const sections = page.locator('.gear-accordion-section');
-      const n = await sections.count();
-
-      // Every header opens alone and closes on a second click.
-      for (let i = 0; i < n; i++) {
-        const sec = sections.nth(i);
-        const hdr = sec.locator('.gear-accordion-header');
-        if (((await sec.getAttribute('class')) || '').includes('is-expanded')) {
-          await hdr.click();
-          await expect(sec).toHaveClass(/is-collapsed/);
-        }
-        await hdr.click();
-        await expect(sec).toHaveClass(/is-expanded/);
-        await expect(page.locator('.gear-accordion-section.is-expanded')).toHaveCount(1);
-        await hdr.click();
-        await expect(sec).toHaveClass(/is-collapsed/);
+      for (const section of await sections.all()) {
+        await openSection(page, (await section.getAttribute('id'))!);
+        await expect(page.locator('.gear-accordion-section:visible')).toHaveCount(1);
       }
 
       // Deck rotation: next, prev, thumbnail, peeking card.
@@ -220,41 +222,32 @@ test.describe('Gear page', () => {
       await expect(activeTitle(lenses)).toHaveText('Sony FE 24-70mm f/2.8 GM');
       await lenses.locator('.deck-thumb-tile').nth(4).evaluate((el) => (el as HTMLElement).click());
       await expect(activeTitle(lenses)).toHaveText('Sony FE 90mm f/2.8 Macro G OSS');
-      // A reader clicks the sliver of the next card peeking out on the right.
-      // Measure the card's ON-SCREEN box (it is scaled, so a locator click
-      // with `position` aims at its untransformed box and hits the front
-      // card) and click there. The cards glide for 0.5s and the page may
-      // still be settling, so the whole step re-measures and retries.
-      const peek = lenses.locator('.deck-card.next-1');
+      const stage = lenses.locator('.deck-stage');
+      await stage.scrollIntoViewIfNeeded();
       await expect(async () => {
-        const now = (await activeTitle(lenses).textContent()) || '';
-        if (now.includes('55mm')) return;
-        // Never click past it: a click that lands on the wrong card fails.
-        expect(now).toContain('90mm');
-        await peek.scrollIntoViewIfNeeded();
-        // Wait until the card's box holds still between two reads.
-        let box = (await peek.boundingBox())!;
-        for (let k = 0; k < 10; k++) {
-          await page.waitForTimeout(120);
-          const next = (await peek.boundingBox())!;
-          const still = Math.abs(next.x - box.x) < 0.5 && Math.abs(next.y - box.y) < 0.5 && Math.abs(next.width - box.width) < 0.5;
-          box = next;
-          if (still) break;
-        }
-        await peek.evaluate((el) => (el as HTMLElement).click());
-        await expect(activeTitle(lenses)).toHaveText('Sony FE 55mm f/1.8 ZA Sonnar', { timeout: 1500 });
-      }).toPass({ timeout: 10000 });
+        const card = await lenses.locator('.deck-card.active').boundingBox();
+        const peek = await lenses.locator('.deck-card.next-1').boundingBox();
+        expect(card).toBeTruthy();
+        expect(peek).toBeTruthy();
+        const edge = card!.x + card!.width;
+        expect(peek!.x + peek!.width - edge).toBeGreaterThan(12);
+        await page.mouse.click(edge + 10, peek!.y + peek!.height / 2);
+        await expect(activeTitle(lenses)).toHaveText('Sony FE 55mm f/1.8 ZA Sonnar', { timeout: 900 });
+      }).toPass();
 
-      // The hero image has its own row: below the nav, nothing over it.
-      await lenses.locator('.deck-card.active .card-visual').scrollIntoViewIfNeeded();
-      const geo = await lenses.evaluate((sec) => {
-        const img = sec.querySelector('.deck-card.active .card-img')!.getBoundingClientRect();
-        const vis = sec.querySelector('.deck-card.active .card-visual')!.getBoundingClientRect();
-        const nav = document.querySelector('.site-nav')!.getBoundingClientRect().bottom;
-        return { inRow: img.top >= vis.top - 0.5 && img.bottom <= vis.bottom + 0.5, belowNav: img.top >= nav - 0.5 };
+      const img = lenses.locator('.deck-card.active .card-img');
+      await expect(img).toHaveCSS('object-fit', 'cover');
+      const geometry = await img.evaluate((element) => {
+        const photo = element.getBoundingClientRect();
+        const card = element.parentElement!.getBoundingClientRect();
+        return {
+          widthDelta: photo.width - card.width,
+          heightDelta: photo.height - card.height,
+        };
       });
-      expect(geo.inRow).toBe(true);
-      expect(geo.belowNav).toBe(true);
+      expect(geometry.widthDelta).toBeCloseTo(0);
+      expect(geometry.heightDelta).toBeCloseTo(0);
+      await expect(lenses.locator('.deck-thumb-tile.is-active')).toHaveCSS('border-top-color', 'rgb(230, 0, 0)');
 
       // No horizontal page scroll.
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

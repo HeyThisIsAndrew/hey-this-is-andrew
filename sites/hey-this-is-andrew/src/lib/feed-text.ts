@@ -9,7 +9,7 @@
 const NAMED: Record<string, string> = {
   amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
   rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“',
-  hellip: '…', ndash: '–', mdash: '—', middot: '·',
+  hellip: '…', ndash: '–', mdash: '\u2014', middot: '·',
 };
 
 function decodeOnce(s: string): string {
@@ -42,7 +42,7 @@ export function cleanFeedText(input: string | null | undefined): string {
       .replace(/^\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*$/, '$1')
       .replace(/<[^>]*>/g, ' ')
   )
-    .replace(/\s*—\s*/g, ', ')
+    .replace(/\s*\u2014\s*/g, ', ')
     .replace(/\s+/g, ' ')
     .trim();
   return s;

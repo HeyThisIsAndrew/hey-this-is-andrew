@@ -2,14 +2,11 @@
 /**
  * The homepage Gear carousel (#gear): the seven gear sections of /gear/
  * (src/data/gear.json), one card in view at a time, in the /gear/ page's
- * order. Each card is a whole section: its lead photo, kicker, name,
- * subtitle and piece count, and a strip of the other pieces in it. The card
- * in view is the link; it opens that section on /gear/ (GearGrid opens the
- * section a link names).
+ * order. Each card previews a section with its lead photo and links to
+ * that section on /gear/.
  *
- * Named tabs above the card say what is in it and which section is showing.
  * Swipe on touch (native scroll with snap, one card per swipe), mouse drag,
- * a trackpad or Shift+wheel swipe, the Prev and Next arrows, a tab, or the
+ * a trackpad or Shift+wheel swipe, the Prev and Next arrows, or the
  * arrow keys all move it, and it stays where they put it: it advances on
  * its own only until the reader touches it, and never while hovered,
  * focused, off screen, in a background tab or under reduced motion.
@@ -32,33 +29,34 @@ const photoFor = (image?: string) => {
   return Object.entries(photos).find(([key]) => key.endsWith(`/gear/${file}`))?.[1].default;
 };
 
-const THUMBS = 4;
+const previewSubtitles: Record<string, string> = {
+  bodies: 'Full-frame bodies and phones',
+  lighting: 'LED and radio wireless flash',
+  audio: 'Mics and monitoring',
+  cafe: 'Espresso, pour-over, and nitro',
+};
 const categories = (await getCollection('gear')).sort((a, b) => a.data.order - b.data.order);
 const sections = (
   await Promise.all(
     categories.map(async (cat) => {
-      // What /gear/ shows: items with a store link.
-      const shown = cat.data.items.filter((it) => it.stores.length > 0);
-      const withPhoto = shown.map((it) => ({ it, photo: photoFor(it.image) })).filter((x) => x.photo);
-      if (!shown.length || !withPhoto.length) return null;
-      const lead = withPhoto[0];
-      const hero = await getImage({ src: lead.photo!, widths: [480, 800, 1200], format: 'webp' });
-      const thumbs = await Promise.all(
-        withPhoto.slice(1, 1 + THUMBS).map(async ({ it, photo }) => ({
-          name: it.name,
-          src: (await getImage({ src: photo!, width: 128, format: 'webp' })).src,
-        }))
-      );
+      const lead = cat.data.items
+        .filter((item) => item.stores.length > 0)
+        .map((item) => ({ name: item.name, photo: photoFor(item.image) }))
+        .find(({ photo }) => photo);
+      if (!lead?.photo) return null;
+      const hero = await getImage({ src: lead.photo, widths: [480, 800, 1200], format: 'webp' });
       return {
-        id: cat.id,
         chip: gearChipLabel(cat.id, cat.data.category),
         title: cat.data.category,
         kicker: cat.data.kicker || '',
-        subtitle: cat.data.subtitle || '',
-        count: shown.length,
-        more: Math.max(0, shown.length - 1 - thumbs.length),
-        hero: { src: hero.src, srcset: hero.srcSet.attribute, alt: lead.it.name },
-        thumbs,
+        subtitle: previewSubtitles[cat.id] ?? cat.data.subtitle,
+        hero: {
+          src: hero.src,
+          srcset: hero.srcSet.attribute,
+          alt: lead.name,
+          width: lead.photo.width,
+          height: lead.photo.height,
+        },
         href: `${base}/gear/#${gearSectionId(cat.id)}`,
       };
     })
@@ -78,20 +76,12 @@ const n = sections.length;
         <li class="gc-slide" role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${n}: ${s.title}`}>
           <a class="gc-card" href={s.href} draggable="false" tabindex={i === 0 ? undefined : '-1'}>
             <span class="gc-media">
-              <img src={s.hero.src} srcset={s.hero.srcset} sizes="(max-width: 720px) 92vw, 55vw" alt={s.hero.alt} width="1200" height="900" loading="lazy" decoding="async" draggable="false" />
+              <img src={s.hero.src} srcset={s.hero.srcset} sizes="(max-width: 720px) calc(100vw - 80px), 50vw" alt={s.hero.alt} width={s.hero.width} height={s.hero.height} loading="lazy" decoding="async" draggable="false" />
+              {s.kicker && <span class="gc-kicker font-mono">{s.kicker}</span>}
             </span>
             <span class="gc-body">
-              <span class="gc-kicker font-mono">{s.kicker}</span>
               <span class="gc-title display">{s.title}</span>
               {s.subtitle && <span class="gc-subtitle">{s.subtitle}</span>}
-              {s.thumbs.length > 0 && (
-                <span class="gc-strip" aria-hidden="true">
-                  {s.thumbs.map((t) => (
-                    <img src={t.src} alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false" />
-                  ))}
-                  {s.more > 0 && <span class="gc-more font-mono">+{s.more}</span>}
-                </span>
-              )}
               <span class="gc-go font-mono">
                 Open {s.chip}
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
@@ -122,6 +112,7 @@ const n = sections.length;
   }
 
   .gc-track {
+    --gc-peek: clamp(48px, 6vw, 72px);
     position: relative;
     display: flex;
     margin: 0;
@@ -144,8 +135,13 @@ const n = sections.length;
     scroll-snap-type: none;
     cursor: grabbing;
   }
+  .gc-track::after {
+    /* Let the last card reach the same snap position as the other cards. */
+    content: '';
+    flex: 0 0 var(--gc-peek);
+  }
   .gc-slide {
-    flex: 0 0 calc(100% - clamp(44px, 6vw, 72px));
+    flex: 0 0 calc(100% - var(--gc-peek));
     min-width: 0;
     scroll-snap-align: start;
     scroll-snap-stop: always;
@@ -156,7 +152,7 @@ const n = sections.length;
     position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-    min-height: clamp(300px, 30vw, 420px);
+    min-height: clamp(190px, 19vw, 260px);
     color: var(--ink);
     text-decoration: none;
     -webkit-user-select: none;
@@ -167,10 +163,12 @@ const n = sections.length;
     outline-offset: -3px;
   }
   .gc-media {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: clamp(1rem, 3vw, 2rem);
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    height: clamp(190px, 19vw, 260px);
+    padding: 1rem;
     /* The gear photos are shot on this same near-black. */
     background: #0d0d0d;
     border-right: 1px solid var(--line);
@@ -181,7 +179,7 @@ const n = sections.length;
     display: block;
     width: 100%;
     height: 100%;
-    max-height: 340px;
+    min-height: 0;
     object-fit: contain;
     -webkit-user-drag: none;
     border-radius: 0;
@@ -197,48 +195,28 @@ const n = sections.length;
     padding: clamp(1.25rem, 3vw, 2.5rem);
     padding-right: clamp(4.5rem, 7vw, 6.5rem);
   }
-  .gc-kicker,
-  .gc-count {
+  .gc-kicker {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    max-width: calc(100% - 1.5rem);
+    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--line);
+    background: #080808;
     font-size: 0.72rem;
-    letter-spacing: 0.2em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--ink);
   }
   .gc-title {
-    font-size: clamp(1.8rem, 3.6vw, 2.8rem);
+    font-size: clamp(1.25rem, 2.1vw, 1.9rem);
     line-height: 1;
     overflow-wrap: anywhere;
   }
   .gc-subtitle {
     color: var(--muted);
-    max-width: 40ch;
-  }
-  .gc-strip {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin-top: 0.4rem;
-  }
-  .gc-strip img {
-    width: 48px;
-    height: 48px;
-    padding: 3px;
-    object-fit: contain;
-    background: #0d0d0d;
-    border: 1px solid var(--line);
-    border-radius: 0;
-    -webkit-user-drag: none;
-  }
-  .gc-more {
-    display: grid;
-    place-items: center;
-    min-width: 48px;
-    height: 48px;
-    padding: 0 0.4rem;
-    border: 1px solid var(--line);
-    border-radius: 0;
-    font-size: 0.72rem;
-    color: var(--muted);
+    font-size: 0.92rem;
+    max-width: 32ch;
   }
   .gc-go {
     display: inline-flex;
@@ -282,12 +260,10 @@ const n = sections.length;
     min-width: 44px;
     min-height: 44px;
     padding: 0.45rem 0.75rem;
-    background: rgba(10, 10, 10, 0.85);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: #080808;
+    border: 1px solid #f5f5f5;
     border-radius: 0;
-    color: var(--ink, #fff);
+    color: #f5f5f5;
     font-family: var(--font-mono);
     font-size: 0.72rem;
     letter-spacing: 0.14em;
@@ -295,8 +271,7 @@ const n = sections.length;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
-    transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out;
   }
   .gc-step--prev {
     left: 0.75rem;
@@ -306,18 +281,12 @@ const n = sections.length;
   }
   .gc-step:hover,
   .gc-step:focus-visible {
-    border-color: rgba(255, 255, 255, 0.5);
-    background: rgba(20, 20, 20, 0.95);
-    color: #fff;
+    background: #f5f5f5;
+    color: #080808;
   }
 
   @media (max-width: 720px) {
-    .gc-slide {
-      flex: 0 0 calc(100% - 36px);
-    }
     .gc-step {
-      min-width: 32px;
-      min-height: 40px;
       padding: 0.25rem 0.4rem;
       gap: 0.25rem;
       font-size: 0.6rem;
@@ -334,18 +303,16 @@ const n = sections.length;
       min-height: 0;
     }
     .gc-media {
-      aspect-ratio: 4 / 3;
+      height: clamp(9rem, 45vw, 13rem);
       border-right: 0;
       border-bottom: 1px solid var(--line);
     }
-    .gc-media img {
-      max-height: none;
-    }
     .gc-body {
-      padding: 1.25rem clamp(4.25rem, 15vw, 4.75rem);
+      gap: 0.45rem;
+      padding: 1rem;
     }
     .gc-title {
-      font-size: clamp(1.6rem, 8vw, 2.2rem);
+      font-size: clamp(1.25rem, 5vw, 1.6rem);
     }
   }
 
@@ -418,7 +385,7 @@ const n = sections.length;
         sync();
       };
 
-      // The tabs follow the reader's own swipe or scroll as it happens.
+      // Keep the focusable card in sync with the reader's swipe or scroll.
       let raf = 0;
       track.addEventListener('scroll', () => {
         if (raf) return;

@@ -1,27 +1,32 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Audit Fixes Verification', () => {
-  test('Brand-Client Block under #services renders 3-column card grid with no pricing', async ({ page }) => {
+  test('Service logistics ledger has three centered columns and no pricing', async ({ page }) => {
     await page.goto('./');
 
     const clientBlock = page.locator('#services [data-client-block]');
     await expect(clientBlock).toBeVisible();
+    const ledger = clientBlock.locator('.logistics-ledger');
+    const columns = await ledger.evaluate(el => getComputedStyle(el).gridTemplateColumns);
+    expect(columns.split(' ')).toHaveLength(3);
 
-    const cards = clientBlock.locator('.client-card');
-    await expect(cards).toHaveCount(3);
+    const items = ledger.locator('.logistics-item');
+    await expect(items).toHaveText([
+      '15 selects the next day. The full gallery within a week.',
+      'Edited photos and vertical reels, licensed for your social and web.',
+      'Shot on location for Desert Escape at Ace Hotel Palm Springs, the Stone Groove Stillhouse launch, and brand and creator campaigns.',
+    ]);
+    for (const item of await items.all()) {
+      await expect(item).toHaveCSS('text-align', 'center');
+      await expect(item).toHaveCSS('align-items', 'center');
+      await expect(item).toHaveCSS('justify-content', 'center');
+      await expect(item).toHaveCSS('border-left-width', '0px');
+      await expect(item.locator('.logistics-value')).toHaveCSS('text-transform', 'uppercase');
+    }
 
     // No Starting Rate or pricing numbers
     await expect(clientBlock).not.toContainText('Starting Rate');
     await expect(clientBlock).not.toContainText('$');
-
-    await expect(cards.nth(0)).toContainText('Turnaround');
-    await expect(cards.nth(0)).toContainText('15 selects the next day. The full gallery within a week.');
-
-    await expect(cards.nth(1)).toContainText('Deliverables & Usage');
-    await expect(cards.nth(1)).toContainText('Edited photos and vertical reels, licensed for your social and web.');
-
-    await expect(cards.nth(2)).toContainText('Client Results');
-    await expect(cards.nth(2)).toContainText('Shot on location for Desert Escape at Ace Hotel Palm Springs, the Stone Groove Stillhouse launch, and brand and creator campaigns.');
   });
 
   test('Contact rule: UGC CTA on homepage, no CCC email on homepage or gear page', async ({ page }) => {
@@ -32,7 +37,7 @@ test.describe('Audit Fixes Verification', () => {
       '&body=Brand%3A%0AProduct%3A%0AWhat%20you%20want%20shown%3A%0ATimeline%3A%0A';
 
     // 1. Homepage services has exactly one UGC CTA
-    const servicesCta = page.locator('#services a:has-text("Send a product to review")');
+    const servicesCta = page.locator('#services').getByRole('link', { name: 'Send a product' });
     await expect(servicesCta).toBeVisible();
     await expect(servicesCta).toHaveAttribute('href', expectedUgcHref);
 
@@ -52,42 +57,52 @@ test.describe('Audit Fixes Verification', () => {
     await expect(cccContactBtn).toBeVisible();
   });
 
-  test('Homepage section order has What I do (#services) above Goals (#goals)', async ({ page }) => {
+  test('Homepage shows the seven sections in order', async ({ page }) => {
     await page.goto('./');
-    const servicesY = await page.locator('#services').evaluate(el => el.getBoundingClientRect().top);
-    const goalsY = await page.locator('#goals').evaluate(el => el.getBoundingClientRect().top);
-    expect(servicesY).toBeLessThan(goalsY);
+    const sections = await page.locator('#main-content > section').evaluateAll(els => els.map(el => el.id));
+    expect(sections).toEqual(['overview', 'directory', 'work', 'services', 'gear', 'explore', 'newsletter']);
   });
 
-  test('Elevator video tile zooms first, then plays in place', async ({ page }) => {
+  test('Elevator reels play local files in place or open their Instagram links', async ({ page }) => {
     await page.goto('./');
 
-    const videoItem = page.locator('.photo-set:not([aria-hidden]) .photo-item[data-video-url]').first();
-    if ((await videoItem.count()) === 0) return; // No Instagram photos downloaded in local dev
+    const originals = page.locator('.photo-set:not([aria-hidden])');
+    const reels = originals.locator('.photo-item[data-video-url]');
+    test.skip((await reels.count()) === 0, 'no Instagram reels in this build');
+
+    const instagramLinks = originals.locator('.photo-item[data-video-url]:not([data-video-src])');
+    for (const link of await instagramLinks.all()) {
+      const permalink = await link.getAttribute('data-video-url');
+      expect(permalink).toMatch(/^https:\/\/www\.instagram\.com\/reel\//);
+      await expect(link).toHaveAttribute('href', permalink!);
+      await expect(link).toHaveAttribute('target', '_blank');
+      await expect(link.locator('.photo-play-badge, .photo-tag-video-icon')).toHaveCount(0);
+    }
+    const player = page.locator('[data-photo-player]');
+    if (await instagramLinks.count()) {
+      const link = instagramLinks.first();
+      const permalink = (await link.getAttribute('href'))!;
+      await page.context().route(permalink, route => route.fulfill({ body: '' }), { times: 1 });
+      const [popup] = await Promise.all([
+        page.waitForEvent('popup'),
+        link.evaluate(el => (el as HTMLElement).click()),
+      ]);
+      await expect(popup).toHaveURL(permalink);
+      await popup.close();
+      await expect(page.locator('.photo-section')).not.toHaveClass(/is-zoomed/);
+      await expect(player).toBeHidden();
+    }
+
+    const videoItem = originals.locator('.photo-item[data-video-src]').first();
+    if (!(await videoItem.count())) return;
     await expect(videoItem.locator('.photo-play-badge')).toContainText('Video');
 
     // A video tile zooms into the elevator view like a photo: nothing plays
     // and no separate dialog opens.
     await videoItem.evaluate((el) => (el as HTMLElement).click());
     await expect(page.locator('.photo-section')).toHaveClass(/is-zoomed/);
-    const player = page.locator('[data-photo-player]');
     await expect(player).toBeHidden();
     await expect(page.locator('#photo-reel-player')).toHaveCount(0);
-
-    // A reel with no self-hosted file has no Play (Instagram's embed refuses
-    // those reels); the dock's Instagram link is the way to it, and a second
-    // tap on the tile opens no player.
-    const hasFile = await videoItem.evaluate((el) => Boolean((el as HTMLElement).dataset.videoSrc));
-    await expect(page.locator('[data-photo-watch]')).toBeVisible();
-    if (!hasFile) {
-      await expect(page.locator('[data-photo-play]')).toBeHidden();
-      await videoItem.evaluate((el) => (el as HTMLElement).click());
-      await expect(player).toBeHidden();
-      await expect(page.locator('iframe[src*="instagram.com"]')).toHaveCount(0);
-      await page.keyboard.press('Escape');
-      await expect(page.locator('.photo-section')).not.toHaveClass(/is-zoomed/);
-      return;
-    }
 
     // Play in the dock plays the self-hosted file in place, with the HQ
     // close button above it, clear of the nav.

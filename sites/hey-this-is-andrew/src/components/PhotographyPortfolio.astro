@@ -41,10 +41,8 @@ const rawDisplayPhotos = instagramPhotos.map((p) => ({
   venue: p.venue,
   event: p.event,
   permalink: p.permalink,
-  duration: (p as any).duration,
-  // A reel the sync found removed from Instagram stays on the wall as a
-  // photo (it is still the work) unless its file was saved: no dead embed.
-  video: p.mediaType === 'VIDEO' && Boolean(p.permalink) && (!p.removed || Boolean(p.videoSrc)),
+  // Removed posts stay as photos unless a saved file can play locally.
+  video: p.mediaType === 'VIDEO' && Boolean(p.videoSrc || (!p.removed && p.permalink)),
   videoSrc: p.videoSrc,
 }));
 
@@ -290,6 +288,6 @@ const finalPhotos = displayPhotos.length > 0 ? displayPhotos : FALLBACK_PORTFOLI
 ---
 <PhotoElevator
   photos={finalPhotos}
-  aboutHref="#about"
+  embedded
   emptyText="There are no self-hosted photos in <code>src/assets/instagram/</code>. To view the photos, run the <a href=\"https://github.com/HeyThisIsAndrew/hey-this-is-andrew/blob/main/docs/instagram-sync.md\">Instagram Sync script</a>."
 />

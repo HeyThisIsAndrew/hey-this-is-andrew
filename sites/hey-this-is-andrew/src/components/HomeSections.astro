@@ -5,15 +5,12 @@
  * around a different hero. `skipBrands` drops the brands section when the
  * hero already renders the accordion (concepts A and C).
  */
-import { getCollection } from 'astro:content';
 import BrandsSection from './BrandsSection.astro';
-import AboutSection from './AboutSection.astro';
 import PhotographyPortfolio from './PhotographyPortfolio.astro';
 import SelectedWork from './SelectedWork.astro';
-import LatestSection from './LatestSection.astro';
-import GoalsSummary from './GoalsSummary.astro';
 import WorkWithAndrew from './WorkWithAndrew.astro';
 import KitSection from './KitSection.astro';
+import ExploreSection from './ExploreSection.astro';
 import NewsletterSection from './NewsletterSection.astro';
 
 interface Props {
@@ -23,16 +20,13 @@ interface Props {
   brandsTight?: boolean;
 }
 const { skipBrands = false, brandsTight = false } = Astro.props;
-const goals = (await getCollection('goals')).sort((a, b) => a.data.order - b.data.order);
 ---
 <slot name="hero" />
 {!skipBrands && <BrandsSection tight={brandsTight} />}
-<AboutSection />
-{/* The photo elevator's home: right after About, for every visitor, whatever the Instagram sync did (it renders its own empty state). */}
-<PhotographyPortfolio />
-<SelectedWork />
-<LatestSection />
+<SelectedWork>
+  <PhotographyPortfolio />
+</SelectedWork>
 <WorkWithAndrew />
-<GoalsSummary groups={goals} />
 <KitSection />
+<ExploreSection />
 <NewsletterSection />

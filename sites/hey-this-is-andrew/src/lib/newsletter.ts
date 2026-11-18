@@ -1,6 +1,6 @@
 // Newsletter integration point.
 //
-// Today the signup completes on Substack (a real, working path — no fake
+// Today the signup completes on Substack (a real, working path, no fake
 // form). To connect a direct email provider later, swap NEWSLETTER_HANDLER
 // for one that POSTs to the provider's endpoint; the UI stays untouched.
 //

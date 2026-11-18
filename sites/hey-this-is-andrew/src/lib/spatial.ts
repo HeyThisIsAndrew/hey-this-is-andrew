@@ -1,6 +1,6 @@
 import { createPageScope } from '@andrew/ui/scripts/page-scope.ts';
 /**
- * spatial.ts — Site-wide spatial transition system for Hey This Is Andrew.
+ * spatial.ts, Site-wide spatial transition system for Hey This Is Andrew.
  *
  * The core principle: when a user selects something that represents a
  * destination or expanded state, the transition into that destination
@@ -27,7 +27,7 @@ export const EASING = {
   zoomOut: "cubic-bezier(0.32, 0.72, 0, 1)",
   /** Zoom return: smooth re-entry to the source rect. */
   zoomIn: "cubic-bezier(0.22, 0.61, 0.36, 1)",
-  /** Subtle overshoot — ONLY for small settle moments (photo landing in viewer). */
+  /** Subtle overshoot, ONLY for small settle moments (photo landing in viewer). */
   settle: "cubic-bezier(0.34, 1.18, 0.64, 1)",
   /** Micro-interactions: quick and tactile. */
   snap: "cubic-bezier(0.2, 0.9, 0.25, 1)",
@@ -42,7 +42,7 @@ export const DURATION = {
   standard: 380,
   /** Spatial: zoom expansions (desktop). Matches BrandZoom's 550ms. */
   spatial: 550,
-  /** Spatial on small screens — shorter distance, shorter time. */
+  /** Spatial on small screens, shorter distance, shorter time. */
   spatialMobile: 400,
 } as const;
 
@@ -88,8 +88,8 @@ export function insetOf(r: Rect): string {
  * Jump the page without animating.
  *
  * `html { scroll-behavior: smooth }` is global, so a bare window.scrollTo()
- * animates. Setting the inline style alone does not recalculate in time —
- * a layout read (void offsetHeight) forces the recalc before scrolling.
+ * animates. Setting the inline style alone does not recalculate in time.
+ * A layout read (void offsetHeight) forces the recalc before scrolling.
  * Adapted from BE Unconventional HQ's scroll-to.ts.
  */
 export function jumpTo(y = 0, x = 0): void {
@@ -368,8 +368,8 @@ export async function flipRect(
  * transition and plays a settle animation on its main content.
  *
  * Usage:
- *   initRouteTransitions('a[data-route-zoom]')  — call once per page.
- *   handleRouteEnter() — call on DOMContentLoaded of every page.
+ *   initRouteTransitions('a[data-route-zoom]'), call once per page.
+ *   handleRouteEnter(), call on DOMContentLoaded of every page.
  */
 const ROUTE_KEY = "htia-route-transition";
 
@@ -410,7 +410,7 @@ export function initRouteTransitions(selector = "a[data-route-zoom]"): void {
     try {
       sessionStorage.setItem(ROUTE_KEY, JSON.stringify(pending));
     } catch {
-      /* storage unavailable — navigate plainly */
+      /* storage unavailable, navigate plainly */
       window.location.href = pending.url;
       return;
     }
@@ -461,13 +461,13 @@ export function handleRouteEnter(contentSelector = "main"): void {
     return;
   }
   if (!pending) return;
-  // Stale (older than 10s) — ignore.
+  // Stale (older than 10s), ignore.
   if (Date.now() - pending.at > 10000) return;
 
   const main = document.querySelector<HTMLElement>(contentSelector);
   if (!main || prefersReducedMotion()) return;
 
-  // The new view settles in from a slight zoom — the tail of the
+  // The new view settles in from a slight zoom, the tail of the
   // "zoom into the selected thing" motion from the previous page. Transform
   // only: the page is never hidden (it used to start at opacity 0, which
   // held back the first paint of the arriving page, and its LCP).

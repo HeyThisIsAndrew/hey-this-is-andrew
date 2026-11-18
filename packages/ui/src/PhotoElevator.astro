@@ -26,7 +26,7 @@ interface DisplayPhoto {
   event?: string;
   permalink?: string;
   duration?: string;
-  /** An Instagram reel: its frame shows here; it plays in the zoomed view. */
+  /** An Instagram reel with a local player or an Instagram permalink. */
   video: boolean;
   /** The reel as a self-hosted file (public URL), when the sync has one. */
   videoSrc?: string;
@@ -36,12 +36,14 @@ interface DisplayPhoto {
 export interface Props {
   photos: DisplayPhoto[];
   emptyText?: string;
+  embedded?: boolean;
   /** Where the credit line's name links. The homepage passes "#about"
       (its own section); elsewhere it is the About page. */
   aboutHref?: string;
 }
 
-const { photos: displayPhotos, emptyText = 'No photos configured yet.', aboutHref } = Astro.props;
+const { photos: displayPhotos, aboutHref, embedded = false } = Astro.props;
+const Wrapper = embedded ? 'div' : 'section';
 
 const categoryLabels: Record<string, string> = {
   cocktails: 'Cocktails',
@@ -69,7 +71,7 @@ const cccUrl = `${siteBase}/ccc/`;
 const SETS = [0, 1];
 ---
 
-<section id="photos" class="photo-section" aria-labelledby="photography-title">
+<Wrapper id="photos" class:list={['photo-section', { 'photo-section--embedded': embedded }]} aria-labelledby="photography-title">
   <div class="photo-zoom-backdrop" aria-hidden="true"></div>
   <div class="photo-intro">
     <SectionHeader
@@ -77,6 +79,7 @@ const SETS = [0, 1];
       title="Shot on the job."
       lede="Bar and beverage photography. The work behind Capture Create Caffeinate. Available for select photography work."
       id="photography-title"
+      as={embedded ? 'h3' : 'h2'}
     />
   </div>
 
@@ -100,17 +103,23 @@ const SETS = [0, 1];
             {col.map((pi) => {
               const p = displayPhotos[pi];
               if (!p) return null;
+              const playable = p.video && Boolean(p.videoSrc);
+              const instagramUrl = p.video && !playable ? p.permalink : undefined;
+              const Tile = instagramUrl ? 'a' : 'button';
               return (
-                <button
-                  type="button"
+                <Tile
+                  type={Tile === 'button' ? 'button' : undefined}
+                  href={instagramUrl}
+                  target={instagramUrl ? '_blank' : undefined}
+                  rel={instagramUrl ? 'noopener' : undefined}
                   class="photo-item"
-                  data-camera-zoom
+                  data-camera-zoom={instagramUrl ? undefined : ''}
                   data-photo-index={pi}
                   data-video-url={p.video ? p.permalink : undefined}
-                  data-video-src={p.video && p.videoSrc ? p.videoSrc : undefined}
+                  data-video-src={playable ? p.videoSrc : undefined}
                   tabindex={set === 1 ? -1 : undefined}
                   style={`aspect-ratio: ${p.image.width} / ${p.image.height}`}
-                  aria-label={p.video ? `Open video: ${p.caption}` : `View photo: ${p.caption}`}
+                  aria-label={instagramUrl ? `Watch video on Instagram: ${p.caption}` : playable ? `Open video: ${p.caption}` : `View photo: ${p.caption}`}
                 >
                   <Image
                     src={p.image}
@@ -122,14 +131,14 @@ const SETS = [0, 1];
                     decoding="async"
                   />
                   <span class="photo-tag">
-                    {p.video && (
+                    {playable && (
                       <svg class="photo-tag-video-icon" width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M8 5v14l11-7z" />
                       </svg>
                     )}
                     {p.location || categoryLabels[p.category] || 'Cocktails'}
                   </span>
-                  {p.video && (
+                  {playable && (
                     <div class="photo-play-badge" data-action="play-reel" aria-hidden="true">
                       <div class="photo-play-icon-wrap">
                         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -140,7 +149,7 @@ const SETS = [0, 1];
                       {p.duration && <span class="photo-play-duration">{p.duration}</span>}
                     </div>
                   )}
-                </button>
+                </Tile>
               );
             })}
           </div>
@@ -169,7 +178,7 @@ const SETS = [0, 1];
   {/* Zoomed onto a reel, the dock offers Play (in place) and the way out
       to Instagram. Photos get none. */}
   <div class="photo-actions" data-photo-actions hidden>
-    <button type="button" class="btn btn-primary photo-play-btn" data-photo-play aria-label="Play video reel">
+    <button type="button" class="btn btn-primary photo-play-btn" data-photo-play aria-label="Play video reel" hidden>
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <path d="M8 5v14l11-7z" />
       </svg>
@@ -187,9 +196,8 @@ const SETS = [0, 1];
       a photo; only there, from the dock's Play button or a second tap on
       the zoomed tile, does it play, laid exactly over the zoomed tile.
       Only a self-hosted file plays here (data-video-src, downloaded by the
-      deploy's Instagram sync or dropped in public/reels/<id>.mp4). A reel
-      without one has no Play button: Instagram's embed refuses those, so the
-      dock's "Watch on Instagram" link is the way to it. */}
+      deploy's Instagram sync or dropped in public/reels/<id>.mp4). Other
+      reels use their Instagram permalink directly. */}
   <div class="photo-player" data-photo-player hidden>
     <button type="button" class="photo-player-close" data-photo-player-close aria-label="Stop video">&times;</button>
     <div class="photo-player-media" data-photo-player-media></div>
@@ -199,7 +207,7 @@ const SETS = [0, 1];
     Shot for <a href={cccUrl}>Capture Create Caffeinate</a>.<br />
     Photographs by <a href={aboutUrl}>Andrew Baxter</a>.
   </p>
-</section>
+</Wrapper>
 
 <style>
   .photo-section {
@@ -207,6 +215,9 @@ const SETS = [0, 1];
     padding: var(--space-section) 0;
     overflow: hidden;
     overflow-anchor: none;
+  }
+  .photo-section--embedded {
+    padding-top: 0;
   }
   /* Header, grid and note sit on the site's .container measure, so this
      section lines up with every other section (it used its own max-width
@@ -427,7 +438,7 @@ const SETS = [0, 1];
     text-underline-offset: 3px;
   }
 
-  /* Mobile: two columns, shorter reels — the concept adapts, not hidden. */
+  /* Mobile: two columns, shorter reels, the concept adapts, not hidden. */
   @media (max-width: 767px) {
     .photo-note {
       /* The links' 44px rows already leave ~14px above the first line. */
@@ -652,23 +663,19 @@ const SETS = [0, 1];
     gap: 0.5rem;
     min-height: var(--tap-min, 44px);
     padding: 0 1.1rem;
-    background: rgba(10, 10, 10, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: transparent;
+    border: 0;
     color: var(--ink, #f0f0f0);
     font: 600 0.72rem / 1 var(--font-mono, monospace);
     letter-spacing: 0.18em;
     text-transform: uppercase;
     cursor: pointer;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
     pointer-events: auto;
-    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    transition: opacity 0.2s ease-in-out;
   }
   .photo-close:hover,
   .photo-close:focus-visible {
-    background-color: var(--ink, #ffffff);
-    color: #080808;
-    border-color: var(--ink, #ffffff);
+    opacity: 0.7;
   }
 
   /* Play badge overlay on video items: ALWAYS visible at rest so reels are
@@ -1567,7 +1574,7 @@ const SETS = [0, 1];
     // Delegated click listener on wall so every item click (original or loop) is handled reliably
     wall.addEventListener('click', (e) => {
       const item = (e.target as HTMLElement).closest<HTMLElement>('.photo-item');
-      if (!item) return;
+      if (!item || item instanceof HTMLAnchorElement) return;
 
       e.preventDefault();
       e.stopPropagation();

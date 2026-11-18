@@ -44,26 +44,23 @@ test.describe('Corrective Pass Verification', () => {
     await expect(neewerLink.first()).toBeAttached();
   });
 
-  test('Gate 6: Selected Work on homepage renders video-led without brand project cards', async ({ page }) => {
-    // Desktop 1440x900
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('./');
-
-    const workSec = page.locator('#work');
-    await expect(workSec).toBeVisible();
-    await expect(workSec.locator('.sw-feature')).toBeVisible();
-    await expect(workSec.locator('.sw-projects')).toHaveCount(0);
-    await expect(workSec.locator('.sw-archive')).toBeVisible();
-
-    await workSec.screenshot({ path: 'test-results/selected-work-desktop.png' });
-
-    // Mobile touch 390x844
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('./');
-    const workSecMobile = page.locator('#work');
-    await expect(workSecMobile).toBeVisible();
-    await expect(workSecMobile.locator('.sw-projects')).toHaveCount(0);
-    await workSecMobile.screenshot({ path: 'test-results/selected-work-mobile.png' });
+  test('Gate 6: Work combines the photography portfolio and video proof without duplicates', async ({ page }, testInfo) => {
+    for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+      const work = page.locator('#work');
+      await expect(work).toBeVisible();
+      await expect(work.locator('#photos')).toBeVisible();
+      await expect(work.locator('.sw-feature')).toBeVisible();
+      await expect(work.locator('.sw-projects')).toHaveCount(0);
+      await expect(page.locator('#photos')).toHaveCount(1);
+      const videos = await work.locator('[data-video-player][data-video-url]').evaluateAll(items =>
+        items.map(item => item.getAttribute('data-video-url'))
+      );
+      expect(videos.length).toBeGreaterThan(0);
+      expect(new Set(videos).size).toBe(videos.length);
+      await work.screenshot({ path: testInfo.outputPath(`work-${viewport.width}.png`) });
+    }
   });
 
   test('Gate 7: Modal fallback on 501 mailto and success state on mocked 200', async ({ page }) => {

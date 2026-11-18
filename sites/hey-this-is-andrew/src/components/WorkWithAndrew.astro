@@ -4,13 +4,11 @@
  * src/data/services.ts in one balanced visual grid, followed by the
  * project logistics ledger and brand partnership actions.
  */
-import { Image } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
 import FlipCard from '@andrew/ui/FlipCard.astro';
 import {
   SERVICES,
-  SERVICES_LEDE,
   SERVICES_CLIENT_BLOCK,
   UGC_INQUIRY_HREF,
   COHLEY_PROFILE_URL,
@@ -62,9 +60,6 @@ const SERVICE_VISUALS: Record<string, ServiceVisual> = {
   },
 };
 
-const widthsFor = (src: ImageMetadata) =>
-  [...new Set([320, 480, 640].filter((w) => w < src.width).concat(src.width))];
-
 const serviceCards = SERVICES.map((service, index) => {
   const visual = SERVICE_VISUALS[service.title] ?? {};
   const isWide = index >= 3;
@@ -88,7 +83,6 @@ const logisticsItems = [
     <SectionHeader
       id="services-heading"
       title="What I do"
-      lede={SERVICES_LEDE}
     />
 
     <div class="work-grid">
@@ -154,12 +148,14 @@ const logisticsItems = [
   }
 
   .work-grid {
+    --flip-accent-border: var(--hairline-strong);
+    --flip-accent-shadow: 0 8px 30px rgb(255 255 255 / 0.1);
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
     grid-template-columns: 1fr;
-    gap: 1.5rem;
+    gap: 1rem;
   }
 
   @media (min-width: 760px) {
@@ -180,57 +176,52 @@ const logisticsItems = [
     width: 100%;
   }
 
-  :global(.work-flip-card) {
-    min-height: 220px;
-    height: 100%;
-    width: 100%;
+  .work-card-wrap :global(.stat-card.flip-card) {
+    min-height: 180px;
   }
 
   @media (min-width: 760px) {
-    :global(.work-flip-card) {
-      min-height: 250px;
+    .work-card-wrap :global(.stat-card.flip-card) {
+      min-height: 200px;
     }
   }
 
   /* How projects run: unified specification ledger matching WorkflowStrip. */
   .client-block {
-    margin-top: clamp(2rem, 4vw, 3rem);
+    margin-top: clamp(1.5rem, 3vw, 2rem);
   }
 
   .logistics-ledger {
     border: 1px solid var(--line);
-    border-radius: var(--radius);
+    border-radius: 0;
     background: var(--surface);
-    padding: 1.5rem;
+    padding: clamp(0.65rem, 2vw, 1.5rem);
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-
-  @media (min-width: 760px) {
-    .logistics-ledger {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(0.5rem, 2vw, 1.5rem);
   }
 
   .logistics-item {
     min-width: 0;
     display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
-    border-left: 2px solid var(--key-dim);
-    padding-left: 1rem;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
   }
 
   .logistics-value {
     margin: 0;
-    font-size: 0.92rem;
-    line-height: 1.55;
-    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: clamp(0.6875rem, 0.9vw, 0.8rem);
+    line-height: 1.5;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    overflow-wrap: anywhere;
   }
 
   .work-cta {
-    margin-top: clamp(1.75rem, 3.5vw, 2.5rem);
+    margin-top: clamp(1.5rem, 3vw, 2rem);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -243,6 +234,10 @@ const logisticsItems = [
     font-size: 0.92rem;
     line-height: 1.55;
     color: var(--muted);
+  }
+
+  :global(#site) .work-cta .btn:not(:hover, :focus-visible) {
+    background: #000;
   }
 
   .work-press-note {

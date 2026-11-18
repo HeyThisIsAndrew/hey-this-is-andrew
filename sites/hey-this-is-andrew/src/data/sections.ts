@@ -5,13 +5,10 @@ export type PageSection = { id: string; label: string; kicker?: string };
 export const HOME_SECTIONS: PageSection[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'directory', label: 'Brands' },
-  { id: 'about', label: 'Meet The Creator' },
-  { id: 'photos', label: 'Shot on the job.' },
   { id: 'work', label: 'Work' },
-  { id: 'latest', label: 'Latest' },
   { id: 'services', label: 'What I do' },
-  { id: 'goals', label: 'Goals' },
   { id: 'gear', label: 'Gear' },
+  { id: 'explore', label: 'Explore' },
   { id: 'newsletter', label: 'Newsletter' }
 ];
 

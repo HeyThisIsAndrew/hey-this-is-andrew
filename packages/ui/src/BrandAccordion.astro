@@ -26,7 +26,7 @@
  *  - Theming: every accent value is a --accordion-* token (@andrew/tokens).
  *    A panel renders data-accent="<accent>"; the site's theme re-points the
  *    tokens for that accent (e.g. the personal site's BE panel in BE red).
- *    Nothing brand-specific is written in this file.
+ *    The hover treatment follows the panel's named accent.
  *  - `fullscreen` adds the "brand view": a camera dolly into the open panel
  *    (the personal site's addition to HQ's mechanics). Two steps: a tap on a
  *    closed brand opens it; a tap on the open panel's art or CTA goes into
@@ -330,7 +330,6 @@ const linkAttrs = (href?: string) =>
   .bacc-viewport {
     position: relative;
     width: 100%;
-    overflow: hidden;
   }
   /* The brand view's backdrop fades with the camera, both ways. An opacity
      layer, not a background-color transition: that repainted a full-screen
@@ -371,7 +370,6 @@ const linkAttrs = (href?: string) =>
     display: flex;
     gap: var(--acc-gap);
     width: 100%;
-    overflow: hidden;
     height: calc(75vh - var(--nav-bar-h, var(--nav-h, 0px)) - 36px);
     min-height: 460px;
     background: var(--page-bg);
@@ -397,20 +395,20 @@ const linkAttrs = (href?: string) =>
   .bacc-panel.is-open {
     flex: 1 1 0%;
   }
-  .bacc-panel[data-brand-id="be"]:hover,
-  .bacc-panel[data-accent="be-red"]:hover {
-    border-color: rgba(230, 0, 0, 0.65);
-    box-shadow: 0 0 30px rgba(230, 0, 0, 0.28);
+  .bacc-panel[data-accent="be-red"] {
+    --accordion-hover-rgb: 230, 0, 0;
   }
-  .bacc-panel[data-brand-id="ccc"]:hover,
-  .bacc-panel[data-accent="ccc-gold"]:hover {
-    border-color: rgba(201, 169, 110, 0.65);
-    box-shadow: 0 0 30px rgba(201, 169, 110, 0.28);
+  .bacc-panel[data-accent="ccc-gold"] {
+    --accordion-hover-rgb: 201, 169, 110;
   }
-  .bacc-panel[data-brand-id="sip-the-magic"]:hover,
-  .bacc-panel[data-accent="slate"]:hover {
-    border-color: rgba(130, 130, 160, 0.65);
-    box-shadow: 0 0 30px rgba(130, 130, 160, 0.28);
+  .bacc-panel[data-accent="slate"] {
+    --accordion-hover-rgb: 130, 130, 160;
+    --accordion-tint-alpha: 0.2;
+  }
+  .bacc-panel:is([data-accent="be-red"], [data-accent="ccc-gold"], [data-accent="slate"]):hover {
+    border-color: rgba(var(--accordion-hover-rgb), 0.65);
+    box-shadow: 0 0 30px rgba(var(--accordion-hover-rgb), 0.28);
+    z-index: 3;
   }
   /* The active edge: a pseudo-element, so opening a panel shifts nothing. */
   .bacc-panel::before {
@@ -457,20 +455,9 @@ const linkAttrs = (href?: string) =>
     inset: 0;
     z-index: 1;
     pointer-events: none;
+    background: radial-gradient(circle at 50% 100%, rgba(var(--accordion-hover-rgb), var(--accordion-tint-alpha, 0.28)) 0%, transparent 68%);
     opacity: 0.75;
     transition: opacity 0.4s ease;
-  }
-  .bacc-panel[data-brand-id="be"] .bacc-media-tint,
-  .bacc-panel[data-accent="be-red"] .bacc-media-tint {
-    background: radial-gradient(circle at 50% 100%, rgba(230, 0, 0, 0.28) 0%, transparent 68%);
-  }
-  .bacc-panel[data-brand-id="ccc"] .bacc-media-tint,
-  .bacc-panel[data-accent="ccc-gold"] .bacc-media-tint {
-    background: radial-gradient(circle at 50% 100%, rgba(201, 169, 110, 0.28) 0%, transparent 68%);
-  }
-  .bacc-panel[data-brand-id="sip-the-magic"] .bacc-media-tint,
-  .bacc-panel[data-accent="slate"] .bacc-media-tint {
-    background: radial-gradient(circle at 50% 100%, rgba(130, 130, 160, 0.2) 0%, transparent 68%);
   }
   .bacc-panel:hover .bacc-media-tint {
     opacity: 1;
@@ -1301,6 +1288,7 @@ const linkAttrs = (href?: string) =>
     width: 100vw;
     height: 100dvh;
     z-index: 1000;
+    overflow: hidden;
     /* The page behind never pans while the view is up (iOS). */
     touch-action: none;
     overscroll-behavior: none;

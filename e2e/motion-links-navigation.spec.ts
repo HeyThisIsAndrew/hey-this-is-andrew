@@ -32,30 +32,47 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
   });
 }
 
-test('gear collapse finishes smoothly without the padded-height pause or delayed snap', async ({ page }) => {
-  await page.setViewportSize({width:390,height:844});
+test('gear item details collapse while the hero and glow keep their geometry', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${base}gear/`);
-  const samples = await page.locator('#gear-bodies').evaluate(async section => {
-    const body = section.querySelector<HTMLElement>('.gear-accordion-body')!;
-    const deck = section.querySelector('.gear-deck')!;
-    const glow = section.querySelector('.deck-glow')!;
+  const section = page.locator('#gear-bodies');
+  const trigger = section.locator('.deck-card.active [data-gear-open]');
+  const panel = section.locator('#gear-item-sony-a7iv-details');
+  await trigger.click();
+  await expect(panel).toBeVisible();
+  const samples = await section.evaluate(async (element) => {
+    const details = element.querySelector<HTMLElement>('.card-details[data-open="true"]')!;
+    const deck = element.querySelector('.gear-deck')!;
+    const stage = element.querySelector('.deck-stage')!;
+    const glow = element.querySelector('.deck-glow')!;
     const containedGlow = glow.getBoundingClientRect().top >= deck.getBoundingClientRect().top - 1 && getComputedStyle(deck).overflow === 'clip';
-    section.querySelector<HTMLButtonElement>('.gear-accordion-header')!.click();
-    const values: {time:number;height:number}[] = [];
+    const heroHeight = stage.getBoundingClientRect().height;
+    element.querySelector<HTMLButtonElement>('.deck-card.active [data-gear-open]')!.click();
+    const values: { height: number; hero: number }[] = [];
     const start = performance.now();
-    await new Promise<void>(resolve => {
-      const frame = () => { values.push({time:performance.now()-start,height:body.getBoundingClientRect().height}); if(performance.now()-start < 600) requestAnimationFrame(frame); else resolve(); }; requestAnimationFrame(frame);
+    await new Promise<void>((resolve) => {
+      function frame() {
+        values.push({ height: details.getBoundingClientRect().height, hero: stage.getBoundingClientRect().height });
+        if (performance.now() - start < 550) requestAnimationFrame(frame);
+        else resolve();
+      }
+      requestAnimationFrame(frame);
     });
-    return {containedGlow, values};
+    return { containedGlow, heroHeight, values };
   });
   expect(samples.containedGlow).toBe(true);
+  expect(samples.values.every(({ hero }) => hero === samples.heroHeight)).toBe(true);
   expect(samples.values.at(-1)!.height).toBeLessThanOrEqual(1.1);
-  const tail = samples.values.filter(sample => sample.time > 330);
-  expect(Math.max(...tail.map(sample => sample.height)) - Math.min(...tail.map(sample => sample.height))).toBeLessThan(8);
-  await page.locator('#gear-lenses .gear-accordion-header').click();
-  await expect(page.locator('#gear-lenses')).toHaveClass(/is-settled/);
-  await page.locator('#gear-lenses .gear-accordion-header').evaluate(el => { (el as HTMLButtonElement).click(); (el as HTMLButtonElement).click(); });
-  await expect(page.locator('#gear-lenses .gear-accordion-body')).toHaveAttribute('data-open','true');
+  await expect(panel).toBeHidden();
+  await trigger.evaluate((button: HTMLButtonElement) => {
+    button.click();
+    button.click();
+    button.click();
+  });
+  await expect(panel).toHaveAttribute('data-open', 'true');
+  await expect(panel).toBeVisible();
+  await page.locator('#gear-category-select').selectOption('lenses');
+  await expect(panel).toBeHidden();
   await expect(page.locator('#gear-lenses')).toHaveClass(/is-settled/);
 });
 
@@ -138,7 +155,7 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
     await expect(viewport).not.toHaveClass(/is-zoomed/);
     expect(await page.evaluate(() => (window as any).__homeRoot === document.querySelector('main'))).toBe(true);
     await page.locator('.photo-wall').scrollIntoViewIfNeeded();
-    await page.locator('.photo-item').first().evaluate((el: HTMLElement) => el.click());
+    await page.locator('.photo-item:not([data-video-url])').first().evaluate((el: HTMLElement) => el.click());
     await expect(page.locator('html')).toHaveClass(/photo-zoom-open/);
     await page.keyboard.press('Escape');
     await expect(page.locator('html')).not.toHaveClass(/photo-zoom-open/);
