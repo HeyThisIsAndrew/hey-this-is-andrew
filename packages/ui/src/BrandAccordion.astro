@@ -281,8 +281,8 @@ const linkAttrs = (href?: string) =>
         </div>
 
         <button type="button" class="bacc-toggle" data-bacc-toggle aria-label={labels.pause} data-label-play={labels.play} data-label-pause={labels.pause} hidden>
-          <svg class="bacc-icon-pause" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7 5h3v14H7zM14 5h3v14h-3z" /></svg>
-          <svg class="bacc-icon-play" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+          <svg class="bacc-icon-pause" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z" /></svg>
+          <svg class="bacc-icon-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
         </button>
       </div>
       {fullscreen && <div class="bacc-caption" data-bacc-caption hidden></div>}
@@ -892,7 +892,7 @@ const linkAttrs = (href?: string) =>
     transform: scaleX(0);
     transform-origin: left center;
   }
-  /* HQ .acc-toggle: the round play/pause button over the art. */
+  /* HQ .acc-toggle: the round subtle play/pause button over the art. */
   .bacc-toggle {
     position: absolute;
     top: 14px;
@@ -900,25 +900,31 @@ const linkAttrs = (href?: string) =>
     z-index: 8;
     display: grid;
     place-items: center;
-    /* HQ's is 40px; this site's touch targets are 44 (--tap-min). */
-    width: var(--tap-min, 44px);
-    height: var(--tap-min, 44px);
+    width: 38px;
+    height: 38px;
+    min-height: 38px;
     padding: 0;
     border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 50%;
-    background: rgba(8, 8, 8, 0.6);
-    color: #f0f0f0;
+    background: rgba(10, 10, 10, 0.6);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    color: rgba(245, 245, 245, 0.85);
     cursor: pointer;
-    transition: border-color 0.2s ease, background 0.2s ease;
+    box-shadow: none;
+    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.15s ease;
   }
   .bacc-toggle:focus-visible {
-    outline: 2px solid var(--focus-ring);
+    outline: 2px solid var(--focus-ring, #fff);
     outline-offset: 2px;
   }
-  .bacc-toggle:hover,
-  .bacc-toggle:focus-visible {
-    border-color: rgba(255, 255, 255, 0.6);
-    background: rgba(8, 8, 8, 0.85);
+  .bacc-toggle:hover {
+    border-color: rgba(255, 255, 255, 0.5);
+    background: rgba(10, 10, 10, 0.85);
+    color: #ffffff;
+  }
+  .bacc-toggle:active {
+    transform: scale(0.94);
   }
   .bacc-toggle[hidden] {
     display: none;
@@ -1745,7 +1751,6 @@ const linkAttrs = (href?: string) =>
         toggle.setAttribute('aria-label', label ?? '');
         toggle.title = label ?? '';
       }
-      if (stopped || userPaused) setFill(0);
       kick();
     }
 

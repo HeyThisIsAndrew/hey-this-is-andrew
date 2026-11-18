@@ -3,6 +3,8 @@ import { Image } from 'astro:assets';
 import portraitImg from '../assets/hero-media/portrait.jpg';
 import { SUBSTACK_URL } from '../lib/latest-content';
 import { NOW_MONTH, NOW_ITEMS } from '../data/now';
+import Accordion from '@andrew/ui/Accordion.astro';
+import AccordionRow from '@andrew/ui/AccordionRow.astro';
 
 interface Props {
   /** Full version (About page): the longer telling, Substack kicker link. */
@@ -59,27 +61,47 @@ const STORY = {
         <p class="about-punchline">BUILDING IN PUBLIC.</p>
         {!full && (
           <div class="about-panels">
-            <div class="about-dossier-grid">
-              <article class="about-dossier-col" id="about-building">
-                <p class="about-dossier-kicker font-mono">What I'm building</p>
+            <Accordion exclusive>
+              <AccordionRow
+                id="about-building"
+                title="What I'm building"
+                subtitle="Hey, I'm building three brands: my personal brand, BE Unconventional HQ, and CCC."
+                open={false}
+                level={3}
+                size="md"
+              >
                 <p class="about-body">{STORY.building}</p>
-              </article>
-              <article class="about-dossier-col" id="about-how">
-                <p class="about-dossier-kicker font-mono">How I work</p>
+              </AccordionRow>
+              <AccordionRow
+                id="about-how"
+                title="How I work"
+                subtitle="My workflow uses professional cameras and lighting equipment: Sony Alpha, DaVinci Resolve, Lightroom..."
+                open={false}
+                level={3}
+                size="md"
+              >
                 {STORY.how.map((para) => <p class="about-body">{para}</p>)}
-              </article>
-            </div>
-            <div class="about-now-ledger" id="now">
-              <p class="about-dossier-kicker font-mono">Now &middot; {NOW_MONTH}</p>
-              <ul class="about-now-list">
-                {NOW_ITEMS.map((n) => (
-                  <li class="about-now-item">
-                    <span class="about-now-key">{n.label}</span>
-                    <span class="about-now-val">{n.value.replace(/\.$/, '')}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+              </AccordionRow>
+              <AccordionRow
+                id="now"
+                title={`Now · ${NOW_MONTH}`}
+                subtitle={`${NOW_ITEMS[0].label}: ${NOW_ITEMS[0].value.replace(/\.$/, '')}`}
+                open={false}
+                level={3}
+                size="md"
+              >
+                <div class="about-now-ledger-inner">
+                  <ul class="about-now-list">
+                    {NOW_ITEMS.map((n) => (
+                      <li class="about-now-item">
+                        <span class="about-now-key">{n.label}</span>
+                        <span class="about-now-val">{n.value.replace(/\.$/, '')}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </AccordionRow>
+            </Accordion>
           </div>
         )}
 
@@ -105,12 +127,6 @@ const STORY = {
         </div>
       </div>
     </div>
-
-    {!full && (
-      <p class="section-handoff font-mono">
-        <a href="#photos">Next: Shot on the job <span aria-hidden="true">&darr;</span></a>
-      </p>
-    )}
   </div>
 </section>
 

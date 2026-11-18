@@ -1,6 +1,8 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
+import Accordion from '@andrew/ui/Accordion.astro';
+import AccordionRow from '@andrew/ui/AccordionRow.astro';
 
 interface Props { groups: CollectionEntry<'goals'>[] }
 const { groups } = Astro.props;
@@ -18,52 +20,53 @@ const buildUrl = rawBase === '/' ? '/build/' : `${rawBase.replace(/\/$/, '')}/bu
     <SectionHeader id="goals-heading" kicker="Building in public" title="Goals" />
 
     <div class="goals-board">
-      {groups.map((group) => {
-        const { done, total } = count(group);
-        return (
-          <article class="goal-ledger-col" id={`home-goal-${group.id}`}>
-            <header class="goal-ledger-head">
-              <div class="goal-ledger-meta font-mono">
-                <span class="goal-ledger-index">Goal group</span>
-                <span class="goal-ledger-count">{done} of {total} done</span>
-              </div>
-              <h3 class="goal-ledger-title">{group.data.title}</h3>
-            </header>
-
-            <ul class="goal-ledger-list">
-              {group.data.items.map((item) => {
-                const statusKey = item.status === 'next' ? 'queued' : item.status;
-                const statusText = item.status === 'done' ? 'Done' : item.status === 'in-progress' ? 'In Progress' : 'Queued';
-                return (
-                  <li class:list={['goal-ledger-item', { 'is-done': item.status === 'done' }]}>
-                    <span class:list={['checklist-mark', { 'is-done': item.status === 'done', 'is-active': item.status === 'in-progress' }]} aria-hidden="true">
-                      {item.status === 'done' && (
-                        <svg viewBox="0 0 16 16" width="11" height="11" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="square" /></svg>
-                      )}
-                    </span>
-                    <div class="goal-ledger-info">
-                      <span class="goal-ledger-label">{item.label}</span>
-                      {item.note && <span class="goal-ledger-note">{item.note}</span>}
-                    </div>
-                    <span class="goal-status-badge font-mono" data-status={statusKey}>
-                      {statusText}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </article>
-        );
-      })}
+      <Accordion exclusive>
+        {groups.map((group) => {
+          const { done, total } = count(group);
+          const firstItem = group.data.items[0];
+          const previewText = firstItem ? firstItem.label : undefined;
+          return (
+            <AccordionRow
+              id={`home-goal-${group.id}`}
+              title={group.data.title}
+              subtitle={previewText}
+              progressCount={done}
+              progressTotal={total}
+              open={false}
+              level={3}
+              size="md"
+            >
+              <ul class="goal-ledger-list">
+                {group.data.items.map((item) => {
+                  const statusKey = item.status === 'next' ? 'queued' : item.status;
+                  const statusText = item.status === 'done' ? 'Done' : item.status === 'in-progress' ? 'In Progress' : 'Queued';
+                  return (
+                    <li class:list={['goal-ledger-item', 'checklist-card', { 'is-done': item.status === 'done', completed: item.status === 'done' }]}>
+                      <span class:list={['checklist-mark', { 'is-done': item.status === 'done', 'is-active': item.status === 'in-progress' }]} aria-hidden="true">
+                        {item.status === 'done' && (
+                          <svg viewBox="0 0 16 16" width="11" height="11" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="square" /></svg>
+                        )}
+                      </span>
+                      <div class="goal-ledger-info">
+                        <span class="goal-ledger-label checklist-title">{item.label}</span>
+                        {item.note && <span class="goal-ledger-note checklist-desc">{item.note}</span>}
+                      </div>
+                      <span class="goal-status-badge font-mono" data-status={statusKey}>
+                        {statusText}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </AccordionRow>
+          );
+        })}
+      </Accordion>
     </div>
 
     <div class="goals-actions">
       <a href={buildUrl} class="btn btn-primary">View all goals <span aria-hidden="true">&rarr;</span></a>
     </div>
-
-    <p class="section-handoff font-mono">
-      <a href="#gear">Next: The kit <span aria-hidden="true">&darr;</span></a>
-    </p>
   </div>
 </section>
 

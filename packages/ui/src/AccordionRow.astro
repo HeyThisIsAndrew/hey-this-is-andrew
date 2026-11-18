@@ -23,6 +23,7 @@ interface Props {
   id: string;
   kicker?: string;
   title: string;
+  subtitle?: string;
   progressCount?: number;
   progressTotal?: number;
   open?: boolean;
@@ -31,7 +32,7 @@ interface Props {
   /** The row's name in a PageNav, when the title is a sentence (default: the title). */
   navLabel?: string;
 }
-const { id, kicker, title, progressCount, progressTotal, open = false, level = 2, size = 'lg', navLabel } = Astro.props;
+const { id, kicker, title, subtitle, progressCount, progressTotal, open = false, level = 2, size = 'lg', navLabel } = Astro.props;
 const hasProgress = progressCount !== undefined && progressTotal !== undefined;
 const progressPercent = hasProgress ? Math.round((progressCount / Math.max(1, progressTotal)) * 100) : 0;
 const Heading = level === 3 ? 'h3' : 'h2';
@@ -57,6 +58,7 @@ const hasMedia = Astro.slots.has('media');
         <span class="accordion-header-text">
           {kicker && <span class="accordion-kicker font-mono">{kicker}</span>}
           <span class="accordion-title">{title}</span>
+          {subtitle && <span class="accordion-subtitle font-mono">{subtitle}</span>}
         </span>
         {hasProgress && (
           <span class="accordion-progress-meta">
@@ -169,6 +171,17 @@ const hasMedia = Astro.slots.has('media');
     letter-spacing: 0.02em;
     color: var(--ink);
     line-height: 1.1;
+  }
+  .accordion-subtitle {
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    color: var(--muted, #888);
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    text-transform: none;
   }
   .accordion-row--md .accordion-header {
     padding: 1.25rem 1.5rem;
