@@ -327,36 +327,38 @@ const isClientWork = Astro.url.pathname.replace(/\/+$/, '').endsWith('/work-with
           );
         }
 
-        // Intercept internal anchor link clicks
-        on(document, 'click', (e) => {
-          // A component that already handled its own link (the side panel)
-          // keeps it: scrolling again here moved its Top link to the hero
-          // heading less the nav, instead of the top of the page.
-          if (e.defaultPrevented) return;
-          if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
-          const targetEl = e.target as Element | null;
-          if (!targetEl || typeof targetEl.closest !== 'function') return;
-          const link = targetEl.closest('a[href*="#"]') as HTMLAnchorElement | null;
-          if (!link) return;
-          const href = link.getAttribute('href') || '';
-          const hashIndex = href.indexOf('#');
-          if (hashIndex === -1) return;
-          const hash = href.slice(hashIndex);
-          if (!hash || hash === '#') return;
+        // Intercept internal anchor link clicks in capture phase before router scroll
+        on(
+          document,
+          'click',
+          (e) => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+            const targetEl = e.target as Element | null;
+            if (!targetEl || typeof targetEl.closest !== 'function') return;
+            const link = targetEl.closest('a[href*="#"]') as HTMLAnchorElement | null;
+            if (!link || link.closest('.page-nav')) return;
+            const href = link.getAttribute('href') || '';
+            const hashIndex = href.indexOf('#');
+            if (hashIndex === -1) return;
+            const hash = href.slice(hashIndex);
+            if (!hash || hash === '#') return;
 
-          // Only intercept same-page hashes.
-          const linkPath = href.slice(0, hashIndex);
-          const currentPath = window.location.pathname;
-          if (linkPath && linkPath !== currentPath && linkPath !== currentPath.replace(/\/$/, '') && linkPath !== '/') {
-            return;
-          }
+            // Only intercept same-page hashes.
+            const linkPath = href.slice(0, hashIndex);
+            const currentPath = window.location.pathname;
+            if (linkPath && linkPath !== currentPath && linkPath !== currentPath.replace(/\/$/, '') && linkPath !== '/') {
+              return;
+            }
 
-          const target = getTargetElement(hash);
-          if (!target) return;
+            const target = getTargetElement(hash);
+            if (!target) return;
 
-          e.preventDefault();
-          scrollToTarget(target, true, hash);
-        });
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            scrollToTarget(target, true, hash);
+          },
+          true
+        );
 
         // Initial hash load. A reload is not a deep link: it stays at the
         // top (see the head script), and a section hash is dropped so the
