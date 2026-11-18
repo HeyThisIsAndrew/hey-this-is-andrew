@@ -4,7 +4,6 @@
  * homepage keeps a short Gear section (the storefront) that links here.
  */
 import BaseLayout from '../layouts/BaseLayout.astro';
-import Disclosure from '@andrew/ui/Disclosure.astro';
 import GearGrid from '../components/GearGrid.astro';
 import StorefrontCTA from '../components/StorefrontCTA.astro';
 import { getCollection } from 'astro:content';
@@ -37,130 +36,84 @@ const COLLECTIONS = [
     <h2 class="vh">Camera and studio kit</h2>
     <GearGrid categories={gear} />
 
-    <button
-      class="gear-resources-toggle font-mono"
-      type="button"
-      id="gear-resources-toggle"
-      aria-expanded="false"
-      aria-controls="gear-resources"
-      data-gear-resources-toggle
-    >
-      Shop the lists
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-        <path d="m3 5 4 4 4-4" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-    </button>
-    <Disclosure class="gear-resources" id="gear-resources" hiddenWhenClosed labelledby="gear-resources-toggle">
-      <nav class="gear-collections" aria-label="Amazon collections">
-        <div class="gear-collections-links btn-group">
-          {COLLECTIONS.map((c) => (
-            <a class="gear-collection-link font-mono" href={c.url} target="_blank" rel="noopener sponsored">
-              {c.label}
-              <span aria-hidden="true">&#8599;</span>
-            </a>
-          ))}
-        </div>
-      </nav>
-
-      <div class="gear-shop">
-        <StorefrontCTA />
+    <nav class="gear-collections" aria-label="Amazon collections">
+      <span class="gear-collections-label font-mono">Shop the lists</span>
+      <div class="gear-collections-links btn-group">
+        {COLLECTIONS.map((c) => (
+          <a class="gear-collection-link font-mono" href={c.url} target="_blank" rel="noopener sponsored">
+            {c.label}
+            <span aria-hidden="true">&#8599;</span>
+          </a>
+        ))}
       </div>
+    </nav>
 
-      <aside class="gear-bottom-disclosure" aria-label="Affiliate Disclosure" data-bottom-disclosure>
-        <div class="disclosure-card font-mono">
-          <p class="disclosure-text">
-            As an Amazon Associate, I earn from qualifying purchases. When you purchase through links on this page, I may earn an affiliate commission at no extra cost to you. The Viltrox store link is an affiliate link as well. Unmarked items are the gear actually owned, tested, and utilized in commercial beverage production and content creation.
-          </p>
-        </div>
-      </aside>
-    </Disclosure>
+    <div class="gear-shop">
+      <StorefrontCTA />
+    </div>
+
+    <!-- DISTINCT BOTTOM AFFILIATE DISCLOSURE BANNER -->
+    <aside class="gear-bottom-disclosure" aria-label="Affiliate Disclosure" data-bottom-disclosure>
+      <div class="disclosure-card font-mono">
+        <p class="disclosure-text">
+          As an Amazon Associate, I earn from qualifying purchases. When you purchase through links on this page, I may earn an affiliate commission at no extra cost to you. The Viltrox store link is an affiliate link as well. Unmarked items are the gear actually owned, tested, and utilized in commercial beverage production and content creation.
+        </p>
+      </div>
+    </aside>
   </div>
 </BaseLayout>
 
 <style>
   .gear-page {
-    padding-block: clamp(0.6rem, 1.4vw, 1.1rem) 0.5rem;
+    padding-top: clamp(2rem, 4vw, 4rem);
+    padding-bottom: clamp(4rem, 8vw, 7rem);
   }
-  :global(body:has(.gear-page) .site-camera-stage),
-  :global(body:has(.gear-page) #main-content) {
-    flex: 0 0 auto;
-  }
-  :global(body:has(.gear-page) .client-work-footer-contact) {
-    padding-top: 0.75rem;
-  }
-  :global(body:has(.gear-page) .site-footer) {
-    margin-top: 1.25rem;
-  }
-  :global(body:has(.gear-page) .footer-inner) {
-    padding-top: 1.5rem;
-  }
+  /* Same header unit as /build: tag, title, lede, small fixed steps. */
   .gear-header {
     display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    column-gap: 1rem;
-    row-gap: 0.2rem;
-    margin-bottom: 0.75rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.9rem;
+    margin-bottom: clamp(2rem, 3vw, 3rem);
+  }
+  .mono-tag {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    padding: 0.3rem 0.65rem;
+    display: inline-block;
   }
   .gear-title {
-    margin: 0;
-    color: var(--ink);
-    font: 800 clamp(1.7rem, 3.5vw, 2.8rem) / 1.05 var(--font-display);
-    letter-spacing: 0.01em;
+    font-family: var(--font-display);
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    font-weight: 800;
     text-transform: uppercase;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+    margin: 0;
+    line-height: 1.05;
   }
   .gear-lede {
-    margin: 0;
+    font-size: 1.05rem;
     color: var(--muted);
-    font-size: clamp(0.8rem, 1.2vw, 1rem);
-    line-height: 1.45;
+    max-width: 65ch;
+    line-height: 1.7;
+    margin: 0;
   }
   .gear-disclosure {
-    flex-basis: 100%;
-    margin: 0;
-    color: var(--muted);
-    font-size: 0.65rem;
-    letter-spacing: 0.075em;
-    text-transform: uppercase;
-  }
-  .gear-resources-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    min-height: 44px;
-    margin-top: 0.5rem;
-    padding: 0.4rem 0.8rem;
-    border: 1px solid #fff;
-    background: #000;
-    color: #fff;
-    font-size: 0.7rem;
+    margin: 0.25rem 0 0;
+    font-size: 0.72rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    cursor: pointer;
-    transition: background 0.2s ease-in-out, color 0.2s ease-in-out;
-  }
-  .gear-resources-toggle:is(:hover, :focus-visible) {
-    background: #fff;
-    color: #000;
-  }
-  .gear-resources-toggle svg {
-    transition: transform 0.2s ease-in-out;
-  }
-  .gear-resources-toggle[aria-expanded='true'] svg {
-    transform: rotate(180deg);
-  }
-  @media (max-width: 600px) {
-    .gear-resources-toggle {
-      width: 100%;
-    }
-  }
-  .gear-resources,
-  .gear-resources > :global(.disclosure-clip > .disclosure-content) {
-    transition-timing-function: ease-in-out;
+    color: var(--muted);
   }
   .gear-collections {
-    margin-top: 1rem;
+    margin-top: clamp(2rem, 4vw, 3rem);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -169,33 +122,44 @@ const COLLECTIONS = [
   .gear-collections-links {
     --btn-group-gap: 0.5rem;
   }
-  :global(#site) .gear-collections .gear-collection-link {
+  @media (max-width: 600px) {
+    .gear-collections-label {
+      flex-basis: 100%;
+    }
+  }
+  .gear-collections-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 0.25rem;
+  }
+  .gear-collection-link {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
     min-height: 44px;
     padding: 0.45rem 0.85rem;
-    border: 1px solid #fff;
-    background: #000;
-    color: #fff;
+    border: 1px solid var(--border);
+    color: var(--ink);
     font-size: 0.7rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     text-decoration: none;
-    transition: background 0.2s ease-in-out, color 0.2s ease-in-out;
+    transition: background 0.2s ease, color 0.2s ease;
   }
-  :global(#site) .gear-collections .gear-collection-link:is(:hover, :focus-visible) {
+  .gear-collection-link:hover {
     background: #fff;
     color: #000;
   }
   .gear-shop {
-    margin-top: 1rem;
+    margin-top: clamp(2rem, 4vw, 3rem);
   }
   .gear-shop :global(.storefront) {
     margin-top: 0;
   }
   .gear-bottom-disclosure {
-    margin-top: 1rem;
+    margin-top: 2rem;
   }
   .disclosure-card {
     background: #0f0f0f;
@@ -209,23 +173,3 @@ const COLLECTIONS = [
     margin: 0;
   }
 </style>
-
-
-<script>
-  import { setDisclosureOpen } from '@andrew/ui/scripts/disclosure.ts';
-
-  function initGearResources() {
-    const toggle = document.querySelector<HTMLButtonElement>('[data-gear-resources-toggle]');
-    const resources = document.getElementById('gear-resources');
-    if (!toggle || !resources || toggle.dataset.ready) return;
-    toggle.dataset.ready = 'true';
-    toggle.addEventListener('click', () => {
-      const open = toggle.getAttribute('aria-expanded') !== 'true';
-      toggle.setAttribute('aria-expanded', String(open));
-      void setDisclosureOpen(resources, open);
-    });
-  }
-
-  initGearResources();
-  document.addEventListener('astro:page-load', initGearResources);
-</script>

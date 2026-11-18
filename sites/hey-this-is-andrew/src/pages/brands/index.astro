@@ -42,7 +42,6 @@ const sources = (image: ImageMetadata | RemoteImage) =>
             class:list={['brand-tile', { 'is-link': Tag === 'a', 'is-coming-soon': isComingSoon }]}
             href={Tag === 'a' ? href : undefined}
             draggable="false"
-            inert={i !== 0}
             aria-label={Tag === 'a' ? `Explore ${brand.name}` : `${brand.name} - Coming Soon`}
             data-accent={brand.accent}
             data-brand-id={brand.id}
@@ -54,7 +53,7 @@ const sources = (image: ImageMetadata | RemoteImage) =>
                   {...sources(visual)}
                   alt=""
                   widths={[640, 960, 1280]}
-                  sizes="(max-width: 480px) 85vw, 450px"
+                  sizes="(max-width: 1023px) 85vw, 33vw"
                   class="brand-tile-image"
                   loading={i === 0 ? 'eager' : 'lazy'}
                 />
@@ -230,8 +229,8 @@ const sources = (image: ImageMetadata | RemoteImage) =>
     display: block;
     width: 100%;
     height: 100%;
-    object-fit: contain;
-    object-position: center 46%;
+    object-fit: cover;
+    object-position: center;
   }
 
   .brand-tile-teaser {
@@ -256,7 +255,7 @@ const sources = (image: ImageMetadata | RemoteImage) =>
     transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1), filter 0.4s ease;
   }
 
-  .brand-tile[data-depth="0"]:is(:hover, :focus-visible) :is(.brand-tile-image, .brand-tile-teaser) {
+  .brand-tile:is(:hover, :focus-visible) :is(.brand-tile-image, .brand-tile-teaser) {
     transform: scale(1.03);
   }
 
@@ -300,11 +299,11 @@ const sources = (image: ImageMetadata | RemoteImage) =>
     background: radial-gradient(circle at 50% 100%, rgba(var(--brand-rgb, 245, 245, 245), var(--tint-opacity, 0.28)) 0%, transparent 68%);
   }
 
-  .brand-tile[data-depth="0"]:is(:hover, :focus-visible) .brand-tile-tint {
+  .brand-tile:is(:hover, :focus-visible) .brand-tile-tint {
     opacity: 1;
   }
 
-  .brand-tile[data-depth="0"]:is(:hover, :focus-visible) {
+  .brand-tile:is(:hover, :focus-visible) {
     border-color: rgba(var(--brand-rgb, 245, 245, 245), 0.65);
     box-shadow: 0 0 30px rgba(var(--brand-rgb, 245, 245, 245), 0.28);
   }
@@ -477,17 +476,7 @@ const sources = (image: ImageMetadata | RemoteImage) =>
     padding-top: 0.4rem;
   }
 
-  @media (min-width: 1100px) {
-    .brands-cinematic-wrap {
-      padding-bottom: 15px;
-    }
-
-    .brand-deck-indicator {
-      height: 36px;
-    }
-  }
-
-  @media (max-width: 1099px) {
+  @media (max-width: 1023px) {
     .brands-cinematic-wrap {
       padding-top: 12px;
     }
@@ -536,6 +525,50 @@ const sources = (image: ImageMetadata | RemoteImage) =>
     }
   }
 
+  @media (min-width: 1024px) {
+    .brands-cinematic-wrap {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 0%;
+      min-height: 0;
+      width: 100%;
+      padding: 15px 3vw;
+      box-sizing: border-box;
+    }
+
+    .brand-tiles {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 2.5vw;
+      width: 100%;
+      max-width: none;
+      flex: 1 1 0%;
+      min-height: 0;
+      height: 100%;
+      touch-action: auto;
+      user-select: auto;
+    }
+
+    .brand-tile,
+    .brand-tile[data-depth="0"],
+    .brand-tile[data-depth="1"],
+    .brand-tile[data-depth="2"] {
+      position: relative;
+      inset: auto;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      transform: none;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .brand-deck-indicators {
+      display: none;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .brand-tile,
     .brand-tile-image,
@@ -560,9 +593,16 @@ const sources = (image: ImageMetadata | RemoteImage) =>
     if (cards.length < 2) return;
 
     const { on } = createPageScope(root);
+    const desktopMq = window.matchMedia('(min-width: 1024px)');
     let active = 0;
     let drag: { id: number; x: number; y: number; started: boolean } | null = null;
     let suppressClick = false;
+
+    function syncInert() {
+      cards.forEach((card, i) => {
+        card.inert = !desktopMq.matches && i !== active;
+      });
+    }
 
     function showCard(index: number) {
       const next = (index + cards.length) % cards.length;
@@ -570,8 +610,8 @@ const sources = (image: ImageMetadata | RemoteImage) =>
       active = next;
       cards.forEach((card, i) => {
         card.dataset.depth = String((i - active + cards.length) % cards.length);
-        card.inert = i !== active;
       });
+      syncInert();
       indicators.forEach((indicator, i) => {
         if (i === active) indicator.setAttribute('aria-current', 'true');
         else indicator.removeAttribute('aria-current');
@@ -579,9 +619,14 @@ const sources = (image: ImageMetadata | RemoteImage) =>
       if (moveFocus) indicators[active].focus({ preventScroll: true });
     }
 
+    syncInert();
+    on(desktopMq, 'change', syncInert);
+    on(window, 'resize', syncInert, { passive: true });
+
     indicators.forEach((indicator, i) => on(indicator, 'click', () => showCard(i)));
 
     on(document, 'keydown', (event) => {
+      if (desktopMq.matches) return;
       if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
       if (document.documentElement.matches('.menu-open, .modal-open')) return;
       if (!(event.target instanceof HTMLElement)) return;
@@ -594,6 +639,7 @@ const sources = (image: ImageMetadata | RemoteImage) =>
     on(stack, 'dragstart', (event) => event.preventDefault());
 
     on(stack, 'pointerdown', (event) => {
+      if (desktopMq.matches) return;
       if (!event.isPrimary || event.button !== 0) return;
       suppressClick = false;
       drag = { id: event.pointerId, x: event.clientX, y: event.clientY, started: false };
