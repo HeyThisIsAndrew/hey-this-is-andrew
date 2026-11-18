@@ -32,13 +32,8 @@ export const SITE = {
  */
 export const BOOKING_MODE: 'sms' | 'email' = 'sms';
 
-/**
- * Netta's booking phone number for 3A Flip the Flow.
- * Andrew will fill this in once Netta confirms her preferred business phone number.
- * Format: digits only or E.164, e.g. '8055550123' or '+18055550123'.
- * Leave empty ('') until Netta confirms her number.
- */
-export const BOOKING_SMS_NUMBER = '';
+// Obfuscation only, not security. The booking recipient is decoded only at submit time.
+export const BOOKING_SMS_NUMBER_ENCODED = 'KzE4MDU4NjY4Njg2';
 
 export const BOOKING_DELIVERY = {
   // Configured submission endpoint for 3B email fallback (Formspree free tier or custom endpoint).

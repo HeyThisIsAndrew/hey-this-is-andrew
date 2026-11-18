@@ -13,7 +13,7 @@
  * - Full iOS Safari-safe background scroll & interaction lock (locks body at current scrollY, marks background inert, restores exact scrollY on X, backdrop tap, or Escape)
  * - Zero em dashes, zero horizontal modal scroll
  */
-import { SITE, BOOKING_DELIVERY, BOOKING_MODE, BOOKING_SMS_NUMBER } from '../data/site';
+import { SITE, BOOKING_DELIVERY, BOOKING_MODE } from '../data/site';
 import HennaBorderDraw from './HennaBorderDraw.astro';
 ---
 
@@ -144,7 +144,6 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
         class="booking-form"
         data-endpoint={BOOKING_DELIVERY.endpoint}
         data-booking-mode={BOOKING_MODE}
-        data-sms-number={BOOKING_SMS_NUMBER}
         novalidate
       >
         <!-- Row 1: Name & Phone Number (Mandatory) -->
@@ -1634,10 +1633,13 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
 </style>
 
 <script>
+  import { BOOKING_SMS_NUMBER_ENCODED } from '../data/site';
+
   function initBookingSection() {
     const modal = document.getElementById('booking-modal') as HTMLDialogElement | null;
     const closeBtn = document.getElementById('booking-modal-close');
     const confirmCloseBtn = document.getElementById('confirm-close-btn');
+    const openSmsBtn = document.getElementById('btn-open-sms') as HTMLAnchorElement | null;
     const form = document.getElementById('booking-request-form') as HTMLFormElement | null;
     const confirmBox = document.getElementById('booking-confirm-box');
     const dateInput = document.getElementById('book-date') as HTMLInputElement | null;
@@ -1729,6 +1731,7 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
 
     function finishModalClose() {
       if (!modal) return;
+      if (openSmsBtn) openSmsBtn.onclick = null;
       const restoreY = savedScrollY;
       const root = document.documentElement;
       root.style.scrollBehavior = 'auto';
@@ -2204,15 +2207,6 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
       const preferredTime = preferredTimeRaw || 'To be coordinated';
 
       const bookingMode = (form.getAttribute('data-booking-mode') || 'sms').toLowerCase();
-      const smsNumber = (form.getAttribute('data-sms-number') || '').trim();
-
-      if (bookingMode === 'sms' && !smsNumber) {
-        if (configErr) {
-          configErr.textContent = "Netta's booking phone number is not set yet. Please contact Netta directly on Instagram (@nettahennaandfeatheredsoul) or check back soon.";
-          configErr.hidden = false;
-        }
-        return;
-      }
 
       const confirmTitle = document.getElementById('confirm-title');
       const confirmIcon = document.getElementById('confirm-icon');
@@ -2221,14 +2215,6 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
       const confirmDetailsSummary = document.getElementById('confirm-details-summary');
 
       if (bookingMode === 'sms') {
-        const cleanSmsNumber = smsNumber.replace(/[^\d+]/g, '');
-        let formattedDisplay = smsNumber;
-        if (/^\d{10}$/.test(cleanSmsNumber)) {
-          formattedDisplay = `(${cleanSmsNumber.slice(0,3)}) ${cleanSmsNumber.slice(3,6)}-${cleanSmsNumber.slice(6)}`;
-        } else if (/^1\d{10}$/.test(cleanSmsNumber)) {
-          formattedDisplay = `+1 (${cleanSmsNumber.slice(1,4)}) ${cleanSmsNumber.slice(4,7)}-${cleanSmsNumber.slice(7)}`;
-        }
-
         const smsLines = [
           "Hi Netta! I'd like to request an appointment:",
           `• Name: ${name}`,
@@ -2246,7 +2232,27 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
 
         const isApple = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent) && !('MSStream' in window);
         const separator = isApple ? '&' : '?';
+        let cleanSmsNumber = '';
+        try {
+          cleanSmsNumber = atob(BOOKING_SMS_NUMBER_ENCODED);
+        } catch {
+          // Keep the existing configuration fallback for an invalid encoding.
+        }
+        if (!/^\+[1-9]\d{7,14}$/.test(cleanSmsNumber)) {
+          if (configErr) {
+            configErr.textContent = "Netta's booking phone number is not set yet. Please contact Netta directly on Instagram (@nettahennaandfeatheredsoul) or check back soon.";
+            configErr.hidden = false;
+          }
+          return;
+        }
         const smsUrl = `sms:${cleanSmsNumber}${separator}body=${encodeURIComponent(smsBody)}`;
+        const launchSms = () => {
+          try {
+            window.location.href = smsUrl;
+          } catch {
+            // The confirmation still offers a copyable message if the handoff is blocked.
+          }
+        };
 
         if (confirmTitle) confirmTitle.textContent = 'Check Your Messages';
         if (confirmIcon) confirmIcon.textContent = '💬';
@@ -2257,20 +2263,16 @@ import HennaBorderDraw from './HennaBorderDraw.astro';
         if (smsFlowDetails) smsFlowDetails.hidden = false;
         if (confirmDetailsSummary) confirmDetailsSummary.hidden = true;
 
-        const phoneDisplay = document.getElementById('sms-target-phone-display');
-        if (phoneDisplay) phoneDisplay.textContent = formattedDisplay;
-
         const fallbackTextarea = document.getElementById('sms-fallback-textarea') as HTMLTextAreaElement | null;
         if (fallbackTextarea) fallbackTextarea.value = smsBody;
 
-        const openSmsBtn = document.getElementById('btn-open-sms') as HTMLAnchorElement | null;
-        if (openSmsBtn) openSmsBtn.href = smsUrl;
-
-        try {
-          window.location.href = smsUrl;
-        } catch (e) {
-          console.warn('SMS trigger notice:', e);
+        if (openSmsBtn) {
+          openSmsBtn.onclick = (event) => {
+            event.preventDefault();
+            launchSms();
+          };
         }
+        launchSms();
 
       } else {
         if (confirmTitle) confirmTitle.textContent = 'Request Received!';
