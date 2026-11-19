@@ -9,6 +9,8 @@
  *   already has its own h2 takes 3.
  * - `size`: 'lg' (default, page-level rows) or 'md' (rows inside a section).
  * - The `media` slot puts a small image in the header (a work row's thumb).
+ * - `chip`: the row is named by metadata chips (BrandAccordion's .bacc-chip:
+ *   the title with its edge tick, then the kicker), not a display title.
  * - data-pn-label carries the title, so a PageNav that selects rows
  *   (`[data-accordion-row]`) lists each by its title, not its whole text.
  *
@@ -31,14 +33,16 @@ interface Props {
   size?: 'lg' | 'md';
   /** The row's name in a PageNav, when the title is a sentence (default: the title). */
   navLabel?: string;
+  /** Name the row with metadata chips instead of a display title. */
+  chip?: boolean;
 }
-const { id, kicker, title, subtitle, progressCount, progressTotal, open = false, level = 2, size = 'lg', navLabel } = Astro.props;
+const { id, kicker, title, subtitle, progressCount, progressTotal, open = false, level = 2, size = 'lg', navLabel, chip = false } = Astro.props;
 const hasProgress = progressCount !== undefined && progressTotal !== undefined;
 const progressPercent = hasProgress ? Math.round((progressCount / Math.max(1, progressTotal)) * 100) : 0;
 const Heading = level === 3 ? 'h3' : 'h2';
 const hasMedia = Astro.slots.has('media');
 ---
-<div class:list={['accordion-row', `accordion-row--${size}`, { 'is-expanded': open, 'is-settled': open }]} id={id} data-accordion-row data-pn-label={navLabel ?? title}>
+<div class:list={['accordion-row', `accordion-row--${size}`, { 'accordion-row--chip': chip, 'is-expanded': open, 'is-settled': open }]} id={id} data-accordion-row data-pn-label={navLabel ?? title}>
   <Heading class="accordion-heading">
     <button
       type="button"
@@ -56,8 +60,17 @@ const hasMedia = Astro.slots.has('media');
           </span>
         )}
         <span class="accordion-header-text">
-          {kicker && <span class="accordion-kicker font-mono">{kicker}</span>}
-          <span class="accordion-title">{title}</span>
+          {chip ? (
+            <span class="accordion-chips">
+              <span class="accordion-title">{title}</span>
+              {kicker && <span class="accordion-kicker">{kicker}</span>}
+            </span>
+          ) : (
+            <>
+              {kicker && <span class="accordion-kicker font-mono">{kicker}</span>}
+              <span class="accordion-title">{title}</span>
+            </>
+          )}
           {subtitle && <span class="accordion-subtitle font-mono">{subtitle}</span>}
         </span>
         {hasProgress && (
@@ -186,8 +199,45 @@ const hasMedia = Astro.slots.has('media');
   .accordion-row--md .accordion-header {
     padding: 1.25rem 1.5rem;
   }
+  /* Chip mode: the site's metadata chips, value for value. */
+  .accordion-chips {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+  .accordion-row--chip .accordion-title,
+  .accordion-row--chip .accordion-kicker {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(10, 10, 10, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    font-family: var(--font-body, sans-serif);
+    font-weight: 600;
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    line-height: 1.2;
+    color: rgba(255, 255, 255, 0.75);
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  .accordion-row--chip .accordion-title {
+    border-left: 2px solid var(--accordion-edge, #f0f0f0);
+    color: rgba(255, 255, 255, 0.95);
+  }
   .accordion-row--md .accordion-title {
     font-size: clamp(1.05rem, 1.6vw, 1.5rem);
+    line-height: 1.2;
+  }
+  /* A chip stays chip-sized at every row size. */
+  .accordion-row--chip.accordion-row--md .accordion-title {
+    font-size: 0.68rem;
     line-height: 1.2;
   }
   .accordion-progress-meta {

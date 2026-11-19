@@ -21,9 +21,21 @@ const SHARED_EXCLUSIONS = new Set([
 
 const STEP_TERMS = ['Send', 'Wording List', 'Approve', 'Build', 'Deliver'] as const;
 
-function cleanRevisions(revisions: string): string {
-  return revisions.replace(/,\s*extra\s+(?:round|page).*$/i, '.');
+// Revisions are the same in every tier (2 rounds; the third tier's "on the
+// build" only meant its monthly retainer is covered by its own support
+// hours), so they are said once, in the shared terms, not on each card.
+// The build stops if a tier's revisions ever stop agreeing.
+const SHARED_REVISIONS = '2 revision rounds included';
+for (const tier of CLIENT_WORK_TIERS) {
+  if (!tier.revisions.startsWith(SHARED_REVISIONS)) {
+    throw new Error(`work-with-me: ${tier.name} revisions no longer match the shared line: ${tier.revisions}`);
+  }
 }
+
+// "Everything in Tier 1, plus ..." names the tier: the cards carry no
+// tier numbers.
+const nameTierRefs = (item: string) =>
+  item.replace(/\bTier (\d)\b/g, (_, n: string) => CLIENT_WORK_TIERS[Number(n) - 1]?.name ?? `Tier ${n}`);
 
 function cleanRetainer(retainer: string): string {
   const s = retainer.replace(/^\$900 per month\s*/i, '');
@@ -84,16 +96,14 @@ const cleanWordingChanges = CLIENT_WORK.wordingChanges
       {CLIENT_WORK_TIERS.map((tier, index) => (
         <article class="client-work-card" aria-labelledby={`tier-${index + 1}`}>
           <div class="tier-heading">
-            <p class="tier-index font-mono">Tier {index + 1}</p>
             <h2 id={`tier-${index + 1}`}>{tier.name}</h2>
           </div>
           <dl class="tier-logistics">
             <div><dt>Timeline</dt><dd>{tier.timeline}</dd></div>
-            <div><dt>Revisions</dt><dd>{cleanRevisions(tier.revisions)}</dd></div>
           </dl>
           <div class="tier-list">
             <h3>{'monthlyIncluded' in tier ? 'Included in the build' : 'Included'}</h3>
-            <ul>{filterIncluded(tier.included, index).map((item) => <li>{item}</li>)}</ul>
+            <ul>{filterIncluded(tier.included, index).map((item) => <li>{nameTierRefs(item)}</li>)}</ul>
           </div>
           {'monthlyIncluded' in tier && (
             <div class="tier-list">
@@ -110,9 +120,21 @@ const cleanWordingChanges = CLIENT_WORK.wordingChanges
       ))}
     </section>
 
+    <section id="get-started" class="client-work-start" aria-labelledby="start-heading">
+      <SectionHeader variant="chip" id="start-heading" title="Get started" />
+      <p class="client-work-lede">{CLIENT_WORK.paragraph}</p>
+      <div class="btn-group client-work-actions">
+        <a class="btn btn-secondary" href={CLIENT_WORK.intakeUrl} target="_blank" rel="noopener noreferrer">Sign up</a>
+        <a class="btn btn-secondary" href={CLIENT_WORK.wordingListUrl} target="_blank" rel="noopener noreferrer">Wording list</a>
+        <a class="btn btn-secondary client-work-email" href={`mailto:${CONTACT.personal}`}>Email</a>
+      </div>
+      <p class="client-work-intake-note">{shortIntakeNote}</p>
+    </section>
+
     <section id="terms" class="client-work-terms-section" aria-label="Terms for all tiers">
       <div class="client-work-terms-notes">
         <p class="client-work-term-line"><span class="term-line-label">Deposit:</span> {depositText}</p>
+        <p class="client-work-term-line"><span class="term-line-label">Revisions:</span> {SHARED_REVISIONS} in every tier.</p>
         <p class="client-work-term-line"><span class="term-line-label">Not included in any tier:</span> Photography (separate service), Shop or checkout, Domain purchase.</p>
       </div>
       <div class="client-work-terms">
@@ -147,21 +169,12 @@ const cleanWordingChanges = CLIENT_WORK.wordingChanges
       </ul>
     </section>
 
-    <section id="get-started" class="client-work-start" aria-labelledby="start-heading">
-      <SectionHeader variant="chip" id="start-heading" title="Get started" />
-      <p class="client-work-lede">{CLIENT_WORK.paragraph}</p>
-      <div class="btn-group client-work-actions">
-        <a class="btn btn-secondary" href={CLIENT_WORK.intakeUrl} target="_blank" rel="noopener noreferrer">Sign up</a>
-        <a class="btn btn-secondary" href={CLIENT_WORK.wordingListUrl} target="_blank" rel="noopener noreferrer">Wording list</a>
-        <a class="btn btn-secondary client-work-email" href={`mailto:${CONTACT.personal}`}>Email</a>
-      </div>
-      <p class="client-work-intake-note">{shortIntakeNote}</p>
-    </section>
   </div>
 </BaseLayout>
 
 <style>
-  .client-work { --cw-section-pad: clamp(3rem, 5vw, 4.75rem); padding-block: clamp(2rem, 3.5vw, 3.5rem) 0; }
+  /* Sections flow with small, even gaps (as on the homepage). */
+  .client-work { --cw-section-pad: clamp(1.5rem, 2.75vw, 2.5rem); padding-block: clamp(2rem, 3.5vw, 3.5rem) 0; }
   .client-work-services { padding: 0 0 var(--cw-section-pad); margin-bottom: var(--cw-section-pad); border-bottom: 1px solid var(--line); }
   .client-work-press { margin: 0 0 2rem; }
   .client-work-service-list { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1.25rem; list-style: none; margin: 0; padding: 0; align-items: stretch; --flip-value-size: clamp(0.85rem, 1.02vw, 1.2rem); }
@@ -169,11 +182,11 @@ const cleanWordingChanges = CLIENT_WORK.wordingChanges
   .client-work-service-list :global(.stat-card.flip-card) { min-height: 200px; }
   .client-work-tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; padding: 0 0 var(--cw-section-pad); align-items: stretch; grid-auto-rows: 1fr; }
   .client-work-card { min-width: 0; padding: clamp(1.5rem, 2.4vw, 2.75rem); border: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; }
-  .tier-index { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.18em; margin: 0 0 1rem; }
   .tier-heading h2 { font-family: var(--font-display); font-size: clamp(1rem, 1.25vw, 1.65rem); font-weight: 800; line-height: 1.15; text-transform: uppercase; margin: 0; }
   @media (min-width: 1100px) {
-    .tier-heading {
-      min-height: 7.5rem;
+    /* Two lines of the tier name, so the three cards' rows line up. */
+    .tier-heading h2 {
+      min-height: calc(2 * 1.15em);
     }
   }
   .tier-logistics { display: grid; gap: 1.25rem; padding-block: 1.75rem; margin: 1.75rem 0 0; border-top: 1px solid var(--line); }

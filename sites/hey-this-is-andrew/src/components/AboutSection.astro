@@ -5,6 +5,7 @@ import { SUBSTACK_URL } from '../lib/latest-content';
 import { NOW_MONTH, NOW_ITEMS } from '../data/now';
 import Accordion from '@andrew/ui/Accordion.astro';
 import AccordionRow from '@andrew/ui/AccordionRow.astro';
+import SectionHeader from '@andrew/ui/SectionHeader.astro';
 
 interface Props {
   /** Full version (About page): the longer telling, Substack kicker link. */
@@ -26,16 +27,7 @@ const STORY = {
   <div class="container">
     <!-- BE-style section bar: icon + title + categories + rule, one line.
          No link here: Read the Substack below is the primary CTA. -->
-    <div class="about-bar">
-      <span class="about-bar-icon" aria-hidden="true">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="3"></circle>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-        </svg>
-      </span>
-      <h2 class="about-bar-title" id="about-heading">{full ? 'About Andrew' : 'Meet The Creator'}</h2>
-      <span class="about-bar-rule" aria-hidden="true"></span>
-    </div>
+    <SectionHeader variant="chip" id="about-heading" title={full ? 'About Andrew' : 'Meet The Creator'} />
 
     <div class="about-grid">
       <figure class="about-portrait">
@@ -61,7 +53,7 @@ const STORY = {
         {!full && (
           <div class="about-panels">
             <Accordion exclusive>
-              <AccordionRow
+              <AccordionRow chip
                 id="about-building"
                 title="What I'm building"
                 subtitle="Hey, I'm building three brands: my personal brand, BE Unconventional HQ, and CCC."
@@ -71,7 +63,7 @@ const STORY = {
               >
                 <p class="about-body">{STORY.building}</p>
               </AccordionRow>
-              <AccordionRow
+              <AccordionRow chip
                 id="about-how"
                 title="How I work"
                 subtitle="My workflow uses professional cameras and lighting equipment: Sony Alpha, DaVinci Resolve, Lightroom..."
@@ -81,7 +73,7 @@ const STORY = {
               >
                 {STORY.how.map((para) => <p class="about-body">{para}</p>)}
               </AccordionRow>
-              <AccordionRow
+              <AccordionRow chip
                 id="now"
                 title={`Now · ${NOW_MONTH}`}
                 subtitle={`${NOW_ITEMS[0].label}: ${NOW_ITEMS[0].value.replace(/\.$/, '')}`}
@@ -142,62 +134,9 @@ const STORY = {
   @media (min-width: 1920px) {
     .about-section { --u: calc(100vw / 1512); }
   }
-  .about-bar {
-    display: flex;
-    align-items: center;
-    column-gap: calc(11.52 * var(--u));
-    row-gap: calc(5.12 * var(--u));
-    margin-bottom: clamp(calc(19.2 * var(--u)), 3vw, calc(32 * var(--u)));
-    flex-wrap: wrap;
-  }
-  .about-bar-title {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: clamp(calc(16.64 * var(--u)), 2.1vw, calc(23.68 * var(--u)));
-    line-height: 1;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink);
-    margin: 0;
-    white-space: nowrap;
-  }
-  .about-bar-cats {
-    font-family: var(--font-mono);
-    font-size: calc(8.96 * var(--u));
-    font-weight: 500;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--muted);
-    white-space: nowrap;
-  }
-  .about-bar-rule {
-    flex: 1 1 2rem;
-    height: 1px;
-    background: var(--border);
-    min-width: 2rem;
-  }
   @media (max-width: 767px) {
-    .about-bar {
-      margin-bottom: 24px;
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
-      grid-template-areas: 'icon title';
-      column-gap: 0.7rem;
-    }
-    .about-bar-icon { grid-area: icon; }
-    .about-bar-title { grid-area: title; font-size: min(1.15rem, 4.4vw); letter-spacing: 0.06em; white-space: normal; }
-    .about-bar-rule { display: none; }
   }
 
-  .about-bar-icon {
-    display: flex;
-    align-items: center;
-    color: var(--ink);
-  }
-  .about-bar-icon svg {
-    width: calc(30 * var(--u));
-    height: calc(30 * var(--u));
-  }
 
   .about-grid {
     display: grid;
