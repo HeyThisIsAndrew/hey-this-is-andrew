@@ -4,6 +4,12 @@
  * Editorial notebook, not HQ chalk: a mono eyebrow with a file-tab index,
  * a strong title, an optional lede, an optional link, and a hairline rule
  * closed with a small registration square. Tactile, square, monochrome.
+ *
+ * variant="chip": the section is named by a metadata chip instead (the
+ * BrandAccordion .bacc-chip, as is: the title with its edge tick, then the
+ * kicker if there is one). The heading element stays for the outline; no
+ * big title, no rule, a small gap to what follows. Its wrapper is not
+ * .section-header, or section-anchors.ts would put its "#" link in the chip.
  */
 interface Props {
   kicker?: string;
@@ -16,13 +22,24 @@ interface Props {
   id?: string;
   /** Heading level to maintain semantic hierarchy. Defaults to h2. */
   as?: 'h2' | 'h3' | 'h4';
+  /** 'chip': a metadata chip in place of the big title (see above). */
+  variant?: 'default' | 'chip';
 }
 
-const { kicker, title, lede, linkLabel, linkHref, linkExternal = false, id, as: HeadingTag = 'h2' } = Astro.props;
+const { kicker, title, lede, linkLabel, linkHref, linkExternal = false, id, as: HeadingTag = 'h2', variant = 'default' } = Astro.props;
 const headingId =
   id ?? `sec-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`;
 ---
 
+{variant === 'chip' ? (
+<div class="sec-head-chip">
+  <div class="sec-chips">
+    <HeadingTag class="sec-chip sec-chip--title" id={headingId}>{title}</HeadingTag>
+    {kicker && <span class="sec-chip sec-chip--kicker">{kicker}</span>}
+  </div>
+  {lede && <p class="section-lede sec-chip-lede">{lede}</p>}
+</div>
+) : (
 <div class="sec-head section-header">
   {kicker && (
     <p class="sec-eyebrow">
@@ -60,8 +77,49 @@ const headingId =
   )}
   <span class="sec-rule" aria-hidden="true"><i></i></span>
 </div>
+)}
 
 <style>
+  .sec-head-chip {
+    width: 100%;
+    margin-bottom: clamp(0.75rem, 1.4vw, 1.1rem);
+  }
+  .sec-chips {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+  /* BrandAccordion's .bacc-chip, value for value. */
+  .sec-chip {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(10, 10, 10, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    font-family: var(--font-body, sans-serif);
+    font-weight: 600;
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    line-height: 1.2;
+    color: rgba(255, 255, 255, 0.75);
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  .sec-chip--title {
+    border-left: 2px solid var(--accordion-edge, #f0f0f0);
+    color: rgba(255, 255, 255, 0.95);
+  }
+  .sec-chip-lede {
+    margin: 0.75rem 0 0;
+  }
+
   .sec-head {
     margin-bottom: clamp(2rem, 4vw, 3.25rem);
     max-width: none;
