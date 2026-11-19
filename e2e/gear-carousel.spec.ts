@@ -47,19 +47,16 @@ test('gear carousel: the seven sections, controls and keys, pause holds past int
   // The active slide links directly to that section on /gear/, and /gear/ opens on that section.
   await spotlight.locator('[data-spotlight-slide].is-current').click();
   await expect(page).toHaveURL(/\/gear\/#gear-audio$/);
-  await expect(page.locator('#gear-audio')).toHaveClass(/is-expanded/);
-  await expect(page.locator('.gear-accordion-section.is-expanded')).toHaveCount(1);
+  await expect(page.locator('#gear-audio')).toBeInViewport();
 });
 
-test('/gear/ section and item links open their section', async ({ page }) => {
+test('/gear/ section and item links land on their section', async ({ page }) => {
   for (const id of ['gear-lenses', 'brew', 'gear-audio']) {
     await page.goto(`./gear/#${id}`);
-    await expect(page.locator(`#${id}`)).toHaveClass(/is-expanded/);
-    await expect(page.locator('.gear-accordion-section.is-expanded')).toHaveCount(1);
+    await expect(page.locator(`#${id}`)).toBeInViewport();
   }
   await page.goto('./gear/#gear-item-aputure-amaran-200d');
-  await expect(page.locator('#gear-lighting')).toHaveClass(/is-expanded/);
-  await expect(page.locator('#gear-lighting .deck-card.active')).toHaveAttribute('aria-label', 'Aputure Amaran 200d');
+  await expect(page.locator('#gear-item-aputure-amaran-200d')).toBeInViewport();
 });
 
 test('unified BannerRotator (kit + referrals) on /about/ and /gear/ plus View all referrals modal', async ({ page }) => {
@@ -132,7 +129,7 @@ test('mobile 390x844 edge-to-edge carousels, framed flip-card rotator, and scrol
   expect(homeMetrics.ctaW).toBeGreaterThanOrEqual(44);
   expect(homeMetrics.ctaH).toBeGreaterThanOrEqual(44);
 
-  // /gear/ accordion deck spans 0..390 edge-to-edge and BannerRotator has HQ framed geometry
+  // /gear/ category panels span 0..390 edge-to-edge and BannerRotator has HQ framed geometry
   await page.goto('./gear/');
   const gearMetrics = await page.evaluate(() => {
     const doc = document.documentElement;
@@ -142,16 +139,13 @@ test('mobile 390x844 edge-to-edge carousels, framed flip-card rotator, and scrol
     };
     return {
       overflow: doc.scrollWidth > doc.clientWidth,
-      accordion: box('#gear-accordion-container'),
-      expanded: box('.gear-accordion-section.is-expanded'),
-      deck: box('.gear-accordion-section.is-expanded .gear-deck'),
-      stage: box('.gear-accordion-section.is-expanded .deck-stage'),
-      thumbs: box('.gear-accordion-section.is-expanded .deck-thumb-track'),
+      panels: box('#gear-panels'),
+      panel: box('.gear-panel'),
       rotator: box('[data-banner-rotator] .ui-rotator-grid'),
     };
   });
   expect(gearMetrics.overflow).toBe(false);
-  for (const key of ['accordion', 'expanded', 'deck', 'stage', 'thumbs'] as const) {
+  for (const key of ['panels', 'panel'] as const) {
     expect(gearMetrics[key]?.left).toBe(0);
     expect(gearMetrics[key]?.right).toBe(390);
   }

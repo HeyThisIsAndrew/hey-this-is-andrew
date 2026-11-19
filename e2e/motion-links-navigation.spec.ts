@@ -10,71 +10,18 @@ async function navigateWithHeader(page: Page, name: string) {
 }
 
 for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }, { width: 1440, height: 900 }, { width: 3840, height: 2160 }]) {
-  test(`product grid has contained text and wider desktop cards at ${viewport.width}`, async ({ page }) => {
+  test(`gear cards keep their text contained at ${viewport.width}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto(`${base}gear/`);
-    await page.locator('[data-all-toggle]').click();
-    const grid = page.locator('#gear-all-products');
-    await expect(grid).toHaveAttribute('data-open', 'true');
-    await expect(page.locator('#gear-decks-view')).toBeHidden();
-    await expect(grid.locator('.all-grid-card:visible')).toHaveCount(45);
-    const results = await grid.locator('.all-grid-card').evaluateAll(cards => cards.map(card => {
+    await expect(page.locator('.gear-card:visible')).toHaveCount(45);
+    const issues = await page.locator('.gear-card').evaluateAll(cards => cards.flatMap(card => {
       const outer = card.getBoundingClientRect();
-      return { ratio: outer.width / outer.height, width: outer.width, issues: Array.from(card.querySelectorAll('.all-card-name, .all-card-spec, .all-card-type, .all-card-cta')).filter(el => { const r = el.getBoundingClientRect(); return r.left < outer.left - 1 || r.right > outer.right + 1 || r.bottom > outer.bottom + 1 || el.scrollWidth > el.clientWidth + 1; }).map(el => el.textContent) };
+      return Array.from(card.querySelectorAll('.gear-card-name, .gear-card-spec, .gear-card-type, .gear-card-cta, .gear-card-tag')).filter(el => { const r = el.getBoundingClientRect(); return r.left < outer.left - 1 || r.right > outer.right + 1 || r.bottom > outer.bottom + 1 || el.scrollWidth > el.clientWidth + 1; }).map(el => el.textContent);
     }));
-    expect(results.flatMap(card => card.issues)).toEqual([]);
-    if (viewport.width >= 1100) {
-      expect(results.every(card => card.ratio > 1.1)).toBe(true);
-      const columns = await grid.locator('.all-grid-cards').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length);
-      expect(columns).toBeLessThanOrEqual(3);
-    }
+    expect(issues).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
   });
 }
-
-test('gear item details collapse while the hero and glow keep their geometry', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`${base}gear/`);
-  const section = page.locator('#gear-bodies');
-  const trigger = section.locator('.deck-card.active [data-gear-open]');
-  const panel = section.locator('#gear-item-sony-a7iv-details');
-  await trigger.click();
-  await expect(panel).toBeVisible();
-  const samples = await section.evaluate(async (element) => {
-    const details = element.querySelector<HTMLElement>('.card-details[data-open="true"]')!;
-    const deck = element.querySelector('.gear-deck')!;
-    const stage = element.querySelector('.deck-stage')!;
-    const glow = element.querySelector('.deck-glow')!;
-    const containedGlow = glow.getBoundingClientRect().top >= deck.getBoundingClientRect().top - 1 && getComputedStyle(deck).overflow === 'clip';
-    const heroHeight = stage.getBoundingClientRect().height;
-    element.querySelector<HTMLButtonElement>('.deck-card.active [data-gear-open]')!.click();
-    const values: { height: number; hero: number }[] = [];
-    const start = performance.now();
-    await new Promise<void>((resolve) => {
-      function frame() {
-        values.push({ height: details.getBoundingClientRect().height, hero: stage.getBoundingClientRect().height });
-        if (performance.now() - start < 550) requestAnimationFrame(frame);
-        else resolve();
-      }
-      requestAnimationFrame(frame);
-    });
-    return { containedGlow, heroHeight, values };
-  });
-  expect(samples.containedGlow).toBe(true);
-  expect(samples.values.every(({ hero }) => hero === samples.heroHeight)).toBe(true);
-  expect(samples.values.at(-1)!.height).toBeLessThanOrEqual(1.1);
-  await expect(panel).toBeHidden();
-  await trigger.evaluate((button: HTMLButtonElement) => {
-    button.click();
-    button.click();
-    button.click();
-  });
-  await expect(panel).toHaveAttribute('data-open', 'true');
-  await expect(panel).toBeVisible();
-  await page.locator('#gear-category-select').selectOption('lenses');
-  await expect(panel).toBeHidden();
-  await expect(page.locator('#gear-lenses')).toHaveClass(/is-settled/);
-});
 
 for (const width of [390, 1440]) {
   test(`links identity, shared social icons and accessible QR dialog at ${width}`, async ({ page }) => {
@@ -129,7 +76,7 @@ for (const width of [390, 1440]) {
       await navigateWithHeader(page,'Gear');
       await expect(page).toHaveURL(`${base}gear/`);
       await page.locator('#gear-search-input').fill('90mm');
-      await expect(page.locator('#gear-lenses .deck-card.active .card-title')).toContainText('90mm');
+      await expect(page.locator('#gear-lenses .gear-card:visible')).toContainText('90mm');
       await page.locator('#gear-search-clear').click();
       expect(await page.evaluate(()=>(window as any).__navigationIdentity)).toBe('same-document');
     }

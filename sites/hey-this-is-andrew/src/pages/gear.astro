@@ -6,7 +6,10 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import GearGrid from '../components/GearGrid.astro';
 import StorefrontCTA from '../components/StorefrontCTA.astro';
+import SectionHeader from '@andrew/ui/SectionHeader.astro';
 import { getCollection } from 'astro:content';
+import path from 'node:path';
+import { sampleAccent, NEUTRAL_ACCENT } from '../lib/gear-accent';
 
 const gear = (await getCollection('gear')).sort((a, b) => a.data.order - b.data.order);
 
@@ -16,6 +19,20 @@ const COLLECTIONS = [
   { label: 'Cafe Bar', url: 'https://a.co/d/0fSswpx1' },
   { label: 'Command Station Desk', url: 'https://a.co/d/070Rc6h9' },
 ];
+
+// Each tile's ambient glow is the lead photo of the first gear category
+// that links the same list (Camera Gear: Cameras; Cafe Bar: the Cafe Bar).
+// A list no category links (the desk) keeps the neutral glow.
+const rawBase = import.meta.env.BASE_URL;
+const siteBase = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
+const collectionTiles = await Promise.all(
+  COLLECTIONS.map(async (c) => {
+    const cat = gear.find((g) => g.data.collectionUrl === c.url);
+    const lead = cat?.data.items.find((it) => it.stores.length > 0 && it.image);
+    const accent = lead?.image ? await sampleAccent(path.join(process.cwd(), 'public', lead.image)) : NEUTRAL_ACCENT;
+    return { ...c, accent, glow: lead?.image ? `${siteBase}${lead.image}` : '' };
+  })
+);
 ---
 
 <BaseLayout
@@ -27,7 +44,7 @@ const COLLECTIONS = [
   <div class="gear-page">
     <div class="container">
       <header class="gear-header">
-        <h1 class="gear-title">Gear</h1>
+        <h1 class="vh">Gear</h1>
         <p class="gear-lede">Behind the work. Updated as it evolves.</p>
         <p class="gear-disclosure font-mono" data-affiliate-disclosure>
           As an Amazon Associate, I earn from qualifying purchases.
@@ -39,17 +56,26 @@ const COLLECTIONS = [
     <GearGrid categories={gear} />
 
     <div class="container">
-      <nav class="gear-collections" aria-label="Amazon collections">
-        <span class="gear-collections-label font-mono">Shop the lists</span>
-        <div class="gear-collections-links btn-group">
-          {COLLECTIONS.map((c) => (
-            <a class="gear-collection-link font-mono" href={c.url} target="_blank" rel="noopener sponsored">
-              {c.label}
-              <span aria-hidden="true">&#8599;</span>
-            </a>
+      <section class="gear-collections" aria-labelledby="gear-collections-heading">
+        <SectionHeader id="gear-collections-heading" title="Shop the lists" />
+        <ul class="gear-collection-tiles" role="list">
+          {collectionTiles.map((c) => (
+            <li>
+              <a
+                class="gear-collection-tile"
+                href={c.url}
+                target="_blank"
+                rel="noopener sponsored"
+                style={`--accent: ${c.accent};${c.glow ? ` --glow-img: url('${c.glow}');` : ''}`}
+              >
+                <span class="gear-collection-glow" aria-hidden="true"></span>
+                <span class="gear-collection-name">{c.label}</span>
+                <span class="gear-collection-arrow" aria-hidden="true">&#8599;</span>
+              </a>
+            </li>
           ))}
-        </div>
-      </nav>
+        </ul>
+      </section>
 
       <div class="gear-shop">
         <StorefrontCTA label="Referrals and kit" eyebrow="Referrals & Kit" modalId="gear-referrals-modal" />
@@ -73,7 +99,8 @@ const COLLECTIONS = [
     padding-top: clamp(2rem, 4vw, 4rem);
     padding-bottom: clamp(4rem, 8vw, 7rem);
   }
-  /* Same header unit as /build: tag, title, lede, small fixed steps. */
+  /* The header is the lede and the disclosure; the page title is the
+     screen-reader h1 (the nav already says where you are). */
   .gear-header {
     display: flex;
     flex-direction: column;
@@ -93,16 +120,6 @@ const COLLECTIONS = [
     padding: 0.3rem 0.65rem;
     display: inline-block;
   }
-  .gear-title {
-    font-family: var(--font-display);
-    font-size: clamp(2.2rem, 5vw, 3.8rem);
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.01em;
-    color: var(--ink);
-    margin: 0;
-    line-height: 1.05;
-  }
   .gear-lede {
     font-size: 1.05rem;
     color: var(--muted);
@@ -118,44 +135,106 @@ const COLLECTIONS = [
     color: var(--muted);
   }
   .gear-collections {
-    margin-top: clamp(2rem, 4vw, 3rem);
+    margin-top: clamp(3.5rem, 7vw, 6rem);
+  }
+  .gear-collection-tiles {
+    list-style: none;
+    margin: clamp(1.5rem, 3vw, 2.25rem) 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(0.75rem, 1.4vw, 1.25rem);
+  }
+  .gear-collection-tile {
+    --hover-ease: cubic-bezier(0.25, 1, 0.5, 1);
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem 0.75rem;
-  }
-  .gear-collections-links {
-    --btn-group-gap: 0.5rem;
-  }
-  @media (max-width: 600px) {
-    .gear-collections-label {
-      flex-basis: 100%;
-    }
-  }
-  .gear-collections-label {
-    font-size: 0.68rem;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-right: 0.25rem;
-  }
-  .gear-collection-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    min-height: 44px;
-    padding: 0.45rem 0.85rem;
-    border: 1px solid var(--border);
-    color: var(--ink);
-    font-size: 0.7rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    aspect-ratio: 16 / 9;
+    padding: clamp(1.1rem, 2vw, 1.75rem);
+    box-sizing: border-box;
+    background: #0d0d0d;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0;
+    color: #fff;
     text-decoration: none;
+    transition:
+      border-color 0.8s var(--hover-ease),
+      box-shadow 0.8s var(--hover-ease);
+  }
+  .gear-collection-glow {
+    position: absolute;
+    inset: -20%;
+    z-index: -1;
+    background-image:
+      radial-gradient(ellipse 55% 60% at 50% 50%, rgba(var(--accent), 0.55), rgba(var(--accent), 0) 72%),
+      var(--glow-img, none);
+    background-size: cover, 70% auto;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(48px) saturate(1.5);
+    opacity: 0.75;
+    transition: opacity 0.8s var(--hover-ease), transform 0.8s var(--hover-ease);
+  }
+  .gear-collection-name {
+    font-family: var(--font-display);
+    font-size: clamp(1.15rem, 2.1vw, 1.9rem);
+    font-weight: 800;
+    line-height: 1.05;
+    text-transform: uppercase;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
+  }
+  .gear-collection-arrow {
+    flex: 0 0 auto;
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(10, 10, 10, 0.55);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    font-size: 1rem;
     transition: background 0.2s ease, color 0.2s ease;
   }
-  .gear-collection-link:hover {
+  @media (hover: hover) and (pointer: fine) {
+    .gear-collection-tile:hover {
+      border-color: rgba(var(--accent), 0.7);
+      box-shadow:
+        0 22px 50px rgba(0, 0, 0, 0.6),
+        0 0 34px rgba(var(--accent), 0.28);
+    }
+    .gear-collection-tile:hover .gear-collection-glow {
+      opacity: 1;
+      transform: scale(1.03);
+    }
+  }
+  .gear-collection-tile:is(:hover, :focus-visible) .gear-collection-arrow {
     background: #fff;
     color: #000;
+  }
+  .gear-collection-tile:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+  @media (max-width: 760px) {
+    .gear-collection-tiles {
+      grid-template-columns: 1fr;
+    }
+    .gear-collection-tile {
+      aspect-ratio: auto;
+      min-height: 7.5rem;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .gear-collection-tile,
+    .gear-collection-glow {
+      transition: none;
+    }
   }
   .gear-shop {
     margin-top: clamp(2rem, 4vw, 3rem);

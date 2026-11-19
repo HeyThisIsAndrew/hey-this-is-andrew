@@ -1,25 +1,27 @@
 ---
 /**
- * /gear: the kit as the BE Unconventional HQ /featured deck, copied, not
- * reinterpreted.
+ * /gear: the whole kit as one gallery. Every category is its own expanded,
+ * full-width panel, one after another: the category heading, then its
+ * products in a grid. No accordion, no deck, no view toggle (2026-11-19:
+ * the show-all view, organised by category, is the only view).
  *
- * Every section header shows at once as a compact stack; exactly one section
- * is open (or none: clicking the open header closes it). The open section is
- * a deck: the current item is a large card in front, the next two PEEK out
- * to its right with their names on a spine, and a thumbnail strip sits
- * underneath. Rotating moves every card between those positions, so the
- * change is a short crossfade with a slide and scale, never a swap.
+ * The cinematic language is the BE Unconventional HQ /featured page's,
+ * translated to a catalogue: sharp corners, product imagery full-bleed on
+ * its own dark ground, an ambient glow behind each panel (a blurred copy of
+ * the panel's first photo washed in that photo's accent, sampled at build
+ * time in src/lib/gear-accent.ts), and HQ's locked hover: the image scales
+ * to 1.03 over 0.8s cubic-bezier(0.25, 1, 0.5, 1), the accent tint behind
+ * it rises from 0.75 to 1, the border glows and a shadow lifts the card.
+ * Tags are frosted (backdrop blur 8px).
  *
- * Behind the deck is the HQ ambient glow: a blurred copy of the current photo
- * washed in that photo's own accent colour (sampled at build time, see
- * src/lib/gear-accent.ts). The same accent tints the badge, the counter and
- * the active thumbnail. All other chrome stays monochrome.
+ * Search and the category select filter the cards across every panel; a
+ * panel with no matching card hides. The count is the number of cards
+ * showing.
  *
  * Data: src/data/gear.json. An item with no store link is owned but not
- * shown. An item whose image file is missing renders a typographic card
+ * shown. An item whose image file is missing renders a typographic tile
  * rather than a wrong or broken picture.
  */
-import Disclosure from '@andrew/ui/Disclosure.astro';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { CollectionEntry } from 'astro:content';
@@ -94,9 +96,8 @@ const sections = await Promise.all(
 ).then((all) => all.filter((s) => s.items.length > 0));
 
 const ctaLabel = (s: Store) => `View on ${s.store}`;
-/** Positions in the deck, as the HQ deck names them. */
-const stateOf = (i: number, n: number) =>
-  i === 0 ? 'active' : i === 1 ? 'next-1' : i === 2 ? 'next-2' : i === n - 1 && n > 3 ? 'prev' : 'hidden';
+const totalItems = sections.reduce((total, sec) => total + sec.items.length, 0);
+const countLabel = (n: number) => `${n} ${n === 1 ? 'product' : 'products'}`;
 ---
 
 <div class="gear-monolith" id="gear-monolith">
@@ -128,7 +129,7 @@ const stateOf = (i: number, n: number) =>
         <polyline points="6 9 12 15 18 9"></polyline>
       </svg>
     </div>
-    <button type="button" class="btn-all-toggle font-mono" data-all-toggle aria-expanded="false" aria-controls="gear-all-products">Show all products</button>
+    <span class="gear-count font-mono" data-grid-count aria-live="polite">{countLabel(totalItems)}</span>
   </div>
 
   <div id="gear-empty-state" class="gear-empty-state" hidden>
@@ -136,275 +137,115 @@ const stateOf = (i: number, n: number) =>
     <button type="button" id="gear-reset-btn" class="gear-reset-btn font-mono">Reset filter</button>
   </div>
 
-  <Disclosure class="gear-all-grid-view" id="gear-all-products" hiddenWhenClosed labelledby="gear-all-title">
-    <div class="gear-all-grid-content">
-      <div class="all-grid-topbar">
-        <h2 class="all-grid-title" id="gear-all-title">All products</h2>
-        <span class="font-mono" data-grid-count aria-live="polite">{sections.reduce((total, sec) => total + sec.items.length, 0)} products</span>
-      </div>
-      <div class="all-grid-cards">
-        {sections.flatMap((sec) => sec.items.map((it) => (
-          <article class="all-grid-card" data-search={it.search} data-chip={sec.chipKey}>
-            <div class="all-card-img-wrap">
-              {it.src ? (
-                <img src={it.src} alt={it.name} class="all-card-img" loading="lazy" decoding="async" />
-              ) : (
-                <span class="all-card-type" role="img" aria-label={it.name}>{it.short}</span>
-              )}
-            </div>
-            <div class="all-card-body">
-              <span class="all-card-tag font-mono">{it.tag || it.brand}</span>
-              <h3 class="all-card-name">{it.name}</h3>
-              <p class="all-card-spec">{it.spec}</p>
-              <div class="all-card-links">
-                {it.stores.map((s, si) => (
-                  <a
-                    href={s.url}
-                    target="_blank"
-                    rel="noopener sponsored"
-                    class={`all-card-cta font-mono ${si === 0 ? 'is-primary' : ''}`}
-                  >
-                    {ctaLabel(s)}
-                  </a>
-                ))}
-              </div>
-            </div>
-          </article>
-        )))}
-      </div>
-    </div>
-  </Disclosure>
-
-  <Disclosure id="gear-decks-view" open hiddenWhenClosed>
-  <div class="gear-accordion-container" id="gear-accordion-container">
+  <div class="gear-panels" id="gear-panels">
     {sections.map((sec, secIdx) => {
-      const open = secIdx === 0;
-      const n = sec.items.length;
+      const lead = sec.items.find((it) => it.src);
       return (
         <section
-          class={`gear-accordion-section ${open ? 'is-expanded' : 'is-collapsed'}`}
+          class="gear-panel"
           id={sec.domId}
           data-category={sec.slug}
           data-chip={sec.chipKey}
           data-pn-entry
           data-pn-label={sec.title}
           data-sec-head
-          style={`--accent: ${sec.items[0].accent};`}
+          aria-labelledby={`gear-heading-${sec.slug}`}
+          style={`--accent: ${(lead ?? sec.items[0]).accent};${lead ? ` --glow-img: url('${lead.src}');` : ''}`}
         >
-          <div class="gear-accordion-header-bar">
-            <h2 class="gear-accordion-heading">
-              <button
-                type="button"
-                class="gear-accordion-header"
-                id={`gear-header-${sec.slug}`}
-                aria-expanded={open ? 'true' : 'false'}
-                aria-controls={`gear-body-${sec.slug}`}
-              >
-                <span class="gear-header-left">
-                  <span class="box-idx font-mono">{sec.kicker}</span>
-                  <span class="gear-header-title-row">
-                    <span class="box-title">{sec.title}</span>
-                  </span>
-                  <span class="box-subtitle font-mono">{sec.subtitle}</span>
-                </span>
-                <span class="header-chevron" aria-hidden="true">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                </span>
-              </button>
-            </h2>
-            <div class="gear-header-right btn-group btn-group--row">
+          <div class="gear-panel-glow" aria-hidden="true"></div>
+          <div class="gear-panel-inner">
+            <header class="gear-panel-head">
+              <div class="gear-panel-titles">
+                {sec.kicker && <span class="gear-panel-kicker font-mono">{sec.kicker}</span>}
+                <h2 class="gear-panel-title" id={`gear-heading-${sec.slug}`}>{sec.title}</h2>
+                {sec.subtitle && <p class="gear-panel-subtitle font-mono">{sec.subtitle}</p>}
+              </div>
               <a href={sec.collectionUrl} target="_blank" rel="noopener sponsored" class="influencer-pill font-mono">
                 <span class="influencer-text">{sec.collectionLabel.replace(/ list$/i, '')}{/ list$/i.test(sec.collectionLabel) && <span class="influencer-text-long"> list</span>}</span>
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                   <path d="M2.5 9.5L9.5 2.5M9.5 2.5H4.5M9.5 2.5V7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </a>
+            </header>
+
+            <div class="gear-cards">
+              {sec.items.map((it, i) => (
+                <article
+                  class="gear-card"
+                  id={gearItemId(it.name)}
+                  data-search={it.search}
+                  style={`--accent: ${it.accent};`}
+                >
+                  <div class="gear-card-visual">
+                    <span class="gear-card-tint" aria-hidden="true"></span>
+                    {it.src ? (
+                      <img
+                        src={it.src}
+                        alt={it.name}
+                        class="gear-card-img"
+                        loading={secIdx === 0 && i < 4 ? 'eager' : 'lazy'}
+                        decoding="async"
+                        draggable="false"
+                      />
+                    ) : (
+                      <span class="gear-card-type" role="img" aria-label={it.name}>{it.short}</span>
+                    )}
+                    <span class="gear-card-tag font-mono">{it.tag || it.brand}</span>
+                  </div>
+                  <div class="gear-card-body">
+                    <h3 class="gear-card-name">{it.name}</h3>
+                    <p class="gear-card-spec">{it.spec}</p>
+                    <div class="gear-card-links">
+                      {it.stores.map((s, si) => (
+                        <a
+                          href={s.url}
+                          target="_blank"
+                          rel="noopener sponsored"
+                          class:list={['gear-card-cta', 'font-mono', { 'is-primary': si === 0 }]}
+                        >
+                          {ctaLabel(s)}
+                        </a>
+                      ))}
+                      {it.video && (
+                        <a class="gear-card-cta gear-card-video font-mono" href={it.video.url} target="_blank" rel="noopener sponsored">
+                          {it.video.label}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))}
             </div>
           </div>
-
-          <Disclosure class="gear-accordion-body" id={`gear-body-${sec.slug}`} open={open} labelledby={`gear-header-${sec.slug}`}>
-            <div class="gear-deck" data-deck={sec.slug}>
-              <div class="deck-glow" aria-hidden="true">
-                {sec.items.map((it, i) => (
-                  <div
-                    class={`deck-glow-layer ${i === 0 ? 'active' : ''}`}
-                    data-glow-index={i}
-                    data-glow-src={it.src || undefined}
-                    style={`--glow: ${it.accent};${i === 0 && it.src ? ` --glow-img: url('${it.src}');` : ''}`}
-                  ></div>
-                ))}
-              </div>
-
-              <div
-                class="deck-stage"
-                data-deck-stage={sec.slug}
-                role="group"
-                aria-roledescription="carousel"
-                aria-label={`${sec.title}: ${n} items`}
-              >
-                {sec.items.map((it, i) => {
-                  const primary = it.stores[0];
-                  const extraAffiliates = it.stores.filter((s) => s.affiliate).map((s) => s.store);
-                  // The Amazon line covers Amazon links only (James Coffee Co.
-                  // links to its own shop and carries no disclosure).
-                  const hasAmazon = it.stores.some((s) => s.store === 'Amazon');
-                  return (
-                    <article
-                      class={`deck-card ${stateOf(i, n)}`}
-                      id={gearItemId(it.name)}
-                      data-index={i}
-                      data-accent={it.accent}
-                      data-search={it.search}
-                      aria-hidden={i === 0 ? 'false' : 'true'}
-                      aria-label={it.name}
-                    >
-                      <div class="card-top">
-                        <span class="card-tags">
-                          <span class="card-badge font-mono">{it.tag || 'In the kit'}</span>
-                          <span class="card-brand font-mono">{it.brand}</span>
-                        </span>
-                      </div>
-
-                      <div class="card-visual">
-                        {it.src ? (
-                          <img
-                            class="card-img"
-                            src={it.src}
-                            alt={it.name}
-                            loading={secIdx === 0 && i < 3 ? 'eager' : 'lazy'}
-                            decoding="async"
-                            draggable="false"
-                          />
-                        ) : (
-                          <div class="card-type" role="img" aria-label={it.name}>
-                            <span class="card-type-brand font-mono">{it.brand}</span>
-                            <span class="card-type-name">{it.short}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div class="card-plate">
-                        <h3 class="card-title">{it.name}</h3>
-                        <p class="card-spec">{it.spec}</p>
-                        <div class="card-actions">
-                          <a
-                            class="store-cta font-mono"
-                            href={primary.url}
-                            target="_blank"
-                            rel="noopener sponsored"
-                            data-store-cta
-                            tabindex={i === 0 ? undefined : '-1'}
-                          >
-                            <span data-store-cta-label>{ctaLabel(primary)}</span>
-                            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                              <path d="M2.5 11.5L11.5 2.5M11.5 2.5H5.5M11.5 2.5V8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                          </a>
-                          {it.stores.length > 1 && (
-                            <div class="store-picker" role="radiogroup" aria-label={`Store for ${it.short}`}>
-                              {it.stores.map((s, si) => (
-                                <button
-                                  type="button"
-                                  class="store-option font-mono"
-                                  role="radio"
-                                  aria-checked={si === 0 ? 'true' : 'false'}
-                                  data-store-url={s.url}
-                                  data-store-label={ctaLabel(s)}
-                                  tabindex={i === 0 && si === 0 ? undefined : '-1'}
-                                >
-                                  {s.store}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                          {it.video && (
-                            <a
-                              class="video-link font-mono"
-                              href={it.video.url}
-                              target="_blank"
-                              rel="noopener sponsored"
-                              tabindex={i === 0 ? undefined : '-1'}
-                            >
-                              {it.video.label}
-                            </a>
-                          )}
-                        </div>
-                        {(hasAmazon || extraAffiliates.length > 0) && (
-                          <p class="card-disclosure font-mono">
-                            {hasAmazon && 'As an Amazon Associate, I earn from qualifying purchases.'}
-                            {extraAffiliates.length > 0 && ` The ${extraAffiliates.join(' and ')} link is an affiliate link${hasAmazon ? ' too' : ''}.`}
-                          </p>
-                        )}
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-
-              <div class="deck-controls" role="group" aria-label={`${sec.title} item navigation`}>
-                <button type="button" class="deck-step deck-step--prev" data-deck-prev aria-label={`Previous ${sec.title} item`}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                </button>
-                <span class="deck-swipe-hint font-mono" aria-hidden="true">Swipe or tap arrows</span>
-                <button type="button" class="deck-step deck-step--next" data-deck-next aria-label={`Next ${sec.title} item`}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                </button>
-              </div>
-
-              <div class="deck-thumb-track" role="tablist" aria-label={`${sec.title} items`}>
-                {sec.items.map((it, i) => (
-                  <button
-                    type="button"
-                    class={`deck-thumb-tile ${i === 0 ? 'is-active' : ''}`}
-                    role="tab"
-                    aria-selected={i === 0 ? 'true' : 'false'}
-                    aria-label={it.name}
-                    data-index={i}
-                  >
-                    <span class="thumb-tile-img-box">
-                      {it.src ? (
-                        <img src={it.src} alt="" aria-hidden="true" class="thumb-tile-img" loading="lazy" decoding="async" draggable="false" />
-                      ) : (
-                        <span class="thumb-tile-fallback font-mono">{it.brand}</span>
-                      )}
-                    </span>
-                    <span class="thumb-tile-name">{it.short}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </Disclosure>
         </section>
       );
     })}
   </div>
-  </Disclosure>
 </div>
 
 <style>
+  .gear-monolith :is(button, a) {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   /* ------------------------------------------------------------------
-     Toolbar
+     Toolbar: one tight, left-aligned row (search, category, count).
      ------------------------------------------------------------------ */
   .gear-filter-toolbar {
     width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw));
-    margin-inline: auto;
+    margin: 0 auto clamp(1.75rem, 3vw, 2.75rem);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem 1.25rem;
-    padding-bottom: 1.5rem;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+    justify-content: flex-start;
+    gap: 0.75rem;
   }
   .gear-search-wrap {
     position: relative;
     display: flex;
     align-items: center;
-    flex: 1 1 280px;
-    max-width: 480px;
+    flex: 0 1 380px;
+    min-width: 0;
   }
   .gear-search-icon {
     position: absolute;
@@ -415,9 +256,12 @@ const stateOf = (i: number, n: number) =>
   .gear-search-input {
     width: 100%;
     min-height: 44px;
+    height: 44px;
+    box-sizing: border-box;
     padding: 0.7rem 2.75rem;
     background: #0d0d0d;
     border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 0;
     color: #fff;
     font-size: 0.8rem;
     letter-spacing: 0.04em;
@@ -444,7 +288,7 @@ const stateOf = (i: number, n: number) =>
     position: relative;
     display: inline-flex;
     align-items: center;
-    width: 220px;
+    flex: 0 0 220px;
     max-width: 100%;
   }
   .gear-category-select {
@@ -490,31 +334,36 @@ const stateOf = (i: number, n: number) =>
   .gear-category-select:focus-visible + .gear-select-arrow {
     color: #000000;
   }
-  @media (max-width: 768px) {
-    .gear-filter-toolbar {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0.75rem;
-    }
-    .gear-search-wrap,
-    .gear-category-select-wrap,
-    .btn-all-toggle {
-      width: 100%;
-      max-width: 100%;
-    }
+  .gear-count {
+    flex: 0 0 auto;
+    margin-left: 0.5rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted, #888);
+  }
+  @media (max-width: 600px) {
     .gear-search-wrap {
-      flex: 0 0 auto;
+      flex: 1 1 100%;
     }
-    .btn-all-toggle {
-      justify-content: center;
+    .gear-category-select-wrap {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+    .gear-count {
+      margin-left: 0.25rem;
     }
   }
+
   .gear-empty-state {
     width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw));
-    margin-inline: auto;
+    margin: 0 auto 2rem;
     padding: 3rem 1rem;
     text-align: center;
     border: 1px dashed rgba(255, 255, 255, 0.16);
+  }
+  .gear-empty-state[hidden] {
+    display: none;
   }
   .gear-empty-text {
     color: var(--muted, #888);
@@ -526,6 +375,7 @@ const stateOf = (i: number, n: number) =>
     background: #fff;
     color: #000;
     border: none;
+    border-radius: 0;
     font-size: 0.72rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -533,1035 +383,320 @@ const stateOf = (i: number, n: number) =>
   }
 
   /* ------------------------------------------------------------------
-     Section stack: every header visible, one open at a time (full bleed)
+     Panels: one full-width cinematic panel per category, all expanded.
      ------------------------------------------------------------------ */
-  .gear-accordion-container {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
+  .gear-panel {
+    position: relative;
+    isolation: isolate;
+    overflow: clip;
+    padding-block: clamp(3.5rem, 7vw, 7rem);
+    background: #050505;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    scroll-margin-top: calc(var(--gear-nav-h, 88px) + 0.5rem);
   }
-  .gear-accordion-container[hidden] {
+  .gear-panel[hidden] {
     display: none;
   }
-  .gear-accordion-section {
-    --accent: 176, 184, 196;
-    position: relative;
-    width: 100%;
-    background: #080808;
-    border-left: 0;
-    border-right: 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
-    border-bottom: 0;
-    /* The site's global `section` padding would open a dead band above
-       every header. */
-    padding: 0;
-    /* Nothing inside (the glow, a card parked off to the right) may push
-       the page sideways. No iframe lives in here, so clipping is safe. */
-    overflow-x: clip;
-    /* Anchor jumps (/gear/#brew) stop clear of the fixed header. Opening a
-       section scrolls with explicit math in the script, not this. */
-    scroll-margin-top: calc(var(--gear-nav-h, 88px) + 1.5rem);
-    transition: border-color 0.3s ease;
+  /* HQ ambient glow: a blurred copy of the panel's lead photo, washed in
+     its accent, fading out toward the edges. No scrim over the cards. */
+  .gear-panel-glow {
+    position: absolute;
+    inset: -10%;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      radial-gradient(ellipse 46% 52% at 30% 38%, rgba(var(--accent), 0.55), rgba(var(--accent), 0) 72%),
+      var(--glow-img, none);
+    background-size: cover, 52% auto;
+    background-position: center, 30% 38%;
+    background-repeat: no-repeat;
+    filter: blur(120px) saturate(1.5);
+    opacity: 0.6;
+    -webkit-mask-image: radial-gradient(circle at 30% 40%, #000 0%, transparent 70%);
+    mask-image: radial-gradient(circle at 30% 40%, #000 0%, transparent 70%);
   }
-  .gear-accordion-section:last-child {
+  .gear-panel-inner {
+    width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw));
+    margin-inline: auto;
+  }
+  .gear-panel-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem 2rem;
+    padding-bottom: clamp(1.25rem, 2vw, 1.75rem);
+    margin-bottom: clamp(1.75rem, 3vw, 2.75rem);
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   }
-  .gear-accordion-section.is-expanded {
-    border-color: rgba(255, 255, 255, 0.24);
-  }
-  .gear-accordion-header-bar {
-    container-type: inline-size;
-    width: 100%;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding-inline: max(clamp(1rem, 2vw, 2.5rem), calc((100cqw - var(--maxw, 100cqw)) / 2));
-    background: #0e0e0e;
-    cursor: pointer;
-    transition: background 0.2s ease;
-  }
-  .gear-accordion-header-bar:hover {
-    background: #141414;
-  }
-  .gear-accordion-heading {
-    margin: 0;
-    font: inherit;
-    flex: 1;
-    min-width: 0;
-  }
-  .gear-accordion-header {
-    appearance: none;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1.1rem 0.5rem 1.1rem 0;
-    background: none;
-    border: none;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-  }
-  .gear-accordion-header:focus-visible {
-    outline: 2px solid #fff;
-    outline-offset: -2px;
-  }
-  .gear-header-left {
+  .gear-panel-titles {
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
-    flex: 1;
+    gap: 0.6rem;
     min-width: 0;
   }
-  .box-idx {
-    font-size: 0.66rem;
-    letter-spacing: 0.18em;
+  .gear-panel-kicker,
+  .gear-panel-subtitle {
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--muted, #888);
+    color: var(--muted, #9a9a95);
+    margin: 0;
   }
-  .gear-header-title-row {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-  }
-  .box-title {
+  .gear-panel-title {
+    margin: 0;
     font-family: var(--font-display);
-    font-size: clamp(1.3rem, 2.2vw, 1.8rem);
+    font-size: clamp(1.9rem, 4.6vw, 4.25rem);
     font-weight: 800;
-    line-height: 1.1;
-    color: #fff;
-  }
-  .gear-item-count-badge {
-    font-size: 0.62rem;
-    letter-spacing: 0.14em;
+    line-height: 1;
+    letter-spacing: 0.01em;
     text-transform: uppercase;
-    color: var(--muted, #888);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    padding: 0.15rem 0.45rem;
+    color: #fff;
+    overflow-wrap: break-word;
   }
-  .box-subtitle {
-    font-size: 0.74rem;
-    color: var(--muted, #888);
-  }
-  .header-chevron {
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 0;
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    background: #080808;
-    color: #f5f5f5;
-    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-  }
-  .header-chevron svg {
-    display: block;
-    stroke: currentColor;
-  }
-  .gear-accordion-header:is(:hover, :focus-visible) .header-chevron {
-    background: #f5f5f5;
-    color: #080808;
-    border-color: #f5f5f5;
-  }
-  .gear-accordion-section.is-expanded .header-chevron {
-    transform: rotate(180deg);
-    color: #f5f5f5;
-    border-color: rgba(255, 255, 255, 0.45);
-  }
-  .gear-accordion-section.is-expanded .gear-accordion-header:is(:hover, :focus-visible) .header-chevron {
-    background: #f5f5f5;
-    color: #080808;
-    border-color: #f5f5f5;
-  }
-  .gear-header-right {
-    --btn-group-gap: 0.5rem;
-    align-items: center;
-    flex-shrink: 0;
-  }
-  .influencer-pill,
-  .btn-all-toggle {
+  .influencer-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
     min-height: 44px;
-    padding: 0.4rem 0.75rem;
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 0.4rem 0.85rem;
+    background: rgba(10, 10, 10, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 0;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
     color: #fff;
     font-size: 0.66rem;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     text-decoration: none;
     white-space: nowrap;
-    cursor: pointer;
     transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
-  .influencer-pill:hover,
-  .btn-all-toggle:hover {
+  .influencer-pill:is(:hover, :focus-visible) {
     background: #fff;
     color: #000;
     border-color: #fff;
   }
-  .gear-accordion-body {
-    position: relative;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-  }
-  .gear-accordion-section.is-collapsed .gear-accordion-body {
-    border-top-color: transparent;
-  }
 
   /* ------------------------------------------------------------------
-     The deck (HQ /featured): glow, card stack, item controls, thumbnails
+     Cards: product imagery full-bleed on its own dark ground.
      ------------------------------------------------------------------ */
-  .gear-deck {
-    --card-w: 78%;
-    --stage-h: clamp(460px, calc(100svh - var(--gear-nav-h, 88px) - 250px), 680px);
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    /* Grid item of .gear-accordion-body: never wider than its section. */
-    min-width: 0;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    gap: 1rem;
-    padding: 1.75rem 0 1.25rem;
-    background: #050505;
-    isolation: isolate;
-    overflow: clip;
-  }
-  .gear-deck[hidden] {
-    display: none;
-  }
-  .deck-glow {
-    position: absolute;
-    inset: 0;
-    overflow: clip;
-    z-index: 0;
-    pointer-events: none;
-  }
-  .deck-glow-layer {
-    position: absolute;
-    inset: 0;
-    background-image:
-      radial-gradient(ellipse 48% 58% at 38% 50%, rgba(var(--glow), 0.62), rgba(var(--glow), 0) 72%),
-      var(--glow-img, none);
-    background-size: cover, 60% auto;
-    background-position: center, 38% 50%;
-    background-repeat: no-repeat;
-    filter: blur(70px) saturate(1.5);
-    opacity: 0;
-    transition: opacity 0.9s ease;
-  }
-  .deck-glow-layer.active {
-    opacity: 0.9;
-  }
-  .gear-monolith :is(button, a) {
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .deck-stage {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    box-sizing: border-box;
-    scroll-margin-top: calc(var(--gear-nav-h, 88px) + 1.5rem);
-    height: var(--stage-h);
-    touch-action: pan-y;
-    user-select: none;
-    -webkit-user-select: none;
-    overflow-x: clip;
-    overflow-y: visible;
-    /* Cards stacked behind dissolve into the right edge (HQ feather). */
-    -webkit-mask-image: linear-gradient(to left, transparent 0%, #000 5%);
-    mask-image: linear-gradient(to left, transparent 0%, #000 5%);
-  }
-  .deck-stage.is-dragging .deck-card {
-    transition: none;
-  }
-
-  .deck-card {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: var(--card-w);
-    height: 100%;
+  .gear-cards {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(0.75rem, 1.4vw, 1.25rem);
+  }
+  @media (min-width: 900px) {
+    .gear-cards {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1200px) {
+    .gear-cards {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+  .gear-card {
+    --hover-ease: cubic-bezier(0.25, 1, 0.5, 1);
+    position: relative;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
     background: #0d0d0d;
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.85);
-    overflow: hidden;
-    transform-origin: center center;
-    transition:
-      transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
-      opacity 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
-      translate 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
-      visibility 0s linear 0.5s;
-    cursor: pointer;
-  }
-  /* In view: visible at once. Parked (hidden, prev): hidden once the fade
-     out has finished, so a card waiting off to the right never paints. */
-  .deck-card.active,
-  .deck-card.next-1,
-  .deck-card.next-2 {
-    visibility: visible;
-    transition-delay: 0s, 0s, 0s, 0s;
-  }
-  .deck-card.hidden,
-  .deck-card.prev {
-    visibility: hidden;
-  }
-  .deck-card.active {
-    z-index: 10;
-    transform: translateX(0) scale(1);
-    opacity: 1;
-    cursor: default;
-  }
-  .deck-card.next-1 {
-    z-index: 9;
-    transform: translateX(16%) scale(0.92);
-    opacity: 0.8;
-  }
-  .deck-card.next-2 {
-    z-index: 8;
-    transform: translateX(28%) scale(0.84);
-    opacity: 0.5;
-  }
-  .deck-card.prev {
-    z-index: 7;
-    transform: translateX(-7%) scale(0.95);
-    opacity: 0;
-    pointer-events: none;
-  }
-  .deck-card.hidden {
-    z-index: 1;
-    transform: translateX(40%) scale(0.76);
-    opacity: 0;
-    pointer-events: none;
-  }
-  .deck-card.is-filtered-out {
-    display: none;
-  }
-  /* The cards behind lift on hover: "click me to bring this forward". */
-  .deck-card.next-1:hover {
-    opacity: 1;
-    transform: translateX(16%) translateY(-8px) scale(0.92);
-  }
-  .deck-card.next-2:hover {
-    opacity: 0.85;
-    transform: translateX(28%) translateY(-8px) scale(0.84);
-  }
-
-  .card-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding: 1rem 1.5rem 0.25rem;
-    min-width: 0;
-  }
-  .card-tags {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.4rem 0.6rem;
-    min-width: 0;
-  }
-  /* "Recommended": a catalog pick, not part of the owned kit. Solid white,
-     so it reads at a glance against the photo-tinted tag beside it, and
-     monochrome like the rest of the chrome. */
-  .reco-badge {
-    display: inline-flex;
-    align-items: center;
-    flex-shrink: 0;
-    padding: 0.2rem 0.5rem;
-    background: #fff;
-    color: #000;
-    font-size: 0.62rem;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-  .reco-badge--thumb {
-    align-self: flex-start;
-    padding: 0.12rem 0.35rem;
-    font-size: 0.54rem;
-    letter-spacing: 0.1em;
-  }
-  .reco-badge--grid {
-    align-self: flex-start;
-  }
-  .card-badge {
-    font-size: 0.64rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgb(var(--accent));
-    border: 1px solid rgba(var(--accent), 0.55);
-    background: rgba(var(--accent), 0.08);
-    padding: 0.2rem 0.5rem;
-    white-space: nowrap;
-    transition: color 0.5s ease, border-color 0.5s ease, background 0.5s ease;
-  }
-  .card-brand {
-    font-size: 0.64rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted, #888);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* The picture gets its own row: nothing overlays it, so it is never
-     clipped by the top bar, the plate, or the page's sticky header. */
-  .card-visual {
-    position: relative;
-    min-height: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem 1.5rem;
-  }
-  .card-img {
-    display: block;
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-    -webkit-user-drag: none;
-    pointer-events: none;
-  }
-  .card-type {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    width: min(100%, 520px);
-    height: min(100%, 300px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: radial-gradient(ellipse at center, rgba(var(--accent), 0.08), transparent 70%), #0a0a0a;
-    text-align: center;
-    padding: 1.5rem;
-  }
-  .card-type-brand {
-    font-size: 0.68rem;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--muted, #888);
-  }
-  .card-type-name {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: clamp(1.5rem, 3.4vw, 2.75rem);
-    line-height: 1.05;
-    text-transform: uppercase;
-    color: #fff;
-    overflow-wrap: anywhere;
-  }
-
-  .card-plate {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    padding: 0.75rem 1.5rem 1.25rem;
-    background: linear-gradient(to top, #0d0d0d 60%, rgba(13, 13, 13, 0));
-    transition: opacity 0.35s ease, visibility 0.35s ease;
-  }
-  .deck-card:not(.active) .card-plate,
-  .deck-card:not(.active) .card-top {
-    opacity: 0;
-    visibility: hidden;
-  }
-  .card-title {
-    margin: 0;
-    overflow-wrap: anywhere;
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: clamp(1.35rem, 2.4vw, 2.1rem);
-    line-height: 1.1;
-    color: #fff;
-  }
-  .card-spec {
-    margin: 0.15rem 0 0.6rem;
-    max-width: 68ch;
-    font-size: 0.9rem;
-    line-height: 1.55;
-    color: rgba(255, 255, 255, 0.8);
-  }
-  .card-actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.6rem;
-  }
-  .store-cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.55rem;
-    min-height: 44px;
-    padding: 0.55rem 1.2rem;
-    background: #fff;
-    color: #000;
-    font-size: 0.74rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    text-decoration: none;
-    white-space: nowrap;
-    transition: background 0.2s ease, transform 0.2s ease;
-  }
-  .store-cta:hover {
-    background: #dcdcdc;
-    transform: translateY(-1px);
-  }
-  .store-picker {
-    display: inline-flex;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-  }
-  .store-option {
-    min-height: 44px;
-    padding: 0.45rem 0.85rem;
-    background: transparent;
-    border: none;
-    color: var(--muted, #888);
-    font-size: 0.66rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: background 0.2s ease, color 0.2s ease;
-  }
-  .store-option + .store-option {
-    border-left: 1px solid rgba(255, 255, 255, 0.2);
-  }
-  .store-option:hover {
-    color: #fff;
-  }
-  .store-option[aria-checked='true'] {
-    background: rgba(255, 255, 255, 0.12);
-    color: #fff;
-  }
-  .video-link {
-    display: inline-flex;
-    align-items: center;
-    min-height: 44px;
-    padding: 0 0.25rem;
-    color: #fff;
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    text-decoration: underline;
-    text-underline-offset: 4px;
-  }
-  .card-disclosure {
-    margin: 0.4rem 0 0;
-    font-size: 0.64rem;
-    letter-spacing: 0.04em;
-    color: var(--muted, #888);
-  }
-
-  /* Spines: the name of each card peeking out behind the front one. */
-  .card-spine {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(90deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.88) 100%);
-    pointer-events: none;
-    transition: opacity 0.4s ease;
-  }
-  .deck-card.active .card-spine {
-    opacity: 0;
-  }
-  .spine-text {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 0.82rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    color: #fff;
-  }
-
-  .deck-controls {
-    position: relative;
-    z-index: 2;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-  .deck-step {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 48px;
-    height: 48px;
-    min-height: 44px;
-    min-width: 44px;
-    padding: 0;
-    background: #080808;
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    color: #f5f5f5;
-    cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 0;
+    overflow-wrap: anywhere;
+    scroll-margin-top: calc(var(--gear-nav-h, 88px) + 1rem);
+    transition:
+      border-color 0.8s var(--hover-ease),
+      box-shadow 0.8s var(--hover-ease);
   }
-  .deck-step svg {
-    display: block;
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    stroke: currentColor;
-  }
-  .deck-step:is(:hover, :focus-visible) {
-    background: #f5f5f5;
-    color: #080808;
-    border-color: #f5f5f5;
-  }
-  .deck-swipe-hint {
-    font-size: 0.68rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted, #888);
-  }
-  .deck-step:focus-visible,
-  .store-option:focus-visible,
-  .deck-thumb-tile:focus-visible,
-  .store-cta:focus-visible {
-    outline: 2px solid #fff;
-    outline-offset: 2px;
-  }
-
-  .deck-thumb-track {
-    position: relative;
-    z-index: 2;
-    display: flex;
-    gap: 0.6rem;
-    overflow-x: auto;
-    min-width: 0;
-    max-width: 100%;
-    padding: 0.5rem 0.25rem 0.5rem;
-    scrollbar-width: none;
-    justify-content: safe center;
-  }
-  .deck-thumb-track::-webkit-scrollbar {
+  .gear-card[hidden] {
     display: none;
   }
-  .deck-thumb-tile {
-    flex: 0 0 132px;
+  .gear-card-visual {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: #0d0d0d;
+  }
+  .gear-card-img {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.8s var(--hover-ease);
+  }
+  /* The accent tint: present at 0.75, full on hover. */
+  .gear-card-tint {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: radial-gradient(ellipse 70% 60% at 50% 60%, rgba(var(--accent), 0.26), rgba(var(--accent), 0) 72%);
+    mix-blend-mode: screen;
+    opacity: 0.75;
+    transition: opacity 0.8s var(--hover-ease);
+  }
+  .gear-card-type {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    font-family: var(--font-display);
+    font-size: clamp(1rem, 1.6vw, 1.5rem);
+    font-weight: 800;
+    text-transform: uppercase;
+    text-align: center;
+    color: #fff;
+  }
+  .gear-card-tag {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: 3;
+    max-width: calc(100% - 1.5rem);
+    box-sizing: border-box;
+    padding: 0.35rem 0.6rem;
+    background: rgba(10, 10, 10, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-left: 2px solid #f0f0f0;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.6rem;
+    letter-spacing: 0.16em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+  .gear-card-body {
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
-    height: auto;
-    min-height: 108px;
-    padding: 0.5rem;
-    background: #0f0f0f;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 0;
-    color: #f5f5f5;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-    opacity: 0.65;
-    transition: opacity 0.25s ease, transform 0.25s ease, background-color 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-  }
-  .deck-thumb-tile:is(:hover, :focus-visible) {
-    opacity: 1;
-    background: #181818;
-    border-color: rgba(255, 255, 255, 0.65);
-    color: #ffffff;
-    transform: translateY(-3px);
-  }
-  .deck-thumb-tile.is-active {
-    opacity: 1;
-    background: #141414;
-    border-color: rgb(var(--accent));
-    box-shadow: 0 0 18px rgba(var(--accent), 0.35);
-    color: #ffffff;
-  }
-  .deck-thumb-tile.is-filtered-out {
-    display: none;
-  }
-  .thumb-tile-img-box {
-    height: 64px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #080808;
-    overflow: hidden;
-  }
-  .thumb-tile-img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-  }
-  .thumb-tile-fallback {
-    font-size: 0.6rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted, #888);
-    text-align: center;
-  }
-  .thumb-tile-name {
-    font-size: 0.72rem;
-    font-weight: 600;
-    line-height: 1.25;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  /* ------------------------------------------------------------------
-     Show all: one scrollable product grid
-     ------------------------------------------------------------------ */
-  .gear-all-grid-view {
-    background: #070707;
-  }
-  .gear-all-grid-content {
-    width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw));
-    margin-inline: auto;
-    min-width: 0;
-    padding: 1.75rem 0;
-  }
-  .all-grid-topbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding-bottom: 1.25rem;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  }
-  .all-grid-title {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: 1.4rem;
-    color: #fff;
-  }
-  .all-grid-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, clamp(20rem, 26vw, 36rem)), 1fr));
-    gap: 1rem;
-  }
-  .all-grid-card {
-    min-width: 0;
-    overflow-wrap: anywhere;
-    display: flex;
-    flex-direction: column;
-    background: #101010;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: transform 0.2s ease, border-color 0.2s ease;
-  }
-  .all-grid-card:hover {
-    transform: translateY(-3px);
-    border-color: rgba(255, 255, 255, 0.3);
-  }
-  .all-grid-card.is-filtered-out {
-    display: none;
-  }
-  .all-card-img-wrap {
-    min-width: 0;
-    overflow: hidden;
-    height: 150px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.75rem;
-    background: #0a0a0a;
-  }
-  .all-card-img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-  }
-  .all-card-type {
-    min-width: 0;
-    max-width: 100%;
-    overflow-wrap: anywhere;
-    font-size: clamp(1rem, 1.5vw, 1.5rem);
-    font-family: var(--font-display);
-    font-weight: 800;
-    text-transform: uppercase;
-    text-align: center;
-    color: #fff;
-  }
-  .all-card-body {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    padding: 1rem;
     flex: 1;
-  }
-  .all-card-tag {
-    font-size: 0.62rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted, #888);
-  }
-  .all-card-name {
     min-width: 0;
-    overflow-wrap: anywhere;
+    padding: 1.1rem 1.15rem 1.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .gear-card-name {
     margin: 0;
     font-size: 1rem;
+    line-height: 1.3;
     color: #fff;
   }
-  .all-card-spec {
+  .gear-card-spec {
     margin: 0 0 0.75rem;
     font-size: 0.8rem;
     line-height: 1.5;
     color: var(--muted, #888);
   }
-  .all-card-links {
+  .gear-card-links {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
     margin-top: auto;
   }
-  .all-card-cta {
+  .gear-card-cta {
     max-width: 100%;
-    white-space: normal;
-    overflow-wrap: anywhere;
+    box-sizing: border-box;
     display: inline-flex;
     align-items: center;
     min-height: 44px;
     padding: 0.4rem 0.75rem;
     border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0;
     color: #fff;
     font-size: 0.64rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     text-decoration: none;
+    white-space: normal;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
-  .all-card-cta.is-primary {
+  .gear-card-cta.is-primary {
     background: #fff;
     color: #000;
     border-color: #fff;
   }
-  .all-card-cta:hover {
+  .gear-card-cta:is(:hover, :focus-visible) {
     background: #dcdcdc;
     color: #000;
+    border-color: #dcdcdc;
   }
 
-  @media (min-width: 1100px) {
-    .all-grid-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .all-grid-card { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); }
-    .all-card-img-wrap { height: auto; min-height: 180px; }
-    .all-card-img { max-height: clamp(140px, 12vw, 240px); }
-    .all-card-body { padding: 1.25rem; }
-  }
-
-  @media (min-width: 1600px) {
-    .all-grid-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  }
-
-  /* Desktop deck rails share the .container measure while .gear-deck and .deck-glow stay full bleed. */
-  @media (min-width: 769px) {
-    .deck-stage,
-    .deck-controls,
-    .deck-thumb-track {
-      width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw, 1536px));
-      margin-inline: auto;
+  /* HQ's locked cinematic hover. */
+  @media (hover: hover) and (pointer: fine) {
+    .gear-card:hover {
+      border-color: rgba(var(--accent), 0.7);
+      box-shadow:
+        0 22px 50px rgba(0, 0, 0, 0.6),
+        0 0 34px rgba(var(--accent), 0.28);
+    }
+    .gear-card:hover .gear-card-img {
+      transform: scale(1.03);
+    }
+    .gear-card:hover .gear-card-tint {
+      opacity: 1;
     }
   }
+  .gear-card:focus-within {
+    border-color: rgba(var(--accent), 0.7);
+  }
 
-  /* ------------------------------------------------------------------
-     Responsive
-     ------------------------------------------------------------------ */
-  @media (max-width: 768px) {
-    .gear-accordion-header-bar {
-      flex-wrap: wrap;
-      padding: 0 1rem 0.75rem 1rem;
-      gap: 0.25rem 0.5rem;
+  @media (max-width: 599px) {
+    .gear-cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.6rem;
     }
-    .gear-accordion-heading {
-      flex: 0 0 100%;
+    .gear-card-visual {
+      aspect-ratio: 1 / 1;
+    }
+    .gear-card-tag {
+      top: 0.5rem;
+      left: 0.5rem;
+      max-width: calc(100% - 1rem);
+      font-size: 0.52rem;
+      letter-spacing: 0.12em;
+    }
+    .gear-card-body {
+      padding: 0.75rem 0.7rem 0.85rem;
+    }
+    .gear-card-name {
+      font-size: 0.85rem;
+    }
+    .gear-card-spec {
+      font-size: 0.72rem;
+    }
+    .gear-card-cta {
       width: 100%;
+      justify-content: center;
+      text-align: center;
+      padding: 0.4rem 0.5rem;
+      font-size: 0.58rem;
     }
-    .gear-accordion-header {
-      padding: 0.95rem 0 0.5rem 0;
-    }
-    /* The collection link uses its own row under the title. */
-    .gear-header-right {
-      flex: 0 0 100%;
-      width: 100%;
-      margin-left: 0;
-      grid-auto-columns: minmax(0, 1fr);
-    }
-    .gear-header-right > * {
-      padding-left: 0.5rem;
-      padding-right: 0.5rem;
-    }
-    .gear-header-right {
-      align-items: stretch;
-    }
-    /* "Camera Gear" is enough on a phone; the arrow says it is a list. */
     .influencer-text-long {
       display: none;
-    }
-    .gear-item-count-badge {
-      display: none;
-    }
-    .gear-deck {
-      --card-w: 88%;
-      --stage-h: clamp(540px, 76svh, 660px);
-      padding: 1rem 0 1rem;
-    }
-    .deck-stage {
-      width: 100%;
-    }
-    .deck-card {
-      left: 3%;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    .deck-card.next-1 {
-      transform: translateX(12%) scale(0.92);
-    }
-    .deck-card.next-1:hover {
-      transform: translateX(12%) translateY(-6px) scale(0.92);
-    }
-    .deck-card.next-2 {
-      transform: translateX(22%) scale(0.85);
-    }
-    .deck-card.next-2:hover {
-      transform: translateX(22%) translateY(-6px) scale(0.85);
-    }
-    .deck-controls {
-      width: 100%;
-      padding-inline: 1rem;
-      box-sizing: border-box;
-    }
-    .deck-thumb-track {
-      width: 100%;
-      padding: 0.5rem 1rem;
-      box-sizing: border-box;
-    }
-    .deck-card.next-2 .spine-text {
-      display: none;
-    }
-    .card-spine {
-      width: 40px;
-    }
-    .spine-text {
-      font-size: 0.66rem;
-    }
-    .card-top {
-      padding: 0.85rem 1rem 0.25rem;
-    }
-    .card-brand {
-      display: none;
-    }
-    .card-visual {
-      padding: 0.5rem 1rem;
-    }
-    .card-plate {
-      padding: 0.5rem 1rem 1rem;
-    }
-    .card-spec {
-      font-size: 0.82rem;
-      display: -webkit-box;
-      -webkit-line-clamp: 4;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .deck-step span {
-      display: none;
-    }
-    .deck-thumb-tile {
-      flex-basis: 112px;
-    }
-  }
-
-  /* Phones on their side: picture beside the words, deck fits the screen. */
-  @media (max-height: 500px) and (orientation: landscape) {
-    .gear-accordion-header {
-      padding-top: 0.7rem;
-      padding-bottom: 0.7rem;
-    }
-    .box-subtitle {
-      display: none;
-    }
-    .gear-deck {
-      --card-w: 82%;
-      --stage-h: max(260px, calc(100svh - var(--gear-nav-h, 64px) - 20px));
-      padding-top: 0.75rem;
-    }
-    .deck-card {
-      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-      grid-template-rows: auto minmax(0, 1fr);
-    }
-    .card-top {
-      grid-column: 1 / -1;
-    }
-    .card-visual {
-      grid-row: 2;
-      grid-column: 1;
-    }
-    .card-plate {
-      grid-row: 2;
-      grid-column: 2;
-      justify-content: center;
-      background: none;
-      padding: 0.25rem 2.75rem 0.75rem 0.5rem;
-      overflow: hidden;
-    }
-    .card-title {
-      font-size: 1.15rem;
-    }
-    .card-spec {
-      font-size: 0.78rem;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      margin-bottom: 0.4rem;
-    }
-    .card-disclosure {
-      display: none;
-    }
-    /* Spines read from the top: the site's back-to-top button sits over
-       the bottom right corner of a short screen. */
-    .card-spine {
-      align-items: flex-start;
-      padding-top: 0.9rem;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .deck-card,
-    .deck-glow-layer,
-    .deck-thumb-tile,
-    .card-plate,
-    .gear-accordion-body,
-    .gear-all-grid-view,
-    .gear-all-grid-content,
-    .header-chevron {
-      transition-duration: 0.01ms !important;
+    .gear-card,
+    .gear-card-img,
+    .gear-card-tint {
+      transition: none;
+    }
+    .gear-card:hover .gear-card-img {
+      transform: none;
     }
   }
 </style>
 
 <script>
-  import { setDisclosureOpen } from '@andrew/ui/scripts/disclosure.ts';
   import { createPageScope } from '@andrew/ui/scripts/page-scope.ts';
   (() => {
     function setNavHeight() {
@@ -1571,419 +706,50 @@ const stateOf = (i: number, n: number) =>
     }
 
     function init() {
-      const root = document.getElementById('gear-accordion-container');
+      const root = document.getElementById('gear-panels');
       if (!root || root.dataset.gearWired === '1') return;
       root.dataset.gearWired = '1';
-      const { on, cleanup } = createPageScope(root);
+      const { on } = createPageScope(root);
       setNavHeight();
       on(window, 'resize', setNavHeight, { passive: true });
 
-      const sections = Array.from(root.querySelectorAll<HTMLElement>('.gear-accordion-section'));
-      const decks = new Map<HTMLElement, { refresh: () => void; show: (index: number) => void }>();
-
-      sections.forEach((s) => {
-        const body = s.querySelector<HTMLElement>('.gear-accordion-body');
-        if (s.classList.contains('is-expanded')) {
-          s.classList.add('is-settled');
-          if (body) body.inert = false;
-        } else {
-          s.classList.add('is-collapsed');
-          if (body) body.inert = true;
-        }
-      });
-
-      const setOpen = (section: HTMLElement, open: boolean) => {
-        const body = section.querySelector<HTMLElement>('.gear-accordion-body');
-        if (!body || (section.classList.contains('is-expanded') === open && body.inert === !open)) return;
-        section.classList.toggle('is-expanded', open);
-        section.classList.toggle('is-collapsed', !open);
-        section.classList.remove('is-settled');
-        section.classList.add('is-animating');
-        section.querySelector('.gear-accordion-header')?.setAttribute('aria-expanded', String(open));
-        void setDisclosureOpen(body, open).then((settled) => {
-          if (!settled || section.classList.contains('is-expanded') !== open) return;
-          section.classList.remove('is-animating');
-          section.classList.toggle('is-settled', open);
-        });
-      };
-
-      /** Open one section and close the rest; or close it if it is open. */
-      function toggleSection(section: HTMLElement, force?: boolean) {
-        const open = force ?? !section.classList.contains('is-expanded');
-        sections.forEach((s) => setOpen(s, open && s === section));
-        if (open) {
-          decks.get(section)?.refresh();
-          // Keep what was opened in view, and never under the fixed header:
-          // explicit math from the header's measured bottom, not
-          // scrollIntoView (which trusts a fixed scroll-padding). On a short
-          // screen (a phone on its side) the header and the hero cannot both
-          // fit, so the HERO (.deck-stage) is what gets brought into view.
-          requestAnimationFrame(() => {
-            const header = document.querySelector<HTMLElement>('.site-nav');
-            const headerBottom = header ? Math.max(0, header.getBoundingClientRect().bottom) : 88;
-            const behavior: ScrollBehavior = 'auto';
-            const short = window.innerHeight < 560;
-            const target = short ? section.querySelector<HTMLElement>('.deck-stage') : section;
-            if (!target) return;
-            const want = headerBottom + (short ? 8 : 16);
-            const top = target.getBoundingClientRect().top;
-            // Tall screens: move when the header is under the nav, or when the
-            // hero runs off the bottom (a phone opening a lower section).
-            const stage = section.querySelector<HTMLElement>('.deck-stage');
-            const heroCut = !!stage && stage.getBoundingClientRect().bottom > window.innerHeight;
-            const needs = short ? Math.abs(top - want) > 4 : top < want || heroCut;
-            if (needs) window.scrollTo({ top: Math.max(0, window.scrollY + top - want), behavior });
-          });
-        }
-      }
-
-      sections.forEach((section) => {
-        const bar = section.querySelector<HTMLElement>('.gear-accordion-header-bar');
-        bar?.addEventListener('click', (e) => {
-          if ((e.target as HTMLElement).closest('.influencer-pill')) return;
-          toggleSection(section);
-        });
-
-        const stage = section.querySelector<HTMLElement>('.deck-stage');
-        const cards = Array.from(section.querySelectorAll<HTMLElement>('.deck-card'));
-        const thumbs = Array.from(section.querySelectorAll<HTMLElement>('.deck-thumb-tile'));
-        const glows = Array.from(section.querySelectorAll<HTMLElement>('.deck-glow-layer'));
-        const deck = section.querySelector<HTMLElement>('.gear-deck');
-        if (!stage || !cards.length) return;
-
-        let active = 0;
-        let visible = cards.map((_, i) => i);
-
-        function render(focusThumb = false) {
-          if (!visible.includes(active)) active = visible[0] ?? 0;
-          const pos = visible.indexOf(active);
-          const count = visible.length;
-          const at = (k: number) => visible[(pos + k + count) % count];
-          const n1 = count > 1 ? at(1) : -1;
-          const n2 = count > 2 ? at(2) : -1;
-          const pv = count > 3 ? at(-1) : -1;
-
-          cards.forEach((card, i) => {
-            const shown = visible.includes(i);
-            card.classList.toggle('is-filtered-out', !shown);
-            card.classList.remove('active', 'next-1', 'next-2', 'prev', 'hidden');
-            card.classList.add(i === active ? 'active' : i === n1 ? 'next-1' : i === n2 ? 'next-2' : i === pv ? 'prev' : 'hidden');
-            const isActive = i === active;
-            card.setAttribute('aria-hidden', String(!isActive));
-            card.querySelectorAll<HTMLElement>('a, button').forEach((el) => {
-              if (isActive) {
-                if (el.classList.contains('store-option') && el.getAttribute('aria-checked') !== 'true') el.tabIndex = -1;
-                else el.removeAttribute('tabindex');
-              } else el.tabIndex = -1;
-            });
-          });
-
-          thumbs.forEach((t, i) => {
-            const isActive = i === active;
-            t.classList.toggle('is-filtered-out', !visible.includes(i));
-            t.classList.toggle('is-active', isActive);
-            t.setAttribute('aria-selected', String(isActive));
-            t.tabIndex = isActive ? 0 : -1;
-          });
-          glows.forEach((g, i) => {
-            const isActive = i === active;
-            g.classList.toggle('active', isActive);
-            if (isActive && g.dataset.glowSrc && !g.style.getPropertyValue('--glow-img')) {
-              g.style.setProperty('--glow-img', `url('${g.dataset.glowSrc}')`);
-            }
-          });
-
-          const accent = cards[active]?.dataset.accent;
-          if (accent) section.style.setProperty('--accent', accent);
-
-          const thumb = thumbs[active];
-          const track = thumb?.parentElement;
-          if (thumb && track && track.scrollWidth > track.clientWidth) {
-            track.scrollTo({ left: thumb.offsetLeft - track.clientWidth / 2 + thumb.offsetWidth / 2, behavior: 'smooth' });
-          }
-          if (focusThumb) thumb?.focus({ preventScroll: true });
-        }
-
-        const go = (index: number, focusThumb = false) => {
-          if (index === active || !visible.includes(index)) return;
-          active = index;
-          render(focusThumb);
-        };
-        const step = (dir: 1 | -1, focusThumb = false) => {
-          if (visible.length < 2) return;
-          const pos = visible.indexOf(active);
-          go(visible[(pos + dir + visible.length) % visible.length], focusThumb);
-        };
-
-        decks.set(section, {
-          refresh: () => render(),
-          show: (index: number) => go(index),
-        });
-        (section as HTMLElement & { _gearFilter?: (q: string) => number })._gearFilter = (q: string) => {
-          visible = cards
-            .map((c, i) => ({ c, i }))
-            .filter(({ c }) => !q || (c.dataset.search || '').includes(q))
-            .map(({ i }) => i);
-          if (visible.length) render();
-          return visible.length;
-        };
-
-        // Thumbnails and peeking cards bring an item forward.
-        thumbs.forEach((t, i) => t.addEventListener('click', () => go(i)));
-
-        // Item navigation (inside the deck, not the section header).
-        section.querySelector('[data-deck-prev]')?.addEventListener('click', () => step(-1));
-        section.querySelector('[data-deck-next]')?.addEventListener('click', () => step(1));
-
-        // Keyboard: arrows anywhere in the deck rotate it.
-        deck?.addEventListener('keydown', (e) => {
-          if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-          const onThumb = (e.target as HTMLElement).closest('.deck-thumb-tile');
-          if ((e.target as HTMLElement).closest('.store-picker')) return; // radios own their arrows
-          e.preventDefault();
-          step(e.key === 'ArrowRight' ? 1 : -1, Boolean(onThumb));
-        });
-
-        // Store picker: choosing a store re-points the one primary CTA.
-        cards.forEach((card) => {
-          const cta = card.querySelector<HTMLAnchorElement>('[data-store-cta]');
-          const label = card.querySelector<HTMLElement>('[data-store-cta-label]');
-          const options = Array.from(card.querySelectorAll<HTMLButtonElement>('.store-option'));
-          const choose = (opt: HTMLButtonElement, focus = false) => {
-            options.forEach((o) => {
-              const on = o === opt;
-              o.setAttribute('aria-checked', String(on));
-              o.tabIndex = on ? 0 : -1;
-            });
-            if (cta && opt.dataset.storeUrl) cta.href = opt.dataset.storeUrl;
-            if (label && opt.dataset.storeLabel) label.textContent = opt.dataset.storeLabel;
-            if (focus) opt.focus();
-          };
-          options.forEach((opt, oi) => {
-            opt.addEventListener('click', (e) => {
-              e.stopPropagation();
-              choose(opt);
-            });
-            opt.addEventListener('keydown', (e) => {
-              if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-              e.preventDefault();
-              const next = options[(oi + (e.key === 'ArrowRight' ? 1 : -1) + options.length) % options.length];
-              choose(next, true);
-            });
-          });
-        });
-
-        // Drag and swipe: mouse, pen and touch alike. The front card follows
-        // the pointer (the `translate` property, which composes with the
-        // class transform), and a release past the threshold rotates.
-        let startX = 0;
-        let startY = 0;
-        let dx = 0;
-        let tracking = false;
-        let dragging = false;
-        let suppressClick = false;
-        const SWIPE = 50;
-
-        const endDrag = () => {
-          tracking = false;
-          stage.classList.remove('is-dragging');
-          cards[active]?.style.removeProperty('translate');
-          if (dragging) {
-            if (dx <= -SWIPE) step(1);
-            else if (dx >= SWIPE) step(-1);
-            suppressClick = true;
-            window.setTimeout(() => (suppressClick = false), 0);
-          }
-          dragging = false;
-          dx = 0;
-        };
-
-        stage.addEventListener('pointerdown', (e) => {
-          if (e.button !== 0) return;
-          if ((e.target as HTMLElement).closest('a, button, input')) return;
-          tracking = true;
-          dragging = false;
-          startX = e.clientX;
-          startY = e.clientY;
-          dx = 0;
-        });
-        stage.addEventListener('pointermove', (e) => {
-          if (!tracking) return;
-          dx = e.clientX - startX;
-          const dy = e.clientY - startY;
-          if (!dragging) {
-            if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
-              dragging = true;
-              stage.classList.add('is-dragging');
-              try {
-                stage.setPointerCapture(e.pointerId);
-              } catch {
-                /* not capturable: window listeners still end the drag */
-              }
-            } else if (Math.abs(dy) > 12) {
-              tracking = false; // a vertical scroll, not a swipe
-              return;
-            }
-          }
-          if (dragging) {
-            e.preventDefault();
-            cards[active]?.style.setProperty('translate', `${dx * 0.6}px 0`);
-          }
-        });
-        stage.addEventListener('pointerup', endDrag);
-        stage.addEventListener('pointercancel', endDrag);
-        // Touch starts with implicit capture on the element under the finger;
-        // taking capture for the stage fires lostpointercapture on THAT
-        // element, which bubbles here. Only the stage losing it ends a drag.
-        stage.addEventListener('lostpointercapture', (e) => {
-          if (e.target === stage && tracking) endDrag();
-        });
-
-        // A click on a peeking card brings it forward (never after a drag).
-        stage.addEventListener('click', (e) => {
-          if (suppressClick) {
-            e.preventDefault();
-            e.stopPropagation();
-            return;
-          }
-          const card = (e.target as HTMLElement).closest<HTMLElement>('.deck-card');
-          if (!card || card.classList.contains('active')) return;
-          e.preventDefault();
-          go(Number(card.dataset.index));
-        }, true);
-
-        // Trackpad: a horizontal two-finger swipe moves one card, fired on
-        // the leading edge (40px of deltaX) and then locked. Ported from the
-        // HQ /featured deck, which hit the same bug first.
-        //
-        // The lock used to be released by silence alone (140ms with no
-        // wheel events). macOS keeps sending momentum events for a second
-        // or two after the fingers lift, and each one re-armed the timer,
-        // so a second swipe made during that tail was swallowed: "swipe,
-        // swipe again, nothing happens" until the pointer left the deck.
-        //
-        // Now the lock is also released by INPUT, in two stages. A momentum
-        // tail peaks and then only decays, so: (1) while still near the peak
-        // it is the rest of the push that already fired, and never releases;
-        // (2) once it has fallen to 60% of the peak it is coasting, and a
-        // delta that climbs well back above the lowest point so far (2.5x
-        // the trough, and at least 10px) can only be fingers on the pad
-        // again. Measuring against the trough, not the previous sample, is
-        // what keeps noisy macOS momentum from re-arming it. MIN_FIRE_GAP
-        // makes "one swipe, one card" unconditional; the quiet timer stays
-        // as a backstop.
-        const SWIPE_DELTA = 40;
-        const QUIET_MS = 120;
-        const TAIL_RATIO = 0.6;
-        const REARM_FACTOR = 2.5;
-        const REARM_FLOOR = 10;
-        const MIN_FIRE_GAP = 220;
-        let wheelAcc = 0;
-        let wheelLocked = false;
-        let peak = 0;
-        let tailing = false;
-        let trough = Infinity;
-        let lastFire = -Infinity;
-        let quietTimer = 0;
-        const releaseWheel = () => {
-          wheelLocked = false;
-          wheelAcc = 0;
-          peak = 0;
-          tailing = false;
-          trough = Infinity;
-        };
-        cleanup(() => window.clearTimeout(quietTimer));
-        stage.addEventListener('wheel', (e) => {
-          if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
-          e.preventDefault();
-          const abs = Math.abs(e.deltaX);
-          window.clearTimeout(quietTimer);
-          quietTimer = window.setTimeout(releaseWheel, QUIET_MS);
-          if (wheelLocked) {
-            if (abs > peak) peak = abs;
-            if (!tailing) {
-              if (abs < peak * TAIL_RATIO) {
-                tailing = true;
-                trough = abs;
-              }
-              return;
-            }
-            if (abs < trough) trough = abs;
-            if (abs < REARM_FLOOR || abs < trough * REARM_FACTOR) return;
-            releaseWheel();
-          }
-          wheelAcc += e.deltaX;
-          if (Math.abs(wheelAcc) < SWIPE_DELTA) return;
-          const now = e.timeStamp || performance.now();
-          if (now - lastFire < MIN_FIRE_GAP) {
-            wheelAcc = 0;
-            return;
-          }
-          const forward = wheelAcc > 0;
-          wheelLocked = true;
-          peak = abs;
-          tailing = false;
-          trough = Infinity;
-          lastFire = now;
-          wheelAcc = 0;
-          step(forward ? 1 : -1);
-        }, { passive: false });
-
-        render();
-      });
-
-      // Search and chips: a section shows only its matches; its hero,
-      // counter, peeking cards and thumbnails all follow the matches.
+      const panels = Array.from(root.querySelectorAll<HTMLElement>('.gear-panel'));
       const input = document.getElementById('gear-search-input') as HTMLInputElement | null;
       const clear = document.getElementById('gear-search-clear') as HTMLButtonElement | null;
       const empty = document.getElementById('gear-empty-state');
       const reset = document.getElementById('gear-reset-btn');
       const select = document.getElementById('gear-category-select') as HTMLSelectElement | null;
+      const count = document.querySelector<HTMLElement>('[data-grid-count]');
       let cat = '';
       let query = '';
 
-      const allView = document.getElementById('gear-all-products');
-      const deckView = document.getElementById('gear-decks-view');
-      const allToggle = document.querySelector<HTMLButtonElement>('[data-all-toggle]');
-      const allCards = Array.from(allView?.querySelectorAll<HTMLElement>('.all-grid-card') || []);
-      const gridCount = allView?.querySelector('[data-grid-count]');
-      let gridOpen = false;
-
-      allToggle?.addEventListener('click', () => {
-        if (!allView || !deckView) return;
-        gridOpen = !gridOpen;
-        allToggle.setAttribute('aria-expanded', String(gridOpen));
-        allToggle.textContent = gridOpen ? 'Deck view' : 'Show all products';
-        void setDisclosureOpen(deckView, !gridOpen);
-        void setDisclosureOpen(allView, gridOpen);
-        if (!gridOpen) sections.forEach((section) => {
-          if (section.classList.contains('is-expanded')) decks.get(section)?.refresh();
-        });
-      });
-
+      // Search and category: a card shows when it matches both; a panel
+      // with no card showing hides; the count is the cards showing.
       function apply() {
         let total = 0;
-        let firstShown: HTMLElement | null = null;
-        sections.forEach((s) => {
-          const inCat = !cat || s.dataset.chip === cat;
-          const filter = (s as HTMLElement & { _gearFilter?: (q: string) => number })._gearFilter;
-          const matches = inCat && filter ? filter(query) : 0;
-          s.hidden = !inCat || matches === 0;
-          total += s.hidden ? 0 : matches;
-          if (!s.hidden && !firstShown) firstShown = s;
+        panels.forEach((panel) => {
+          const inCat = !cat || panel.dataset.chip === cat;
+          let shown = 0;
+          panel.querySelectorAll<HTMLElement>('.gear-card').forEach((card) => {
+            const match = inCat && (!query || (card.dataset.search || '').includes(query));
+            card.hidden = !match;
+            if (match) shown += 1;
+          });
+          panel.hidden = shown === 0;
+          total += shown;
         });
-        allCards.forEach((card) => {
-          const matches = (!cat || card.dataset.chip === cat) && (!query || (card.dataset.search || '').includes(query));
-          card.classList.toggle('is-filtered-out', !matches);
-        });
-        if (gridCount) gridCount.textContent = `${total} ${total === 1 ? 'product' : 'products'}`;
+        if (count) count.textContent = `${total} ${total === 1 ? 'product' : 'products'}`;
         if (empty) empty.hidden = total > 0;
         if (clear) clear.hidden = !query;
-        if (firstShown && (query || cat)) {
-          sections.forEach((s) => setOpen(s, s === firstShown));
-          decks.get(firstShown)?.refresh();
-        }
       }
+
+      const resetAll = () => {
+        if (input) input.value = '';
+        if (select) select.value = '';
+        query = '';
+        cat = '';
+        apply();
+      };
 
       select?.addEventListener('change', () => {
         cat = select.value;
@@ -1999,65 +765,31 @@ const stateOf = (i: number, n: number) =>
         apply();
         input?.focus();
       });
-      reset?.addEventListener('click', () => {
-        if (input) input.value = '';
-        query = '';
-        cat = '';
-        if (select) select.value = '';
-        apply();
-      });
+      reset?.addEventListener('click', resetAll);
 
-      // A link to a section (the nav's Lenses, Audio, The Cafe...) or to one
-      // item in it (#gear-item-..., what the homepage Gear carousel links to)
-      // opens that section, with that item in front: on load, on a hash
-      // change, and on a same-page link click, before the layout's anchor
-      // scroll measures it (the Accordion.astro pattern). Arriving from
-      // another page, the section is simply open, as the first one is on any
-      // load; on this page it opens with the usual ease. The layout then
-      // scrolls to the section's header (data-sec-head on the section).
-      const targetFor = (hash: string) => {
-        if (!hash || hash.length < 2) return null;
+      // A link to a section (#gear-lenses, #brew) or to one item
+      // (#gear-item-..., what the homepage Gear carousel links to) clears a
+      // filter that hides it, so the layout's anchor scroll finds it.
+      const reveal = (hash: string) => {
+        if (!hash || hash.length < 2) return;
         let id = hash.slice(1);
         try {
           id = decodeURIComponent(id);
         } catch {
-          return null;
+          return;
         }
         const el = document.getElementById(id);
-        const section = el?.closest<HTMLElement>('.gear-accordion-section');
-        if (!el || !section || !root.contains(section)) return null;
-        return { section, card: el.closest<HTMLElement>('.deck-card') };
+        if (!el || !root.contains(el)) return;
+        if (el.hidden || el.closest<HTMLElement>('.gear-panel')?.hidden) resetAll();
       };
-      const openFor = (hash: string, instant: boolean) => {
-        const t = targetFor(hash);
-        if (!t) return;
-        if (gridOpen) allToggle?.click();
-        if (t.section.hidden || t.card?.classList.contains('is-filtered-out')) reset?.click();
-        if (instant) {
-          const quiet = sections.flatMap((s) =>
-            Array.from(s.querySelectorAll<HTMLElement>('.gear-accordion-body, .gear-accordion-body > .disclosure-clip > .disclosure-content'))
-          );
-          quiet.forEach((el) => (el.style.transition = 'none'));
-          sections.forEach((s) => setOpen(s, s === t.section));
-          void root.offsetHeight;
-          requestAnimationFrame(() => quiet.forEach((el) => el.style.removeProperty('transition')));
-          decks.get(t.section)?.refresh();
-        } else {
-          toggleSection(t.section, true);
-        }
-        if (t.card) decks.get(t.section)?.show(Number(t.card.dataset.index));
-      };
-      const arrival = performance.getEntriesByType?.('navigation')[0] as PerformanceNavigationTiming | undefined;
-      if (location.hash && !(arrival?.type === 'reload' && !document.documentElement.dataset.pageTransition)) {
-        openFor(location.hash, true);
-      }
-      on(window, 'hashchange', () => openFor(location.hash, false));
+      reveal(location.hash);
+      on(window, 'hashchange', () => reveal(location.hash));
       on(document, 'click', (e) => {
         const link = (e.target as Element | null)?.closest?.('a[href*="#"]') as HTMLAnchorElement | null;
         if (!link) return;
         const url = new URL(link.href, location.href);
         if (url.pathname.replace(/\/$/, '') !== location.pathname.replace(/\/$/, '')) return;
-        openFor(url.hash, false);
+        reveal(url.hash);
       }, { capture: true });
     }
 
