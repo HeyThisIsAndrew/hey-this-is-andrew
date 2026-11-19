@@ -38,6 +38,7 @@ const {
 } = Astro.props;
 
 const rotates = slides.length > 1;
+const hasMetaAction = Astro.slots.has('meta-action');
 const initialMeta = slides[0]?.meta ?? '';
 ---
 
@@ -63,7 +64,7 @@ const initialMeta = slides[0]?.meta ?? '';
         inert={index === 0 ? undefined : true}
         tabindex={index === 0 ? undefined : -1}
       >
-        <span class="ui-rotator-visual" aria-hidden="true">
+        <span class:list={['ui-rotator-visual', { 'has-img': Boolean(slide.imageSrc) }]} aria-hidden="true">
           {slide.imageSrc ? (
             <img
               class="ui-rotator-img"
@@ -115,6 +116,12 @@ const initialMeta = slides[0]?.meta ?? '';
 
   <div class="ui-rotator-meta-row">
     <span class="ui-rotator-meta-text font-mono" data-rotator-meta>{initialMeta}</span>
+
+    {hasMetaAction && (
+      <div class="ui-rotator-meta-action">
+        <slot name="meta-action" />
+      </div>
+    )}
 
     {rotates && (
       <div class="ui-rotator-controls">
@@ -224,6 +231,11 @@ const initialMeta = slides[0]?.meta ?? '';
     flex-shrink: 0;
   }
 
+  .ui-rotator-visual.has-img {
+    background: transparent;
+    border: 0;
+  }
+
   .ui-rotator-img {
     display: block;
     width: 100%;
@@ -235,11 +247,15 @@ const initialMeta = slides[0]?.meta ?? '';
   }
 
   .ui-rotator-badge {
-    font-size: 0.72rem;
+    font-size: clamp(0.5rem, 1.4vw, 0.66rem);
     font-weight: 700;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--ink, #f0f0f0);
+    padding: 0.2rem;
+    text-align: center;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
   }
 
   .ui-rotator-text {
@@ -287,8 +303,8 @@ const initialMeta = slides[0]?.meta ?? '';
   }
 
   .ui-rotator-perimeter {
-    grid-column: 1 / 2;
-    grid-row: 1 / 2;
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     pointer-events: none;
@@ -335,9 +351,9 @@ const initialMeta = slides[0]?.meta ?? '';
   .ui-rotator-meta-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-top: 0.75rem;
+    justify-content: flex-start;
+    gap: 0.75rem 1rem;
+    margin-top: 0.9rem;
     min-height: 32px;
   }
 
@@ -346,6 +362,19 @@ const initialMeta = slides[0]?.meta ?? '';
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--muted, #9a9a9a);
+  }
+
+  .ui-rotator-meta-action {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  @media (min-width: 769px) {
+    .ui-rotator-meta-action {
+      order: 4;
+      margin-left: auto;
+    }
   }
 
   .ui-rotator-controls {
@@ -409,17 +438,52 @@ const initialMeta = slides[0]?.meta ?? '';
     }
   }
 
-  @media (max-width: 720px) {
+  @media (max-width: 768px) {
+    .ui-rotator-wrapper {
+      margin: 0 -0.5rem;
+      width: calc(100% + 1rem);
+    }
+
+    .ui-rotator-meta-row {
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem 0.9rem;
+      margin-top: 0.9rem;
+    }
+
+    .ui-rotator-meta-text {
+      flex: 0 1 auto;
+      min-width: 0;
+      margin-right: 0;
+    }
+
+    .ui-rotator-meta-action {
+      order: 3;
+      flex: 1 0 100%;
+      display: flex;
+      justify-content: center;
+      margin-left: 0;
+    }
+
     .ui-rotator-slide {
-      grid-template-columns: clamp(44px, 13vw, 56px) minmax(0, 1fr) auto;
-      gap: 0.75rem;
-      padding: 1rem;
+      grid-template-columns: clamp(44px, 13vw, 64px) minmax(0, 1fr) auto;
+      gap: clamp(0.75rem, 3.5vw, 1.25rem);
+      padding: 1.35rem clamp(1rem, 4.5vw, 1.5rem);
       min-height: 92px;
     }
 
     .ui-rotator-visual {
-      width: clamp(44px, 13vw, 56px);
-      height: clamp(44px, 13vw, 56px);
+      width: clamp(44px, 13vw, 64px);
+      height: clamp(44px, 13vw, 64px);
+    }
+
+    .ui-rotator-title {
+      font-size: clamp(0.88rem, 4.2vw, 1.15rem);
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .ui-rotator-cta-label {

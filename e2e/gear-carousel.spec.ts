@@ -62,18 +62,131 @@ test('/gear/ section and item links open their section', async ({ page }) => {
   await expect(page.locator('#gear-lighting .deck-card.active')).toHaveAttribute('aria-label', 'Aputure Amaran 200d');
 });
 
-test('referrals BannerRotator on /about/ (Mint Mobile never in a gear section), Full kit on /gear/, Cohley under What I do', async ({ page }) => {
-  await page.goto('./about/');
-  const referrals = page.getByRole('complementary', { name: 'Referrals' });
-  await expect(referrals.locator('[data-banner-rotator] [data-rotator-slide]', { hasText: 'Mint Mobile' }))
-    .toHaveAttribute('href', 'https://my.mintmobile.com/refer/pHvGFQz');
-  await expect(referrals.locator('[data-banner-rotator] [data-rotator-slide] .ui-rotator-title-full'))
-    .toHaveText(['Mint Mobile', 'inKind', 'Fetch', 'Instacart', 'Rakuten']);
+test('unified BannerRotator (kit + referrals) on /about/ and /gear/ plus View all referrals modal', async ({ page }) => {
+  const expectedTitles = ['Full kit', 'DaVinci Resolve', 'Mint Mobile', 'inKind', 'Fetch', 'Instacart', 'Rakuten'];
+
+  for (const route of ['./about/', './gear/']) {
+    await page.goto(route);
+    const rotator = page.getByRole('complementary', { name: 'Referrals and kit' });
+    await expect(rotator.locator('[data-banner-rotator] [data-rotator-slide]', { hasText: 'Mint Mobile' }))
+      .toHaveAttribute('href', 'https://my.mintmobile.com/refer/pHvGFQz');
+    await expect(rotator.locator('[data-banner-rotator] [data-rotator-slide] .ui-rotator-title-full'))
+      .toHaveText(expectedTitles);
+
+    const dialog = rotator.locator('[data-referrals-dialog]');
+    await expect(dialog).not.toHaveAttribute('open', '');
+
+    await rotator.getByRole('button', { name: /View all referrals/i }).click();
+    await expect(dialog).toHaveAttribute('open', '');
+    await expect(dialog.locator('.referrals-dialog-disclosure')).toContainText('Amazon Associate');
+    await expect(dialog.locator('.referrals-card-title')).toHaveText(expectedTitles);
+
+    // Esc closes the modal
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toHaveAttribute('open', '');
+
+    // Reopen and close with the bare X button
+    await rotator.getByRole('button', { name: /View all referrals/i }).click();
+    await expect(dialog).toHaveAttribute('open', '');
+    await dialog.getByRole('button', { name: 'Close referrals' }).click();
+    await expect(dialog).not.toHaveAttribute('open', '');
+
+    // Reopen and light-dismiss by clicking outside the dialog box
+    await rotator.getByRole('button', { name: /View all referrals/i }).click();
+    await expect(dialog).toHaveAttribute('open', '');
+    await page.mouse.click(5, 5);
+    await expect(dialog).not.toHaveAttribute('open', '');
+  }
+
   await page.goto('./');
   await expect(page.locator('#services').getByRole('link', { name: 'Cohley profile' }))
     .toHaveAttribute('href', 'https://connect.cohley.com/public/profile/andrew-baxter/');
+});
+
+test('mobile 390x844 edge-to-edge carousels, framed flip-card rotator, and scrollable modal', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  // Homepage #gear spotlight matches HQ edge-to-edge mobile layout
+  await page.goto('./');
+  await page.locator('#gear').scrollIntoViewIfNeeded();
+  const homeMetrics = await page.evaluate(() => {
+    const doc = document.documentElement;
+    const frame = document.querySelector('#gear .ui-spotlight-frame')?.getBoundingClientRect();
+    const cta = document.querySelector('#gear .ui-spotlight-slide.is-current .ui-spotlight-cta')?.getBoundingClientRect();
+    const ctaLabel = document.querySelector('#gear .ui-spotlight-slide.is-current .ui-spotlight-cta-label');
+    return {
+      overflow: doc.scrollWidth > doc.clientWidth,
+      left: frame ? Math.round(frame.left) : -1,
+      right: frame ? Math.round(frame.right) : -1,
+      height: frame ? Math.round(frame.height) : -1,
+      ctaW: cta ? Math.round(cta.width) : 0,
+      ctaH: cta ? Math.round(cta.height) : 0,
+      ctaLabelDisplay: ctaLabel ? getComputedStyle(ctaLabel).display : '',
+    };
+  });
+  expect(homeMetrics.overflow).toBe(false);
+  expect(homeMetrics.left).toBe(0);
+  expect(homeMetrics.right).toBe(390);
+  expect(homeMetrics.height).toBeLessThan(260);
+  expect(homeMetrics.ctaLabelDisplay).toBe('none');
+  expect(homeMetrics.ctaW).toBeGreaterThanOrEqual(44);
+  expect(homeMetrics.ctaH).toBeGreaterThanOrEqual(44);
+
+  // /gear/ accordion deck spans 0..390 edge-to-edge and BannerRotator has HQ framed geometry
   await page.goto('./gear/');
-  await expect(page.locator('[data-banner-rotator] [data-rotator-slide] .ui-rotator-title-full'))
-    .toHaveText(['Full kit', 'DaVinci Resolve']);
-  await expect(page.locator('main')).not.toContainText('Mint Mobile');
+  const gearMetrics = await page.evaluate(() => {
+    const doc = document.documentElement;
+    const box = (sel: string) => {
+      const r = document.querySelector(sel)?.getBoundingClientRect();
+      return r ? { left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width), height: Math.round(r.height) } : null;
+    };
+    return {
+      overflow: doc.scrollWidth > doc.clientWidth,
+      accordion: box('#gear-accordion-container'),
+      expanded: box('.gear-accordion-section.is-expanded'),
+      deck: box('.gear-accordion-section.is-expanded .gear-deck'),
+      stage: box('.gear-accordion-section.is-expanded .deck-stage'),
+      thumbs: box('.gear-accordion-section.is-expanded .deck-thumb-track'),
+      rotator: box('[data-banner-rotator] .ui-rotator-grid'),
+    };
+  });
+  expect(gearMetrics.overflow).toBe(false);
+  for (const key of ['accordion', 'expanded', 'deck', 'stage', 'thumbs'] as const) {
+    expect(gearMetrics[key]?.left).toBe(0);
+    expect(gearMetrics[key]?.right).toBe(390);
+  }
+  expect(gearMetrics.rotator?.width).toBeGreaterThanOrEqual(370);
+  expect(gearMetrics.rotator?.height).toBeLessThanOrEqual(120);
+
+  // /about/ framed flip-card rotator + scrollable modal on mobile
+  await page.goto('./about/');
+  const aboutMetrics = await page.evaluate(() => {
+    const doc = document.documentElement;
+    const r = document.querySelector('[data-banner-rotator] .ui-rotator-grid')?.getBoundingClientRect();
+    return {
+      overflow: doc.scrollWidth > doc.clientWidth,
+      width: r ? Math.round(r.width) : 0,
+      height: r ? Math.round(r.height) : 0,
+    };
+  });
+  expect(aboutMetrics.overflow).toBe(false);
+  expect(aboutMetrics.width).toBeGreaterThanOrEqual(370);
+  expect(aboutMetrics.height).toBeLessThanOrEqual(120);
+
+  await page.getByRole('button', { name: /View all referrals/i }).click();
+  const modalMetrics = await page.evaluate(() => {
+    const dialog = document.querySelector<HTMLDialogElement>('[data-referrals-dialog]');
+    const body = dialog?.querySelector<HTMLElement>('.referrals-dialog-body');
+    return {
+      open: Boolean(dialog?.open),
+      overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      rectWidth: dialog ? Math.round(dialog.getBoundingClientRect().width) : 0,
+      scrollHeight: body ? body.scrollHeight : 0,
+      clientHeight: body ? body.clientHeight : 0,
+    };
+  });
+  expect(modalMetrics.open).toBe(true);
+  expect(modalMetrics.overflow).toBe(false);
+  expect(modalMetrics.rectWidth).toBeLessThanOrEqual(390);
+  expect(modalMetrics.scrollHeight).toBeGreaterThanOrEqual(modalMetrics.clientHeight);
 });

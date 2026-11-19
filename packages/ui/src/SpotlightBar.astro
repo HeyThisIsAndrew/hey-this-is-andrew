@@ -70,13 +70,13 @@ const rotates = slides.length > 1;
         inert={index === 0 ? undefined : true}
         tabindex={index === 0 ? undefined : -1}
       >
-        {slide.imageSrc && slide.imageFit !== 'contain' && (
+        {slide.imageSrc && (
           <img
-            class="ui-spotlight-bg"
+            class:list={['ui-spotlight-bg', { 'ui-spotlight-bg--contain': slide.imageFit === 'contain' }]}
             src={slide.imageSrc}
             srcset={slide.imageSrcset}
-            sizes="(max-width: 720px) 100vw, 90vw"
-            alt={slide.imageAlt ?? ''}
+            sizes={slide.imageFit === 'contain' ? '(max-width: 599px) 100vw, 68vw' : '(max-width: 720px) 100vw, 90vw'}
+            alt={slide.imageFit === 'contain' ? '' : (slide.imageAlt ?? '')}
             width={slide.imageWidth}
             height={slide.imageHeight}
             loading={index === 0 ? 'eager' : 'lazy'}
@@ -90,29 +90,13 @@ const rotates = slides.length > 1;
             {slide.eyebrow && <span class="ui-spotlight-eyebrow font-mono">{slide.eyebrow}</span>}
             <span class="ui-spotlight-title display">{slide.title}</span>
             {slide.subtitle && <span class="ui-spotlight-subtitle">{slide.subtitle}</span>}
-            <span class="ui-spotlight-cta font-mono">
-              <span class="ui-spotlight-cta-label">{slide.cta}</span>
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </span>
           </span>
-          {slide.imageSrc && slide.imageFit === 'contain' && (
-            <span class="ui-spotlight-media" aria-hidden="true">
-              <img
-                class="ui-spotlight-art"
-                src={slide.imageSrc}
-                srcset={slide.imageSrcset}
-                sizes="(max-width: 720px) 80vw, 44vw"
-                alt=""
-                width={slide.imageWidth}
-                height={slide.imageHeight}
-                loading={index === 0 ? 'eager' : 'lazy'}
-                decoding="async"
-                draggable="false"
-              />
-            </span>
-          )}
+          <span class="ui-spotlight-cta font-mono">
+            <span class="ui-spotlight-cta-label">{slide.cta}</span>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </span>
         </span>
       </a>
     ))}
@@ -150,14 +134,22 @@ const rotates = slides.length > 1;
 
   .ui-spotlight-frame {
     position: relative;
+    container-type: inline-size;
     width: 100%;
-    height: var(--spotlight-h, clamp(250px, 24vw, 440px));
-    min-height: 240px;
-    border: 1px solid var(--hairline-strong, rgba(255, 255, 255, 0.16));
+    height: var(--spotlight-h, clamp(210px, 24vw, 310px));
+    min-height: 190px;
+    border-top: 1px solid var(--hairline-strong, rgba(255, 255, 255, 0.14));
+    border-bottom: 1px solid var(--hairline-strong, rgba(255, 255, 255, 0.14));
+    border-left: 0;
+    border-right: 0;
     border-radius: 0;
     background: #0d0d0d;
     overflow: hidden;
     isolation: isolate;
+  }
+
+  .ui-spotlight:not(.ui-spotlight--bleed) .ui-spotlight-frame {
+    border-inline: 1px solid var(--hairline-strong, rgba(255, 255, 255, 0.14));
   }
 
   .ui-spotlight--bleed .ui-spotlight-frame {
@@ -167,18 +159,13 @@ const rotates = slides.length > 1;
   }
 
   .ui-spotlight--bleed .ui-spotlight-inner {
-    width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw, 100%));
+    width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw, 1536px));
     margin-inline: auto;
-  }
-
-  @media (min-width: 721px) {
-    .ui-spotlight--bleed .ui-spotlight-body {
-      padding-inline-start: 0;
-    }
+    padding-inline: 0;
   }
 
   .ui-spotlight--bleed .ui-spotlight-controls {
-    width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw, 100%));
+    width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw, 1536px));
     margin-inline: auto;
   }
 
@@ -214,27 +201,33 @@ const rotates = slides.length > 1;
     transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
+  .ui-spotlight-bg--contain {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: auto;
+    width: clamp(54%, 58vw, 72%);
+    height: 100%;
+    object-fit: contain;
+    object-position: right center;
+    padding: clamp(0.6rem, 1.8vw, 1.5rem) clamp(1rem, 4vw, 4rem) clamp(0.6rem, 1.8vw, 1.5rem) 0;
+    box-sizing: border-box;
+  }
+
   .ui-spotlight-scrim {
     position: absolute;
     inset: 0;
     z-index: 1;
     pointer-events: none;
-    background: linear-gradient(
-      to right,
-      rgba(8, 8, 8, 0.94) 0%,
-      rgba(8, 8, 8, 0.78) 42%,
-      rgba(8, 8, 8, 0.25) 78%,
-      rgba(8, 8, 8, 0.45) 100%
-    );
-  }
-
-  .ui-spotlight-slide.is-contain .ui-spotlight-scrim {
-    background: linear-gradient(
-      to right,
-      rgba(8, 8, 8, 0.95) 0%,
-      rgba(13, 13, 13, 0.45) 55%,
-      transparent 100%
-    );
+    background:
+      linear-gradient(
+        to right,
+        rgba(8, 8, 8, 0.96) 0%,
+        rgba(8, 8, 8, 0.8) 38%,
+        rgba(8, 8, 8, 0.22) 72%,
+        rgba(8, 8, 8, 0.12) 100%
+      ),
+      linear-gradient(to top, rgba(8, 8, 8, 0.86) 0%, rgba(8, 8, 8, 0.25) 45%, transparent 72%);
   }
 
   .ui-spotlight-inner {
@@ -242,61 +235,65 @@ const rotates = slides.length > 1;
     z-index: 2;
     width: 100%;
     height: 100%;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    align-items: center;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-block: clamp(1rem, 2vw, 1.75rem);
+    padding-inline: clamp(1rem, 2.5vw, 2rem);
     min-width: 0;
-  }
-
-  .ui-spotlight-slide.is-contain .ui-spotlight-inner {
-    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    box-sizing: border-box;
   }
 
   .ui-spotlight-body {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    justify-content: center;
-    gap: clamp(0.45rem, 0.9vw, 0.8rem);
+    gap: 0.35rem;
     min-width: 0;
-    padding: clamp(1.25rem, 3vw, 2.75rem);
+    padding: 0;
   }
 
   .ui-spotlight-eyebrow {
-    font-size: clamp(0.68rem, 0.8vw, 0.78rem);
-    letter-spacing: 0.18em;
+    font-size: clamp(0.65rem, 0.78vw, 0.76rem);
+    font-weight: 700;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: var(--muted, #9a9a9a);
+    color: var(--muted, #b2b2b2);
   }
 
   .ui-spotlight-title {
-    font-size: clamp(1.4rem, 2.5vw, 2.4rem);
-    line-height: 1.04;
+    font-size: clamp(1.25rem, 2.3vw, 2.2rem);
+    line-height: 1.1;
+    letter-spacing: 0.04em;
     color: #ffffff;
     overflow-wrap: anywhere;
   }
 
   .ui-spotlight-subtitle {
-    font-size: clamp(0.9rem, 1.05vw, 1.05rem);
+    font-size: clamp(0.88rem, 1vw, 1rem);
     line-height: 1.45;
     color: var(--muted, #b2b2b2);
-    max-width: 40ch;
+    max-width: 44ch;
   }
 
   .ui-spotlight-cta {
+    margin-left: auto;
+    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
-    margin-top: 0.35rem;
-    padding: 0.55rem 0.95rem;
-    border: 1px solid rgba(255, 255, 255, 0.32);
+    padding: 0.6rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.28);
     border-radius: 0;
-    background: #080808;
+    background: rgba(8, 8, 8, 0.55);
     color: #f5f5f5;
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.15em;
     text-transform: uppercase;
+    white-space: nowrap;
     transition: background-color 180ms ease-in-out, color 180ms ease-in-out, border-color 180ms ease-in-out;
   }
 
@@ -311,31 +308,8 @@ const rotates = slides.length > 1;
     outline-offset: -3px;
   }
 
-  .ui-spotlight-media {
-    height: 100%;
-    min-height: 0;
-    display: grid;
-    place-items: center;
-    padding: clamp(0.9rem, 2vw, 1.75rem);
-    background: #0d0d0d;
-    border-left: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
-    overflow: hidden;
-  }
-
-  .ui-spotlight-art {
-    display: block;
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    object-fit: contain;
-    object-position: center;
-    border-radius: 0;
-    transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
   @media (hover: hover) {
-    .ui-spotlight-slide:hover .ui-spotlight-bg,
-    .ui-spotlight-slide:hover .ui-spotlight-art {
+    .ui-spotlight-slide:hover .ui-spotlight-bg {
       transform: scale(1.03);
     }
   }
@@ -400,7 +374,7 @@ const rotates = slides.length > 1;
 
   .ui-spotlight-progress {
     flex: 1;
-    height: 3px;
+    height: 2px;
     background: rgba(255, 255, 255, 0.14);
     position: relative;
     overflow: hidden;
@@ -448,37 +422,39 @@ const rotates = slides.length > 1;
     }
   }
 
-  @media (max-width: 720px) {
+  @media (max-width: 599px) {
     .ui-spotlight-frame {
-      height: clamp(320px, 72vw, 390px);
+      height: clamp(195px, 54vw, 235px);
     }
 
-    .ui-spotlight-slide.is-contain .ui-spotlight-inner {
-      grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: minmax(0, 1fr) auto;
+    .ui-spotlight-bg--contain {
+      left: 0;
+      right: 0;
+      width: 100%;
+      padding: 0.75rem 0.5rem 2.25rem 28%;
+      object-position: right center;
     }
 
-    .ui-spotlight-media {
-      order: -1;
-      border-left: 0;
-      border-bottom: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
-      padding: 0.75rem;
+    .ui-spotlight-subtitle {
+      display: none;
     }
 
-    .ui-spotlight-body {
-      padding: 1rem;
-      gap: 0.35rem;
+    .ui-spotlight-cta-label {
+      display: none;
     }
 
     .ui-spotlight-cta {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
       min-height: 44px;
+      padding: 0;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .ui-spotlight-slide,
-    .ui-spotlight-bg,
-    .ui-spotlight-art {
+    .ui-spotlight-bg {
       transition: none;
     }
 

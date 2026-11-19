@@ -1,12 +1,18 @@
 ---
 /**
- * Storefront picks or referrals (src/data/storefront.ts).
+ * Unified kit and referral links (src/data/storefront.ts).
  * Always rendered via @andrew/ui BannerRotator (3D flip, SVG perimeter clock,
- * Play/Pause, Prev, and Next) for both GEAR_PICKS (/gear/) and REFERRALS (/about/).
+ * Play/Pause, Prev, and Next) plus a "View all referrals" trigger that opens
+ * a scrollable native modal dialog showing every kit and referral link.
  */
 import { getImage } from 'astro:assets';
 import BannerRotator, { type RotatorSlide } from '@andrew/ui/BannerRotator.astro';
-import { AMAZON_STOREFRONT, GEAR_PICKS, type StorefrontPick } from '../data/storefront';
+import {
+  ALL_REFERRAL_PICKS,
+  AMAZON_STOREFRONT,
+  REFERRAL_DISCLOSURE,
+  type StorefrontPick,
+} from '../data/storefront';
 import sonyA7iv from '../../public/gear/sony-a7iv.jpg';
 import davinciResolve from '../assets/brand-logos/davinci-resolve.png';
 
@@ -16,8 +22,16 @@ interface Props {
   label?: string;
   /** Optional small heading above the picks. */
   eyebrow?: string;
+  /** DOM id for the scrollable referrals dialog. */
+  modalId?: string;
 }
-const { picks = GEAR_PICKS, label = 'Featured picks and tools', eyebrow } = Astro.props;
+
+const {
+  picks = ALL_REFERRAL_PICKS,
+  label = 'Referrals and kit',
+  eyebrow,
+  modalId = 'referrals-modal',
+} = Astro.props;
 
 const kitThumb = await getImage({ src: sonyA7iv, width: 240, format: 'webp' });
 const resolveThumb = await getImage({ src: davinciResolve, width: 240, format: 'webp' });
@@ -28,28 +42,115 @@ const rotatorSlides: RotatorSlide[] = picks.map((pick, index) => {
   const isGear = isAmazon || isResolve;
   return {
     title: pick.title,
+    compactTitle: pick.compactTitle,
     subtitle: pick.desc ?? pick.frontDesc ?? '',
     meta: isAmazon
       ? 'Amazon Storefront'
       : isResolve
-        ? 'Editing & Color Software'
-        : eyebrow
-          ? `${eyebrow} · ${index + 1} / ${picks.length}`
-          : `${index + 1} / ${picks.length}`,
+        ? 'Editing & Color'
+        : `Referral · ${index + 1} / ${picks.length}`,
     cta: pick.cta,
     href: pick.url,
     external: true,
-    rel: isAmazon ? 'noopener sponsored' : 'noopener noreferrer',
+    rel: pick.affiliate === false ? 'noopener noreferrer' : 'noopener noreferrer sponsored',
     imageSrc: isAmazon ? kitThumb.src : isResolve ? resolveThumb.src : undefined,
     imageAlt: isGear ? pick.title : undefined,
-    badge: isAmazon ? 'KIT' : isResolve ? 'TOOL' : pick.title.slice(0, 4).toUpperCase(),
+    badge: pick.badge ?? pick.title.slice(0, 6).toUpperCase(),
   };
 });
+
+const categoryOrder = ['Kit & Tools', 'Referrals'] as const;
+const groups = [
+  ...categoryOrder
+    .map((name) => ({
+      name,
+      items: picks.filter((pick) => pick.category === name),
+    }))
+    .filter((group) => group.items.length > 0),
+  ...(() => {
+    const rest = picks.filter((pick) => !pick.category);
+    return rest.length > 0 ? [{ name: 'Links', items: rest }] : [];
+  })(),
+];
 ---
 
 <aside class="storefront storefront--rotator" aria-label={label} data-count={picks.length}>
   {eyebrow && <p class="storefront-eyebrow font-mono">{eyebrow}</p>}
-  <BannerRotator slides={rotatorSlides} label={label} holdSeconds={8} />
+  <BannerRotator slides={rotatorSlides} label={label} holdSeconds={8}>
+    <button
+      slot="meta-action"
+      type="button"
+      class="referrals-view-all font-mono"
+      data-referrals-open={modalId}
+      aria-haspopup="dialog"
+      aria-controls={modalId}
+    >
+      View all referrals <span aria-hidden="true">&rarr;</span>
+    </button>
+  </BannerRotator>
+
+  <dialog
+    id={modalId}
+    class="referrals-dialog"
+    aria-labelledby={`${modalId}-title`}
+    data-referrals-dialog
+    {...({ closedby: 'any' } as Record<string, string>)}
+  >
+    <div class="referrals-dialog-head">
+      <div class="referrals-dialog-head-copy">
+        <span class="referrals-dialog-kicker font-mono">Directory</span>
+        <h2 id={`${modalId}-title`} class="referrals-dialog-title">All Referrals &amp; Kit</h2>
+      </div>
+      <form method="dialog">
+        <button
+          type="submit"
+          class="close-btn referrals-close"
+          aria-label="Close referrals"
+          autofocus
+        >&times;</button>
+      </form>
+    </div>
+
+    <div class="referrals-dialog-body">
+      <p class="referrals-dialog-disclosure font-mono">{REFERRAL_DISCLOSURE}</p>
+
+      {groups.map((group) => (
+        <div class="referrals-group" role="group" aria-label={group.name}>
+          <h3 class="referrals-group-title font-mono">{group.name}</h3>
+          <ul class="referrals-list">
+            {group.items.map((pick) => {
+              const isAmazon = pick.url === AMAZON_STOREFRONT;
+              const isResolve = pick.title.toLowerCase().includes('davinci');
+              const imgSrc = isAmazon ? kitThumb.src : isResolve ? resolveThumb.src : undefined;
+              const badge = pick.badge ?? pick.title.slice(0, 6).toUpperCase();
+              const rel = pick.affiliate === false ? 'noopener noreferrer' : 'noopener noreferrer sponsored';
+              const copy = pick.desc ?? pick.frontDesc;
+              return (
+                <li class="referrals-item">
+                  <a class="referrals-card" href={pick.url} target="_blank" rel={rel}>
+                    <span class:list={['referrals-card-visual', { 'has-img': Boolean(imgSrc) }]} aria-hidden="true">
+                      {imgSrc ? (
+                        <img src={imgSrc} alt="" loading="lazy" decoding="async" />
+                      ) : (
+                        <span class="referrals-card-badge font-mono">{badge}</span>
+                      )}
+                    </span>
+                    <span class="referrals-card-body">
+                      <span class="referrals-card-title display">{pick.title}</span>
+                      {copy && <span class="referrals-card-desc">{copy}</span>}
+                      <span class="referrals-card-cta font-mono">
+                        {pick.cta} <span aria-hidden="true">&#8599;</span>
+                      </span>
+                    </span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </dialog>
 </aside>
 
 <style>
@@ -66,4 +167,302 @@ const rotatorSlides: RotatorSlide[] = picks.map((pick, index) => {
     text-transform: uppercase;
     color: var(--ink);
   }
+  .referrals-view-all {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 30px;
+    padding: 0 0.85rem;
+    background: #080808;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 0;
+    color: #f5f5f5;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 180ms ease-in-out, color 180ms ease-in-out, border-color 180ms ease-in-out;
+  }
+  .referrals-view-all:is(:hover, :focus-visible) {
+    background: #f5f5f5;
+    color: #080808;
+    border-color: #f5f5f5;
+  }
+  @media (max-width: 1023px), (pointer: coarse) {
+    .referrals-view-all {
+      min-height: 44px;
+      padding: 0 1.15rem;
+    }
+  }
+
+  .referrals-dialog {
+    width: min(calc(100vw - 2rem), 680px);
+    max-height: min(86svh, 760px);
+    margin: auto;
+    padding: 0;
+    background: #080808;
+    color: #f5f5f5;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 0;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.92);
+    box-sizing: border-box;
+  }
+  .referrals-dialog[open] {
+    display: flex;
+    flex-direction: column;
+  }
+  .referrals-dialog:modal {
+    overscroll-behavior: contain;
+    overflow: hidden;
+  }
+  .referrals-dialog::backdrop {
+    background: rgb(0 0 0 / 0.84);
+    backdrop-filter: blur(3px);
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+  .referrals-dialog-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    background: #0c0c0c;
+    flex-shrink: 0;
+  }
+  .referrals-dialog-head-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+  .referrals-dialog-kicker {
+    font-size: 0.64rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted, #9a9a9a);
+  }
+  .referrals-dialog-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(1.15rem, 2.2vw, 1.55rem);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.1;
+    color: #ffffff;
+  }
+  .referrals-close {
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    min-height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #f5f5f5;
+    font-size: 1.7rem;
+    line-height: 1;
+    cursor: pointer;
+    appearance: none;
+    outline: none;
+    box-shadow: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 180ms ease-in-out, opacity 180ms ease-in-out;
+  }
+  .referrals-close:hover {
+    color: #bdbdbd;
+    opacity: 0.7;
+  }
+  .referrals-close:focus-visible {
+    outline: 1px solid #f5f5f5;
+    outline-offset: 2px;
+  }
+  .referrals-dialog-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 1.15rem 1.25rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .referrals-dialog-disclosure {
+    margin: 0;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: #0d0d0d;
+    font-size: 0.68rem;
+    line-height: 1.5;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted, #9a9a9a);
+  }
+  .referrals-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+  .referrals-group-title {
+    margin: 0;
+    font-size: 0.66rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted, #9a9a9a);
+  }
+  .referrals-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .referrals-card {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    align-items: start;
+    gap: 0.9rem;
+    padding: 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 0;
+    background: #0c0c0c;
+    color: #f5f5f5;
+    text-decoration: none;
+    transition: border-color 180ms ease-in-out, background-color 180ms ease-in-out;
+  }
+  .referrals-card:is(:hover, :focus-visible) {
+    background: #141414;
+    border-color: rgba(255, 255, 255, 0.42);
+  }
+  .referrals-card-visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: #101010;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .referrals-card-visual.has-img {
+    border: 0;
+    background: transparent;
+  }
+  .referrals-card-visual img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 0.2rem;
+  }
+  .referrals-card-badge {
+    font-size: 0.56rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.1;
+    padding: 0.2rem;
+    color: #f0f0f0;
+  }
+  .referrals-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+  }
+  .referrals-card-title {
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+    line-height: 1.15;
+    color: #ffffff;
+  }
+  .referrals-card-desc {
+    font-size: 0.84rem;
+    line-height: 1.45;
+    color: var(--muted, #a4a4a4);
+  }
+  .referrals-card-cta {
+    margin-top: 0.15rem;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #f5f5f5;
+  }
+  @media (max-width: 600px) {
+    .referrals-dialog {
+      width: min(calc(100vw - 1.5rem), 680px);
+      max-height: 88svh;
+    }
+    .referrals-dialog-head {
+      padding: 0.85rem 1rem;
+    }
+    .referrals-dialog-body {
+      padding: 0.9rem 1rem 1.15rem;
+    }
+    .referrals-card {
+      grid-template-columns: 44px minmax(0, 1fr);
+      gap: 0.75rem;
+      padding: 0.75rem;
+    }
+    .referrals-card-visual {
+      width: 44px;
+      height: 44px;
+    }
+  }
 </style>
+
+<script>
+  import { createPageScope } from '@andrew/ui/scripts/page-scope.ts';
+
+  function initReferralModals() {
+    document.querySelectorAll<HTMLDialogElement>('[data-referrals-dialog]').forEach((dialog) => {
+      if (dialog.dataset.modalReady === 'true') return;
+      dialog.dataset.modalReady = 'true';
+
+      const { on } = createPageScope(dialog);
+      const triggers = Array.from(
+        document.querySelectorAll<HTMLElement>(`[data-referrals-open="${dialog.id}"]`),
+      );
+
+      triggers.forEach((btn) => {
+        on(btn, 'click', () => {
+          if (!dialog.open) dialog.showModal();
+        });
+      });
+
+      on(dialog, 'close', () => {
+        dialog.returnValue = '';
+      });
+
+      if (!('closedBy' in HTMLDialogElement.prototype)) {
+        const outside = (e: PointerEvent) => {
+          const r = dialog.getBoundingClientRect();
+          return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+        };
+        let pressedOutside = false;
+        on(dialog, 'pointerdown', (e) => {
+          pressedOutside = outside(e as PointerEvent);
+        });
+        on(dialog, 'pointerup', (e) => {
+          if (pressedOutside && outside(e as PointerEvent)) dialog.close();
+        });
+      }
+    });
+  }
+
+  initReferralModals();
+  document.addEventListener('astro:page-load', initReferralModals);
+</script>
