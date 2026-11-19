@@ -4,17 +4,20 @@
 
 html { scroll-behavior: smooth; overflow-x: clip; scroll-padding-top: calc(96px + env(safe-area-inset-top, 0px)); background-color: #000; scrollbar-gutter: stable; }
 
-/* Andrew's 14" MacBook Pro calibration: at 100% browser zoom on standard laptop/desktop
-   (1100px-1919px), site reads like 75% zoom.
-   For larger displays, QHD, and 4K monitors (1920px up to 3840px+),
-   scale proportionally to the viewport so the percentage of screen occupied is
-   identical to the 14" MacBook Pro. */
-@media (min-width: 1100px) and (max-width: 1919px) {
+/* Andrew's 14" MacBook Pro calibration: at 100% browser zoom on standard
+   laptop/desktop (1100px-1512px), the site reads like 75% zoom (12px root).
+   Wide screens (1920px and up) use a 16px root. Between the two the root
+   ramps linearly, 12px at 1512 to 16px at 1920, so nothing jumps.
+   It used to step from 12px to 16px between 1919 and 1920. (The wide rule
+   was calc(75% * (100vw / 1512)), which is invalid CSS, a percentage times
+   a length, so browsers ignored it and wide screens always got 16px.) */
+@media (min-width: 1100px) and (max-width: 1511.98px) {
   html { font-size: 75%; }
 }
-@media (min-width: 1920px) {
+@media (min-width: 1512px) {
   html {
-    font-size: calc(75% * (100vw / 1512));
+    /* 12px at 1512, 16px at 1920: slope 4/408 per px of width. */
+    font-size: clamp(12px, calc(0.980392vw - 2.823529px), 16px);
   }
 }
 
