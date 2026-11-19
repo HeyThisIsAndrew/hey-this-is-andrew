@@ -14,7 +14,6 @@ import {
   type StorefrontPick,
 } from '../data/storefront';
 import sonyA7iv from '../../public/gear/sony-a7iv.jpg';
-import davinciResolve from '../assets/brand-logos/davinci-resolve.png';
 
 interface Props {
   picks?: StorefrontPick[];
@@ -34,12 +33,22 @@ const {
 } = Astro.props;
 
 const kitThumb = await getImage({ src: sonyA7iv, width: 240, format: 'webp' });
-const resolveThumb = await getImage({ src: davinciResolve, width: 240, format: 'webp' });
+/* A pick's art: the kit photo for the storefront, else the partner's own
+   logo (storefront.ts), else nothing and the text badge shows. */
+const logoSrcs = new Map(
+  await Promise.all(
+    picks
+      .filter((pick) => pick.logo)
+      .map(async (pick) => [pick.title, (await getImage({ src: pick.logo!, width: 240, format: 'webp' })).src] as const)
+  )
+);
+const artFor = (pick: StorefrontPick) =>
+  pick.url === AMAZON_STOREFRONT ? kitThumb.src : logoSrcs.get(pick.title);
 
 const rotatorSlides: RotatorSlide[] = picks.map((pick, index) => {
   const isAmazon = pick.url === AMAZON_STOREFRONT;
   const isResolve = pick.title.toLowerCase().includes('davinci');
-  const isGear = isAmazon || isResolve;
+  const art = artFor(pick);
   return {
     title: pick.title,
     compactTitle: pick.compactTitle,
@@ -53,8 +62,8 @@ const rotatorSlides: RotatorSlide[] = picks.map((pick, index) => {
     href: pick.url,
     external: true,
     rel: pick.affiliate === false ? 'noopener noreferrer' : 'noopener noreferrer sponsored',
-    imageSrc: isAmazon ? kitThumb.src : isResolve ? resolveThumb.src : undefined,
-    imageAlt: isGear ? pick.title : undefined,
+    imageSrc: art,
+    imageAlt: art ? pick.title : undefined,
     badge: pick.badge ?? pick.title.slice(0, 6).toUpperCase(),
   };
 });
@@ -119,9 +128,7 @@ const groups = [
           <h3 class="referrals-group-title font-mono">{group.name}</h3>
           <ul class="referrals-list">
             {group.items.map((pick) => {
-              const isAmazon = pick.url === AMAZON_STOREFRONT;
-              const isResolve = pick.title.toLowerCase().includes('davinci');
-              const imgSrc = isAmazon ? kitThumb.src : isResolve ? resolveThumb.src : undefined;
+              const imgSrc = artFor(pick);
               const badge = pick.badge ?? pick.title.slice(0, 6).toUpperCase();
               const rel = pick.affiliate === false ? 'noopener noreferrer' : 'noopener noreferrer sponsored';
               const copy = pick.desc ?? pick.frontDesc;

@@ -1,5 +1,12 @@
 // Storefront picks and referrals (StorefrontCTA.astro). The Amazon
 // influencer storefront URL lives here once; GearGrid reads it too.
+//
+// Partner logos are the BE Unconventional HQ referral art (its
+// src/assets/partners), copied into src/assets/brand-logos. A pick with no
+// logo shows its text badge; never draw one for a partner.
+import type { ImageMetadata } from 'astro';
+import davinciResolveLogo from '../assets/brand-logos/davinci-resolve.png';
+import mintMobileLogo from '../assets/brand-logos/mint-mobile.png';
 
 export const AMAZON_STOREFRONT = 'https://www.amazon.com/shop/influencer-0931c541?ref=ac_inf_tb_vh';
 
@@ -17,6 +24,8 @@ export interface StorefrontPick {
   url: string;
   affiliate?: boolean;
   category?: 'Kit & Tools' | 'Referrals';
+  /** The partner's own logo, shown in place of the text badge. */
+  logo?: ImageMetadata;
 }
 
 export const REFERRAL_DISCLOSURE =
@@ -42,6 +51,7 @@ export const GEAR_PICKS: StorefrontPick[] = [
     cta: 'Explore',
     url: 'https://www.blackmagicdesign.com/products/davinciresolve',
     affiliate: false,
+    logo: davinciResolveLogo,
     category: 'Kit & Tools',
   },
 ];
@@ -58,6 +68,7 @@ export const REFERRALS: StorefrontPick[] = [
     cta: 'Check out',
     url: 'https://my.mintmobile.com/refer/pHvGFQz',
     affiliate: true,
+    logo: mintMobileLogo,
     category: 'Referrals',
   },
   {
