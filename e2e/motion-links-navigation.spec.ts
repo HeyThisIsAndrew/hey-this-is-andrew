@@ -10,13 +10,15 @@ async function navigateWithHeader(page: Page, name: string) {
 }
 
 for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }, { width: 1440, height: 900 }, { width: 3840, height: 2160 }]) {
-  test(`gear cards keep their text contained at ${viewport.width}`, async ({ page }) => {
+  test(`show-all gear tiles keep their text contained at ${viewport.width}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto(`${base}gear/`);
-    await expect(page.locator('.gear-card:visible')).toHaveCount(45);
-    const issues = await page.locator('.gear-card').evaluateAll(cards => cards.flatMap(card => {
+    await page.locator('[data-all-toggle]').click();
+    await expect(page.locator('#gear-all-products')).toHaveAttribute('data-open', 'true');
+    await expect(page.locator('.all-grid-card:visible')).toHaveCount(45);
+    const issues = await page.locator('.all-grid-card').evaluateAll(cards => cards.flatMap(card => {
       const outer = card.getBoundingClientRect();
-      return Array.from(card.querySelectorAll('.gear-card-name, .gear-card-spec, .gear-card-type, .gear-card-cta, .gear-card-tag')).filter(el => { const r = el.getBoundingClientRect(); return r.left < outer.left - 1 || r.right > outer.right + 1 || r.bottom > outer.bottom + 1 || el.scrollWidth > el.clientWidth + 1; }).map(el => el.textContent);
+      return Array.from(card.querySelectorAll('.all-card-name, .all-card-spec, .all-card-type, .all-card-cta, .all-card-tag')).filter(el => { const r = el.getBoundingClientRect(); return r.left < outer.left - 1 || r.right > outer.right + 1 || r.bottom > outer.bottom + 1 || el.scrollWidth > el.clientWidth + 1; }).map(el => el.textContent);
     }));
     expect(issues).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
@@ -78,7 +80,7 @@ for (const width of [390, 1440]) {
       await navigateWithHeader(page,'Gear');
       await expect(page).toHaveURL(`${base}gear/`);
       await page.locator('#gear-search-input').fill('90mm');
-      await expect(page.locator('#gear-lenses .gear-card:visible')).toContainText('90mm');
+      await expect(page.locator('#gear-lenses .deck-card.active .card-title')).toContainText('90mm');
       await page.locator('#gear-search-clear').click();
       expect(await page.evaluate(()=>(window as any).__navigationIdentity)).toBe('same-document');
     }

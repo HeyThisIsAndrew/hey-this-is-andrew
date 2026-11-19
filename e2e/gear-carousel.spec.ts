@@ -135,7 +135,7 @@ test('mobile 390x844 edge-to-edge carousels, framed flip-card rotator, and scrol
   expect(homeMetrics.ctaW).toBeGreaterThanOrEqual(44);
   expect(homeMetrics.ctaH).toBeGreaterThanOrEqual(44);
 
-  // /gear/ category panels span 0..390 edge-to-edge and BannerRotator has HQ framed geometry
+  // /gear/ carousel sections span 0..390 edge-to-edge and BannerRotator has HQ framed geometry
   await page.goto('./gear/');
   const gearMetrics = await page.evaluate(() => {
     const doc = document.documentElement;
@@ -146,8 +146,8 @@ test('mobile 390x844 edge-to-edge carousels, framed flip-card rotator, and scrol
     return {
       overflow: doc.scrollWidth > doc.clientWidth,
       edge: Math.round(document.body.getBoundingClientRect().right),
-      panels: box('#gear-panels'),
-      panel: box('.gear-panel'),
+      panels: box('#gear-accordion-container'),
+      panel: box('.gear-accordion-section.is-expanded'),
       rotator: box('[data-banner-rotator] .ui-rotator-grid'),
     };
   });

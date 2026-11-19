@@ -29,8 +29,35 @@ import portrait from '../../assets/hero-media/portrait.jpg';
 import { PERSONAL_BRAND } from '../../data/brand';
 import { WORK_WITH_ME_HREF } from '../../data/nav';
 import SpotlightBar, { type SpotlightSlide } from '@andrew/ui/SpotlightBar.astro';
-import { getNetworkFeed, NETWORK_BRANDS, NETWORK_KIND_LABELS } from '../../lib/network';
+import { getImage } from 'astro:assets';
+import { getNetworkFeed, NETWORK_BRANDS, NETWORK_KIND_LABELS, type NetworkBrandId } from '../../lib/network';
+import beLogo from '../../assets/brand-logos/be-logo.png';
+import cccLogo from '../../assets/brand-logos/ccc-logo.png';
 const wordmark = PERSONAL_BRAND.logo;
+
+/* Each post slide shows its brand's own logo (the files the brands section
+   uses) where the headline was, and the brands section's metadata chips
+   upper left: whose, with its accent tick, then what. Andrew's own posts
+   and his Substack writing (The Build) carry the personal wordmark. */
+const BRAND_LOGO: Record<NetworkBrandId, ImageMetadata> = {
+  htia: PERSONAL_BRAND.logo,
+  build: PERSONAL_BRAND.logo,
+  be: beLogo,
+  ccc: cccLogo,
+};
+/* The accordion's brand ticks (theme.css): BE red, CCC gold, white. */
+const BRAND_ACCENT: Partial<Record<NetworkBrandId, string>> = {
+  be: 'var(--be-red, #e60000)',
+  ccc: 'var(--ccc-gold, #c9a96e)',
+};
+const logoUrls = Object.fromEntries(
+  await Promise.all(
+    (Object.keys(BRAND_LOGO) as NetworkBrandId[]).map(async (id) => {
+      const img = await getImage({ src: BRAND_LOGO[id], width: 840, format: 'png' });
+      return [id, { src: img.src, width: Number(img.attributes.width) || undefined, height: Number(img.attributes.height) || undefined }];
+    })
+  )
+) as Record<NetworkBrandId, { src: string; width?: number; height?: number }>;
 
 const MAX_POSTS = 5;
 const feed = await getNetworkFeed(30).catch(() => []);
@@ -38,7 +65,13 @@ const posts: SpotlightSlide[] = feed
   .filter((item) => Boolean(item.image))
   .slice(0, MAX_POSTS)
   .map((item) => ({
-    eyebrow: `${NETWORK_BRANDS[item.brand]} · ${NETWORK_KIND_LABELS[item.kind]}`,
+    chips: [
+      { label: NETWORK_BRANDS[item.brand], accent: BRAND_ACCENT[item.brand] },
+      { label: NETWORK_KIND_LABELS[item.kind] },
+    ],
+    logoSrc: logoUrls[item.brand].src,
+    logoWidth: logoUrls[item.brand].width,
+    logoHeight: logoUrls[item.brand].height,
     title: item.title,
     href: item.url,
     external: item.external,
@@ -77,7 +110,7 @@ const {
       <div class="container hs-content">
         <div class="hs-copy">
           <h2 id="hero-statement-title" class="hs-wordmark" data-pn-top data-pn-label="Overview">
-            <Image src={wordmark} alt={PERSONAL_BRAND.name} widths={[420, 640, 820, 1049]} sizes="min(92vw, 820px)" format="png" loading="eager" />
+            <Image src={wordmark} alt={PERSONAL_BRAND.name} widths={[240, 360, 540, 720]} sizes="min(46vw, 360px)" format="png" loading="eager" />
           </h2>
           <p class="hs-line">{line}</p>
           <div class="btn-group hs-cta">
@@ -129,18 +162,9 @@ const {
     padding-bottom: var(--hs-pad);
     align-items: flex-end;
   }
-  .hero-statement :global(.hs-carousel .ui-spotlight-title) {
-    font-size: clamp(1.6rem, 3.6vw, 3.25rem);
-    max-width: 24ch;
-  }
   @media (max-width: 599px) {
     .hero-statement {
       --hs-pad: 6.25rem;
-    }
-    .hero-statement :global(.hs-carousel .ui-spotlight-title) {
-      font-size: clamp(1.15rem, 5.6vw, 1.5rem);
-      overflow-wrap: break-word;
-      hyphens: none;
     }
     /* The progress bar gets its own full-width row above the buttons and
        the meta line, instead of being squeezed beside them. */
@@ -217,9 +241,11 @@ const {
   .hs-wordmark {
     margin: 0;
   }
+  /* A logo mark with the line and the buttons, not the whole frame:
+     under half its old width (it was min(92vw, 820px)). */
   .hs-wordmark :global(img) {
     display: block;
-    width: min(92vw, 820px);
+    width: min(46vw, 360px);
     height: auto;
   }
   .hs-line {
@@ -262,7 +288,7 @@ const {
       inset: -1.25rem -2rem -1rem -3rem;
     }
     .hs-wordmark :global(img) {
-      width: clamp(180px, 42vw, 320px);
+      width: clamp(120px, 22vw, 180px);
     }
     .hs-line {
       margin-top: 0.5rem;

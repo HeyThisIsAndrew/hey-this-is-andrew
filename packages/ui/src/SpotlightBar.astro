@@ -14,7 +14,10 @@
  * - `overlayControls` lays the controls over the frame's bottom edge;
  * - `holdSelector` limits hover-pausing to the matching parts (focus
  *   inside still pauses everywhere);
- * - a slide's `backdrop` adds a blurred copy of its image behind it.
+ * - a slide's `backdrop` adds a blurred copy of its image behind it;
+ * - a slide's `chips` pin the BrandAccordion metadata chips (whose, then
+ *   what) upper left with the title small beneath them, and its `logoSrc`
+ *   takes the big title's place: the brand's logo, not a headline.
  */
 export interface SpotlightSlide {
   tag?: string;
@@ -28,6 +31,14 @@ export interface SpotlightSlide {
   meta?: string;
   /** A blurred copy of the image fills the frame behind the image. */
   backdrop?: boolean;
+  /** Metadata chips, upper left (BrandAccordion's .bacc-chip pattern): the
+      first is the brand (with `accent` as its edge tick), then its kind.
+      With chips the title prints small under them, not as a headline. */
+  chips?: { label: string; accent?: string }[];
+  /** A logo in the big title's place (bottom left). */
+  logoSrc?: string;
+  logoWidth?: number;
+  logoHeight?: number;
   external?: boolean;
   imageSrc?: string;
   imageSrcset?: string;
@@ -141,10 +152,38 @@ const hasControls = rotates || Boolean(actionLabel && actionHref);
               <span class="ui-spotlight-tag">{slide.tag}</span>
             </span>
           )}
+          {slide.chips?.length ? (
+            <span class="ui-spotlight-meta-block">
+              <span class="ui-spotlight-chips" aria-hidden="true">
+                {slide.chips.map((chip, ci) => (
+                  <span
+                    class:list={['ui-spotlight-chip', { 'ui-spotlight-chip--brand': ci === 0 }]}
+                    style={chip.accent ? `--chip-accent: ${chip.accent};` : undefined}
+                  >{chip.label}</span>
+                ))}
+              </span>
+              <span class="ui-spotlight-title-sm">{slide.title}</span>
+            </span>
+          ) : null}
           <span class="ui-spotlight-body">
-            {slide.eyebrow && <span class="ui-spotlight-eyebrow font-mono">{slide.eyebrow}</span>}
-            <span class="ui-spotlight-title display">{slide.title}</span>
-            {slide.subtitle && <span class="ui-spotlight-subtitle">{slide.subtitle}</span>}
+            {slide.logoSrc ? (
+              <img
+                class="ui-spotlight-logo"
+                src={slide.logoSrc}
+                alt=""
+                width={slide.logoWidth}
+                height={slide.logoHeight}
+                loading="lazy"
+                decoding="async"
+                draggable="false"
+              />
+            ) : (
+              <>
+                {slide.eyebrow && <span class="ui-spotlight-eyebrow font-mono">{slide.eyebrow}</span>}
+                {!slide.chips?.length && <span class="ui-spotlight-title display">{slide.title}</span>}
+                {slide.subtitle && <span class="ui-spotlight-subtitle">{slide.subtitle}</span>}
+              </>
+            )}
           </span>
           <span class:list={['ui-spotlight-cta', 'font-mono', { 'ui-spotlight-cta--icon': !slide.cta }]}>
             {slide.cta && <span class="ui-spotlight-cta-label">{slide.cta}</span>}
@@ -369,6 +408,78 @@ const hasControls = rotates || Boolean(actionLabel && actionHref);
     line-height: 1.2;
     white-space: normal;
     overflow-wrap: break-word;
+  }
+
+  /* Metadata chips, upper left: BrandAccordion's .bacc-chip, as is. */
+  .ui-spotlight-meta-block {
+    position: absolute;
+    top: clamp(1rem, 2vw, 1.75rem);
+    left: clamp(1rem, 2.5vw, 2rem);
+    right: clamp(1rem, 2.5vw, 2rem);
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+    pointer-events: none;
+  }
+  .ui-spotlight--bleed .ui-spotlight-meta-block {
+    left: 0;
+    right: 0;
+  }
+  .ui-spotlight-chips {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+  .ui-spotlight-chip {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(10, 10, 10, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    font-family: var(--font-body, sans-serif);
+    font-weight: 600;
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    line-height: 1.2;
+    color: rgba(255, 255, 255, 0.75);
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  .ui-spotlight-chip--brand {
+    border-left: 2px solid var(--chip-accent, #f0f0f0);
+    color: rgba(255, 255, 255, 0.95);
+  }
+  /* The post title, metadata size: never a headline. */
+  .ui-spotlight-title-sm {
+    max-width: min(46ch, 100%);
+    padding: 0.4rem 0.65rem;
+    background: rgba(10, 10, 10, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    font-family: var(--font-body, sans-serif);
+    font-size: clamp(0.8rem, 0.95vw, 0.95rem);
+    font-weight: 600;
+    line-height: 1.4;
+    color: #fff;
+    text-wrap: balance;
+  }
+  .ui-spotlight-logo {
+    display: block;
+    width: auto;
+    height: clamp(44px, 6vw, 96px);
+    max-width: min(60vw, 420px);
+    object-fit: contain;
+    object-position: left bottom;
+    filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.75));
   }
 
   .ui-spotlight-body {
