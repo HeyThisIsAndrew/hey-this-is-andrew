@@ -6,14 +6,28 @@
  * Uses one clock, never two: the progress bar's CSS animation triggers
  * `animationend` to advance slides, so hovering, focusing, scrolling offscreen,
  * or pressing Pause stops both the bar and the rotation together.
+ *
+ * Optional, all off by default (the hero carousel uses them):
+ * - a `lead` slot renders as the first slide, any markup (not one link);
+ * - `showMeta` prints a short description of the current slide to the
+ *   right of the controls (`leadMeta` for the lead, `meta` per slide);
+ * - `overlayControls` lays the controls over the frame's bottom edge;
+ * - `holdSelector` limits hover-pausing to the matching parts (focus
+ *   inside still pauses everywhere);
+ * - a slide's `backdrop` adds a blurred copy of its image behind it.
  */
 export interface SpotlightSlide {
   tag?: string;
   eyebrow?: string;
   title: string;
   subtitle?: string;
-  cta: string;
+  /** The CTA chip's label. Without one the chip shows only its arrow. */
+  cta?: string;
   href: string;
+  /** Short description for the meta line (showMeta). */
+  meta?: string;
+  /** A blurred copy of the image fills the frame behind the image. */
+  backdrop?: boolean;
   external?: boolean;
   imageSrc?: string;
   imageSrcset?: string;
@@ -32,6 +46,11 @@ export interface Props {
   class?: string;
   actionLabel?: string;
   actionHref?: string;
+  /** Meta line text for the `lead` slot's slide. */
+  leadMeta?: string;
+  showMeta?: boolean;
+  overlayControls?: boolean;
+  holdSelector?: string;
 }
 
 const {
@@ -43,22 +62,35 @@ const {
   class: className,
   actionLabel,
   actionHref,
+  leadMeta,
+  showMeta = false,
+  overlayControls = false,
+  holdSelector,
 } = Astro.props;
 
-const rotates = slides.length > 1;
+const hasLead = Astro.slots.has('lead');
+const offset = hasLead ? 1 : 0;
+const total = slides.length + offset;
+const rotates = total > 1;
 const hasControls = rotates || Boolean(actionLabel && actionHref);
 ---
 
 <div
-  class:list={['ui-spotlight', { 'ui-spotlight--bleed': fullBleed }, className]}
+  class:list={['ui-spotlight', { 'ui-spotlight--bleed': fullBleed, 'ui-spotlight--overlay': overlayControls }, className]}
   data-spotlight
   role="region"
   aria-roledescription={rotates ? 'carousel' : undefined}
   aria-label={label}
   style={`--spotlight-hold: ${holdSeconds}s; --spotlight-h: ${height};`}
+  data-spotlight-hold={holdSelector}
 >
   <div class="ui-spotlight-frame">
-    {slides.map((slide, index) => (
+    {hasLead && (
+      <div class="ui-spotlight-slide ui-spotlight-slide--lead is-current" data-spotlight-slide data-index="0" data-meta={leadMeta}>
+        <slot name="lead" />
+      </div>
+    )}
+    {slides.map((slide, i) => { const index = i + offset; return (
       <a
         href={slide.href}
         target={slide.external ? '_blank' : undefined}
@@ -72,10 +104,22 @@ const hasControls = rotates || Boolean(actionLabel && actionHref);
         ]}
         data-spotlight-slide
         data-index={index}
+        data-meta={slide.meta}
         aria-hidden={index === 0 ? undefined : 'true'}
         inert={index === 0 ? undefined : true}
         tabindex={index === 0 ? undefined : -1}
       >
+        {slide.imageSrc && slide.backdrop && (
+          <img
+            class="ui-spotlight-backdrop"
+            src={slide.imageSrc}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
+            draggable="false"
+          />
+        )}
         {slide.imageSrc && (
           <img
             class:list={['ui-spotlight-bg', { 'ui-spotlight-bg--contain': slide.imageFit === 'contain' }]}
@@ -102,15 +146,15 @@ const hasControls = rotates || Boolean(actionLabel && actionHref);
             <span class="ui-spotlight-title display">{slide.title}</span>
             {slide.subtitle && <span class="ui-spotlight-subtitle">{slide.subtitle}</span>}
           </span>
-          <span class="ui-spotlight-cta font-mono">
-            <span class="ui-spotlight-cta-label">{slide.cta}</span>
+          <span class:list={['ui-spotlight-cta', 'font-mono', { 'ui-spotlight-cta--icon': !slide.cta }]}>
+            {slide.cta && <span class="ui-spotlight-cta-label">{slide.cta}</span>}
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
           </span>
         </span>
       </a>
-    ))}
+    ); })}
   </div>
 
   {hasControls && (
@@ -133,6 +177,10 @@ const hasControls = rotates || Boolean(actionLabel && actionHref);
             </svg>
           </button>
         </>
+      )}
+
+      {showMeta && rotates && (
+        <p class="ui-spotlight-meta" data-spotlight-meta aria-hidden="true">{hasLead ? leadMeta : slides[0]?.meta}</p>
       )}
 
       <div class="ui-spotlight-track-end">
@@ -235,6 +283,17 @@ const hasControls = rotates || Boolean(actionLabel && actionHref);
     object-position: right center;
     padding: clamp(0.6rem, 1.8vw, 1.5rem) clamp(1rem, 4vw, 4rem) clamp(0.6rem, 1.8vw, 1.5rem) 0;
     box-sizing: border-box;
+  }
+
+  .ui-spotlight-backdrop {
+    position: absolute;
+    inset: -24px;
+    width: calc(100% + 48px);
+    height: calc(100% + 48px);
+    object-fit: cover;
+    z-index: 0;
+    filter: blur(24px) brightness(0.55);
+    pointer-events: none;
   }
 
   .ui-spotlight-scrim {
@@ -364,6 +423,13 @@ const hasControls = rotates || Boolean(actionLabel && actionHref);
     transition: background-color 180ms ease-in-out, color 180ms ease-in-out, border-color 180ms ease-in-out;
   }
 
+  .ui-spotlight-cta--icon {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    padding: 0;
+  }
+
   .ui-spotlight-slide:is(:hover, :focus-visible) .ui-spotlight-cta {
     background: #f5f5f5;
     color: #080808;
@@ -437,6 +503,42 @@ const hasControls = rotates || Boolean(actionLabel && actionHref);
     border-right: 0;
     border-top: 5px solid transparent;
     border-bottom: 5px solid transparent;
+  }
+
+  .ui-spotlight-meta {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 52ch;
+    margin: 0 0.35rem;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1.35;
+    text-transform: uppercase;
+    color: var(--muted, #b2b2b2);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .ui-spotlight--overlay .ui-spotlight-controls {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(clamp(0.75rem, 2vh, 1.5rem) + env(safe-area-inset-bottom, 0px));
+    z-index: 3;
+    margin-top: 0;
+  }
+
+  .ui-spotlight--overlay .ui-spotlight-meta {
+    color: rgba(245, 245, 245, 0.85);
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.85);
+  }
+
+  .ui-spotlight--overlay .ui-spotlight-progress {
+    background: rgba(255, 255, 255, 0.24);
   }
 
   .ui-spotlight-track-end {
@@ -592,7 +694,9 @@ const hasControls = rotates || Boolean(actionLabel && actionHref);
       if (root.dataset.spotlightBound === 'true') return;
       root.dataset.spotlightBound = 'true';
 
-      const slides = Array.from(root.querySelectorAll<HTMLAnchorElement>('[data-spotlight-slide]'));
+      const slides = Array.from(root.querySelectorAll<HTMLElement>('[data-spotlight-slide]'));
+      const meta = root.querySelector<HTMLElement>('[data-spotlight-meta]');
+      const holdSelector = root.dataset.spotlightHold;
       const progress = root.querySelector<HTMLElement>('[data-spotlight-progress]');
       const prevBtn = root.querySelector<HTMLButtonElement>('[data-spotlight-prev]');
       const nextBtn = root.querySelector<HTMLButtonElement>('[data-spotlight-next]');
@@ -624,8 +728,9 @@ const hasControls = rotates || Boolean(actionLabel && actionHref);
           }
         });
         index = next;
+        if (meta) meta.textContent = slides[next].dataset.meta || '';
         if (announce && live) {
-          const title = slides[next].querySelector('.ui-spotlight-title')?.textContent?.trim() || '';
+          const title = slides[next].dataset.meta || slides[next].querySelector('.ui-spotlight-title')?.textContent?.trim() || '';
           live.textContent = `Slide ${next + 1} of ${slides.length}: ${title}`;
         }
       };
@@ -702,9 +807,28 @@ const hasControls = rotates || Boolean(actionLabel && actionHref);
         });
       }
 
-      on(root, 'mouseenter', () => root.classList.add('is-held'));
-      on(root, 'mouseleave', () => root.classList.remove('is-held'));
-      on(root, 'focusin', () => root.classList.add('is-held'));
+      if (holdSelector) {
+        // Hover holds only over the matching parts (a full-screen hero is
+        // always under the pointer, so holding on the whole root would
+        // never let it advance).
+        const inHold = (n: EventTarget | null) =>
+          n instanceof Element && Boolean(n.closest(holdSelector)) && root.contains(n);
+        on(root, 'mouseover', (e: MouseEvent) => {
+          if (inHold(e.target)) root.classList.add('is-held');
+        });
+        on(root, 'mouseout', (e: MouseEvent) => {
+          if (!inHold(e.relatedTarget)) root.classList.remove('is-held');
+        });
+      } else {
+        on(root, 'mouseenter', () => root.classList.add('is-held'));
+        on(root, 'mouseleave', () => root.classList.remove('is-held'));
+      }
+      on(root, 'focusin', (e: FocusEvent) => {
+        // With holdSelector, a mouse click on a control (focus without
+        // :focus-visible) does not hold, so Play really plays again.
+        if (holdSelector && e.target instanceof Element && !e.target.matches(':focus-visible')) return;
+        root.classList.add('is-held');
+      });
       on(root, 'focusout', (e: FocusEvent) => {
         if (!root.contains(e.relatedTarget as Node | null)) {
           root.classList.remove('is-held');

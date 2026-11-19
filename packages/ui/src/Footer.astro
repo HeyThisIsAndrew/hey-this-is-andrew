@@ -22,9 +22,12 @@ interface Props {
   utility?: FooterLink[];
   notes?: string[];
   labels?: { explore?: string; follow?: string; socials?: string; privacy?: string };
+  /** Stack the Explore links in one left-aligned column, one per line
+      (default: one centred, wrapping row). */
+  stackExplore?: boolean;
 }
 
-const { logo, homeHref, homeLabel = `${logo.alt}, home`, tagline, explore, socials, copyright, privacyHref, utility = [], notes = [], labels = {} } = Astro.props;
+const { logo, homeHref, homeLabel = `${logo.alt}, home`, tagline, explore, socials, copyright, privacyHref, utility = [], notes = [], labels = {}, stackExplore = false } = Astro.props;
 const L = { explore: 'Explore', follow: 'Follow', socials: 'Social links', privacy: 'Privacy', ...labels };
 ---
 <footer class="site-footer">
@@ -45,7 +48,7 @@ const L = { explore: 'Explore', follow: 'Follow', socials: 'Social links', priva
       )}
       <p class="footer-note">{tagline}</p>
     </div>
-    <nav class="footer-nav" aria-label={L.explore}>
+    <nav class:list={['footer-nav', { 'footer-nav--stack': stackExplore }]} aria-label={L.explore}>
       <p class="footer-label">{L.explore}</p>
       <ul>
         {explore.map((l) => (
@@ -203,6 +206,23 @@ const L = { explore: 'Explore', follow: 'Follow', socials: 'Social links', priva
   .footer-nav a:hover::after {
     transform: scaleX(1);
   }
+  /* Stacked: one link per line, left-aligned, the label over the column.
+     The column itself stays centred in its grid track. */
+  .footer-nav--stack {
+    justify-self: center;
+    width: fit-content;
+    align-items: flex-start;
+  }
+  .footer-nav--stack .footer-label {
+    text-align: left;
+  }
+  .footer-nav--stack ul {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 0.9rem;
+  }
   .footer-socials-col {
     display: flex;
     flex-direction: column;
@@ -296,6 +316,13 @@ const L = { explore: 'Explore', follow: 'Follow', socials: 'Social links', priva
       white-space: normal;
       text-align: center;
     }
+    .footer-nav--stack ul {
+      gap: 0;
+      width: auto;
+    }
+    .footer-nav--stack a {
+      text-align: left;
+    }
     .footer-bottom {
       grid-template-columns: 1fr;
       gap: 0.5rem;
@@ -310,6 +337,9 @@ const L = { explore: 'Explore', follow: 'Follow', socials: 'Social links', priva
       justify-content: center;
       min-height: 44px;
       min-width: 44px;
+    }
+    .footer-nav--stack a {
+      justify-content: flex-start;
     }
   }
   @media (prefers-reduced-motion: reduce) {

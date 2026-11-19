@@ -1,10 +1,14 @@
 ---
 /**
- * WorkWithAndrew: "What I do". Top three service cards, the compact photo
- * elevator inline (no side cards), two service cards beneath, and the UGC
- * and Press flip cards at the bottom.
+ * WorkWithAndrew: "What I do". Three brand pillar cards on top (Building in
+ * Public, Creator and Coffee Drinker, UGC) and the compact photo elevator
+ * inline beneath them. Nothing renders beneath the elevator: the services
+ * list lives on Work With Me, and the press kit stays at /about/#press.
+ *
+ * Every back text is existing site copy: the Build in Public page's lede,
+ * the About page's description with the site tagline, and the UGC service
+ * description from services.json. The UGC back carries its two actions.
  */
-import type { ImageMetadata } from 'astro';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
 import FlipCard from '@andrew/ui/FlipCard.astro';
 import PhotographyPortfolio from './PhotographyPortfolio.astro';
@@ -13,65 +17,40 @@ import {
   UGC_INQUIRY_HREF,
   COHLEY_PROFILE_URL,
 } from '../data/services';
-import { CCC_TURNAROUND } from '../data/ccc';
 
 import drinksPourImg from '../assets/ccc/s05-work-drinks-1-pour.jpg';
 import desertMarqueeImg from '../assets/ccc/s08-video-desert-2-marquee.jpg';
 import workDetailImg from '../assets/ccc/s07-work-detail.jpg';
-import davinciResolveImg from '../assets/brand-logos/davinci-resolve.png';
-import laComicConImg from '../assets/brands/hq/la-comic-con-2026.jpg';
 
-const rawBase = import.meta.env.BASE_URL;
-const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
+const ugcService = SERVICES.find((service) => service.title === 'UGC & brand partnerships');
 
-interface ServiceVisual {
-  src?: ImageMetadata;
-  alt?: string;
-  objectPosition?: string;
-  isLogo?: boolean;
-  slateLabel?: string;
-}
-
-const SERVICE_VISUALS: Record<string, ServiceVisual> = {
-  'Beverage & hospitality photography': {
-    src: drinksPourImg,
+/* The images are the ones these three card slots already carried. */
+const pillars = [
+  {
+    title: 'Building in Public',
+    // The Build in Public page (/build/) lede.
+    back: 'My goals, and where each of my three brands stands. I check things off here as they happen.',
+    image: drinksPourImg,
     alt: 'Bartender pouring a craft cocktail into a coupe glass',
-    objectPosition: 'center 40%',
+    position: 'center 40%',
   },
-  'Short-form video & Reels': {
-    src: desertMarqueeImg,
+  {
+    title: 'Creator and Coffee Drinker',
+    // The site tagline, then the About page's description.
+    back: 'Creator, Photographer, Coffee Drinker. Building in public and figuring it out as I go.',
+    image: desertMarqueeImg,
     alt: 'Neon marquee and evening crowd at Desert Escape',
-    objectPosition: '20% center',
+    position: '20% center',
   },
-  'UGC & brand partnerships': {
-    src: workDetailImg,
+  {
+    title: 'UGC',
+    back: ugcService?.desc ?? '',
+    image: workDetailImg,
     alt: 'Cut crystal bar glassware and spirits bottle in studio lighting',
-    objectPosition: 'center 72%',
+    position: 'center 72%',
+    ugc: true,
   },
-  'Video editing': {
-    src: davinciResolveImg,
-    alt: 'DaVinci Resolve studio editing and color grading software',
-    isLogo: true,
-  },
-  'Event photo & video coverage': {
-    src: laComicConImg,
-    alt: 'L.A. Comic Con event coverage by BE Unconventional HQ',
-    objectPosition: 'center center',
-  },
-};
-
-const serviceCards = SERVICES.map((service, index) => {
-  const visual = SERVICE_VISUALS[service.title] ?? {};
-  const desc = index === 0 ? `${service.desc} ${CCC_TURNAROUND}` : service.desc;
-  return {
-    ...service,
-    desc,
-    visual,
-  };
-});
-
-const topServiceCards = serviceCards.slice(0, 3);
-const bottomServiceCards = serviceCards.slice(3, 5);
+];
 ---
 <section id="services" aria-labelledby="services-heading" class="section-hairline work-section">
   <div class="container">
@@ -81,105 +60,65 @@ const bottomServiceCards = serviceCards.slice(3, 5);
     />
 
     <div class="work-row work-row--top">
-      {topServiceCards.map((s, i) => (
+      {pillars.map((p, i) => (
         <div class="work-card-wrap reveal" style={`--rd: ${i * 70}ms`}>
-          <FlipCard
-            value={s.title}
-            backText={s.desc}
-            image={s.visual.src}
-            imageAlt={s.visual.alt}
-            imagePosition={s.visual.objectPosition}
-            isLogo={s.visual.isLogo}
-            slateLabel={s.visual.slateLabel}
-            imageSide="front"
-            idPrefix="service-card"
-            index={i}
-            class="work-flip-card"
-          />
+          {p.ugc ? (
+            <FlipCard
+              value={p.title}
+              backText={p.back}
+              image={p.image}
+              imageAlt={p.alt}
+              imagePosition={p.position}
+              imageSide="front"
+              idPrefix="pillar-card"
+              index={i}
+              class="work-flip-card work-flip-card--action"
+            >
+              <div slot="back-action" class="flip-action-group">
+                <a
+                  class="btn btn-primary flip-action-btn font-mono"
+                  href={UGC_INQUIRY_HREF}
+                  tabindex="-1"
+                  aria-hidden="true"
+                  data-no-flip
+                >
+                  Send a product <span aria-hidden="true">&rarr;</span>
+                </a>
+                <a
+                  class="btn btn-secondary flip-action-btn font-mono"
+                  href={COHLEY_PROFILE_URL}
+                  target="_blank"
+                  rel="noopener"
+                  tabindex="-1"
+                  aria-hidden="true"
+                  data-no-flip
+                >
+                  Cohley profile
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                    <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </a>
+              </div>
+            </FlipCard>
+          ) : (
+            <FlipCard
+              value={p.title}
+              backText={p.back}
+              image={p.image}
+              imageAlt={p.alt}
+              imagePosition={p.position}
+              imageSide="front"
+              idPrefix="pillar-card"
+              index={i}
+              class="work-flip-card"
+            />
+          )}
         </div>
       ))}
     </div>
 
     <div class="work-elevator">
       <PhotographyPortfolio inline />
-    </div>
-
-    <div class="work-row work-row--pair">
-      {bottomServiceCards.map((s, i) => (
-        <div class="work-card-wrap reveal" style={`--rd: ${i * 70}ms`}>
-          <FlipCard
-            value={s.title}
-            backText={s.desc}
-            image={s.visual.src}
-            imageAlt={s.visual.alt}
-            imagePosition={s.visual.objectPosition}
-            isLogo={s.visual.isLogo}
-            slateLabel={s.visual.slateLabel}
-            imageSide="front"
-            idPrefix="service-card"
-            index={i + 3}
-            class="work-flip-card"
-          />
-        </div>
-      ))}
-    </div>
-
-    <div class="work-row work-row--actions">
-      <div class="work-card-wrap reveal" style="--rd: 0ms">
-        <FlipCard
-          value="UGC"
-          idPrefix="work-action"
-          index={0}
-          class="work-flip-card work-flip-card--action"
-        >
-          <div slot="back-action" class="flip-action-group">
-            <a
-              class="btn btn-primary flip-action-btn font-mono"
-              href={UGC_INQUIRY_HREF}
-              tabindex="-1"
-              aria-hidden="true"
-              data-no-flip
-            >
-              Send a product <span aria-hidden="true">&rarr;</span>
-            </a>
-            <a
-              class="btn btn-secondary flip-action-btn font-mono"
-              href={COHLEY_PROFILE_URL}
-              target="_blank"
-              rel="noopener"
-              tabindex="-1"
-              aria-hidden="true"
-              data-no-flip
-            >
-              Cohley profile
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </a>
-          </div>
-        </FlipCard>
-      </div>
-
-      <div class="work-card-wrap reveal" style="--rd: 70ms">
-        <FlipCard
-          value="Press"
-          idPrefix="work-action"
-          index={1}
-          class="work-flip-card work-flip-card--action"
-        >
-          <div slot="back-action" class="flip-action-group">
-            <a
-              class="btn btn-primary flip-action-btn font-mono"
-              href={`${base}/about/#press`}
-              tabindex="-1"
-              aria-hidden="true"
-              data-no-flip
-            >
-              Visit the press kit <span aria-hidden="true">&rarr;</span>
-            </a>
-          </div>
-        </FlipCard>
-      </div>
     </div>
   </div>
 </section>
@@ -205,18 +144,10 @@ const bottomServiceCards = serviceCards.slice(3, 5);
     .work-row--top {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
-    .work-row--pair,
-    .work-row--actions {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
   }
 
   .work-elevator {
-    margin-block: clamp(1rem, 1.8vw, 1.5rem);
-  }
-
-  .work-row--actions {
-    margin-top: 0.75rem;
+    margin-top: clamp(1rem, 1.8vw, 1.5rem);
   }
 
   .work-card-wrap {
@@ -229,10 +160,6 @@ const bottomServiceCards = serviceCards.slice(3, 5);
     min-height: 155px;
   }
 
-  .work-card-wrap :global(.work-flip-card--action.stat-card.flip-card) {
-    min-height: 135px;
-  }
-
   .work-card-wrap :global(.flip-card-front),
   .work-card-wrap :global(.flip-card-back) {
     padding: clamp(0.85rem, 1.35vw, 1.25rem) clamp(1rem, 1.6vw, 1.4rem);
@@ -241,9 +168,6 @@ const bottomServiceCards = serviceCards.slice(3, 5);
   @media (min-width: 760px) {
     .work-card-wrap :global(.stat-card.flip-card) {
       min-height: clamp(165px, 12.5vw, 220px);
-    }
-    .work-card-wrap :global(.work-flip-card--action.stat-card.flip-card) {
-      min-height: clamp(135px, 10vw, 175px);
     }
   }
 </style>

@@ -14,12 +14,39 @@
  * The only shading is a soft gradient behind the text block itself.
  * The wordmark is Andrew's own logo file (hey-thisisandrew.png, restored
  * from b9cc358), shown as-is: resized for the screen, never redrawn.
+ *
+ * Carousel (2026-11-19): the portrait frame above is the first slide, then
+ * up to five of the latest posts from getNetworkFeed (the /latest/ feed,
+ * newest first, the ones with an image), each linking where its /latest/
+ * row links. The transport is the shared SpotlightBar's: slow progress bar,
+ * play/pause, prev/next, the gear spotlight's pace, and a meta line naming
+ * the current slide. Hover holds it only over the copy, the post text and
+ * the controls (the frame fills the screen, so it is always under the
+ * pointer); focus inside holds it anywhere.
  */
 import { Image } from 'astro:assets';
 import portrait from '../../assets/hero-media/portrait.jpg';
 import { PERSONAL_BRAND } from '../../data/brand';
 import { WORK_WITH_ME_HREF } from '../../data/nav';
+import SpotlightBar, { type SpotlightSlide } from '@andrew/ui/SpotlightBar.astro';
+import { getNetworkFeed, NETWORK_BRANDS, NETWORK_KIND_LABELS } from '../../lib/network';
 const wordmark = PERSONAL_BRAND.logo;
+
+const MAX_POSTS = 5;
+const feed = await getNetworkFeed(30).catch(() => []);
+const posts: SpotlightSlide[] = feed
+  .filter((item) => Boolean(item.image))
+  .slice(0, MAX_POSTS)
+  .map((item) => ({
+    eyebrow: `${NETWORK_BRANDS[item.brand]} · ${NETWORK_KIND_LABELS[item.kind]}`,
+    title: item.title,
+    href: item.url,
+    external: item.external,
+    imageSrc: item.image ?? undefined,
+    imageAlt: item.title,
+    backdrop: true,
+    meta: `${item.title} · ${NETWORK_BRANDS[item.brand]}`,
+  }));
 
 interface Props {
   peek?: boolean;
@@ -31,39 +58,132 @@ const {
 } = Astro.props;
 ---
 <section id="overview" class:list={['hero-statement', { 'is-peek': peek }]} aria-labelledby="hero-statement-title">
-  <div class="hs-media" aria-hidden="true">
-    <Image src={portrait} alt="" widths={[960, 1440, 1920, 2560]} sizes="100vw" format="webp" loading="eager" fetchpriority="high" />
-  </div>
-  <div class="container hs-content">
-    <div class="hs-copy">
-      <h2 id="hero-statement-title" class="hs-wordmark" data-pn-top data-pn-label="Overview">
-        <Image src={wordmark} alt={PERSONAL_BRAND.name} widths={[420, 640, 820, 1049]} sizes="min(92vw, 820px)" format="png" loading="eager" />
-      </h2>
-      <p class="hs-line">{line}</p>
-      <div class="btn-group hs-cta">
-        <a class="btn btn-primary" href="#directory">Brands <span aria-hidden="true">↓</span></a>
-        <a class="btn btn-secondary" href={WORK_WITH_ME_HREF}>Work With Me</a>
+  <SpotlightBar
+    slides={posts}
+    label="Hey, This Is Andrew and the latest posts"
+    holdSeconds={7}
+    height="auto"
+    fullBleed
+    overlayControls
+    showMeta
+    leadMeta={line}
+    holdSelector=".hs-copy, .ui-spotlight-body, .ui-spotlight-cta, .ui-spotlight-controls"
+    class="hs-carousel"
+  >
+    <div slot="lead" class="hs-lead">
+      <div class="hs-media" aria-hidden="true">
+        <Image src={portrait} alt="" widths={[960, 1440, 1920, 2560]} sizes="100vw" format="webp" loading="eager" fetchpriority="high" />
+      </div>
+      <div class="container hs-content">
+        <div class="hs-copy">
+          <h2 id="hero-statement-title" class="hs-wordmark" data-pn-top data-pn-label="Overview">
+            <Image src={wordmark} alt={PERSONAL_BRAND.name} widths={[420, 640, 820, 1049]} sizes="min(92vw, 820px)" format="png" loading="eager" />
+          </h2>
+          <p class="hs-line">{line}</p>
+          <div class="btn-group hs-cta">
+            <a class="btn btn-primary" href="#directory">Brands <span aria-hidden="true">↓</span></a>
+            <a class="btn btn-secondary" href={WORK_WITH_ME_HREF}>Work With Me</a>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
+  </SpotlightBar>
 </section>
 
 <style>
   .hero-statement {
+    --hs-min: calc(100svh - var(--nav-h));
+    /* Room under the copy for the carousel controls laid over the frame. */
+    --hs-pad: max(clamp(3rem, 8vh, 6rem), 5.5rem);
     position: relative;
-    min-height: calc(100svh - var(--nav-h));
+    min-height: var(--hs-min);
     display: flex;
-    align-items: flex-end;
-    padding: 0 0 clamp(3rem, 8vh, 6rem);
+    flex-direction: column;
+    padding: 0;
     overflow: hidden;
     background: #000;
+  }
+  /* The carousel fills the frame; its slides stack in one grid cell, so
+     the frame is as tall as the hero (or its copy, on a short screen). */
+  .hero-statement :global(.hs-carousel) {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .hero-statement :global(.hs-carousel .ui-spotlight-frame) {
+    flex: 1 1 auto;
+    display: grid;
+    height: auto;
+    min-height: var(--hs-min);
+    border: 0;
+    background: #000;
+  }
+  .hero-statement :global(.hs-carousel .ui-spotlight-slide) {
+    position: relative;
+    inset: auto;
+    grid-area: 1 / 1;
+    min-width: 0;
+  }
+  .hero-statement :global(.hs-carousel .ui-spotlight-inner) {
+    width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw, 1536px));
+    padding-bottom: var(--hs-pad);
+    align-items: flex-end;
+  }
+  .hero-statement :global(.hs-carousel .ui-spotlight-title) {
+    font-size: clamp(1.6rem, 3.6vw, 3.25rem);
+    max-width: 24ch;
+  }
+  @media (max-width: 599px) {
+    .hero-statement {
+      --hs-pad: 6.25rem;
+    }
+    .hero-statement :global(.hs-carousel .ui-spotlight-title) {
+      font-size: clamp(1.15rem, 5.6vw, 1.5rem);
+      overflow-wrap: break-word;
+      hyphens: none;
+    }
+    /* The progress bar gets its own full-width row above the buttons and
+       the meta line, instead of being squeezed beside them. */
+    .hero-statement :global(.hs-carousel .ui-spotlight-controls) {
+      flex-wrap: wrap;
+      row-gap: 0.6rem;
+    }
+    .hero-statement :global(.hs-carousel .ui-spotlight-track-end) {
+      order: -1;
+      flex: 1 0 100%;
+    }
+    .hero-statement :global(.hs-carousel .ui-spotlight-meta) {
+      flex: 1 1 0;
+    }
+  }
+  /* Portrait screens: the post image sits whole over its blurred copy
+     rather than being cropped to a sliver of a 16:9 frame. */
+  @media (max-aspect-ratio: 1 / 1) {
+    .hero-statement :global(.hs-carousel .ui-spotlight-bg) {
+      object-fit: contain;
+      object-position: center 38%;
+    }
+  }
+  @media (min-aspect-ratio: 1 / 1) {
+    .hero-statement :global(.hs-carousel .ui-spotlight-backdrop) {
+      display: none;
+    }
+  }
+  .hs-lead {
+    position: relative;
+    width: 100%;
+    min-height: var(--hs-min);
+    display: flex;
+    align-items: flex-end;
+    padding: 0 0 var(--hs-pad);
+    box-sizing: border-box;
   }
   /* D: leave room under the frame for the brands heading and the top of
      the accordion. The frame never drops below what its content needs. */
   .hero-statement.is-peek {
     --peek: clamp(15rem, 34svh, 22rem);
-    min-height: max(22rem, calc(100svh - var(--nav-h) - var(--peek)));
-    padding-bottom: clamp(2rem, 5vh, 3.5rem);
+    --hs-min: max(22rem, calc(100svh - var(--nav-h) - var(--peek)));
+    --hs-pad: max(clamp(2rem, 5vh, 3.5rem), 5.5rem);
   }
   .hs-media {
     position: absolute;
@@ -133,7 +253,7 @@ const {
      so it does not stretch across or overlap Andrew's face on short screens. */
   @media (orientation: landscape) and (max-height: 520px), (max-width: 920px) and (orientation: landscape) and (max-height: 600px) {
     .hero-statement {
-      padding: 0 0 1rem;
+      --hs-pad: 4.25rem;
     }
     .hs-copy {
       max-width: 52%;

@@ -4,6 +4,10 @@ import SectionHeader from '@andrew/ui/SectionHeader.astro';
 import FlipCard from '@andrew/ui/FlipCard.astro';
 import { CLIENT_WORK, CLIENT_WORK_TIERS } from '../data/client-work';
 import { CONTACT } from '../data/contact';
+import { SERVICES, SERVICES_LEDE } from '../data/services';
+
+const rawBase = import.meta.env.BASE_URL;
+const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 
 const depositText = '50% before build, 50% before launch.';
 const shortIntakeNote = 'Fill out the form first.';
@@ -54,7 +58,29 @@ const cleanWordingChanges = CLIENT_WORK.wordingChanges
   <div class="container client-work">
     <h1 class="vh sr-only">Work With Me</h1>
 
-    <section class="client-work-tiers" id="website-builds" aria-label="Website build tiers" data-pn-top data-pn-label="Website builds">
+    {/* Every service, above the website build tiers: the five from
+        services.json, front and back copy as written there. */}
+    <section id="services" class="client-work-services" aria-labelledby="services-heading" data-pn-top data-pn-label="What I do">
+      <SectionHeader id="services-heading" title="What I do" lede={SERVICES_LEDE} />
+      <p class="client-work-press">
+        <a class="btn btn-secondary" href={`${base}/about/#press`}>Visit the press kit <span aria-hidden="true">&rarr;</span></a>
+      </p>
+      <ul class="client-work-service-list" role="list">
+        {SERVICES.map((service, index) => (
+          <li class="client-work-service-item">
+            <FlipCard
+              value={service.title}
+              desc={service.frontDesc}
+              backText={service.desc}
+              idPrefix="service-flip"
+              index={index}
+            />
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="client-work-tiers" id="website-builds" aria-label="Website build tiers" data-pn-label="Website builds">
       {CLIENT_WORK_TIERS.map((tier, index) => (
         <article class="client-work-card" aria-labelledby={`tier-${index + 1}`}>
           <div class="tier-heading">
@@ -136,6 +162,11 @@ const cleanWordingChanges = CLIENT_WORK.wordingChanges
 
 <style>
   .client-work { --cw-section-pad: clamp(3rem, 5vw, 4.75rem); padding-block: clamp(2rem, 3.5vw, 3.5rem) 0; }
+  .client-work-services { padding: 0 0 var(--cw-section-pad); margin-bottom: var(--cw-section-pad); border-bottom: 1px solid var(--line); }
+  .client-work-press { margin: 0 0 2rem; }
+  .client-work-service-list { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1.25rem; list-style: none; margin: 0; padding: 0; align-items: stretch; --flip-value-size: clamp(0.85rem, 1.02vw, 1.2rem); }
+  .client-work-service-item { display: flex; flex-direction: column; min-width: 0; }
+  .client-work-service-list :global(.stat-card.flip-card) { min-height: 200px; }
   .client-work-tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; padding: 0 0 var(--cw-section-pad); align-items: stretch; grid-auto-rows: 1fr; }
   .client-work-card { min-width: 0; padding: clamp(1.5rem, 2.4vw, 2.75rem); border: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; }
   .tier-index { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.18em; margin: 0 0 1rem; }
@@ -176,6 +207,7 @@ const cleanWordingChanges = CLIENT_WORK.wordingChanges
   @media (max-width: 1099px) {
     .client-work-tiers { grid-template-columns: 1fr; }
     .client-work-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .client-work-service-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (min-width: 600px) and (max-width: 1099px) {
     .tier-heading h2 { font-size: 1.7rem; }
@@ -183,6 +215,7 @@ const cleanWordingChanges = CLIENT_WORK.wordingChanges
   @media (max-width: 600px) {
     .client-work-terms { grid-template-columns: 1fr; gap: 1.25rem; }
     .client-work-steps { grid-template-columns: 1fr; gap: 1.25rem; }
+    .client-work-service-list { grid-template-columns: 1fr; }
     .client-work-actions { grid-template-columns: minmax(0, 1fr); grid-auto-flow: row; }
   }
 </style>

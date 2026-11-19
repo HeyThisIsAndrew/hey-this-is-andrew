@@ -39,25 +39,19 @@ export interface Props {
   embedded?: boolean;
   compact?: boolean;
   inline?: boolean;
-  /** Where the credit line's name links. The homepage passes "#about"
-      (its own section); elsewhere it is the About page. */
-  aboutHref?: string;
   kicker?: string;
   title?: string;
   lede?: string;
-  showBrandCredit?: boolean;
 }
 
 const {
   photos: displayPhotos,
-  aboutHref,
   embedded = false,
   compact = false,
   inline = false,
   kicker = 'Photography',
   title = 'Shot on the job.',
   lede = 'Bar and beverage photography. The work behind Capture Create Caffeinate. Available for select photography work.',
-  showBrandCredit = true,
 } = Astro.props;
 const Wrapper = embedded || inline ? 'div' : 'section';
 
@@ -76,11 +70,6 @@ displayPhotos.forEach((_, i) => {
 
 const directions = ['up', 'down', 'up', 'down'];
 const durations = [58, 74, 66, 82];
-// The note links to the About page (this section also renders on /work,
-// where there is no #about).
-const siteBase = import.meta.env.BASE_URL.replace(/\/$/, '');
-const aboutUrl = aboutHref ?? `${siteBase}/about/`;
-const cccUrl = `${siteBase}/ccc/`;
 // Each reel renders its photos twice: the CSS/WAAPI loop translates the
 // track by -50%, which is seamless only over two identical sets. The copy
 // is aria-hidden and out of the tab order.
@@ -248,14 +237,6 @@ const SETS = [0, 1];
     <div class="photo-player-media" data-photo-player-media></div>
   </div>
 
-  <p class="photo-note">
-    {showBrandCredit && (
-      <>
-        Shot for <a href={cccUrl}>Capture Create Caffeinate</a>.<br />
-      </>
-    )}
-    Photographs by <a href={aboutUrl}>Andrew Baxter</a>.
-  </p>
 </Wrapper>
 
 <style>
@@ -281,10 +262,6 @@ const SETS = [0, 1];
   .photo-section--inline .photo-grid-container {
     width: 100%;
     margin: 0;
-  }
-  .photo-section--inline .photo-note {
-    width: 100%;
-    margin: 0.75rem auto 0;
   }
   .photo-section.is-fullscreen {
     overflow: visible;
@@ -520,49 +497,9 @@ const SETS = [0, 1];
     text-align: center;
   }
 
-  .photo-note {
-    position: relative;
-    z-index: 10;
-    width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw));
-    /* A caption: close under the wall (whose last ~30px already fade
-       out), not floating in the gap below it. */
-    margin: 1.25rem auto 0;
-    font-size: 0.85rem;
-    color: var(--color-white-muted, #888);
-    text-align: center;
-    opacity: 1;
-    transform: translateY(0);
-    transition:
-      opacity 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0.22s,
-      transform 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0.22s;
-  }
-  .photo-section.is-zoomed .photo-note {
-    opacity: 0;
-    transform: translateY(6px);
-    pointer-events: none;
-    transition: opacity 0.2s ease, transform 0.2s ease;
-  }
-  .photo-note a {
-    color: var(--color-accent-text, #f0f0f0);
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
 
   /* Mobile: two columns, shorter reels, the concept adapts, not hidden. */
   @media (max-width: 767px) {
-    .photo-note {
-      /* The links' 44px rows already leave ~14px above the first line. */
-      margin-top: 0;
-    }
-    /* Each line holds one link, and on a phone each link gets a full 44px
-       tap height. The lines are a tap apart so the two never overlap (a
-       negative-margin squeeze put one link's tap area over the other's). */
-    .photo-note a {
-      display: inline-flex;
-      align-items: center;
-      min-height: 44px;
-      vertical-align: middle;
-    }
     .photo-wall {
       grid-template-columns: repeat(2, 1fr);
       height: 74vh;
@@ -657,7 +594,11 @@ const SETS = [0, 1];
     left: 50%;
     bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
     z-index: 60;
-    width: min(100% - 2rem, max-content);
+    /* max-content, not a % of the shrink-to-fit box: anchored at the
+       tile's centre, that box is only half the viewport and wrapped the
+       two buttons onto two rows on a phone. */
+    width: max-content;
+    max-width: calc(100vw - 2rem);
     display: inline-flex;
     flex-wrap: wrap;
     align-items: center;
@@ -1070,8 +1011,7 @@ const SETS = [0, 1];
     .photo-actions,
     .photo-watch,
     .photo-play-badge,
-    .photo-intro,
-    .photo-note {
+    .photo-intro {
       transition-duration: 0.01ms !important;
       transition-delay: 0ms !important;
     }
@@ -1559,6 +1499,26 @@ const SETS = [0, 1];
       stageWrap.style.clipPath = `inset(${topInset}px ${rightInset}px ${bottomInset}px ${leftInset}px)`;
     }
 
+    /* The Play / Watch on Instagram dock belongs to the zoomed tile: it
+       sits centred directly under the tile's landing spot (focusOn leaves
+       room for it below), never pinned to the viewport's bottom edge. */
+    let dockAnchor: { cx: number; bottom: number } | null = null;
+    function placeActions() {
+      const dock = document.querySelector<HTMLElement>('[data-photo-actions]');
+      if (!dock || !dockAnchor) return;
+      const vw = document.documentElement.clientWidth;
+      const vh = window.innerHeight;
+      const gap = 12;
+      const dockW = dock.offsetWidth || 0;
+      const dockH = dock.offsetHeight || 48;
+      const half = Math.min(dockW / 2, vw / 2 - 8);
+      const cx = Math.min(Math.max(dockAnchor.cx, half + 8), vw - half - 8);
+      const topPx = Math.min(dockAnchor.bottom + gap, vh - dockH - gap);
+      dock.style.left = `${Math.round(cx)}px`;
+      dock.style.top = `${Math.round(topPx)}px`;
+      dock.style.bottom = 'auto';
+    }
+
     /* Just far enough in to show the WHOLE photo: it may take at most 72%
        of the width and 82% of the height under the header (with room for the
        Instagram CTA when present), so the neighbouring reels and the photos
@@ -1604,6 +1564,12 @@ const SETS = [0, 1];
       }
       X = nextX;
       Y = top + availH / 2 - originY - s * (uy + uh / 2);
+      // Where the tile lands once the camera settles: the dock sits there.
+      dockAnchor = {
+        cx: originX + X + s * (ux + uw / 2),
+        bottom: originY + Y + s * (uy + uh),
+      };
+      placeActions();
       apply(ms);
       if (!isFullscreen) {
         updateStageClip(true, ms);
@@ -1762,6 +1728,7 @@ const SETS = [0, 1];
         if (playBtn) playBtn.hidden = !target?.dataset.videoSrc;
         actions.hidden = false;
         void actions.offsetHeight;
+        placeActions();
         requestAnimationFrame(() => {
           actions.classList.add('is-visible');
         });
@@ -2369,19 +2336,24 @@ const SETS = [0, 1];
       }
     });
 
+    /* Decide from the entry the browser landed on, never from isZoomed:
+       resetZoom() clears isZoomed before its own history.back() pops, so
+       a flag check read "not zoomed, fullscreen" and closed the whole
+       elevator. While the landed entry still carries photoFullscreen, the
+       fullscreen view stays open and only the zoom closes. */
     const closeFromHistory = () => {
       if (!isZoomed && !isFullscreen && !expectPop) return;
       const wasExpected = expectPop;
       expectPop = false;
-      const stayingFullscreen = isZoomed && isFullscreen;
-      if (!stayingFullscreen && document.documentElement.dataset.historyView === 'photo') {
+      const keepFullscreen = isFullscreen && !isFsClosing && Boolean(history.state?.photoFullscreen);
+      if (!keepFullscreen && document.documentElement.dataset.historyView === 'photo') {
         delete document.documentElement.dataset.historyView;
       }
       document.documentElement.dataset.viewPop = '1';
       window.setTimeout(() => delete document.documentElement.dataset.viewPop, 80);
       if (isZoomed) resetZoom(true);
-      else if (isFullscreen) closeFullscreen(true);
-      else if (wasExpected && Math.abs(window.scrollY - savedScrollY) > 2) instantScrollTo(savedScrollY);
+      if (isFullscreen && !keepFullscreen) closeFullscreen(true);
+      else if (!isFullscreen && wasExpected && Math.abs(window.scrollY - savedScrollY) > 2) instantScrollTo(savedScrollY);
     };
     on(window, 'andrew:view-pop', (event) => {
       if (event.detail.owner === 'photo') closeFromHistory();
