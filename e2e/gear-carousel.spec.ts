@@ -59,7 +59,7 @@ test('/gear/ section and item links land on their section', async ({ page }) => 
   await expect(page.locator('#gear-item-aputure-amaran-200d')).toBeInViewport();
 });
 
-test('unified BannerRotator (kit + referrals) on /about/ and /gear/ plus View all referrals modal', async ({ page }) => {
+test('unified BannerRotator (kit + referrals) on /about/ and /gear/ plus All referrals modal', async ({ page }) => {
   const expectedTitles = ['Full kit', 'DaVinci Resolve', 'Mint Mobile', 'inKind', 'Fetch', 'Instacart', 'Rakuten'];
 
   for (const route of ['./about/', './gear/']) {
@@ -73,7 +73,7 @@ test('unified BannerRotator (kit + referrals) on /about/ and /gear/ plus View al
     const dialog = rotator.locator('[data-referrals-dialog]');
     await expect(dialog).not.toHaveAttribute('open', '');
 
-    await rotator.getByRole('button', { name: /View all referrals/i }).click();
+    await rotator.getByRole('button', { name: /All referrals/i }).click();
     await expect(dialog).toHaveAttribute('open', '');
     await expect(dialog.locator('.referrals-dialog-disclosure')).toContainText('Amazon Associate');
     await expect(dialog.locator('.referrals-card-title')).toHaveText(expectedTitles);
@@ -83,19 +83,22 @@ test('unified BannerRotator (kit + referrals) on /about/ and /gear/ plus View al
     await expect(dialog).not.toHaveAttribute('open', '');
 
     // Reopen and close with the bare X button
-    await rotator.getByRole('button', { name: /View all referrals/i }).click();
+    await rotator.getByRole('button', { name: /All referrals/i }).click();
     await expect(dialog).toHaveAttribute('open', '');
     await dialog.getByRole('button', { name: 'Close referrals' }).click();
     await expect(dialog).not.toHaveAttribute('open', '');
 
     // Reopen and light-dismiss by clicking outside the dialog box
-    await rotator.getByRole('button', { name: /View all referrals/i }).click();
+    await rotator.getByRole('button', { name: /All referrals/i }).click();
     await expect(dialog).toHaveAttribute('open', '');
     await page.mouse.click(5, 5);
     await expect(dialog).not.toHaveAttribute('open', '');
   }
 
+  // The Cohley link lives on the UGC card's back face: flip it first.
   await page.goto('./');
+  await page.locator('#services .work-flip-card--action .flip-card-toggle').click({ force: true });
+  await expect(page.locator('#services .work-flip-card--action')).toHaveClass(/is-flipped/);
   await expect(page.locator('#services').getByRole('link', { name: 'Cohley profile' }))
     .toHaveAttribute('href', 'https://connect.cohley.com/public/profile/andrew-baxter/');
 });
@@ -113,6 +116,9 @@ test('mobile 390x844 edge-to-edge carousels, framed flip-card rotator, and scrol
     const ctaLabel = document.querySelector('#gear .ui-spotlight-slide.is-current .ui-spotlight-cta-label');
     return {
       overflow: doc.scrollWidth > doc.clientWidth,
+      // Edge to edge is the page body's own right edge: a desktop browser
+      // at 390 reserves a 15px scrollbar gutter a phone does not have.
+      edge: Math.round(document.body.getBoundingClientRect().right),
       left: frame ? Math.round(frame.left) : -1,
       right: frame ? Math.round(frame.right) : -1,
       height: frame ? Math.round(frame.height) : -1,
@@ -123,7 +129,7 @@ test('mobile 390x844 edge-to-edge carousels, framed flip-card rotator, and scrol
   });
   expect(homeMetrics.overflow).toBe(false);
   expect(homeMetrics.left).toBe(0);
-  expect(homeMetrics.right).toBe(390);
+  expect(homeMetrics.right).toBe(homeMetrics.edge);
   expect(homeMetrics.height).toBeLessThan(260);
   expect(homeMetrics.ctaLabelDisplay).toBe('none');
   expect(homeMetrics.ctaW).toBeGreaterThanOrEqual(44);
@@ -139,6 +145,7 @@ test('mobile 390x844 edge-to-edge carousels, framed flip-card rotator, and scrol
     };
     return {
       overflow: doc.scrollWidth > doc.clientWidth,
+      edge: Math.round(document.body.getBoundingClientRect().right),
       panels: box('#gear-panels'),
       panel: box('.gear-panel'),
       rotator: box('[data-banner-rotator] .ui-rotator-grid'),
@@ -147,9 +154,10 @@ test('mobile 390x844 edge-to-edge carousels, framed flip-card rotator, and scrol
   expect(gearMetrics.overflow).toBe(false);
   for (const key of ['panels', 'panel'] as const) {
     expect(gearMetrics[key]?.left).toBe(0);
-    expect(gearMetrics[key]?.right).toBe(390);
+    expect(gearMetrics[key]?.right).toBe(gearMetrics.edge);
   }
-  expect(gearMetrics.rotator?.width).toBeGreaterThanOrEqual(370);
+  // Framed: within 20px of the page width (370 of a phone's 390).
+  expect(gearMetrics.rotator?.width).toBeGreaterThanOrEqual(gearMetrics.edge - 20);
   expect(gearMetrics.rotator?.height).toBeLessThanOrEqual(120);
 
   // /about/ framed flip-card rotator + scrollable modal on mobile
@@ -159,15 +167,16 @@ test('mobile 390x844 edge-to-edge carousels, framed flip-card rotator, and scrol
     const r = document.querySelector('[data-banner-rotator] .ui-rotator-grid')?.getBoundingClientRect();
     return {
       overflow: doc.scrollWidth > doc.clientWidth,
+      edge: Math.round(document.body.getBoundingClientRect().right),
       width: r ? Math.round(r.width) : 0,
       height: r ? Math.round(r.height) : 0,
     };
   });
   expect(aboutMetrics.overflow).toBe(false);
-  expect(aboutMetrics.width).toBeGreaterThanOrEqual(370);
+  expect(aboutMetrics.width).toBeGreaterThanOrEqual(aboutMetrics.edge - 20);
   expect(aboutMetrics.height).toBeLessThanOrEqual(120);
 
-  await page.getByRole('button', { name: /View all referrals/i }).click();
+  await page.getByRole('button', { name: /All referrals/i }).click();
   const modalMetrics = await page.evaluate(() => {
     const dialog = document.querySelector<HTMLDialogElement>('[data-referrals-dialog]');
     const body = dialog?.querySelector<HTMLElement>('.referrals-dialog-body');

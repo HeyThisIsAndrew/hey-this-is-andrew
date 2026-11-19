@@ -29,7 +29,9 @@ for (const width of [390, 1440]) {
     const requests: string[] = [];
     page.on('request', request => requests.push(request.url()));
     await page.goto(`${base}links/`);
-    await expect(page.locator('h1')).toHaveCount(0);
+    // One screen-reader h1 (2026-11-19); nothing visible repeats the logo.
+    await expect(page.locator('h1')).toHaveCount(1);
+    await expect(page.locator('h1')).toHaveClass(/\bvh\b/);
     await expect(page.locator('#scroll-progress')).toHaveCount(0);
     await expect(page.locator('.links-profile img[alt="HEY_THISISANDREW"]')).toHaveAttribute('src', /hey-thisisandrew\..*\.png/);
     await expect(page.locator('img[alt="HEY_THISISANDREW"]')).toHaveCount(1);
