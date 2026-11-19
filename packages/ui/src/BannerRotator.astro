@@ -1,0 +1,575 @@
+---
+/**
+ * BannerRotator (@andrew/ui): 3D flip-card commercial/partner rotator lifted
+ * from BE Unconventional HQ's CommercialRotator.astro.
+ *
+ * Uses one clock, never two: an SVG perimeter outline (`pathLength="100"`)
+ * traces around the card and emits `animationend` when a lap finishes. Prev,
+ * Play/Pause, and Next controls sit cleanly in the metadata row below.
+ */
+export interface RotatorSlide {
+  title: string;
+  compactTitle?: string;
+  subtitle?: string;
+  meta: string;
+  cta?: string;
+  href: string;
+  external?: boolean;
+  rel?: string;
+  imageSrc?: string;
+  imageAlt?: string;
+  imageWidth?: number;
+  imageHeight?: number;
+  badge?: string;
+}
+
+export interface Props {
+  slides: RotatorSlide[];
+  label?: string;
+  holdSeconds?: number;
+  class?: string;
+}
+
+const {
+  slides,
+  label = 'Featured partners and tools',
+  holdSeconds = 8,
+  class: className,
+} = Astro.props;
+
+const rotates = slides.length > 1;
+const initialMeta = slides[0]?.meta ?? '';
+---
+
+<div
+  class:list={['ui-rotator-wrapper', className]}
+  data-banner-rotator
+  style={`--rotator-hold: ${holdSeconds}s;`}
+  role="region"
+  aria-roledescription={rotates ? 'carousel' : undefined}
+  aria-label={label}
+>
+  <div class="ui-rotator-grid" data-rotator-grid>
+    {slides.map((slide, index) => (
+      <a
+        href={slide.href}
+        target={slide.external === false ? undefined : '_blank'}
+        rel={slide.rel ?? (slide.external === false ? undefined : 'noopener noreferrer')}
+        class:list={['ui-rotator-slide']}
+        data-rotator-slide
+        data-state={index === 0 ? 'active' : 'hidden-prev'}
+        data-meta={slide.meta}
+        aria-hidden={index === 0 ? undefined : 'true'}
+        inert={index === 0 ? undefined : true}
+        tabindex={index === 0 ? undefined : -1}
+      >
+        <span class="ui-rotator-visual" aria-hidden="true">
+          {slide.imageSrc ? (
+            <img
+              class="ui-rotator-img"
+              src={slide.imageSrc}
+              alt={slide.imageAlt ?? ''}
+              width={slide.imageWidth}
+              height={slide.imageHeight}
+              loading="lazy"
+              decoding="async"
+              draggable="false"
+            />
+          ) : (
+            <span class="ui-rotator-badge font-mono">{slide.badge ?? 'KIT'}</span>
+          )}
+        </span>
+
+        <span class:list={['ui-rotator-text', { 'has-compact': Boolean(slide.compactTitle) }]}>
+          <span class="ui-rotator-title display">
+            <span class="ui-rotator-title-full">{slide.title}</span>
+            {slide.compactTitle && <span class="ui-rotator-title-compact">{slide.compactTitle}</span>}
+          </span>
+          {slide.subtitle && <span class="ui-rotator-sub">{slide.subtitle}</span>}
+        </span>
+
+        <span class="ui-rotator-go font-mono">
+          {slide.cta && <span class="ui-rotator-cta-label">{slide.cta}</span>}
+          <svg viewBox="0 0 14 14" width="14" height="14" fill="none" aria-hidden="true" focusable="false">
+            <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
+          </svg>
+        </span>
+      </a>
+    ))}
+
+    {rotates && (
+      <svg class="ui-rotator-perimeter" aria-hidden="true" focusable="false">
+        <rect
+          class="ui-rotator-perimeter-rect"
+          data-rotator-progress
+          x="0"
+          y="0"
+          width="100%"
+          height="100%"
+          fill="none"
+          pathLength="100"
+        />
+      </svg>
+    )}
+  </div>
+
+  <div class="ui-rotator-meta-row">
+    <span class="ui-rotator-meta-text font-mono" data-rotator-meta>{initialMeta}</span>
+
+    {rotates && (
+      <div class="ui-rotator-controls">
+        <button type="button" class="ui-rotator-btn" data-rotator-prev hidden aria-label="Previous link">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" aria-hidden="true" focusable="false">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+
+        <button type="button" class="ui-rotator-btn ui-rotator-pause" data-rotator-pause hidden aria-label="Pause rotating links">
+          <span class="ui-rotator-pause-glyph" aria-hidden="true"></span>
+        </button>
+
+        <button type="button" class="ui-rotator-btn" data-rotator-next hidden aria-label="Next link">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" aria-hidden="true" focusable="false">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </button>
+      </div>
+    )}
+
+    <span class="vh" role="status" aria-live="polite" data-rotator-live></span>
+  </div>
+</div>
+
+<style>
+  .ui-rotator-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ui-rotator-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+    width: 100%;
+    perspective: 1200px;
+    transform-style: preserve-3d;
+  }
+
+  .ui-rotator-slide {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+    display: grid;
+    grid-template-columns: clamp(56px, 6vw, 88px) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: clamp(1rem, 2.2vw, 2rem);
+    width: 100%;
+    min-height: clamp(110px, 10vw, 150px);
+    padding: clamp(1.25rem, 2.6vw, 2.25rem) clamp(1.25rem, 3vw, 2.5rem);
+    background: #080808;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 0;
+    color: var(--ink, #f0f0f0);
+    text-decoration: none;
+    backface-visibility: hidden;
+    transform-origin: center center;
+    will-change: transform, opacity;
+    transition: transform 0.78s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.78s ease, border-color 0.25s ease, background-color 0.25s ease;
+    box-sizing: border-box;
+  }
+
+  .ui-rotator-slide[data-state='active'] {
+    transform: rotateX(0deg);
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 2;
+  }
+
+  .ui-rotator-slide[data-state='hidden-next'] {
+    transform: rotateX(-90deg);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .ui-rotator-slide[data-state='hidden-prev'] {
+    transform: rotateX(90deg);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .ui-rotator-slide:hover {
+    background: #0e0e0e;
+    border-color: rgba(255, 255, 255, 0.36);
+  }
+
+  .ui-rotator-slide:focus-visible {
+    outline: 2px solid var(--focus-ring, #f0f0f0);
+    outline-offset: -3px;
+  }
+
+  .ui-rotator-visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: clamp(56px, 6vw, 88px);
+    height: clamp(56px, 6vw, 88px);
+    background: #101010;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .ui-rotator-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 0.35rem;
+    border-radius: 0;
+    box-sizing: border-box;
+  }
+
+  .ui-rotator-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink, #f0f0f0);
+  }
+
+  .ui-rotator-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+  }
+
+  .ui-rotator-title {
+    font-size: clamp(1.1rem, 1.8vw, 1.65rem);
+    letter-spacing: 0.06em;
+    color: #ffffff;
+    line-height: 1.1;
+  }
+
+  .ui-rotator-title-compact {
+    display: none;
+  }
+
+  .ui-rotator-sub {
+    font-size: clamp(0.85rem, 0.95vw, 0.98rem);
+    color: var(--muted, #9a9a9a);
+    line-height: 1.4;
+  }
+
+  .ui-rotator-go {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink, #f0f0f0);
+    white-space: nowrap;
+  }
+
+  .ui-rotator-go svg {
+    transition: transform 0.25s ease;
+  }
+
+  .ui-rotator-slide:hover .ui-rotator-go svg {
+    transform: translate(2px, -2px);
+  }
+
+  .ui-rotator-perimeter {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5;
+    overflow: visible;
+  }
+
+  .ui-rotator-perimeter-rect {
+    stroke: var(--rotator-accent, #f0f0f0);
+    stroke-width: 2px;
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+
+  .ui-rotator-perimeter-rect.is-counting {
+    animation: ui-rotator-lap var(--rotator-hold, 8s) linear forwards;
+  }
+
+  .ui-rotator-grid:hover .ui-rotator-perimeter-rect,
+  .ui-rotator-grid:focus-within .ui-rotator-perimeter-rect,
+  .ui-rotator-wrapper.is-paused .ui-rotator-perimeter-rect,
+  .ui-rotator-wrapper.is-offscreen .ui-rotator-perimeter-rect {
+    animation-play-state: paused;
+  }
+
+  @keyframes ui-rotator-lap {
+    0% {
+      stroke-dashoffset: 100;
+      opacity: 0;
+    }
+    5% {
+      opacity: 0.85;
+    }
+    90% {
+      opacity: 0.85;
+    }
+    100% {
+      stroke-dashoffset: 0;
+      opacity: 0;
+    }
+  }
+
+  .ui-rotator-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.75rem;
+    min-height: 32px;
+  }
+
+  .ui-rotator-meta-text {
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted, #9a9a9a);
+  }
+
+  .ui-rotator-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .ui-rotator-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    background: #080808;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 0;
+    color: #f5f5f5;
+    cursor: pointer;
+    transition: background-color 180ms ease-in-out, color 180ms ease-in-out, border-color 180ms ease-in-out;
+  }
+
+  .ui-rotator-btn[hidden] {
+    display: none;
+  }
+
+  .ui-rotator-btn:is(:hover, :focus-visible) {
+    background: #f5f5f5;
+    color: #080808;
+    border-color: #f5f5f5;
+  }
+
+  .ui-rotator-pause-glyph {
+    display: block;
+    width: 7px;
+    height: 9px;
+    border-left: 2px solid currentColor;
+    border-right: 2px solid currentColor;
+  }
+
+  .ui-rotator-pause[data-paused='true'] .ui-rotator-pause-glyph {
+    width: 0;
+    height: 0;
+    border-left: 7px solid currentColor;
+    border-right: 0;
+    border-top: 4.5px solid transparent;
+    border-bottom: 4.5px solid transparent;
+  }
+
+  @media (max-width: 1023px), (pointer: coarse) {
+    .ui-rotator-meta-row {
+      min-height: 44px;
+    }
+
+    .ui-rotator-btn {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      min-height: 44px;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .ui-rotator-slide {
+      grid-template-columns: clamp(44px, 13vw, 56px) minmax(0, 1fr) auto;
+      gap: 0.75rem;
+      padding: 1rem;
+      min-height: 92px;
+    }
+
+    .ui-rotator-visual {
+      width: clamp(44px, 13vw, 56px);
+      height: clamp(44px, 13vw, 56px);
+    }
+
+    .ui-rotator-cta-label {
+      display: none;
+    }
+
+    .ui-rotator-sub {
+      display: none;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .ui-rotator-text.has-compact .ui-rotator-title-full {
+      display: none;
+    }
+
+    .ui-rotator-text.has-compact .ui-rotator-title-compact {
+      display: inline;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ui-rotator-grid {
+      perspective: none;
+    }
+
+    .ui-rotator-slide {
+      transition: opacity 0.35s ease;
+    }
+
+    .ui-rotator-slide[data-state='active'],
+    .ui-rotator-slide[data-state='hidden-next'],
+    .ui-rotator-slide[data-state='hidden-prev'] {
+      transform: none;
+    }
+
+    .ui-rotator-perimeter-rect.is-counting {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  import { createPageScope } from './scripts/page-scope';
+
+  function initBannerRotators() {
+    document.querySelectorAll<HTMLElement>('[data-banner-rotator]').forEach((wrapper) => {
+      if (wrapper.dataset.rotatorBound === 'true') return;
+      wrapper.dataset.rotatorBound = 'true';
+
+      const slides = Array.from(wrapper.querySelectorAll<HTMLAnchorElement>('[data-rotator-slide]'));
+      const progress = wrapper.querySelector<SVGGeometryElement>('[data-rotator-progress]');
+      const metaLabel = wrapper.querySelector<HTMLElement>('[data-rotator-meta]');
+      const prevBtn = wrapper.querySelector<HTMLButtonElement>('[data-rotator-prev]');
+      const nextBtn = wrapper.querySelector<HTMLButtonElement>('[data-rotator-next]');
+      const pauseBtn = wrapper.querySelector<HTMLButtonElement>('[data-rotator-pause]');
+      const live = wrapper.querySelector<HTMLElement>('[data-rotator-live]');
+
+      if (slides.length <= 1) return;
+
+      const { on, cleanup } = createPageScope(wrapper);
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let index = 0;
+
+      const setSlideState = (slide: HTMLAnchorElement, active: boolean) => {
+        slide.inert = !active;
+        if (active) {
+          slide.removeAttribute('aria-hidden');
+          slide.removeAttribute('tabindex');
+        } else {
+          slide.setAttribute('aria-hidden', 'true');
+          slide.setAttribute('tabindex', '-1');
+        }
+      };
+
+      const startLap = () => {
+        if (reduced || !progress) return;
+        if (progress.classList.contains('is-counting')) {
+          progress.classList.remove('is-counting');
+          void progress.getBoundingClientRect();
+        }
+        progress.classList.add('is-counting');
+      };
+
+      const go = (delta: number, announce = false) => {
+        const nextIndex = (index + delta + slides.length) % slides.length;
+        if (nextIndex === index) return;
+
+        const current = slides[index];
+        const next = slides[nextIndex];
+        const enterFrom = delta > 0 ? 'hidden-prev' : 'hidden-next';
+        const exitTo = delta > 0 ? 'hidden-next' : 'hidden-prev';
+
+        next.style.transition = 'none';
+        next.dataset.state = enterFrom;
+        void next.offsetWidth;
+        next.style.transition = '';
+
+        current.dataset.state = exitTo;
+        next.dataset.state = 'active';
+        setSlideState(current, false);
+        setSlideState(next, true);
+
+        index = nextIndex;
+        if (metaLabel && next.dataset.meta) {
+          metaLabel.textContent = next.dataset.meta;
+        }
+        if (announce && live) {
+          const title = next.querySelector('.ui-rotator-title-full')?.textContent?.trim() || '';
+          live.textContent = `Item ${nextIndex + 1} of ${slides.length}: ${title}`;
+        }
+        startLap();
+      };
+
+      if (prevBtn && nextBtn) {
+        prevBtn.hidden = false;
+        nextBtn.hidden = false;
+        on(prevBtn, 'click', () => go(-1, true));
+        on(nextBtn, 'click', () => go(1, true));
+      }
+
+      if (reduced || !progress) return;
+
+      on(progress, 'animationend', () => go(1, false));
+
+      if (pauseBtn) {
+        pauseBtn.hidden = false;
+        on(pauseBtn, 'click', () => {
+          const paused = !wrapper.classList.contains('is-paused');
+          wrapper.classList.toggle('is-paused', paused);
+          pauseBtn.dataset.paused = String(paused);
+          pauseBtn.setAttribute('aria-label', paused ? 'Resume rotating links' : 'Pause rotating links');
+        });
+      }
+
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((en) => wrapper.classList.toggle('is-offscreen', !en.isIntersecting));
+          },
+          { threshold: 0 },
+        );
+        io.observe(wrapper);
+        cleanup(() => io.disconnect());
+      }
+
+      startLap();
+    });
+  }
+
+  initBannerRotators();
+  document.addEventListener('astro:page-load', initBannerRotators);
+</script>

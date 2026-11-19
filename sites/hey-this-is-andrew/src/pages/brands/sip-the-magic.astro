@@ -4,12 +4,13 @@
  *
  * Excluded from HTML/XML sitemaps and navigation until launch, with
  * <meta name="robots" content="noindex, nofollow" /> via BaseLayout.
- * Uses Andrew's four real Disney photos from src/assets/sip-the-magic/
- * when present, or clearly marks pending slots without substituting art.
+ * Uses the shared PhotoElevator full-scale directly under the hero and
+ * includes only real photos from src/assets/sip-the-magic/ that exist.
  */
 import type { ImageMetadata } from 'astro';
 import { Image } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import PhotoElevator from '@andrew/ui/PhotoElevator.astro';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
 
 const SUPPLIED_PHOTOS = import.meta.glob<ImageMetadata>(
@@ -23,49 +24,60 @@ const photoFor = (filename: string): ImageMetadata | undefined =>
 const heroFilename = 'king-arthur-carrousel.jpg';
 const heroPhoto = photoFor(heroFilename);
 
-const DRINK_DIARY_PLACES = [
+const PHOTO_DIARY_SPECS = [
   {
-    name: 'Disneyland',
-    status: 'Diary entries for Disneyland are coming. The photos below are the content for now.',
+    id: 'king-arthur-carrousel',
+    filename: 'king-arthur-carrousel.jpg',
+    caption: 'King Arthur Carrousel, Fantasyland, Mar 3, 2026, Sony A7C R, 16-35 GM II.',
+    location: 'Fantasyland · Mar 3, 2026',
   },
   {
-    name: 'Disney California Adventure',
-    status: 'Diary entries for Disney California Adventure are coming. The photos below are the content for now.',
+    id: 'flos-v8-cafe-carousel',
+    filename: 'flos-v8-cafe-carousel.jpg',
+    caption: "Flo's V8 Cafe, Cars Land, May 7, 2025, Sony A7C R, 16-35 GM II, Moment Cinebloom 20 percent.",
+    location: 'Cars Land · May 7, 2025',
   },
   {
-    name: 'Downtown Disney',
-    status: 'Diary entries for Downtown Disney are coming. The photos below are the content for now.',
+    id: 'flos-v8-cafe-single',
+    filename: 'flos-v8-cafe-single.jpg',
+    caption: "Flo's V8 Cafe, Cars Land, May 7, 2025 (single image).",
+    location: 'Cars Land · May 7, 2025',
+  },
+  {
+    id: 'disneyland-reintroduction',
+    filename: 'disneyland-reintroduction.jpg',
+    caption: '"Finally made it to Disneyland!" reintroduction, Apr 7, 2025.',
+    location: 'Disneyland · Apr 7, 2025',
   },
 ] as const;
 
-const PHOTO_DIARY_ENTRIES = [
+const elevatorPhotos = PHOTO_DIARY_SPECS.flatMap((entry) => {
+  const image = photoFor(entry.filename);
+  if (!image) return [];
+  return [
+    {
+      id: entry.id,
+      image,
+      caption: entry.caption,
+      category: 'disneyland',
+      location: entry.location,
+      video: false,
+    },
+  ];
+});
+
+const DRINK_DIARY_PLACES = [
   {
-    filename: 'king-arthur-carrousel.jpg',
-    caption: 'King Arthur Carrousel, Fantasyland',
-    date: 'Mar 3, 2026',
-    details: 'Sony A7C R, 16-35 GM II',
-    alt: 'King Arthur Carrousel in Fantasyland at Disneyland',
+    name: 'Disneyland',
+    status: 'Diary entries for Disneyland are coming. The photos above are the content for now.',
   },
   {
-    filename: 'flos-v8-cafe-carousel.jpg',
-    caption: "Flo's V8 Cafe, Cars Land",
-    date: 'May 7, 2025',
-    details: 'Sony A7C R, 16-35 GM II, Moment Cinebloom 20 percent',
-    alt: "Flo's V8 Cafe in Cars Land at Disney California Adventure (carousel frame)",
+    name: 'Disney California Adventure',
+    status: 'Diary entries for Disney California Adventure are coming. The photos above are the content for now.',
   },
   {
-    filename: 'flos-v8-cafe-single.jpg',
-    caption: "Flo's V8 Cafe, Cars Land",
-    date: 'May 7, 2025',
-    details: 'Single image',
-    alt: "Flo's V8 Cafe in Cars Land at Disney California Adventure (single frame)",
-  },
-  {
-    filename: 'disneyland-reintroduction.jpg',
-    caption: '"Finally made it to Disneyland!" reintroduction',
-    date: 'Apr 7, 2025',
-    details: '',
-    alt: 'Disneyland reintroduction frame for Sip the Magic',
+    name: 'Downtown Disney',
+    status: 'Diary entries for Downtown Disney are coming. The photos above are the content for now.',
   },
 ] as const;
 
@@ -126,6 +138,15 @@ const SOCIAL_LINKS = [
       </div>
     </section>
 
+    <div class="stm-elevator-wrap">
+      <PhotoElevator
+        photos={elevatorPhotos}
+        kicker="Photography"
+        title="The Disney Drink Diaries."
+        lede="Disneyland photography. The work behind Sip the Magic."
+      />
+    </div>
+
     <section id="drink-diaries" class="stm-section section-hairline" aria-labelledby="stm-diaries-heading">
       <div class="container">
         <SectionHeader
@@ -143,54 +164,6 @@ const SOCIAL_LINKS = [
               <p class="stm-place-status">{place.status}</p>
             </article>
           ))}
-        </div>
-      </div>
-    </section>
-
-    <section id="photo-diary" class="stm-section section-hairline" aria-labelledby="stm-diary-heading">
-      <div class="container">
-        <SectionHeader
-          id="stm-diary-heading"
-          kicker="Disneyland Photography"
-          title="Photo Diary"
-          lede="Four documented Disneyland frames from the Sip the Magic photo diary."
-        />
-
-        <div class="stm-gallery-grid">
-          {PHOTO_DIARY_ENTRIES.map((entry) => {
-            const img = photoFor(entry.filename);
-            return (
-              <figure class="stm-photo-card">
-                <div class="stm-photo-frame">
-                  {img ? (
-                    <Image
-                      src={img}
-                      alt={entry.alt}
-                      widths={[640, 960, 1280]}
-                      sizes="(max-width: 767px) 100vw, 50vw"
-                      class="stm-photo-img"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  ) : (
-                    <div class="stm-photo-pending" data-photo-pending={entry.filename}>
-                      <span class="stm-pending-label font-mono">Photo Pending</span>
-                      <code class="stm-pending-path font-mono">src/assets/sip-the-magic/{entry.filename}</code>
-                    </div>
-                  )}
-                </div>
-                <figcaption class="stm-photo-meta">
-                  <div class="stm-photo-top">
-                    <span class="stm-photo-date font-mono">{entry.date}</span>
-                    {entry.details && (
-                      <span class="stm-photo-spec font-mono">{entry.details}</span>
-                    )}
-                  </div>
-                  <p class="stm-photo-caption">{entry.caption}</p>
-                </figcaption>
-              </figure>
-            );
-          })}
         </div>
       </div>
     </section>
@@ -393,6 +366,40 @@ const SOCIAL_LINKS = [
     max-width: 48ch;
   }
 
+  /* Full-scale edge-to-edge photo elevator section */
+  .stm-elevator-wrap {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border-bottom: 1px solid var(--stm-border);
+  }
+
+  .stm-elevator-wrap :global(.photo-section) {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  .stm-elevator-wrap :global(.photo-grid-container) {
+    width: 100%;
+    max-width: none;
+    margin: 2rem 0 0;
+    padding-inline: 0;
+  }
+
+  .stm-elevator-wrap :global(.photo-wall) {
+    height: clamp(720px, 100vh, 2000px);
+    min-height: 720px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stm-elevator-wrap :global(.photo-wall) {
+      height: auto;
+      min-height: 0;
+    }
+  }
+
   .stm-section {
     padding-block: clamp(3.5rem, 7vw, 6rem);
   }
@@ -433,97 +440,6 @@ const SOCIAL_LINKS = [
     margin: 0;
     color: var(--muted, #b5b5c0);
     line-height: 1.6;
-  }
-
-  .stm-gallery-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.75rem;
-  }
-
-  .stm-photo-card {
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    border: 1px solid var(--stm-border);
-    background: #0b0b0e;
-    border-radius: 0;
-  }
-
-  .stm-photo-frame {
-    position: relative;
-    aspect-ratio: 16 / 10;
-    width: 100%;
-    background: rgba(130, 130, 160, 0.14);
-    border-bottom: 1px solid var(--stm-border);
-    overflow: hidden;
-    border-radius: 0;
-  }
-
-  .stm-photo-img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-    border-radius: 0;
-  }
-
-  .stm-photo-pending {
-    width: 100%;
-    height: 100%;
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.65rem;
-    text-align: center;
-    background: linear-gradient(135deg, rgba(130, 130, 160, 0.2) 0%, rgba(12, 12, 16, 0.95) 100%);
-    box-sizing: border-box;
-  }
-
-  .stm-pending-label {
-    font-size: 0.72rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: #ffffff;
-  }
-
-  .stm-pending-path {
-    font-size: 0.72rem;
-    color: var(--stm-ink-accent);
-    word-break: break-all;
-  }
-
-  .stm-photo-meta {
-    padding: 1.25rem 1.4rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.55rem;
-  }
-
-  .stm-photo-top {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.45rem 1rem;
-  }
-
-  .stm-photo-date,
-  .stm-photo-spec {
-    font-size: 0.7rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--stm-ink-accent);
-  }
-
-  .stm-photo-caption {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #ffffff;
   }
 
   .stm-video-card {
@@ -616,8 +532,7 @@ const SOCIAL_LINKS = [
   }
 
   @media (max-width: 960px) {
-    .stm-places-grid,
-    .stm-gallery-grid {
+    .stm-places-grid {
       grid-template-columns: 1fr;
     }
   }

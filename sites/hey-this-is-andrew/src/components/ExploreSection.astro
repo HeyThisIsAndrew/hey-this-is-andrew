@@ -34,20 +34,20 @@ const pages = [
 <section id="explore" aria-labelledby="explore-heading" class="section-hairline">
   <div class="container">
     <SectionHeader id="explore-heading" title="Explore" />
-  </div>
-  <div class="flip-card-grid explore-grid">
-    {pages.map((page, index) => (
-      <FlipCard
-        value={page.name}
-        backText={page.line}
-        actionLabel={page.action}
-        actionHref={page.href}
-        actionTarget="_self"
-        clickOnly
-        idPrefix="explore-card"
-        index={index}
-      />
-    ))}
+    <div class="flip-card-grid explore-grid">
+      {pages.map((page, index) => (
+        <FlipCard
+          value={page.name}
+          backText={page.line}
+          actionLabel={page.action}
+          actionHref={page.href}
+          actionTarget="_self"
+          clickOnly
+          idPrefix="explore-card"
+          index={index}
+        />
+      ))}
+    </div>
   </div>
 </section>
 
@@ -55,18 +55,42 @@ const pages = [
   .explore-grid {
     --flip-accent-border: var(--hairline-strong);
     --flip-accent-shadow: 0 8px 30px rgb(255 255 255 / 0.1);
+    --flip-value-size: clamp(1rem, 1.15vw, 1.75rem);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(1rem, 1.6vw, 1.75rem);
+    width: 100%;
+    margin-inline: 0;
   }
 
-  @media (561px <= width <= 1024px) {
+  .explore-grid :global(.stat-card.flip-card) {
+    min-height: clamp(220px, 16vw, 340px);
+  }
+
+  .explore-grid :global(.stat-value) {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    text-wrap: balance;
+    line-height: 1.25;
+  }
+
+  @media (max-width: 1024px) {
     .explore-grid.flip-card-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      width: calc(100% - 4 * var(--flip-rem));
-      margin-inline: auto;
+      width: 100%;
+      margin-inline: 0;
+      gap: 1rem;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .explore-grid.flip-card-grid {
+      grid-template-columns: 1fr;
     }
 
-    .explore-grid :global(.stat-value) {
-      white-space: normal;
-      text-wrap: balance;
+    .explore-grid :global(.stat-card.flip-card) {
+      min-height: 185px;
     }
   }
 </style>

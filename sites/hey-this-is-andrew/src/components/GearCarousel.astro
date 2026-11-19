@@ -1,22 +1,15 @@
 ---
 /**
- * The homepage Gear carousel (#gear): the seven gear sections of /gear/
- * (src/data/gear.json), one card in view at a time, in the /gear/ page's
- * order. Each card previews a section with its lead photo and links to
- * that section on /gear/.
- *
- * Swipe on touch (native scroll with snap, one card per swipe), mouse drag,
- * a trackpad or Shift+wheel swipe, the Prev and Next arrows, or the
- * arrow keys all move it, and it stays where they put it: it advances on
- * its own only until the reader touches it, and never while hovered,
- * focused, off screen, in a background tab or under reduced motion.
- *
- * Photos come from public/gear/ through Astro's image pipeline (WebP at the
- * size each slot needs), not the full-size JPGs /gear/ shows.
+ * The homepage Gear spotlight (#gear): the seven gear sections of /gear/
+ * (src/data/gear.json), rendered with the shared @andrew/ui SpotlightBar
+ * pattern (single-clock progress bar, Prev, Play/Pause, Next). Each slide
+ * previews a section with its lead studio photo and links directly to that
+ * section on /gear/.
  */
 import { getCollection } from 'astro:content';
 import { getImage } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
+import SpotlightBar, { type SpotlightSlide } from '@andrew/ui/SpotlightBar.astro';
 import { gearSectionId, gearChipLabel } from '../lib/gear-anchor';
 
 const rawBase = import.meta.env.BASE_URL;
@@ -36,7 +29,7 @@ const previewSubtitles: Record<string, string> = {
   cafe: 'Espresso, pour-over, and nitro',
 };
 const categories = (await getCollection('gear')).sort((a, b) => a.data.order - b.data.order);
-const sections = (
+const slides: SpotlightSlide[] = (
   await Promise.all(
     categories.map(async (cat) => {
       const lead = cat.data.items
@@ -45,484 +38,35 @@ const sections = (
         .find(({ photo }) => photo);
       if (!lead?.photo) return null;
       const hero = await getImage({ src: lead.photo, widths: [480, 800, 1200], format: 'webp' });
+      const chip = gearChipLabel(cat.id, cat.data.category);
       return {
-        chip: gearChipLabel(cat.id, cat.data.category),
+        eyebrow: cat.data.kicker || chip,
         title: cat.data.category,
-        kicker: cat.data.kicker || '',
         subtitle: previewSubtitles[cat.id] ?? cat.data.subtitle,
-        hero: {
-          src: hero.src,
-          srcset: hero.srcSet.attribute,
-          alt: lead.name,
-          width: lead.photo.width,
-          height: lead.photo.height,
-        },
+        cta: `Open ${chip}`,
         href: `${base}/gear/#${gearSectionId(cat.id)}`,
+        imageSrc: hero.src,
+        imageSrcset: hero.srcSet.attribute,
+        imageAlt: lead.name,
+        imageWidth: lead.photo.width,
+        imageHeight: lead.photo.height,
+        imageFit: 'contain' as const,
       };
-    })
+    }),
   )
 ).filter((s): s is NonNullable<typeof s> => s !== null);
-const n = sections.length;
 ---
-<div class="gear-carousel" data-gear-carousel role="region" aria-roledescription="carousel" aria-label="Gear sections">
-  <div class="gc-stage">
-    <button type="button" class="gc-step gc-step--prev" data-gc-prev aria-label="Previous gear section">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
-      <span>Prev</span>
-    </button>
 
-    <ul class="gc-track" data-gc-track>
-      {sections.map((s, i) => (
-        <li class="gc-slide" role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${n}: ${s.title}`}>
-          <a class="gc-card" href={s.href} draggable="false" tabindex={i === 0 ? undefined : '-1'}>
-            <span class="gc-media">
-              <img src={s.hero.src} srcset={s.hero.srcset} sizes="(max-width: 720px) calc(100vw - 80px), 50vw" alt={s.hero.alt} width={s.hero.width} height={s.hero.height} loading="lazy" decoding="async" draggable="false" />
-              {s.kicker && <span class="gc-kicker font-mono">{s.kicker}</span>}
-            </span>
-            <span class="gc-body">
-              <span class="gc-title display">{s.title}</span>
-              {s.subtitle && <span class="gc-subtitle">{s.subtitle}</span>}
-              <span class="gc-go font-mono">
-                Open {s.chip}
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                  <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </span>
-            </span>
-          </a>
-        </li>
-      ))}
-    </ul>
-
-    <button type="button" class="gc-step gc-step--next" data-gc-next aria-label="Next gear section">
-      <span>Next</span>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
-    </button>
-  </div>
+<div class="gear-spotlight-wrap" data-gear-carousel>
+  <SpotlightBar
+    slides={slides}
+    label="Gear sections"
+    height="clamp(280px, 24vw, 440px)"
+  />
 </div>
 
 <style>
-  .gear-carousel {
-    margin-top: 0;
-  }
-
-  .gc-stage {
-    position: relative;
+  .gear-spotlight-wrap {
     width: 100%;
-  }
-
-  .gc-track {
-    --gc-peek: clamp(48px, 6vw, 72px);
-    position: relative;
-    display: flex;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-    border: 1px solid var(--line);
-    border-radius: 0;
-    background: var(--surface);
-  }
-  .gc-track::-webkit-scrollbar {
-    display: none;
-  }
-  .gc-track.is-dragging {
-    scroll-snap-type: none;
-    cursor: grabbing;
-  }
-  .gc-track::after {
-    /* Let the last card reach the same snap position as the other cards. */
-    content: '';
-    flex: 0 0 var(--gc-peek);
-  }
-  .gc-slide {
-    flex: 0 0 calc(100% - var(--gc-peek));
-    min-width: 0;
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
-    border-right: 1px solid var(--line);
-    border-radius: 0;
-  }
-  .gc-card {
-    position: relative;
-    display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-    min-height: clamp(190px, 19vw, 260px);
-    color: var(--ink);
-    text-decoration: none;
-    -webkit-user-select: none;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .gc-card:focus-visible {
-    outline-offset: -3px;
-  }
-  .gc-media {
-    position: relative;
-    display: grid;
-    place-items: center;
-    min-width: 0;
-    height: clamp(190px, 19vw, 260px);
-    padding: 1rem;
-    /* The gear photos are shot on this same near-black. */
-    background: #0d0d0d;
-    border-right: 1px solid var(--line);
-    border-radius: 0;
-    overflow: hidden;
-  }
-  .gc-media img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    object-fit: contain;
-    -webkit-user-drag: none;
-    border-radius: 0;
-    transition: transform 1.4s ease;
-  }
-  .gc-body {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: flex-start;
-    gap: 0.6rem;
-    min-width: 0;
-    padding: clamp(1.25rem, 3vw, 2.5rem);
-    padding-right: clamp(4.5rem, 7vw, 6.5rem);
-  }
-  .gc-kicker {
-    position: absolute;
-    top: 0.75rem;
-    left: 0.75rem;
-    max-width: calc(100% - 1.5rem);
-    padding: 0.3rem 0.5rem;
-    border: 1px solid var(--line);
-    background: #080808;
-    font-size: 0.72rem;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--ink);
-  }
-  .gc-title {
-    font-size: clamp(1.25rem, 2.1vw, 1.9rem);
-    line-height: 1;
-    overflow-wrap: anywhere;
-  }
-  .gc-subtitle {
-    color: var(--muted);
-    font-size: 0.92rem;
-    max-width: 32ch;
-  }
-  .gc-go {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    min-height: 44px;
-    margin-top: 0.25rem;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--ink);
-    font-size: 0.72rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    text-decoration: underline;
-    text-underline-offset: 4px;
-    text-decoration-color: var(--hairline-strong);
-    transition: color 0.25s ease, text-decoration-color 0.25s ease;
-  }
-  @media (hover: hover) {
-    .gc-card:hover .gc-media img {
-      transform: scale(1.04);
-    }
-    .gc-card:hover .gc-go {
-      background: transparent;
-      border: 0;
-      color: var(--color-accent-hover, #ffffff);
-      text-decoration-color: var(--ink);
-    }
-  }
-
-  .gc-step {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 10;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    min-width: 44px;
-    min-height: 44px;
-    padding: 0.45rem 0.75rem;
-    background: #080808;
-    border: 1px solid #f5f5f5;
-    border-radius: 0;
-    color: #f5f5f5;
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-    transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out;
-  }
-  .gc-step--prev {
-    left: 0.75rem;
-  }
-  .gc-step--next {
-    right: 0.75rem;
-  }
-  .gc-step:hover,
-  .gc-step:focus-visible {
-    background: #f5f5f5;
-    color: #080808;
-  }
-
-  @media (max-width: 720px) {
-    .gc-step {
-      padding: 0.25rem 0.4rem;
-      gap: 0.25rem;
-      font-size: 0.6rem;
-      letter-spacing: 0.05em;
-    }
-    .gc-step--prev {
-      left: 0.25rem;
-    }
-    .gc-step--next {
-      right: 0.25rem;
-    }
-    .gc-card {
-      grid-template-columns: minmax(0, 1fr);
-      min-height: 0;
-    }
-    .gc-media {
-      height: clamp(9rem, 45vw, 13rem);
-      border-right: 0;
-      border-bottom: 1px solid var(--line);
-    }
-    .gc-body {
-      gap: 0.45rem;
-      padding: 1rem;
-    }
-    .gc-title {
-      font-size: clamp(1.25rem, 5vw, 1.6rem);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .gc-media img,
-    .gc-go,
-    .gc-step {
-      transition: none;
-    }
   }
 </style>
-
-<script>
-  const AUTO_MS = 7000;
-
-  function initGearCarousels() {
-    document.querySelectorAll<HTMLElement>('[data-gear-carousel]').forEach((root) => {
-      if (root.dataset.ready === '1') return;
-      root.dataset.ready = '1';
-      const track = root.querySelector<HTMLElement>('[data-gc-track]');
-      if (!track) return;
-      const slides = Array.from(track.querySelectorAll<HTMLElement>('.gc-slide'));
-      const links = slides.map((s) => s.querySelector<HTMLAnchorElement>('.gc-card'));
-      const n = slides.length;
-      if (n < 2) return;
-      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-      let current = 0;
-      let heading: number | null = null;
-
-      const mark = (i: number) => {
-        current = i;
-        links.forEach((a, k) => {
-          if (!a) return;
-          if (k === i) a.removeAttribute('tabindex');
-          else a.tabIndex = -1;
-        });
-      };
-      const leftOf = (i: number) => slides[i].offsetLeft;
-      const indexFromScroll = () => {
-        const stride = slides[1] ? slides[1].offsetLeft - slides[0].offsetLeft : track.clientWidth;
-        return Math.max(0, Math.min(n - 1, Math.round(track.scrollLeft / Math.max(1, stride))));
-      };
-
-      const go = (i: number) => {
-        const to = (i + n) % n;
-        heading = to;
-        mark(to);
-        track.scrollTo({ left: leftOf(to), behavior: reduced.matches ? 'auto' : 'smooth' });
-      };
-
-      // Auto-advance, until the reader takes over.
-      let userTook = false;
-      let inView = false;
-      let hovering = false;
-      let focused = false;
-      let timer = 0;
-      const sync = () => {
-        const run = !userTook && inView && !hovering && !focused && !document.hidden && !reduced.matches;
-        if (run && !timer) timer = window.setInterval(() => go(current + 1), AUTO_MS);
-        else if (!run && timer) {
-          window.clearInterval(timer);
-          timer = 0;
-        }
-      };
-      const takeOver = () => {
-        heading = null;
-        if (userTook) return;
-        userTook = true;
-        sync();
-      };
-
-      // Keep the focusable card in sync with the reader's swipe or scroll.
-      let raf = 0;
-      track.addEventListener('scroll', () => {
-        if (raf) return;
-        raf = requestAnimationFrame(() => {
-          raf = 0;
-          if (heading !== null) {
-            if (Math.abs(track.scrollLeft - leftOf(heading)) < 2) heading = null;
-            return;
-          }
-          const i = indexFromScroll();
-          if (i !== current) mark(i);
-        });
-      }, { passive: true });
-
-      root.querySelector('[data-gc-prev]')?.addEventListener('click', () => {
-        takeOver();
-        go(current - 1);
-      });
-      root.querySelector('[data-gc-next]')?.addEventListener('click', () => {
-        takeOver();
-        go(current + 1);
-      });
-      root.addEventListener('keydown', (e) => {
-        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-        e.preventDefault();
-        takeOver();
-        go(current + (e.key === 'ArrowRight' ? 1 : -1));
-        links[current]?.focus({ preventScroll: true });
-      });
-
-      // Any hand on it, before a click lands: a touch or a press.
-      root.addEventListener('pointerdown', takeOver);
-      track.addEventListener('touchstart', takeOver, { passive: true });
-
-      // A horizontal wheel or trackpad swipe (Shift+wheel included) moves one
-      // card per gesture. Left to native snap, a short swipe settled back on
-      // the card it started from; the momentum tail is ignored until the
-      // wheel goes quiet, so one swipe never skips two.
-      let wheelAcc = 0;
-      let wheelLocked = false;
-      let wheelQuiet = 0;
-      track.addEventListener('wheel', (e) => {
-        const dx = e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX;
-        if (Math.abs(dx) <= Math.abs(e.shiftKey ? 0 : e.deltaY)) return;
-        e.preventDefault();
-        takeOver();
-        window.clearTimeout(wheelQuiet);
-        wheelQuiet = window.setTimeout(() => {
-          wheelLocked = false;
-          wheelAcc = 0;
-        }, 220);
-        if (wheelLocked) return;
-        wheelAcc += dx;
-        if (Math.abs(wheelAcc) < 40) return;
-        wheelLocked = true;
-        go(Math.max(0, Math.min(n - 1, current + (wheelAcc > 0 ? 1 : -1))));
-        wheelAcc = 0;
-      }, { passive: false });
-
-      // Mouse drag (touch and trackpads scroll natively). Snap is off while
-      // the card follows the pointer, then the release settles on the next
-      // card in the drag's direction, or back where it started.
-      const DRAG_START = 6;
-      const SWIPE = 50;
-      let pressX = 0;
-      let pressLeft = 0;
-      let pressIndex = 0;
-      let pressed = false;
-      let dragged = false;
-      track.addEventListener('pointerdown', (e) => {
-        if (e.pointerType !== 'mouse' || e.button !== 0) return;
-        pressed = true;
-        dragged = false;
-        pressX = e.clientX;
-        pressLeft = track.scrollLeft;
-        pressIndex = current;
-      });
-      track.addEventListener('pointermove', (e) => {
-        if (!pressed) return;
-        const dx = e.clientX - pressX;
-        if (!dragged) {
-          if (Math.abs(dx) < DRAG_START) return;
-          dragged = true;
-          track.classList.add('is-dragging');
-          try {
-            track.setPointerCapture(e.pointerId);
-          } catch {
-            /* the release below still ends it */
-          }
-        }
-        track.scrollLeft = pressLeft - dx;
-      });
-      const release = (e: PointerEvent) => {
-        if (!pressed) return;
-        pressed = false;
-        if (!dragged) return;
-        const dx = e.clientX - pressX;
-        track.classList.remove('is-dragging');
-        const to = dx <= -SWIPE ? pressIndex + 1 : dx >= SWIPE ? pressIndex - 1 : pressIndex;
-        go(Math.max(0, Math.min(n - 1, to)));
-      };
-      track.addEventListener('pointerup', release);
-      track.addEventListener('pointercancel', release);
-      // A drag is not a tap on the card under it.
-      track.addEventListener('click', (e) => {
-        if (!dragged) return;
-        dragged = false;
-        e.preventDefault();
-        e.stopPropagation();
-      }, true);
-
-      root.addEventListener('mouseenter', () => { hovering = true; sync(); });
-      root.addEventListener('mouseleave', () => { hovering = false; sync(); });
-      root.addEventListener('focusin', () => { focused = true; sync(); });
-      root.addEventListener('focusout', (e) => {
-        if (!root.contains(e.relatedTarget as Node | null)) {
-          focused = false;
-          sync();
-        }
-      });
-      document.addEventListener('visibilitychange', sync);
-      reduced.addEventListener?.('change', sync);
-      new IntersectionObserver((entries) => {
-        inView = entries.some((en) => en.isIntersecting);
-        sync();
-      }, { threshold: 0.5 }).observe(root);
-
-      // A resize keeps the current card in place.
-      window.addEventListener('resize', () => {
-        heading = null;
-        track.scrollLeft = leftOf(current);
-      }, { passive: true });
-
-      mark(indexFromScroll());
-    });
-  }
-
-  initGearCarousels();
-  document.addEventListener('astro:page-load', initGearCarousels);
-</script>

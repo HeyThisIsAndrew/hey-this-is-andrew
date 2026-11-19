@@ -1,64 +1,51 @@
 import { test, expect, type Page } from '@playwright/test';
 
-// The homepage Gear carousel (GearCarousel.astro): the seven /gear/ sections,
-// and the /gear/ deep links it relies on (GearGrid.astro). Manual control
-// has to win: a pick stays put past the 7s auto-advance, and the card in
-// view opens that section on /gear/.
+// The homepage Gear spotlight (GearCarousel.astro using @andrew/ui SpotlightBar
+// + StorefrontCTA.astro using @andrew/ui BannerRotator): the seven /gear/
+// sections, and the /gear/ deep links it relies on (GearGrid.astro). Pause
+// and manual navigation must hold past the 7s rotation interval, and clicking
+// the active slide opens that section on /gear/.
 
-const state = (page: Page) =>
+const activeSlideIndex = (page: Page) =>
   page.evaluate(() => {
-    const track = document.querySelector<HTMLElement>('[data-gc-track]')!;
-    const slides = [...track.querySelectorAll<HTMLElement>('.gc-slide')];
-    const active = slides.findIndex((slide) => slide.querySelector<HTMLAnchorElement>('.gc-card')?.tabIndex === 0);
-    const activeOffset = slides[active]?.offsetLeft ?? Infinity;
-    return {
-      active,
-      snapped: Math.abs(track.scrollLeft - activeOffset) <= 1,
-    };
+    const slides = [...document.querySelectorAll<HTMLElement>('#gear [data-gear-carousel] [data-spotlight-slide]')];
+    return slides.findIndex((slide) => slide.classList.contains('is-current') && !slide.hasAttribute('aria-hidden'));
   });
 
-test('gear carousel: the seven sections, overlaid arrows and keys, a pick holds, the card opens the section', async ({ page }) => {
+test('gear carousel: the seven sections, controls and keys, pause holds past interval, the slide opens the section', async ({ page }) => {
   await page.goto('./');
-  const carousel = page.locator('#gear [data-gear-carousel]');
-  await carousel.scrollIntoViewIfNeeded();
-  await expect(carousel.locator('.gc-title')).toHaveText(['Cameras', 'Lenses', 'Lighting', 'Tools and Support', 'Audio', 'Cafe Bar', 'Gaming']);
-  await expect(carousel.locator('.gc-card img')).toHaveCount(7);
-  await expect(carousel.locator('.gc-media .gc-kicker')).toHaveCount(7);
-  await expect(carousel.locator('.gc-controls')).toHaveCount(0);
-  const track = carousel.locator('[data-gc-track]');
-  const trackBox = (await track.boundingBox())!;
-  const secondSlide = (await track.locator('.gc-slide').nth(1).boundingBox())!;
-  expect(trackBox.x + trackBox.width - secondSlide.x).toBeGreaterThanOrEqual(40);
-  for (const sel of ['[data-gc-prev]', '[data-gc-next]']) {
-    const arrow = carousel.locator(sel);
-    await expect(arrow).toHaveCSS('position', 'absolute');
-    const box = (await arrow.boundingBox())!;
-    expect(Math.abs(box.y + box.height / 2 - trackBox.y - trackBox.height / 2)).toBeLessThanOrEqual(1);
-  }
+  const spotlight = page.locator('#gear [data-gear-carousel] [data-spotlight]');
+  await spotlight.scrollIntoViewIfNeeded();
+  await expect(spotlight.locator('.ui-spotlight-title')).toHaveText(['Cameras', 'Lenses', 'Lighting', 'Tools and Support', 'Audio', 'Cafe Bar', 'Gaming']);
+  await expect(spotlight.locator('[data-spotlight-slide] img')).toHaveCount(7);
+  await expect(spotlight.locator('[data-spotlight-progress]')).toBeAttached();
 
-  await carousel.locator('[data-gc-next]').click();
-  await expect.poll(() => state(page)).toEqual({ active: 1, snapped: true });
-  await carousel.locator('[data-gc-prev]').click();
-  await expect.poll(() => state(page)).toEqual({ active: 0, snapped: true });
+  await spotlight.locator('[data-spotlight-next]').click();
+  await expect.poll(() => activeSlideIndex(page)).toBe(1);
+  await spotlight.locator('[data-spotlight-prev]').click();
+  await expect.poll(() => activeSlideIndex(page)).toBe(0);
+
   for (let index = 1; index <= 4; index++) {
     await page.keyboard.press('ArrowRight');
-    await expect.poll(() => state(page)).toEqual({ active: index, snapped: true });
-    await expect(carousel.locator('.gc-card').nth(index)).toBeFocused();
+    await expect.poll(() => activeSlideIndex(page)).toBe(index);
   }
 
-  // The selection stays past the auto-advance interval with pointer and focus outside the carousel.
+  // Explicitly pause and verify the active slide holds past the 7s interval even with pointer and focus outside.
+  await spotlight.locator('[data-spotlight-pause]').click();
+  await expect(spotlight).toHaveClass(/is-paused/);
+  await expect(spotlight.locator('[data-spotlight-pause]')).toHaveAttribute('data-paused', 'true');
   await page.mouse.move(2, 2);
   await page.locator('#main-content').focus();
   await page.waitForTimeout(8000);
-  expect(await state(page)).toEqual({ active: 4, snapped: true });
+  expect(await activeSlideIndex(page)).toBe(4);
 
-  // Gear picks only, static, with the disclosure; Mint Mobile is not gear.
-  await expect(page.locator('#gear .storefront-flip-card')).toHaveCount(2);
+  // Gear picks only, BannerRotator with 2 slides, disclosure intact; Mint Mobile is not gear.
+  await expect(page.locator('#gear [data-banner-rotator] [data-rotator-slide]')).toHaveCount(2);
   await expect(page.locator('#gear')).not.toContainText('Mint Mobile');
   await expect(page.locator('#gear .kit-disclosure')).toHaveText('As an Amazon Associate, I earn from qualifying purchases.');
 
-  // The card in view is the link, and /gear/ opens on that section.
-  await carousel.locator('.gc-card').nth(4).click();
+  // The active slide links directly to that section on /gear/, and /gear/ opens on that section.
+  await spotlight.locator('[data-spotlight-slide].is-current').click();
   await expect(page).toHaveURL(/\/gear\/#gear-audio$/);
   await expect(page.locator('#gear-audio')).toHaveClass(/is-expanded/);
   await expect(page.locator('.gear-accordion-section.is-expanded')).toHaveCount(1);

@@ -1,0 +1,612 @@
+---
+/**
+ * SpotlightBar (@andrew/ui): full-width switching banner carousel lifted from
+ * BE Unconventional HQ's HomeSpotlightBar.astro.
+ *
+ * Uses one clock, never two: the progress bar's CSS animation triggers
+ * `animationend` to advance slides, so hovering, focusing, scrolling offscreen,
+ * or pressing Pause stops both the bar and the rotation together.
+ */
+export interface SpotlightSlide {
+  eyebrow?: string;
+  title: string;
+  subtitle?: string;
+  cta: string;
+  href: string;
+  external?: boolean;
+  imageSrc?: string;
+  imageSrcset?: string;
+  imageAlt?: string;
+  imageWidth?: number;
+  imageHeight?: number;
+  imageFit?: 'cover' | 'contain';
+}
+
+export interface Props {
+  slides: SpotlightSlide[];
+  label?: string;
+  holdSeconds?: number;
+  height?: string;
+  class?: string;
+}
+
+const {
+  slides,
+  label = 'Highlights',
+  holdSeconds = 7,
+  height = 'clamp(250px, 24vw, 440px)',
+  class: className,
+} = Astro.props;
+
+const rotates = slides.length > 1;
+---
+
+<div
+  class:list={['ui-spotlight', className]}
+  data-spotlight
+  role="region"
+  aria-roledescription={rotates ? 'carousel' : undefined}
+  aria-label={label}
+  style={`--spotlight-hold: ${holdSeconds}s; --spotlight-h: ${height};`}
+>
+  <div class="ui-spotlight-frame">
+    {slides.map((slide, index) => (
+      <a
+        href={slide.href}
+        target={slide.external ? '_blank' : undefined}
+        rel={slide.external ? 'noopener noreferrer' : undefined}
+        class:list={[
+          'ui-spotlight-slide',
+          {
+            'is-current': index === 0,
+            'is-contain': slide.imageFit === 'contain',
+          },
+        ]}
+        data-spotlight-slide
+        data-index={index}
+        aria-hidden={index === 0 ? undefined : 'true'}
+        inert={index === 0 ? undefined : true}
+        tabindex={index === 0 ? undefined : -1}
+      >
+        {slide.imageSrc && slide.imageFit !== 'contain' && (
+          <img
+            class="ui-spotlight-bg"
+            src={slide.imageSrc}
+            srcset={slide.imageSrcset}
+            sizes="(max-width: 720px) 100vw, 90vw"
+            alt={slide.imageAlt ?? ''}
+            width={slide.imageWidth}
+            height={slide.imageHeight}
+            loading={index === 0 ? 'eager' : 'lazy'}
+            decoding="async"
+            draggable="false"
+          />
+        )}
+        <span class="ui-spotlight-scrim" aria-hidden="true"></span>
+        <span class="ui-spotlight-inner">
+          <span class="ui-spotlight-body">
+            {slide.eyebrow && <span class="ui-spotlight-eyebrow font-mono">{slide.eyebrow}</span>}
+            <span class="ui-spotlight-title display">{slide.title}</span>
+            {slide.subtitle && <span class="ui-spotlight-subtitle">{slide.subtitle}</span>}
+            <span class="ui-spotlight-cta font-mono">
+              <span class="ui-spotlight-cta-label">{slide.cta}</span>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </span>
+          </span>
+          {slide.imageSrc && slide.imageFit === 'contain' && (
+            <span class="ui-spotlight-media" aria-hidden="true">
+              <img
+                class="ui-spotlight-art"
+                src={slide.imageSrc}
+                srcset={slide.imageSrcset}
+                sizes="(max-width: 720px) 80vw, 44vw"
+                alt=""
+                width={slide.imageWidth}
+                height={slide.imageHeight}
+                loading={index === 0 ? 'eager' : 'lazy'}
+                decoding="async"
+                draggable="false"
+              />
+            </span>
+          )}
+        </span>
+      </a>
+    ))}
+  </div>
+
+  {rotates && (
+    <div class="ui-spotlight-controls">
+      <button type="button" class="ui-spotlight-nav" data-spotlight-prev hidden aria-label="Previous slide">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" aria-hidden="true" focusable="false">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+      </button>
+
+      <button type="button" class="ui-spotlight-pause" data-spotlight-pause hidden aria-label="Pause rotation">
+        <span class="ui-spotlight-pause-glyph" aria-hidden="true"></span>
+      </button>
+
+      <button type="button" class="ui-spotlight-nav" data-spotlight-next hidden aria-label="Next slide">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" aria-hidden="true" focusable="false">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </button>
+
+      <span class="ui-spotlight-progress" data-spotlight-progress aria-hidden="true"></span>
+      <span class="vh" role="status" aria-live="polite" data-spotlight-live></span>
+    </div>
+  )}
+</div>
+
+<style>
+  .ui-spotlight {
+    width: 100%;
+    position: relative;
+  }
+
+  .ui-spotlight-frame {
+    position: relative;
+    width: 100%;
+    height: var(--spotlight-h, clamp(250px, 24vw, 440px));
+    min-height: 240px;
+    border: 1px solid var(--hairline-strong, rgba(255, 255, 255, 0.16));
+    border-radius: 0;
+    background: #0d0d0d;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .ui-spotlight-slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: stretch;
+    text-decoration: none;
+    color: var(--ink, #f0f0f0);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.48s ease, visibility 0s linear 0.48s;
+  }
+
+  .ui-spotlight-slide.is-current {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.48s ease, visibility 0s linear 0s;
+  }
+
+  .ui-spotlight-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    z-index: 0;
+    border-radius: 0;
+    transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .ui-spotlight-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+      to right,
+      rgba(8, 8, 8, 0.94) 0%,
+      rgba(8, 8, 8, 0.78) 42%,
+      rgba(8, 8, 8, 0.25) 78%,
+      rgba(8, 8, 8, 0.45) 100%
+    );
+  }
+
+  .ui-spotlight-slide.is-contain .ui-spotlight-scrim {
+    background: linear-gradient(
+      to right,
+      rgba(8, 8, 8, 0.95) 0%,
+      rgba(13, 13, 13, 0.45) 55%,
+      transparent 100%
+    );
+  }
+
+  .ui-spotlight-inner {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    min-width: 0;
+  }
+
+  .ui-spotlight-slide.is-contain .ui-spotlight-inner {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  }
+
+  .ui-spotlight-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: clamp(0.45rem, 0.9vw, 0.8rem);
+    min-width: 0;
+    padding: clamp(1.25rem, 3vw, 2.75rem);
+  }
+
+  .ui-spotlight-eyebrow {
+    font-size: clamp(0.68rem, 0.8vw, 0.78rem);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted, #9a9a9a);
+  }
+
+  .ui-spotlight-title {
+    font-size: clamp(1.4rem, 2.5vw, 2.4rem);
+    line-height: 1.04;
+    color: #ffffff;
+    overflow-wrap: anywhere;
+  }
+
+  .ui-spotlight-subtitle {
+    font-size: clamp(0.9rem, 1.05vw, 1.05rem);
+    line-height: 1.45;
+    color: var(--muted, #b2b2b2);
+    max-width: 40ch;
+  }
+
+  .ui-spotlight-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.35rem;
+    padding: 0.55rem 0.95rem;
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    border-radius: 0;
+    background: #080808;
+    color: #f5f5f5;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    transition: background-color 180ms ease-in-out, color 180ms ease-in-out, border-color 180ms ease-in-out;
+  }
+
+  .ui-spotlight-slide:is(:hover, :focus-visible) .ui-spotlight-cta {
+    background: #f5f5f5;
+    color: #080808;
+    border-color: #f5f5f5;
+  }
+
+  .ui-spotlight-slide:focus-visible {
+    outline: 2px solid var(--focus-ring, #f0f0f0);
+    outline-offset: -3px;
+  }
+
+  .ui-spotlight-media {
+    height: 100%;
+    min-height: 0;
+    display: grid;
+    place-items: center;
+    padding: clamp(0.9rem, 2vw, 1.75rem);
+    background: #0d0d0d;
+    border-left: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
+    overflow: hidden;
+  }
+
+  .ui-spotlight-art {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    object-fit: contain;
+    object-position: center;
+    border-radius: 0;
+    transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @media (hover: hover) {
+    .ui-spotlight-slide:hover .ui-spotlight-bg,
+    .ui-spotlight-slide:hover .ui-spotlight-art {
+      transform: scale(1.03);
+    }
+  }
+
+  .ui-spotlight-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-top: 0.7rem;
+    min-height: 36px;
+  }
+
+  .ui-spotlight-nav,
+  .ui-spotlight-pause {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: #080808;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 0;
+    color: #f5f5f5;
+    cursor: pointer;
+    transition: background-color 180ms ease-in-out, color 180ms ease-in-out, border-color 180ms ease-in-out;
+  }
+
+  .ui-spotlight-nav[hidden],
+  .ui-spotlight-pause[hidden] {
+    display: none;
+  }
+
+  .ui-spotlight-nav:is(:hover, :focus-visible),
+  .ui-spotlight-pause:is(:hover, :focus-visible) {
+    background: #f5f5f5;
+    color: #080808;
+    border-color: #f5f5f5;
+  }
+
+  .ui-spotlight-nav svg {
+    display: block;
+  }
+
+  .ui-spotlight-pause-glyph {
+    display: block;
+    width: 8px;
+    height: 10px;
+    border-left: 2.5px solid currentColor;
+    border-right: 2.5px solid currentColor;
+  }
+
+  .ui-spotlight-pause[data-paused='true'] .ui-spotlight-pause-glyph {
+    width: 0;
+    height: 0;
+    border-left: 8px solid currentColor;
+    border-right: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+  }
+
+  .ui-spotlight-progress {
+    flex: 1;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.14);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ui-spotlight-progress::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform-origin: left center;
+    transform: scaleX(0);
+    background: var(--spotlight-accent, #f0f0f0);
+  }
+
+  .ui-spotlight-progress.is-running::after {
+    animation: ui-spotlight-lap var(--spotlight-hold, 7s) linear forwards;
+  }
+
+  .ui-spotlight.is-paused .ui-spotlight-progress::after,
+  .ui-spotlight.is-held .ui-spotlight-progress::after,
+  .ui-spotlight.is-offscreen .ui-spotlight-progress::after {
+    animation-play-state: paused;
+  }
+
+  @keyframes ui-spotlight-lap {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  @media (max-width: 1023px), (pointer: coarse) {
+    .ui-spotlight-controls {
+      min-height: 44px;
+    }
+
+    .ui-spotlight-nav,
+    .ui-spotlight-pause {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      min-height: 44px;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .ui-spotlight-frame {
+      height: clamp(320px, 72vw, 390px);
+    }
+
+    .ui-spotlight-slide.is-contain .ui-spotlight-inner {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr) auto;
+    }
+
+    .ui-spotlight-media {
+      order: -1;
+      border-left: 0;
+      border-bottom: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
+      padding: 0.75rem;
+    }
+
+    .ui-spotlight-body {
+      padding: 1rem;
+      gap: 0.35rem;
+    }
+
+    .ui-spotlight-cta {
+      min-height: 44px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ui-spotlight-slide,
+    .ui-spotlight-bg,
+    .ui-spotlight-art {
+      transition: none;
+    }
+
+    .ui-spotlight-progress.is-running::after {
+      animation: none;
+      transform: scaleX(1);
+    }
+  }
+</style>
+
+<script>
+  import { createPageScope } from './scripts/page-scope';
+
+  function initSpotlightBars() {
+    document.querySelectorAll<HTMLElement>('[data-spotlight]').forEach((root) => {
+      if (root.dataset.spotlightBound === 'true') return;
+      root.dataset.spotlightBound = 'true';
+
+      const slides = Array.from(root.querySelectorAll<HTMLAnchorElement>('[data-spotlight-slide]'));
+      const progress = root.querySelector<HTMLElement>('[data-spotlight-progress]');
+      const prevBtn = root.querySelector<HTMLButtonElement>('[data-spotlight-prev]');
+      const nextBtn = root.querySelector<HTMLButtonElement>('[data-spotlight-next]');
+      const pauseBtn = root.querySelector<HTMLButtonElement>('[data-spotlight-pause]');
+      const live = root.querySelector<HTMLElement>('[data-spotlight-live]');
+
+      if (slides.length <= 1) {
+        slides[0]?.classList.add('is-current');
+        return;
+      }
+
+      const { on, cleanup } = createPageScope(root);
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let index = 0;
+      let userPaused = false;
+
+      const show = (nextIndex: number, announce = false) => {
+        const next = ((nextIndex % slides.length) + slides.length) % slides.length;
+        slides.forEach((slide, i) => {
+          const active = i === next;
+          slide.classList.toggle('is-current', active);
+          slide.inert = !active;
+          if (active) {
+            slide.removeAttribute('aria-hidden');
+            slide.removeAttribute('tabindex');
+          } else {
+            slide.setAttribute('aria-hidden', 'true');
+            slide.setAttribute('tabindex', '-1');
+          }
+        });
+        index = next;
+        if (announce && live) {
+          const title = slides[next].querySelector('.ui-spotlight-title')?.textContent?.trim() || '';
+          live.textContent = `Slide ${next + 1} of ${slides.length}: ${title}`;
+        }
+      };
+
+      const restartClock = () => {
+        if (reduced || !progress) return;
+        progress.classList.remove('is-running');
+        void progress.offsetWidth;
+        progress.classList.add('is-running');
+      };
+
+      const step = (delta: number, announce = false) => {
+        show(index + delta, announce);
+        restartClock();
+      };
+
+      show(0, false);
+
+      if (prevBtn && nextBtn) {
+        prevBtn.hidden = false;
+        nextBtn.hidden = false;
+        on(prevBtn, 'click', () => step(-1, true));
+        on(nextBtn, 'click', () => step(1, true));
+      }
+
+      // Keyboard navigation when focused inside spotlight
+      on(root, 'keydown', (event: KeyboardEvent) => {
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          step(-1, true);
+        } else if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          step(1, true);
+        }
+      });
+
+      // Touch horizontal swipe support on frame
+      let swipeX: number | null = null;
+      let swipeY = 0;
+      const frame = root.querySelector<HTMLElement>('.ui-spotlight-frame');
+      if (frame) {
+        on(frame, 'pointerdown', (e: PointerEvent) => {
+          if (!e.isPrimary || e.button !== 0) return;
+          swipeX = e.clientX;
+          swipeY = e.clientY;
+        });
+        on(frame, 'pointerup', (e: PointerEvent) => {
+          if (swipeX === null) return;
+          const dx = e.clientX - swipeX;
+          const dy = e.clientY - swipeY;
+          swipeX = null;
+          if (Math.abs(dx) > 42 && Math.abs(dx) > Math.abs(dy)) {
+            step(dx < 0 ? 1 : -1, true);
+          }
+        });
+        on(frame, 'pointercancel', () => {
+          swipeX = null;
+        });
+      }
+
+      if (reduced || !progress) return;
+
+      on(progress, 'animationend', () => {
+        step(1, false);
+      });
+
+      if (pauseBtn) {
+        pauseBtn.hidden = false;
+        on(pauseBtn, 'click', () => {
+          userPaused = !userPaused;
+          root.classList.toggle('is-paused', userPaused);
+          pauseBtn.dataset.paused = String(userPaused);
+          pauseBtn.setAttribute('aria-label', userPaused ? 'Play rotation' : 'Pause rotation');
+        });
+      }
+
+      on(root, 'mouseenter', () => root.classList.add('is-held'));
+      on(root, 'mouseleave', () => root.classList.remove('is-held'));
+      on(root, 'focusin', () => root.classList.add('is-held'));
+      on(root, 'focusout', (e: FocusEvent) => {
+        if (!root.contains(e.relatedTarget as Node | null)) {
+          root.classList.remove('is-held');
+        }
+      });
+
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((en) => root.classList.toggle('is-offscreen', !en.isIntersecting));
+          },
+          { threshold: 0 },
+        );
+        io.observe(root);
+        cleanup(() => io.disconnect());
+      }
+
+      restartClock();
+    });
+  }
+
+  initSpotlightBars();
+  document.addEventListener('astro:page-load', initSpotlightBars);
+</script>
