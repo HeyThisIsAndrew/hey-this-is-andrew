@@ -27,7 +27,7 @@ test.describe('Corrective Pass Verification', () => {
 
     const pricingSection = page.locator('#pricing');
     await expect(pricingSection).toBeVisible();
-    await expect(pricingSection.locator('.section-title')).toContainText('Every shoot includes');
+    await expect(pricingSection.locator('.sec-chip--title')).toContainText('Every shoot includes');
 
     const content = await page.content();
     expect(content).not.toContain('$950');

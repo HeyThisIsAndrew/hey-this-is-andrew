@@ -61,6 +61,9 @@ export interface Props {
   actionHref?: string;
   /** Meta line text for the `lead` slot's slide. */
   leadMeta?: string;
+  /** A tag shown before every slide's own tag (the section's name, e.g.
+      "Gear"), with the edge tick; the slide's tag then reads as its kind. */
+  leadTag?: string;
   showMeta?: boolean;
   overlayControls?: boolean;
   holdSelector?: string;
@@ -76,6 +79,7 @@ const {
   actionLabel,
   actionHref,
   leadMeta,
+  leadTag,
   showMeta = false,
   overlayControls = false,
   holdSelector,
@@ -149,9 +153,10 @@ const hasControls = rotates || Boolean(actionLabel && actionHref);
         )}
         <span class="ui-spotlight-scrim" aria-hidden="true"></span>
         <span class="ui-spotlight-inner">
-          {slide.tag && (
-            <span class="ui-spotlight-tags" aria-hidden="true">
-              <span class="ui-spotlight-tag">{slide.tag}</span>
+          {(slide.tag || leadTag) && (
+            <span class="ui-spotlight-tags" aria-hidden="true" data-align-logo>
+              {leadTag && <span class="ui-spotlight-tag ui-spotlight-tag--lead">{leadTag}</span>}
+              {slide.tag && <span class:list={['ui-spotlight-tag', { 'ui-spotlight-tag--kind': Boolean(leadTag) }]}>{slide.tag}</span>}
             </span>
           )}
           {slide.chips?.length ? (
@@ -469,6 +474,13 @@ const hasControls = rotates || Boolean(actionLabel && actionHref);
     object-fit: contain;
     object-position: left bottom;
     filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.75));
+  }
+
+  /* With a lead tag, the slide's own tag is its kind: no edge tick, the
+     metadata chips' quieter second chip. */
+  .ui-spotlight-tag--kind {
+    border-left: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.75);
   }
 
   .ui-spotlight-body {

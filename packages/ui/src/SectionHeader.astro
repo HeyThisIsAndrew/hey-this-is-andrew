@@ -10,6 +10,9 @@
  * kicker if there is one). The heading element stays for the outline; no
  * big title, no rule, a small gap to what follows. Its wrapper is not
  * .section-header, or section-anchors.ts would put its "#" link in the chip.
+ * It carries data-align-logo (a site may line it up with its header logo)
+ * and data-sec-head (in-page anchor jumps land on it, clear of the header),
+ * but not .sec-head, which would also bring the scroll reveal and parallax.
  */
 interface Props {
   kicker?: string;
@@ -32,10 +35,23 @@ const headingId =
 ---
 
 {variant === 'chip' ? (
-<div class="sec-head-chip">
+<div class="sec-head-chip" data-align-logo data-sec-head>
   <div class="sec-chips">
     <HeadingTag class="sec-chip sec-chip--title" id={headingId}>{title}</HeadingTag>
     {kicker && <span class="sec-chip sec-chip--kicker">{kicker}</span>}
+    {linkLabel && linkHref && (
+      <a
+        class="sec-link sec-chip-link"
+        href={linkHref}
+        target={linkExternal ? '_blank' : undefined}
+        rel={linkExternal ? 'noopener' : undefined}
+      >
+        {linkLabel}
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <path d="M1 11L11 1M11 1H3M11 1V9" stroke="currentColor" stroke-width="1.5" />
+        </svg>
+      </a>
+    )}
   </div>
   {lede && <p class="section-lede sec-chip-lede">{lede}</p>}
 </div>
@@ -118,6 +134,9 @@ const headingId =
   }
   .sec-chip-lede {
     margin: 0.75rem 0 0;
+  }
+  .sec-chip-link {
+    margin-left: auto;
   }
 
   .sec-head {

@@ -144,7 +144,7 @@ const stateOf = (i: number, n: number) =>
       <h2 class="vh" id="gear-all-title">All products</h2>
       {sections.map((sec) => (
         <section class="all-grid-section" data-chip={sec.chipKey} aria-labelledby={`gear-all-${sec.slug}`}>
-          <h3 class="all-grid-section-title" id={`gear-all-${sec.slug}`}>{sec.title}</h3>
+          <h3 class="all-grid-section-title" id={`gear-all-${sec.slug}`} data-align-logo>{sec.title}</h3>
           <div class="all-grid-cards">
             {sec.items.map((it) => (
               <article class="all-grid-card" data-search={it.search} data-chip={sec.chipKey}>
@@ -1302,16 +1302,27 @@ const stateOf = (i: number, n: number) =>
   .all-grid-section[hidden] {
     display: none;
   }
+  /* Each category is named by a metadata chip (the site's section chip:
+     BrandAccordion's .bacc-chip), lined up with the header logo. */
   .all-grid-section-title {
-    margin: 0 0 1rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    font-family: var(--font-display);
-    font-size: clamp(1.1rem, 1.6vw, 1.5rem);
-    font-weight: 800;
-    letter-spacing: 0.02em;
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin: 0 0 0.85rem;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-left: 2px solid var(--accordion-edge, #f0f0f0);
+    background: rgba(10, 10, 10, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    font-family: var(--font-body, sans-serif);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    line-height: 1.2;
     text-transform: uppercase;
-    color: #fff;
+    color: rgba(255, 255, 255, 0.95);
   }
   .all-grid-cards {
     display: grid;
@@ -2012,7 +2023,10 @@ const stateOf = (i: number, n: number) =>
         allToggle.setAttribute('aria-expanded', String(gridOpen));
         allToggle.textContent = gridOpen ? 'Deck view' : 'Show all products';
         void setDisclosureOpen(deckView, !gridOpen);
-        void setDisclosureOpen(allView, gridOpen);
+        void setDisclosureOpen(allView, gridOpen).then(() => {
+          // The category chips were hidden until now: line them up with the logo.
+          window.dispatchEvent(new Event('andrew:align-to-logo'));
+        });
         if (!gridOpen) sections.forEach((section) => {
           if (section.classList.contains('is-expanded')) decks.get(section)?.refresh();
         });

@@ -324,7 +324,7 @@ test.describe('CCC Page Overhaul & Regression Acceptance (CCC-01 through CCC-07)
       await page.waitForTimeout(150);
       const clearance = await page.evaluate((h) => {
         const sec = document.querySelector(h)!;
-        const head = sec.querySelector<HTMLElement>('.sec-head')!;
+        const head = sec.querySelector<HTMLElement>('.sec-head, [data-sec-head]')!;
         const dock = document.querySelector<HTMLElement>('.ccc-dock-row--hero')!;
         const headRect = head.getBoundingClientRect();
         const dockRect = dock.getBoundingClientRect();
