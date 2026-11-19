@@ -6,6 +6,14 @@ import { CLIENT_WORK, CLIENT_WORK_TIERS } from '../data/client-work';
 import { CONTACT } from '../data/contact';
 
 const depositText = '50% before build, 50% before launch.';
+const shortIntakeNote = 'Fill out the form first.';
+
+const SHARED_EXCLUSIONS = new Set([
+  'Photography (separate service)',
+  'Photography',
+  'Shop or checkout',
+  'Domain purchase',
+]);
 
 const STEP_TERMS = ['Send', 'Wording List', 'Approve', 'Build', 'Deliver'] as const;
 
@@ -18,20 +26,35 @@ function cleanRetainer(retainer: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-const cleanWordingChanges = CLIENT_WORK.wordingChanges.replace(
-  /\s*After the rounds are used,\s*\$75 per change round,\s*up to 5 lines\./i,
-  ''
-);
+function filterIncluded(items: readonly string[], tierIndex: number): string[] {
+  return items.filter((item) => {
+    if (tierIndex <= 1) {
+      if (item === 'Wording list sign-off before build') return false;
+      if (/^Delivery with proof/i.test(item)) return false;
+    }
+    if (tierIndex === 1) {
+      if (item === 'Cloudflare Pages launch') return false;
+      if (item === 'Mobile and desktop, light and dark if the brand needs it') return false;
+    }
+    return true;
+  });
+}
+
+function filterNotIncluded(items: readonly string[]): string[] {
+  return items.filter((item) => !SHARED_EXCLUSIONS.has(item));
+}
+
+const cleanWordingChanges = CLIENT_WORK.wordingChanges
+  .replace(/\s*Inside the included revision rounds,\s*no extra charge\./i, '')
+  .replace(/\s*After the rounds are used,\s*\$75 per change round,\s*up to 5 lines\./i, '')
+  .trim();
 ---
 
 <BaseLayout title="Work With Me · HEY_THISISANDREW" description={CLIENT_WORK.paragraph} pane="Work With Me">
   <div class="container client-work">
-    <header class="client-work-header" id="overview">
-      <h1 class="display" data-pn-top data-pn-label="Overview">Work With Me</h1>
-      <p class="client-work-lede">{CLIENT_WORK.paragraph}</p>
-    </header>
+    <h1 class="vh sr-only">Work With Me</h1>
 
-    <section class="client-work-tiers" id="website-builds" aria-label="Website build tiers" data-pn-label="Website builds">
+    <section class="client-work-tiers" id="website-builds" aria-label="Website build tiers" data-pn-top data-pn-label="Website builds">
       {CLIENT_WORK_TIERS.map((tier, index) => (
         <article class="client-work-card" aria-labelledby={`tier-${index + 1}`}>
           <div class="tier-heading">
@@ -39,13 +62,12 @@ const cleanWordingChanges = CLIENT_WORK.wordingChanges.replace(
             <h2 id={`tier-${index + 1}`}>{tier.name}</h2>
           </div>
           <dl class="tier-logistics">
-            <div><dt>Deposit</dt><dd>{depositText}</dd></div>
             <div><dt>Timeline</dt><dd>{tier.timeline}</dd></div>
             <div><dt>Revisions</dt><dd>{cleanRevisions(tier.revisions)}</dd></div>
           </dl>
           <div class="tier-list">
             <h3>{'monthlyIncluded' in tier ? 'Included in the build' : 'Included'}</h3>
-            <ul>{tier.included.map((item) => <li>{item}</li>)}</ul>
+            <ul>{filterIncluded(tier.included, index).map((item) => <li>{item}</li>)}</ul>
           </div>
           {'monthlyIncluded' in tier && (
             <div class="tier-list">
@@ -56,26 +78,32 @@ const cleanWordingChanges = CLIENT_WORK.wordingChanges.replace(
           )}
           <div class="tier-list tier-exclusions">
             <h3>Not included</h3>
-            <ul>{tier.notIncluded.map((item) => <li>{item}</li>)}</ul>
+            <ul>{filterNotIncluded(tier.notIncluded).map((item) => <li>{item}</li>)}</ul>
           </div>
         </article>
       ))}
     </section>
 
-    <div class="client-work-terms" aria-label="Terms for all tiers">
-      <FlipCard
-        value="Payment"
-        backText={CLIENT_WORK.paymentMethods}
-        idPrefix="term-payment"
-        index={0}
-      />
-      <FlipCard
-        value="Wording Changes"
-        backText={cleanWordingChanges}
-        idPrefix="term-wording"
-        index={1}
-      />
-    </div>
+    <section id="terms" class="client-work-terms-section" aria-label="Terms for all tiers">
+      <div class="client-work-terms-notes">
+        <p class="client-work-term-line"><span class="term-line-label">Deposit:</span> {depositText}</p>
+        <p class="client-work-term-line"><span class="term-line-label">Not included in any tier:</span> Photography (separate service), Shop or checkout, Domain purchase.</p>
+      </div>
+      <div class="client-work-terms">
+        <FlipCard
+          value="Payment"
+          backText={CLIENT_WORK.paymentMethods}
+          idPrefix="term-payment"
+          index={0}
+        />
+        <FlipCard
+          value="Wording Changes"
+          backText={cleanWordingChanges}
+          idPrefix="term-wording"
+          index={1}
+        />
+      </div>
+    </section>
 
     <section id="how-it-works" class="client-work-process" aria-labelledby="process-heading">
       <SectionHeader id="process-heading" title="How it works" />
@@ -95,22 +123,20 @@ const cleanWordingChanges = CLIENT_WORK.wordingChanges.replace(
 
     <section id="get-started" class="client-work-start" aria-labelledby="start-heading">
       <SectionHeader id="start-heading" title="Get started" />
+      <p class="client-work-lede">{CLIENT_WORK.paragraph}</p>
       <div class="btn-group client-work-actions">
         <a class="btn btn-secondary" href={CLIENT_WORK.intakeUrl} target="_blank" rel="noopener noreferrer">Fill Out The Sign Up Form</a>
         <a class="btn btn-secondary" href={CLIENT_WORK.wordingListUrl} target="_blank" rel="noopener noreferrer">Start With The Wording List</a>
         <a class="btn btn-secondary client-work-email" href={`mailto:${CONTACT.personal}`}>Email Andrew</a>
       </div>
-      <p class="client-work-intake-note">{CLIENT_WORK.intakeNote}</p>
+      <p class="client-work-intake-note">{shortIntakeNote}</p>
     </section>
   </div>
 </BaseLayout>
 
 <style>
-  .client-work { padding-block: clamp(2rem, 3.5vw, 3.5rem) 0; }
-  .client-work-header { max-width: 76rem; margin-bottom: clamp(2rem, 3.5vw, 3rem); }
-  .client-work h1 { font-size: clamp(2rem, 3.5vw, 3.25rem); }
-  .client-work-lede { max-width: 66ch; margin: 0.85rem 0 0; color: var(--muted); font-size: clamp(1.05rem, 1.35vw, 1.25rem); }
-  .client-work-tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; padding: 0; align-items: stretch; grid-auto-rows: 1fr; }
+  .client-work { --cw-section-pad: clamp(3rem, 5vw, 4.75rem); padding-block: clamp(2rem, 3.5vw, 3.5rem) 0; }
+  .client-work-tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; padding: 0 0 var(--cw-section-pad); align-items: stretch; grid-auto-rows: 1fr; }
   .client-work-card { min-width: 0; padding: clamp(1.5rem, 2.4vw, 2.75rem); border: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; }
   .tier-index { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.18em; margin: 0 0 1rem; }
   .tier-heading h2 { font-family: var(--font-display); font-size: clamp(1rem, 1.25vw, 1.65rem); font-weight: 800; line-height: 1.15; text-transform: uppercase; margin: 0; }
@@ -128,11 +154,23 @@ const cleanWordingChanges = CLIENT_WORK.wordingChanges.replace(
   .tier-list p { margin: 0 0 1rem; }
   .tier-exclusions { color: var(--muted); }
   .tier-exclusions h3 { color: var(--ink); }
-  .client-work-terms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; padding-block: clamp(2.5rem, 4vw, 4rem); margin-top: clamp(2.5rem, 4vw, 4rem); border-bottom: 1px solid var(--line); align-items: stretch; }
-  .client-work-process, .client-work-start { padding-block: clamp(3rem, 6vw, 5rem); }
-  .client-work-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1.25rem; list-style: none; margin: 2rem 0 0; padding: 0; width: 100%; align-items: stretch; }
+  .client-work-terms-section { padding-block: var(--cw-section-pad); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .client-work-terms-notes { display: grid; gap: 0.65rem; padding: clamp(1rem, 2vw, 1.5rem) clamp(1.25rem, 2.5vw, 2rem); margin: 0 0 1.5rem; border: 1px solid var(--line); background: var(--surface); }
+  .client-work-term-line { margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.55; }
+  .term-line-label { color: var(--ink); font: 700 0.78rem / 1.4 var(--font-display); letter-spacing: 0.1em; text-transform: uppercase; margin-right: 0.45rem; }
+  .client-work-terms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; padding: 0; margin: 0; border: 0; align-items: stretch; }
+  .client-work-process, .client-work-start { padding-block: var(--cw-section-pad); }
+  .client-work-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1.25rem; list-style: none; margin: 2rem 0 0; padding: 0; width: 100%; align-items: stretch; --flip-value-size: clamp(0.85rem, 1.02vw, 1.25rem); }
+  .client-work-steps :global(.stat-value) {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    text-wrap: balance;
+    line-height: 1.25;
+  }
   .client-work-step-item { display: flex; flex-direction: column; height: 100%; min-width: 0; }
   .client-work-start { border-top: 1px solid var(--line); }
+  .client-work-lede { max-width: 72ch; margin: 0 0 1.75rem; color: var(--muted); font-size: clamp(1rem, 1.25vw, 1.15rem); line-height: 1.65; }
   .client-work-intake-note { max-width: 70ch; color: var(--muted); margin: 1.5rem 0 0; }
   .client-work-actions { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
   @media (max-width: 1099px) {

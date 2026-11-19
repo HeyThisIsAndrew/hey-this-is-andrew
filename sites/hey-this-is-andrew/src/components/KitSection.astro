@@ -1,37 +1,35 @@
 ---
 /**
- * The kit (homepage, #gear), in reading order:
- * 1. GearCarousel: the seven gear sections, one at a time, each card
- *    opening that section on /gear/.
- * 2. "See all gear": the whole inventory, on /gear/.
- * 3. The gear storefront picks (static) with the Amazon disclosure.
- * Referrals (Mint Mobile) are not gear: they live on /about/.
+ * The kit (homepage, #gear): full-width flush GearCarousel spotlight
+ * directly beneath the divider line, followed by the "See all gear" action
+ * and Amazon affiliate disclosure. Full kit + DaVinci Resolve live in
+ * BannerRotator on /gear/, while Referrals live in BannerRotator on /about/.
  */
-import SectionHeader from '@andrew/ui/SectionHeader.astro';
-import StorefrontCTA from './StorefrontCTA.astro';
 import GearCarousel from './GearCarousel.astro';
 
 const rawBase = import.meta.env.BASE_URL;
 const gearUrl = `${rawBase === '/' ? '' : rawBase.replace(/\/$/, '')}/gear/`;
 ---
-<section id="gear" aria-labelledby="gear-heading" class="section-hairline kit-section">
-  <div class="container">
-    <SectionHeader id="gear-heading" title="Gear" lede="Behind the work. Updated as it evolves." />
+<section id="gear" aria-labelledby="gear-heading" data-pn-entry data-pn-label="Gear" class="section-hairline kit-section">
+  <h2 id="gear-heading" class="vh">Gear</h2>
 
-    <GearCarousel />
+  <GearCarousel />
 
+  <div class="container kit-footer">
     <div class="kit-actions">
       <a class="btn btn-primary" href={gearUrl}>See all gear <span aria-hidden="true">&rarr;</span></a>
     </div>
-
-    <div id="gear-storefront">
-      <StorefrontCTA />
-      <p class="kit-disclosure font-mono">As an Amazon Associate, I earn from qualifying purchases.</p>
-    </div>
+    <p class="kit-disclosure font-mono">As an Amazon Associate, I earn from qualifying purchases.</p>
   </div>
 </section>
 
 <style>
+  .section-hairline.kit-section {
+    padding-top: 0;
+  }
+  .kit-footer {
+    margin-top: clamp(1.25rem, 2.2vw, 2rem);
+  }
   .kit-disclosure {
     margin: 0.85rem 0 0;
     font-size: 0.68rem;
@@ -40,7 +38,7 @@ const gearUrl = `${rawBase === '/' ? '' : rawBase.replace(/\/$/, '')}/gear/`;
     color: var(--muted);
   }
   .kit-actions {
-    margin-top: 1rem;
+    margin-top: 0;
     display: flex;
     justify-content: flex-start;
   }
@@ -49,9 +47,6 @@ const gearUrl = `${rawBase === '/' ? '' : rawBase.replace(/\/$/, '')}/gear/`;
   }
   :global(#site) .kit-actions > .btn:is(:hover, :focus-visible) {
     background: #f5f5f5;
-  }
-  #gear-storefront {
-    margin-top: clamp(2.5rem, 4.5vw, 4rem);
   }
   @media (max-width: 600px) {
     .kit-actions > .btn {

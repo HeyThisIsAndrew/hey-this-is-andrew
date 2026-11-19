@@ -1,11 +1,8 @@
 ---
 /**
  * Storefront picks or referrals (src/data/storefront.ts).
- * - Default (2 items, /#gear & /gear/): rendered via @andrew/ui BannerRotator
- *   (BE Unconventional HQ commercial rotator pattern with 3D flip, SVG perimeter
- *   progress clock, Play/Pause, Prev, and Next).
- * - picks={REFERRALS} (5 items, /about/): rendered as balanced 5-column grid
- *   with equal-height cards and CTA at bottom.
+ * Always rendered via @andrew/ui BannerRotator (3D flip, SVG perimeter clock,
+ * Play/Pause, Prev, and Next) for both GEAR_PICKS (/gear/) and REFERRALS (/about/).
  */
 import { getImage } from 'astro:assets';
 import BannerRotator, { type RotatorSlide } from '@andrew/ui/BannerRotator.astro';
@@ -21,64 +18,41 @@ interface Props {
   eyebrow?: string;
 }
 const { picks = GEAR_PICKS, label = 'Featured picks and tools', eyebrow } = Astro.props;
-const useRotator = picks.length <= 2;
 
 const kitThumb = await getImage({ src: sonyA7iv, width: 240, format: 'webp' });
 const resolveThumb = await getImage({ src: davinciResolve, width: 240, format: 'webp' });
 
-const rotatorSlides: RotatorSlide[] = useRotator
-  ? picks.map((pick) => {
-      const isAmazon = pick.url === AMAZON_STOREFRONT;
-      const isResolve = pick.title.toLowerCase().includes('davinci');
-      return {
-        title: pick.title,
-        subtitle: pick.desc ?? pick.frontDesc ?? '',
-        meta: isAmazon ? 'Amazon Storefront' : isResolve ? 'Editing & Color Software' : 'Featured Link',
-        cta: pick.cta,
-        href: pick.url,
-        external: true,
-        rel: isAmazon ? 'noopener sponsored' : 'noopener noreferrer',
-        imageSrc: isAmazon ? kitThumb.src : isResolve ? resolveThumb.src : undefined,
-        imageAlt: pick.title,
-        badge: isAmazon ? 'KIT' : 'TOOL',
-      };
-    })
-  : [];
+const rotatorSlides: RotatorSlide[] = picks.map((pick, index) => {
+  const isAmazon = pick.url === AMAZON_STOREFRONT;
+  const isResolve = pick.title.toLowerCase().includes('davinci');
+  const isGear = isAmazon || isResolve;
+  return {
+    title: pick.title,
+    subtitle: pick.desc ?? pick.frontDesc ?? '',
+    meta: isAmazon
+      ? 'Amazon Storefront'
+      : isResolve
+        ? 'Editing & Color Software'
+        : eyebrow
+          ? `${eyebrow} · ${index + 1} / ${picks.length}`
+          : `${index + 1} / ${picks.length}`,
+    cta: pick.cta,
+    href: pick.url,
+    external: true,
+    rel: isAmazon ? 'noopener sponsored' : 'noopener noreferrer',
+    imageSrc: isAmazon ? kitThumb.src : isResolve ? resolveThumb.src : undefined,
+    imageAlt: isGear ? pick.title : undefined,
+    badge: isAmazon ? 'KIT' : isResolve ? 'TOOL' : pick.title.slice(0, 4).toUpperCase(),
+  };
+});
 ---
 
-{useRotator ? (
-  <aside class="storefront storefront--rotator" aria-label={label}>
-    {eyebrow && <p class="storefront-eyebrow font-mono">{eyebrow}</p>}
-    <BannerRotator slides={rotatorSlides} label={label} holdSeconds={8} />
-  </aside>
-) : (
-  <aside class="storefront" aria-label={label} data-count={picks.length}>
-    {eyebrow && <p class="storefront-eyebrow font-mono">{eyebrow}</p>}
-    <ul class="storefront-picks">
-      {picks.map((pick) => (
-        <li class="storefront-pick">
-          {pick.kicker && <p class="kicker font-mono">{pick.kicker}</p>}
-          <h3 class="display storefront-pick-title">{pick.title}</h3>
-          {pick.desc && <p class="storefront-pick-desc">{pick.desc}</p>}
-          <a class="btn btn-primary storefront-cta" href={pick.url} target="_blank" rel="noopener">
-            {pick.cta}
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </a>
-        </li>
-      ))}
-    </ul>
-  </aside>
-)}
+<aside class="storefront storefront--rotator" aria-label={label} data-count={picks.length}>
+  {eyebrow && <p class="storefront-eyebrow font-mono">{eyebrow}</p>}
+  <BannerRotator slides={rotatorSlides} label={label} holdSeconds={8} />
+</aside>
 
 <style>
-  .storefront {
-    margin-top: 2.5rem;
-    border: 1px solid var(--line);
-    background: var(--surface);
-    padding: clamp(1.25rem, 3vw, 2rem);
-  }
   .storefront--rotator {
     margin-top: 0;
     border: 0;
@@ -91,82 +65,5 @@ const rotatorSlides: RotatorSlide[] = useRotator
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--ink);
-  }
-
-  .storefront-picks {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-    gap: 1.5rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  [data-count="5"] .storefront-picks {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 1.25rem;
-  }
-  @media (max-width: 1080px) {
-    [data-count="5"] .storefront-picks {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-  @media (max-width: 768px) {
-    [data-count="5"] .storefront-picks {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-  @media (max-width: 520px) {
-    [data-count="5"] .storefront-picks {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  }
-  .storefront-pick {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    height: 100%;
-    padding: clamp(1rem, 1.5vw, 1.25rem);
-    border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
-    background: #0d0d0d;
-    box-sizing: border-box;
-  }
-  .storefront .kicker {
-    margin: 0;
-    font-size: 0.72rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .storefront-pick-title {
-    margin: 0;
-    font-size: clamp(1.05rem, 1.4vw, 1.25rem);
-    text-transform: uppercase;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-  }
-  .storefront-pick-desc {
-    flex: 1 1 auto;
-    margin: 0.75rem 0 1.25rem;
-    color: var(--muted, #888);
-    font-size: 0.85rem;
-    line-height: 1.5;
-  }
-  .storefront-cta {
-    margin-top: auto;
-    width: 100%;
-    min-height: 44px;
-    height: 44px;
-    padding: 0 1rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    white-space: nowrap;
-    text-decoration: none;
-    box-sizing: border-box;
-    font-size: var(--btn-fs-sm, 0.75rem);
-    letter-spacing: var(--btn-ls, 0.08em);
-    text-transform: uppercase;
-    font-weight: 600;
   }
 </style>

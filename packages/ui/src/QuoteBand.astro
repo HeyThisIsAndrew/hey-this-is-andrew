@@ -9,19 +9,28 @@ interface Props {
   eyebrow: string;
   quote: string;
   attribution: string;
+  attributionHref?: string;
   /** Accessible name for the band. */
   label?: string;
 }
 
-const { eyebrow, quote, attribution, label = eyebrow } = Astro.props;
+const { eyebrow, quote, attribution, attributionHref, label = eyebrow } = Astro.props;
 ---
 <aside class="quote-band" aria-label={label}>
   <div class="container">
-    <p class="quote-eyebrow">{eyebrow}</p>
-    <blockquote>
-      <p>"{quote}"</p>
-      <cite>{attribution}</cite>
-    </blockquote>
+    <div class="quote-band-inner">
+      <p class="quote-eyebrow">{eyebrow}</p>
+      <blockquote>
+        <p>"{quote}"</p>
+        <cite>
+          {attributionHref ? (
+            <a class="quote-attribution-link" href={attributionHref} target="_blank" rel="noopener noreferrer">{attribution}</a>
+          ) : (
+            attribution
+          )}
+        </cite>
+      </blockquote>
+    </div>
   </div>
 </aside>
 
@@ -33,15 +42,24 @@ const { eyebrow, quote, attribution, label = eyebrow } = Astro.props;
     border-bottom: 1px solid var(--line);
     text-align: left;
   }
+  .quote-band-inner {
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto;
+  }
   .quote-eyebrow {
     font-size: 0.72rem;
     font-weight: 600;
     letter-spacing: 0.34em;
     text-transform: uppercase;
     color: var(--muted);
+    text-align: center;
     margin: 0 0 clamp(1.25rem, 2.5vw, 2.5rem);
   }
-  .quote-band blockquote { margin: 0; }
+  .quote-band blockquote {
+    margin: 0;
+    text-align: left;
+  }
   .quote-band blockquote p {
     font-family: var(--font-display);
     font-weight: 800;
@@ -60,5 +78,19 @@ const { eyebrow, quote, attribution, label = eyebrow } = Astro.props;
     letter-spacing: 0.24em;
     text-transform: uppercase;
     color: var(--muted);
+  }
+  .quote-attribution-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--muted);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: rgba(255, 255, 255, 0.35);
+    transition: color 180ms ease-in-out, text-decoration-color 180ms ease-in-out;
+  }
+  .quote-attribution-link:is(:hover, :focus-visible) {
+    color: var(--ink);
+    text-decoration-color: var(--ink);
   }
 </style>

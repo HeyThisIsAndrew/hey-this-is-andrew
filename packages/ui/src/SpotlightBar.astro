@@ -27,6 +27,7 @@ export interface Props {
   label?: string;
   holdSeconds?: number;
   height?: string;
+  fullBleed?: boolean;
   class?: string;
 }
 
@@ -35,6 +36,7 @@ const {
   label = 'Highlights',
   holdSeconds = 7,
   height = 'clamp(250px, 24vw, 440px)',
+  fullBleed = false,
   class: className,
 } = Astro.props;
 
@@ -42,7 +44,7 @@ const rotates = slides.length > 1;
 ---
 
 <div
-  class:list={['ui-spotlight', className]}
+  class:list={['ui-spotlight', { 'ui-spotlight--bleed': fullBleed }, className]}
   data-spotlight
   role="region"
   aria-roledescription={rotates ? 'carousel' : undefined}
@@ -156,6 +158,28 @@ const rotates = slides.length > 1;
     background: #0d0d0d;
     overflow: hidden;
     isolation: isolate;
+  }
+
+  .ui-spotlight--bleed .ui-spotlight-frame {
+    border-top: 0;
+    border-left: 0;
+    border-right: 0;
+  }
+
+  .ui-spotlight--bleed .ui-spotlight-inner {
+    width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw, 100%));
+    margin-inline: auto;
+  }
+
+  @media (min-width: 721px) {
+    .ui-spotlight--bleed .ui-spotlight-body {
+      padding-inline-start: 0;
+    }
+  }
+
+  .ui-spotlight--bleed .ui-spotlight-controls {
+    width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw, 100%));
+    margin-inline: auto;
   }
 
   .ui-spotlight-slide {

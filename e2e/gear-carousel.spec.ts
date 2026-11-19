@@ -39,8 +39,8 @@ test('gear carousel: the seven sections, controls and keys, pause holds past int
   await page.waitForTimeout(8000);
   expect(await activeSlideIndex(page)).toBe(4);
 
-  // Gear picks only, BannerRotator with 2 slides, disclosure intact; Mint Mobile is not gear.
-  await expect(page.locator('#gear [data-banner-rotator] [data-rotator-slide]')).toHaveCount(2);
+  // No stacked second banner on #gear, disclosure intact; Mint Mobile is not gear.
+  await expect(page.locator('#gear [data-banner-rotator]')).toHaveCount(0);
   await expect(page.locator('#gear')).not.toContainText('Mint Mobile');
   await expect(page.locator('#gear .kit-disclosure')).toHaveText('As an Amazon Associate, I earn from qualifying purchases.');
 
@@ -62,15 +62,18 @@ test('/gear/ section and item links open their section', async ({ page }) => {
   await expect(page.locator('#gear-lighting .deck-card.active')).toHaveAttribute('aria-label', 'Aputure Amaran 200d');
 });
 
-test('referrals on /about/ (Mint Mobile never in a gear section), Cohley under What I do', async ({ page }) => {
+test('referrals BannerRotator on /about/ (Mint Mobile never in a gear section), Full kit on /gear/, Cohley under What I do', async ({ page }) => {
   await page.goto('./about/');
   const referrals = page.getByRole('complementary', { name: 'Referrals' });
-  await expect(referrals.locator('.storefront-pick', { hasText: 'Mint Mobile' }).getByRole('link', { name: 'Check out' }))
+  await expect(referrals.locator('[data-banner-rotator] [data-rotator-slide]', { hasText: 'Mint Mobile' }))
     .toHaveAttribute('href', 'https://my.mintmobile.com/refer/pHvGFQz');
-  await expect(referrals.locator('.storefront-pick h3')).toHaveText(['Mint Mobile', 'inKind', 'Fetch', 'Instacart', 'Rakuten']);
+  await expect(referrals.locator('[data-banner-rotator] [data-rotator-slide] .ui-rotator-title-full'))
+    .toHaveText(['Mint Mobile', 'inKind', 'Fetch', 'Instacart', 'Rakuten']);
   await page.goto('./');
   await expect(page.locator('#services').getByRole('link', { name: 'Cohley profile' }))
     .toHaveAttribute('href', 'https://connect.cohley.com/public/profile/andrew-baxter/');
   await page.goto('./gear/');
+  await expect(page.locator('[data-banner-rotator] [data-rotator-slide] .ui-rotator-title-full'))
+    .toHaveText(['Full kit', 'DaVinci Resolve']);
   await expect(page.locator('main')).not.toContainText('Mint Mobile');
 });
