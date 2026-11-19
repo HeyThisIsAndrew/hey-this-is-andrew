@@ -1215,6 +1215,8 @@ const SETS = [0, 1];
     let zoomPaused = false;
     let isFullscreen = false;
     let isFsClosing = false;
+    let fsOpenUntil = 0;
+    let settleZoomTimer = 0;
     let fsCloseTimer = 0;
     let fsLastFocus: HTMLElement | null = null;
     let fsSavedScrollY = 0;
@@ -1904,6 +1906,7 @@ const SETS = [0, 1];
         stageWrap.style.transform = 'translate3d(0px, 0px, 0) scale(1)';
         stageWrap.style.clipPath = 'inset(0px 0px 0px 0px)';
         photoViewport.classList.add('is-fullscreen-open');
+        fsOpenUntil = performance.now() + FS_MS;
       }
 
       reels.forEach((r) => {
@@ -2062,6 +2065,22 @@ const SETS = [0, 1];
       }
     });
 
+    /* A zoom asked for while the fullscreen view is still growing waits
+       for it to land: focusOn measures the stage, and mid-growth the stage
+       is scaled, so the camera (and the dock under the tile) aimed at the
+       half-grown frame and left the photo partly off screen. */
+    function focusWhenSettled(target: HTMLElement, ms: number) {
+      window.clearTimeout(settleZoomTimer);
+      const wait = fsOpenUntil - performance.now();
+      if (wait <= 0) {
+        focusOn(target, ms);
+        return;
+      }
+      settleZoomTimer = window.setTimeout(() => {
+        if (isZoomed && activeTarget === target) focusOn(target, ms);
+      }, wait + 30);
+    }
+
     function zoomToElement(target: HTMLElement) {
       if (isZoomed) {
         if (target === activeTarget) resetZoom();
@@ -2113,7 +2132,7 @@ const SETS = [0, 1];
       photoSection?.classList.add('is-zoomed', 'is-camera');
       setWatch(target);
       setHud(target);
-      focusOn(target, reduced() ? 0 : 600);
+      focusWhenSettled(target, reduced() ? 0 : 600);
     }
 
     function panToElement(newTarget: HTMLElement) {
@@ -2132,7 +2151,7 @@ const SETS = [0, 1];
       newTarget.classList.add('is-active');
       setWatch(newTarget);
       setHud(newTarget);
-      focusOn(newTarget, reduced() ? 0 : 520);
+      focusWhenSettled(newTarget, reduced() ? 0 : 520);
     }
 
     function stepItem(dir: 1 | -1) {
@@ -2178,6 +2197,7 @@ const SETS = [0, 1];
        camera transform, so nothing pops or re-crops when the return lands. */
     function resetZoom(fromHistory = false) {
       if (!isZoomed || isClosing) return;
+      window.clearTimeout(settleZoomTimer);
       stopPlayer();
       isZoomed = false;
       isClosing = true;
@@ -2370,6 +2390,7 @@ const SETS = [0, 1];
       clearTimeout(hudTimer);
       clearTimeout(closeTimer);
       clearTimeout(fsCloseTimer);
+      clearTimeout(settleZoomTimer);
       reels.forEach((reel) => { reel.anim?.cancel(); clearTimeout(reel.idleTimer); });
       window.visualViewport?.removeEventListener('resize', onResizeOrRotate);
       if (isZoomed || isClosing || isFullscreen || isFsClosing) {

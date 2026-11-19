@@ -37,10 +37,12 @@ const toggle = mode === 'toggle';
 <style>
   /* One size for every tab in a row (the house rule for buttons that sit
      together): equal columns, the widest label's width. */
+  /* Equal columns even when the row is squeezed to the screen: 1fr keeps
+     a min-content floor, so the longest label took a wider column. */
   .filter-tabs {
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: 1fr;
+    grid-auto-columns: minmax(0, 1fr);
     width: max-content;
     max-width: 100%;
     gap: 0.5rem;
@@ -51,7 +53,9 @@ const toggle = mode === 'toggle';
     position: relative;
     z-index: 1; /* its hit area paints over the list that follows */
     min-height: var(--btn-h-sm);
-    padding: calc(6 * var(--ui-u)) var(--btn-px-sm);
+    /* The side padding gives way first on a phone, so a label never
+       outgrows its equal column. */
+    padding: calc(6 * var(--ui-u)) min(var(--btn-px-sm), 3vw);
     background: transparent;
     border: 0;
     border-bottom: 1px solid var(--hairline-strong, rgba(255, 255, 255, 0.15));

@@ -1,48 +1,51 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+/* The homepage elevator is compact: the first click opens the fullscreen
+   elevator; inside it a tile click zooms the camera onto that tile. */
+async function openFullscreenElevator(page: Page) {
+  const section = page.locator('.photo-section');
+  await page.locator('.photo-section .photo-stage-wrap').scrollIntoViewIfNeeded();
+  await page.locator('.photo-section .photo-stage-wrap').click({ position: { x: 40, y: 40 } });
+  await expect(section).toHaveClass(/is-fullscreen/);
+  return section;
+}
+/* A tile from the visible set that sits on screen, so a click lands on it. */
+async function onScreenTile(page: Page, selector: string) {
+  const handle = await page.evaluateHandle((sel) => {
+    const vh = window.innerHeight;
+    return Array.from(document.querySelectorAll<HTMLElement>(sel)).find((el) => {
+      const col = el.closest<HTMLElement>('.photo-column');
+      const r = el.getBoundingClientRect();
+      return col && getComputedStyle(col).display !== 'none' && r.width > 0 && r.top > 40 && r.top < vh - 150;
+    }) ?? null;
+  }, selector);
+  return handle.asElement();
+}
 
 test.describe('Audit Fixes Verification', () => {
-  test('Service logistics ledger has three centered columns and no pricing', async ({ page }) => {
+  test('What I Do has no pricing and nothing beneath the elevator', async ({ page }) => {
     await page.goto('./');
-
-    const clientBlock = page.locator('#services [data-client-block]');
-    await expect(clientBlock).toBeVisible();
-    const ledger = clientBlock.locator('.logistics-ledger');
-    const columns = await ledger.evaluate(el => getComputedStyle(el).gridTemplateColumns);
-    expect(columns.split(' ')).toHaveLength(3);
-
-    const items = ledger.locator('.logistics-item');
-    await expect(items).toHaveText([
-      '15 selects the next day. The full gallery within a week.',
-      'Edited photos and vertical reels, licensed for your social and web.',
-      'Shot on location for Desert Escape at Ace Hotel Palm Springs, the Stone Groove Stillhouse launch, and brand and creator campaigns.',
-    ]);
-    for (const item of await items.all()) {
-      await expect(item).toHaveCSS('text-align', 'center');
-      await expect(item).toHaveCSS('align-items', 'center');
-      await expect(item).toHaveCSS('justify-content', 'center');
-      await expect(item).toHaveCSS('border-left-width', '0px');
-      await expect(item.locator('.logistics-value')).toHaveCSS('text-transform', 'uppercase');
-    }
-
-    // No Starting Rate or pricing numbers
-    await expect(clientBlock).not.toContainText('Starting Rate');
-    await expect(clientBlock).not.toContainText('$');
+    const services = page.locator('#services');
+    await expect(services.locator('.stat-value')).toHaveText(['Building in Public', 'Creator and Coffee Drinker', 'UGC']);
+    await expect(services).not.toContainText('Starting Rate');
+    await expect(services).not.toContainText('$');
+    expect(await services.locator('.work-elevator').evaluate((el) => el.nextElementSibling)).toBeNull();
+    await expect(page.locator('.photo-note')).toHaveCount(0);
   });
 
-  test('Contact rule: UGC CTA on homepage, no CCC email on homepage or gear page', async ({ page }) => {
+  test('Contact rule: UGC CTA on the UGC card, no CCC email on homepage or gear page', async ({ page }) => {
     await page.goto('./');
 
-    const expectedUgcHref =
-      'mailto:heythisisandrewb@gmail.com?subject=Product%20review%20%2F%20brand%20partnership' +
-      '&body=Brand%3A%0AProduct%3A%0AWhat%20you%20want%20shown%3A%0ATimeline%3A%0A';
-
-    // 1. Homepage services has exactly one UGC CTA
+    // 1. The UGC card's back carries the one UGC CTA.
+    const ugc = page.locator('#services .work-flip-card--action');
+    await ugc.locator('.flip-card-toggle').click({ force: true });
+    await expect(ugc).toHaveClass(/is-flipped/);
     const servicesCta = page.locator('#services').getByRole('link', { name: 'Send a product' });
+    await expect(servicesCta).toHaveCount(1);
     await expect(servicesCta).toBeVisible();
-    await expect(servicesCta).toHaveAttribute('href', expectedUgcHref);
+    await expect(servicesCta).toHaveAttribute('href', /^mailto:[^?]+\?subject=Product%20review%20%2F%20brand%20partnership&body=/);
 
     // 2. No CCC mailto buttons on homepage
-    await expect(page.locator('#work a:has-text("Start a project")')).toHaveCount(0);
     await expect(page.locator('#gear a:has-text("Start a project")')).toHaveCount(0);
     await expect(page.locator('a[href*="capturecreatecaffeinate@gmail.com"]')).toHaveCount(0);
 
@@ -57,92 +60,113 @@ test.describe('Audit Fixes Verification', () => {
     await expect(cccContactBtn).toBeVisible();
   });
 
-  test('Homepage shows the seven sections in order', async ({ page }) => {
+  test('Homepage shows its sections in order', async ({ page }) => {
     await page.goto('./');
     const sections = await page.locator('#main-content > section').evaluateAll(els => els.map(el => el.id));
-    expect(sections).toEqual(['overview', 'directory', 'work', 'services', 'gear', 'explore', 'newsletter']);
+    expect(sections).toEqual(['overview', 'directory', 'gear', 'services', 'newsletter']);
   });
 
-  test('Elevator reels play local files in place or open their Instagram links', async ({ page }) => {
+  test('Elevator reels zoom in, then play locally or open Instagram from the dock', async ({ page }) => {
     await page.goto('./');
-
     const originals = page.locator('.photo-set:not([aria-hidden])');
-    const reels = originals.locator('.photo-item[data-video-url]');
-    test.skip((await reels.count()) === 0, 'no Instagram reels in this build');
+    test.skip((await originals.locator('.photo-item[data-video-url]').count()) === 0, 'no Instagram reels in this build');
 
-    const instagramLinks = originals.locator('.photo-item[data-video-url]:not([data-video-src])');
-    for (const link of await instagramLinks.all()) {
-      const permalink = await link.getAttribute('data-video-url');
-      expect(permalink).toMatch(/^https:\/\/www\.instagram\.com\/reel\//);
-      await expect(link).toHaveAttribute('href', permalink!);
-      await expect(link).toHaveAttribute('target', '_blank');
-      await expect(link.locator('.photo-play-badge, .photo-tag-video-icon')).toHaveCount(0);
+    // Every Instagram-only reel names its permalink and shows no play badge.
+    const instagramOnly = originals.locator('.photo-item[data-video-url]:not([data-video-src])');
+    for (const tile of await instagramOnly.all()) {
+      expect(await tile.getAttribute('data-video-url')).toMatch(/^https:\/\/www\.instagram\.com\/reel\//);
+      await expect(tile.locator('.photo-play-badge, .photo-tag-video-icon')).toHaveCount(0);
     }
+
+    const section = await openFullscreenElevator(page);
     const player = page.locator('[data-photo-player]');
-    if (await instagramLinks.count()) {
-      const link = instagramLinks.first();
-      const permalink = (await link.getAttribute('href'))!;
-      await page.context().route(permalink, route => route.fulfill({ body: '' }), { times: 1 });
-      const [popup] = await Promise.all([
-        page.waitForEvent('popup'),
-        link.evaluate(el => (el as HTMLElement).click()),
-      ]);
-      await expect(popup).toHaveURL(permalink);
-      await popup.close();
-      await expect(page.locator('.photo-section')).not.toHaveClass(/is-zoomed/);
-      await expect(player).toBeHidden();
+    const dock = page.locator('[data-photo-actions]');
+    const watch = page.locator('[data-photo-watch]');
+
+    const igTile = await onScreenTile(page, '.photo-item[data-video-url]:not([data-video-src])');
+    if (igTile) {
+      const permalink = await igTile.getAttribute('data-video-url');
+      await igTile.evaluate((el) => (el as HTMLElement).click());
+      await expect(section).toHaveClass(/is-zoomed/);
+      await expect(watch).toBeVisible();
+      await expect(watch).toHaveAttribute('href', permalink!);
+      await expect(watch).toHaveAttribute('target', '_blank');
+      await expect(page.locator('[data-photo-play]')).toBeHidden();
+      // The dock belongs to the tile: directly beneath it, centred on it
+      // (once the camera has landed; clicked this soon after opening, the
+      // zoom first waits for the fullscreen view to finish growing).
+      const gaps = () => page.evaluate(() => {
+        const t = document.querySelector('.photo-item.is-active')!.getBoundingClientRect();
+        const d = document.querySelector('[data-photo-actions]')!.getBoundingClientRect();
+        return { below: Math.round(d.top - t.bottom), offCentre: Math.round(Math.abs((d.left + d.right) / 2 - (t.left + t.right) / 2)) };
+      });
+      await expect.poll(async () => { const g = await gaps(); return g.below >= 0 && g.below <= 40 && g.offCentre <= 24; }, { timeout: 4000 }).toBe(true);
+      await page.keyboard.press('Escape');
+      await expect(section).not.toHaveClass(/is-zoomed/);
+      await expect(section).toHaveClass(/is-fullscreen/);
     }
 
-    const videoItem = originals.locator('.photo-item[data-video-src]').first();
-    if (!(await videoItem.count())) return;
-    await expect(videoItem.locator('.photo-play-badge')).toContainText('Video');
-
-    // A video tile zooms into the elevator view like a photo: nothing plays
-    // and no separate dialog opens.
-    await videoItem.evaluate((el) => (el as HTMLElement).click());
-    await expect(page.locator('.photo-section')).toHaveClass(/is-zoomed/);
+    const videoTile = await onScreenTile(page, '.photo-item[data-video-src]');
+    if (!videoTile) return;
+    await videoTile.evaluate((el) => (el as HTMLElement).click());
+    await expect(section).toHaveClass(/is-zoomed/);
     await expect(player).toBeHidden();
-    await expect(page.locator('#photo-reel-player')).toHaveCount(0);
-
-    // Play in the dock plays the self-hosted file in place, with the HQ
-    // close button above it, clear of the nav.
     await page.locator('[data-photo-play]').click();
     await expect(player).toBeVisible();
     await expect(player.locator('video')).toHaveCount(1);
     await expect(page.locator('iframe[src*="instagram.com"]')).toHaveCount(0);
-    const close = player.locator('[data-photo-player-close]');
-    await expect(close).toHaveText('×');
-    const gap = await close.evaluate((el) => el.getBoundingClientRect().top - document.querySelector('.site-nav')!.getBoundingClientRect().bottom);
-    expect(gap).toBeGreaterThanOrEqual(0);
+    await expect(player.locator('[data-photo-player-close]')).toHaveText('×');
 
     // Escape stops it and keeps the zoom; Escape again closes the zoom.
     await page.keyboard.press('Escape');
     await expect(player).toBeHidden();
-    await expect(page.locator('.photo-section')).toHaveClass(/is-zoomed/);
+    await expect(section).toHaveClass(/is-zoomed/);
     await page.keyboard.press('Escape');
-    await expect(page.locator('.photo-section')).not.toHaveClass(/is-zoomed/);
+    await expect(section).not.toHaveClass(/is-zoomed/);
   });
 
-  test('Elevator photo tile click opens carousel with HUD counter and Close button', async ({ page }) => {
+  test('Elevator zoom: HUD counter, and every way out of the zoom stays fullscreen', async ({ page }) => {
     await page.goto('./');
-
-    const photoItem = page.locator('.photo-item:not([data-video-url])').first();
-    if ((await photoItem.count()) === 0) return; // No Instagram photos downloaded in local dev
-    await photoItem.click();
-
-    // Verify elevator is zoomed
+    test.skip((await page.locator('.photo-item:not([data-video-url])').count()) === 0, 'no photos in this build');
+    const section = await openFullscreenElevator(page);
     const stage = page.locator('#camera-stage');
-    await expect(stage).toHaveClass(/is-zoomed/);
 
-    // Verify HUD
-    const hud = page.locator('[data-photo-hud]');
-    await expect(hud).toBeVisible();
-    const progress = page.locator('[data-photo-progress]');
-    await expect(progress).toContainText(/Item \d+ of \d+/);
+    const zoomIn = async () => {
+      const tile = await onScreenTile(page, '.photo-set:not([aria-hidden]) .photo-item:not([data-video-url])');
+      expect(tile).not.toBeNull();
+      await tile!.evaluate((el) => { el.setAttribute('data-qa-tile', ''); (el as HTMLElement).click(); });
+      await expect(stage).toHaveClass(/is-zoomed/);
+      await expect(page.locator('[data-photo-hud]')).toBeVisible();
+      await expect(page.locator('[data-photo-progress]')).toContainText(/Item \d+ of \d+/);
+    };
+    const backInFullscreen = async () => {
+      await expect(stage).not.toHaveClass(/is-zoomed/);
+      await expect(section).toHaveClass(/is-fullscreen/);
+      await page.locator('[data-qa-tile]').evaluate((el) => el.removeAttribute('data-qa-tile'));
+    };
 
-    // Click HUD close button exits elevator cleanly
-    const hudClose = page.locator('[data-photo-close]');
-    await hudClose.click();
-    await expect(stage).not.toHaveClass(/is-zoomed/);
+    // The HUD's Close button.
+    await zoomIn();
+    await page.locator('[data-photo-close]').click();
+    await backInFullscreen();
+
+    // Clicking the zoomed photo again.
+    await zoomIn();
+    await page.locator('[data-qa-tile]').evaluate((el) => (el as HTMLElement).click());
+    await backInFullscreen();
+
+    // Escape.
+    await zoomIn();
+    await page.keyboard.press('Escape');
+    await backInFullscreen();
+
+    // The browser's back button.
+    await zoomIn();
+    await page.goBack();
+    await backInFullscreen();
+
+    // Escape from fullscreen leaves the elevator.
+    await page.keyboard.press('Escape');
+    await expect(section).not.toHaveClass(/is-fullscreen/);
   });
 });

@@ -55,6 +55,13 @@ export function installPageTransitions(options, chooseDirection) {
     const direction = document.documentElement.dataset.pageTransition;
     if (direction) event.newDocument.documentElement.dataset.pageTransition = direction;
     rowsPending = direction === 'page-rows';
+    // The Accordion's collapsed styles hang off html.acc-js. Its own script
+    // restores the class on swaps, but only once a page with an accordion
+    // has loaded it; arriving from a page without one (the homepage), the
+    // rows painted open for a frame. The router is on every page.
+    if (event.newDocument.querySelector('[data-accordion-group]')) {
+      event.newDocument.documentElement.classList.add('acc-js');
+    }
   });
   document.addEventListener('astro:after-swap', () => {
     if (!rowsPending) return;

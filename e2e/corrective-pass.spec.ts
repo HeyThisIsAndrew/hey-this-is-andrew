@@ -22,12 +22,11 @@ test.describe('Corrective Pass Verification', () => {
     expect(JSON.parse(projectsRaw)).toEqual([]);
   });
 
-  test('Gate 4: /ccc/ shows "What is included" with zero pricing numbers', async ({ page }) => {
+  test('Gate 4: /ccc/ shows what every shoot includes with zero pricing numbers', async ({ page }) => {
     await page.goto('./ccc/');
 
     const pricingSection = page.locator('#pricing');
     await expect(pricingSection).toBeVisible();
-    await expect(pricingSection.locator('.sec-eyebrow')).toContainText('What is included');
     await expect(pricingSection.locator('.section-title')).toContainText('Every shoot includes');
 
     const content = await page.content();
@@ -44,22 +43,14 @@ test.describe('Corrective Pass Verification', () => {
     await expect(neewerLink.first()).toBeAttached();
   });
 
-  test('Gate 6: Work combines the photography portfolio and video proof without duplicates', async ({ page }, testInfo) => {
+  test('Gate 6: the homepage shows the photography elevator once, inside What I Do', async ({ page }) => {
     for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
       await page.setViewportSize(viewport);
       await page.goto('./');
-      const work = page.locator('#work');
-      await expect(work).toBeVisible();
-      await expect(work.locator('#photos')).toBeVisible();
-      await expect(work.locator('.sw-feature')).toBeVisible();
-      await expect(work.locator('.sw-projects')).toHaveCount(0);
-      await expect(page.locator('#photos')).toHaveCount(1);
-      const videos = await work.locator('[data-video-player][data-video-url]').evaluateAll(items =>
-        items.map(item => item.getAttribute('data-video-url'))
-      );
-      expect(videos.length).toBeGreaterThan(0);
-      expect(new Set(videos).size).toBe(videos.length);
-      await work.screenshot({ path: testInfo.outputPath(`work-${viewport.width}.png`) });
+      await expect(page.locator('.photo-section')).toHaveCount(1);
+      await expect(page.locator('#services .work-elevator .photo-section')).toBeVisible();
+      await expect(page.locator('.sw-projects')).toHaveCount(0);
+      await expect(page.locator('#work')).toHaveCount(0);
     }
   });
 
@@ -157,7 +148,9 @@ test.describe('Corrective Pass Verification', () => {
           const computed = val ? getComputedStyle(val) : null;
           return {
             text: val?.textContent?.trim(),
-            whiteSpace: computed?.whiteSpace,
+            // One line: no taller than one line box (FlipCard values may
+            // wrap by design; these three must fit on one).
+            lines: val && computed ? Math.round(val.getBoundingClientRect().height / parseFloat(computed.lineHeight)) : 0,
             scrollWidth: val?.scrollWidth ?? 0,
             clientWidth: val?.clientWidth ?? 0,
             overflowsCard: Boolean(
@@ -169,7 +162,7 @@ test.describe('Corrective Pass Verification', () => {
 
       expect(tileStats.length).toBe(3);
       for (const stat of tileStats) {
-        expect(stat.whiteSpace).toBe('nowrap');
+        expect(stat.lines, stat.text).toBe(1);
         expect(stat.scrollWidth).toBeLessThanOrEqual(stat.clientWidth + 1);
         expect(stat.overflowsCard).toBe(false);
       }

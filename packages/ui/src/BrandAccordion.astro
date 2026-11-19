@@ -833,10 +833,12 @@ const linkAttrs = (href?: string) =>
      em of the button's own type, so it scales with it) that fits the
      longest label, and the same height. A row too narrow for all of them
      wraps whole buttons, never shrinks one. */
+  /* One size per group (the house rule): equal columns, wrapping to
+     equal rows when the panel is narrow. */
   .bacc-actions {
     --bacc-btn-w: 18.5em;
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
     gap: calc(10 * var(--ui-u));
     width: 100%;
     margin-top: calc(17.92 * var(--u));
@@ -876,7 +878,7 @@ const linkAttrs = (href?: string) =>
     margin-top: 1.25rem;
   }
   .bacc-caption .bacc-actions .bacc-cta {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     min-width: min(100%, 140px);
     max-width: 100%;
     height: auto;
@@ -979,6 +981,14 @@ const linkAttrs = (href?: string) =>
   }
   .bacc-toggle:active {
     transform: scale(0.94);
+  }
+  /* Touch: a full 44px target, still a circle. */
+  @media (pointer: coarse), (max-width: 1023px) {
+    .bacc-toggle {
+      width: 44px;
+      height: 44px;
+      min-height: 44px;
+    }
   }
   .bacc-toggle[hidden] {
     display: none;
@@ -1182,6 +1192,7 @@ const linkAttrs = (href?: string) =>
       width: 100%;
     }
     .bacc-caption .bacc-actions .bacc-cta {
+      flex: 0 0 auto;
       width: 100%;
       min-height: var(--tap-min, 44px);
     }

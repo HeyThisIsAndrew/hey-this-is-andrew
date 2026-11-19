@@ -16,14 +16,15 @@ test.describe('Global QA', () => {
     if (viewport?.width !== 390) test.skip();
     await page.goto('./');
     await page.waitForLoadState('networkidle');
-    await page.waitForSelector('.expand-trigger', { state: 'visible' });
     const interactives = page.locator('a:not(.press-link a):not(.footer-privacy):not([target="_blank"]), button, input, [role="button"]');
     const count = await interactives.count();
     for (let i = 0; i < count; i++) {
       const box = await interactives.nth(i).boundingBox();
       if (!box) continue;
       if (box.width > 0 && box.height > 0) {
-        const isExempt = await interactives.nth(i).evaluate(el => el.classList.contains('skip-link') || el.classList.contains('filter-tab') || el.hasAttribute('data-pn-link'));
+        // Exempt: the skip link, dense tabs, page-nav dots, and anything a
+        // person cannot see or reach (an unflipped card's back face).
+        const isExempt = await interactives.nth(i).evaluate(el => el.classList.contains('skip-link') || el.classList.contains('filter-tab') || el.hasAttribute('data-pn-link') || getComputedStyle(el).visibility === 'hidden' || Boolean(el.closest('[aria-hidden="true"], [inert]')));
         if (!isExempt) {
           expect(box.width).toBeGreaterThanOrEqual(43.5);
           expect(box.height).toBeGreaterThanOrEqual(43.5);
@@ -33,7 +34,8 @@ test.describe('Global QA', () => {
   });
 
   test('Expanders expand, focus, and deep-link', async ({ page }) => {
-    await page.goto('./');
+    // ExpandSection's only page now is the component showroom.
+    await page.goto('./kit/');
     const btn = page.locator('.expand-trigger').first();
     const targetId = await btn.getAttribute('aria-controls');
     if (!targetId) return;
@@ -100,7 +102,7 @@ test.describe('Global QA', () => {
     await expect(bePanel).toHaveClass(/is-open/);
     const bePrimaryBtn = bePanel.locator('.bacc-primary-btn');
     await expect(bePrimaryBtn).toBeVisible();
-    await expect(bePrimaryBtn).toContainText('Enter the HQ');
+    await expect(bePrimaryBtn).toContainText('Explore');
     await expect(bePanel.locator('.bacc-actions')).toBeHidden();
 
     // Clicking the primary button opens brand view with all buttons in even size and zero duplicates
@@ -110,8 +112,8 @@ test.describe('Global QA', () => {
     await expect(captionActions).toHaveCount(3);
     // Strict guarantee: exactly three visible action buttons in the caption, no duplicate bottom CTA
     await expect(viewport.locator('.bacc-caption .bacc-cta:visible')).toHaveCount(3);
-    await expect(captionActions.nth(0)).toContainText('Enter the HQ');
-    await expect(captionActions.nth(1)).toContainText('Visit site');
+    await expect(captionActions.nth(0)).toContainText('Explore');
+    await expect(captionActions.nth(1)).toContainText('Site');
     await expect(captionActions.nth(2)).toContainText('YouTube');
     const beBtnWidths = await captionActions.evaluateAll((btns) =>
       btns.map((b) => Math.round(b.getBoundingClientRect().width))
@@ -134,7 +136,7 @@ test.describe('Global QA', () => {
     await expect(cccPanel).toHaveClass(/is-open/);
     const cccPrimaryBtn = cccPanel.locator('.bacc-primary-btn');
     await expect(cccPrimaryBtn).toBeVisible();
-    await expect(cccPrimaryBtn).toContainText('See What We Shoot');
+    await expect(cccPrimaryBtn).toContainText('Explore');
     await cccPrimaryBtn.click();
     await expect(viewport).toHaveClass(/is-zoomed/);
     const cccActions = viewport.locator('.bacc-caption .bacc-actions .bacc-cta');
@@ -209,33 +211,24 @@ test.describe('Global QA', () => {
     await expect(page.locator('#content-engine .checklist-card').first()).toBeVisible();
   });
 
-  test('Homepage Explore cards flip in place and link to their dedicated pages', async ({ page }) => {
-    const destinations = [
-      { title: 'Goals', path: '/build/' },
-      { title: 'Gear', path: '/gear/' },
-      { title: 'Latest', path: '/latest/' },
-      { title: 'Work With Me', path: '/work-with-me/' },
-    ];
+  test('What I Do pillar cards flip in place; the UGC back carries its two links', async ({ page }) => {
     await page.goto('./');
     const homepage = page.url();
-    await expect(page.locator('main > :is(#goals, #latest)')).toHaveCount(0);
-    const cards = page.locator('#explore .flip-card');
-    await expect(page.locator('#explore .stat-value')).toHaveText(destinations.map(({ title }) => title));
-    for (const [index, { path }] of destinations.entries()) {
-      const card = cards.nth(index);
-      const toggle = card.locator('.flip-card-toggle');
-      const action = card.locator('.flip-action-btn');
+    await expect(page.locator('main > :is(#goals, #latest, #explore)')).toHaveCount(0);
+    const cards = page.locator('#services .flip-card');
+    await expect(page.locator('#services .stat-value')).toHaveText(['Building in Public', 'Creator and Coffee Drinker', 'UGC']);
+    for (let index = 0; index < 3; index++) {
+      const toggle = cards.nth(index).locator('.flip-card-toggle');
       await expect(toggle).toHaveAttribute('aria-pressed', 'false');
-      await expect(action).toHaveAttribute('tabindex', '-1');
-      await card.click();
+      await toggle.click({ force: true });
       await expect(toggle).toHaveAttribute('aria-pressed', 'true');
-      await expect(action).toHaveJSProperty('tabIndex', 0);
       expect(page.url()).toBe(homepage);
-      await action.click();
-      await expect(page).toHaveURL(new URL(`.${path}`, homepage).href);
-      if (path === '/build/') await expect(page.locator('#goals [data-accordion-row]').first()).toBeVisible();
-      await page.goto(homepage);
     }
+    const actions = cards.nth(2).locator('.flip-action-btn');
+    await expect(actions).toHaveText([/Send a product/, /Cohley profile/]);
+    for (const action of await actions.all()) await expect(action).toHaveJSProperty('tabIndex', 0);
+    await expect(actions.nth(0)).toHaveAttribute('href', /^mailto:/);
+    await expect(actions.nth(1)).toHaveAttribute('href', 'https://connect.cohley.com/public/profile/andrew-baxter/');
   });
 
   test('Creator portrait, headline and story are available on the About page', async ({ page }) => {
@@ -247,17 +240,18 @@ test.describe('Global QA', () => {
     await expect(page.locator('#goals')).toHaveCount(0);
   });
 
-  test('Work: a video loads nothing from YouTube until play, and unloads on close', async ({ page }) => {
+  test('Links: a video loads nothing from YouTube until play, and unloads on close', async ({ page }) => {
     const embeds: string[] = [];
     page.on('request', (r) => { if (/youtube(-nocookie)?\.com\/embed\//.test(r.url())) embeds.push(r.url()); });
     await page.route('https://www.youtube-nocookie.com/embed/**', (route) => route.fulfill({ body: '' }));
-    await page.goto('./');
+    // The links hub's "From the build" cards are the player's triggers now.
+    await page.goto('./links/');
     const player = page.locator('#video-player');
     const frame = player.locator('iframe');
     await expect(player).toBeHidden();
     await expect(frame).not.toHaveAttribute('src', /youtube/);
     expect(embeds).toEqual([]);
-    const video = page.locator('#work [data-video-player][data-video-url]').first();
+    const video = page.locator('[data-video-player][data-video-url]').first();
     await video.click();
     await expect(player).toBeVisible();
     await expect(frame).toHaveAttribute('src', /^https:\/\/www\.youtube-nocookie\.com\/embed\//);
@@ -331,7 +325,11 @@ test.describe('Global QA', () => {
       await expect(subLinks).toHaveCount(2);
       await subLinks.filter({ hasText: /BE Unconventional HQ/i }).click();
     } else {
-      // Verify 861px and 899px viewports keep "Build in Public" single-line and .site-nav at 76px height
+      // 861px and 899px keep "Build in Public" on one line, so the nav is
+      // as tall there as at 1099 (its height is padding plus the tallest
+      // control; a wrapped link would add a line).
+      await page.setViewportSize({ width: 1099, height: 844 });
+      const baseNavH = await page.evaluate(() => Math.round(document.querySelector('.site-nav')!.getBoundingClientRect().height));
       for (const vw of [861, 899]) {
         await page.setViewportSize({ width: vw, height: 844 });
         const navMetrics = await page.evaluate(() => {
@@ -344,7 +342,7 @@ test.describe('Global QA', () => {
             bipH: Math.round(bip.getBoundingClientRect().height),
           };
         });
-        expect(navMetrics.navH).toBe(76);
+        expect(navMetrics.navH).toBe(baseNavH);
         expect(navMetrics.bipH).toBeLessThanOrEqual(45);
       }
 
@@ -423,8 +421,8 @@ test.describe('Global QA', () => {
     await missionSec.scrollIntoViewIfNeeded();
     await page.setViewportSize({ width: 1440, height: 900 });
 
-    // Closer Press inquiry button routes to Collaborations
-    const pressBtn = page.locator('#visit .hq-actions a', { hasText: /Press inquiry/i });
+    // Closer Press button (renamed from "Press inquiry" in 3f07156) routes to Collaborations
+    const pressBtn = page.locator('#visit .hq-actions a', { hasText: /^\s*Press\b/i });
     await expect(pressBtn).toHaveAttribute('href', 'https://beunconventionalhq.com/collaborations');
 
     // Coverage Flip Cards on HQ Hub

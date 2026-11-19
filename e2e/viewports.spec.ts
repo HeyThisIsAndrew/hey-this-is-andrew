@@ -14,22 +14,20 @@ for (const vp of viewports) {
     test(`Verifies all audit requirements at ${vp.name}`, async ({ page }) => {
       await page.goto('./');
 
-      // 1. Brand Client block under #services
-      const clientBlock = page.locator('#services [data-client-block]');
-      await expect(clientBlock).toBeVisible();
-      const ledger = clientBlock.locator('.logistics-ledger');
-      await expect(ledger.locator('.logistics-item')).toHaveCount(3);
-      expect(await ledger.evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(3);
+      // 1. What I Do: the three pillar cards, no pricing.
+      const services = page.locator('#services');
+      await expect(services.locator('.stat-value')).toHaveText(['Building in Public', 'Creator and Coffee Drinker', 'UGC']);
+      await expect(services).not.toContainText('$');
 
-      // 2. UGC CTA on homepage services section (no CCC mailto on homepage)
-      const ctaUgc = page.locator('#services a[href^="mailto:heythisisandrewb@gmail.com"]');
-      await expect(ctaUgc).toBeVisible();
-      await expect(page.locator('#work a:has-text("Start a project")')).toHaveCount(0);
+      // 2. The UGC CTA lives on the UGC card (no CCC mailto on homepage).
+      const ctaUgc = services.locator('.work-flip-card--action a[href^="mailto:"]');
+      await expect(ctaUgc).toHaveCount(1);
+      await expect(ctaUgc).toHaveAttribute('href', /subject=Product%20review/);
       await expect(page.locator('#gear a:has-text("Start a project")')).toHaveCount(0);
 
       // 3. Homepage section order at this viewport
       const sections = await page.locator('#main-content > section').evaluateAll(els => els.map(el => el.id));
-      expect(sections).toEqual(['overview', 'directory', 'work', 'services', 'gear', 'explore', 'newsletter']);
+      expect(sections).toEqual(['overview', 'directory', 'gear', 'services', 'newsletter']);
 
       // 4. Elevator 4 columns at 1920 / desktop
       if (vp.width >= 1200) {

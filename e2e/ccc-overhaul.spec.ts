@@ -15,7 +15,8 @@ test.describe('CCC Page Overhaul & Regression Acceptance (CCC-01 through CCC-07)
     await expect(hero.locator('.ccc-hero-logo')).toBeVisible();
     await expect(hero.locator('#ccc-hero-title')).toContainText('Content that brings people');
     await expect(hero.locator('#ccc-hero-title')).toContainText('through your door');
-    await expect(hero.locator('.ccc-hero-sub')).toHaveText('Bars · Restaurants · Events');
+    // The in-hero metadata line was removed in 63d792e.
+    await expect(hero.locator('.ccc-hero-sub')).toHaveCount(0);
 
     // All production sections exist in exact order
     const sectionIds = ['why', 'where', 'work', 'video', 'how', 'pricing', 'contact'];

@@ -475,12 +475,15 @@ const resolvedRel = resolvedTarget === '_blank' ? (actionRel ?? 'noopener') : ac
       opacity 0.16s ease-in 0.23s;
   }
 
+  /* Visible (so its actions are focusable) the moment it flips: a Tab
+     straight after Enter reached nothing while visibility waited 0.39s.
+     The opacity fade still lands at the edge-on midpoint. */
   .flip-card.is-flipped .flip-card-back {
     visibility: visible;
     opacity: 1;
     pointer-events: auto;
     transition:
-      visibility 0s linear 0.39s,
+      visibility 0s linear 0s,
       opacity 0.18s ease-out 0.39s;
   }
 
@@ -747,6 +750,15 @@ const resolvedRel = resolvedTarget === '_blank' ? (actionRel ?? 'noopener') : ac
     pointer-events: none;
   }
 
+  /* Touch: back-face actions get the full 44px tap height. */
+  @media (pointer: coarse), (max-width: 1023px) {
+    :global(.btn.flip-action-btn),
+    :global(.flip-action-btn),
+    .flip-action-btn {
+      min-height: 44px !important;
+    }
+  }
+
   :global(.flip-action-group .flip-action-btn) {
     margin-top: 0 !important;
     width: auto !important;
@@ -825,8 +837,13 @@ const resolvedRel = resolvedTarget === '_blank' ? (actionRel ?? 'noopener') : ac
 
 <script>
   function initFlipCards() {
-    if (document.documentElement.dataset.flipDocWired === '1') return;
-    document.documentElement.dataset.flipDocWired = '1';
+    // Once per window, not per <html>: the client router replaces the root
+    // element's attributes on every navigation, so a flag kept there let a
+    // second document listener in, and every card toggled twice per click
+    // (flipped, then straight back) on any page reached by a link.
+    const w = window as typeof window & { __flipDocWired?: boolean };
+    if (w.__flipDocWired) return;
+    w.__flipDocWired = true;
 
     const fineHoverMq = window.matchMedia('(hover: hover) and (pointer: fine)');
     const isHoverPreview = (card: HTMLElement) => fineHoverMq.matches &&
