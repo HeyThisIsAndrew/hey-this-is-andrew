@@ -7,7 +7,6 @@ export const HOME_SECTIONS: PageSection[] = [
   { id: 'directory', label: 'Brands' },
   { id: 'services', label: 'What I do' },
   { id: 'gear', label: 'Gear' },
-  { id: 'explore', label: 'Explore' },
   { id: 'newsletter', label: 'Newsletter' }
 ];
 
