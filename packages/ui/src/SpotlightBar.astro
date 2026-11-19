@@ -16,8 +16,9 @@
  *   inside still pauses everywhere);
  * - a slide's `backdrop` adds a blurred copy of its image behind it;
  * - a slide's `chips` pin the BrandAccordion metadata chips (whose, then
- *   what) upper left with the title small beneath them, and its `logoSrc`
- *   takes the big title's place: the brand's logo, not a headline.
+ *   what) upper left (the title is read out, not printed: the meta line
+ *   beside the controls shows it), and its `logoSrc` takes the big
+ *   title's place: the brand's logo, not a headline.
  */
 export interface SpotlightSlide {
   tag?: string;
@@ -33,7 +34,8 @@ export interface SpotlightSlide {
   backdrop?: boolean;
   /** Metadata chips, upper left (BrandAccordion's .bacc-chip pattern): the
       first is the brand (with `accent` as its edge tick), then its kind.
-      With chips the title prints small under them, not as a headline. */
+      With chips the title is not printed on the slide (screen readers
+      still get it); the meta line beside the controls shows it. */
   chips?: { label: string; accent?: string }[];
   /** A logo in the big title's place (bottom left). */
   logoSrc?: string;
@@ -162,8 +164,10 @@ const hasControls = rotates || Boolean(actionLabel && actionHref);
                   >{chip.label}</span>
                 ))}
               </span>
-              <span class="ui-spotlight-title-sm">{slide.title}</span>
             </span>
+          ) : null}
+          {slide.chips?.length ? (
+            <span class="vh">{slide.title}</span>
           ) : null}
           <span class="ui-spotlight-body">
             {slide.logoSrc ? (
@@ -456,21 +460,6 @@ const hasControls = rotates || Boolean(actionLabel && actionHref);
   .ui-spotlight-chip--brand {
     border-left: 2px solid var(--chip-accent, #f0f0f0);
     color: rgba(255, 255, 255, 0.95);
-  }
-  /* The post title, metadata size: never a headline. */
-  .ui-spotlight-title-sm {
-    max-width: min(46ch, 100%);
-    padding: 0.4rem 0.65rem;
-    background: rgba(10, 10, 10, 0.65);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    font-family: var(--font-body, sans-serif);
-    font-size: clamp(0.8rem, 0.95vw, 0.95rem);
-    font-weight: 600;
-    line-height: 1.4;
-    color: #fff;
-    text-wrap: balance;
   }
   .ui-spotlight-logo {
     display: block;

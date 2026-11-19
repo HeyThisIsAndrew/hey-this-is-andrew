@@ -29,20 +29,21 @@ test.describe('Hero carousel', () => {
       const chips = post.locator('.ui-spotlight-chip');
       await expect(chips).toHaveCount(2);
       await expect(chips.first()).toHaveClass(/ui-spotlight-chip--brand/);
-      await expect(post.locator('.ui-spotlight-title-sm')).not.toBeEmpty();
+      // No title line on the slide (the meta line shows it); still read out.
+      await expect(post.locator('.ui-spotlight-title-sm')).toHaveCount(0);
+      await expect(post.locator('.vh')).not.toBeEmpty();
     }
 
-    // The first post: chips upper left, title small.
+    // The first post: the chips line up with the header's logo, upper left.
     await page.locator('.hs-carousel [data-spotlight-next]').click();
     const current = page.locator('.hs-carousel a.ui-spotlight-slide.is-current');
-    const [slide, meta, title] = await Promise.all([
+    const [slide, meta, logo] = await Promise.all([
       current.evaluate((el) => el.getBoundingClientRect().toJSON()),
       current.locator('.ui-spotlight-meta-block').evaluate((el) => el.getBoundingClientRect().toJSON()),
-      current.locator('.ui-spotlight-title-sm').evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
+      page.locator('.site-nav .wordmark').evaluate((el) => el.getBoundingClientRect().toJSON()),
     ]);
+    expect(Math.abs(meta.left - logo.left)).toBeLessThanOrEqual(2);
     expect(meta.top - slide.top).toBeLessThan(80);
-    expect(meta.left - slide.left).toBeLessThan(80);
-    expect(title).toBeLessThanOrEqual(16);
     await expect(page.locator('.hs-carousel [data-spotlight-meta]')).toContainText(' · ');
   });
 });
