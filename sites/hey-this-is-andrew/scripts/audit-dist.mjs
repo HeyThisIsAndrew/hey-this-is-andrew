@@ -6,7 +6,7 @@
  *
  * Every page must carry the same chrome and head (defect 36), and the brand
  * and link rules must hold on every page:
- *   - exactly one site header, one footer, one <h1> (none on /links/), the favicon set,
+ *   - exactly one site header, one footer, one <h1> (screen-reader only on /links/), the favicon set,
  *     a <title> carrying HEY_THISISANDREW, a description, a canonical
  *   - dark theme shipped on <html>; no theme toggle rendered
  *   - no double-underscore wordmark, no em dash in visible text
@@ -85,10 +85,11 @@ for (const page of pages) {
   for (const [logo] of personalLogos) {
     if (!/src="[^"]*\/hey-thisisandrew\.[^"]+\.png"/.test(logo)) fail(page, 'personal logo does not use approved artwork');
   }
-  // The links page has no h1 by the owner's call (the name heading was
-  // removed from the bio page on 2026-11-11); every other page has one.
-  const h1Count = bioPage ? 0 : 1;
-  if (count(html, /<h1[\s>]/g) !== h1Count) fail(page, `h1 count = ${count(html, /<h1[\s>]/g)}`);
+  // Every page has exactly one h1. The links page's is screen-reader only
+  // (owner's call, 2026-11-19): the visible name heading stays removed
+  // from the bio page (2026-11-11), the h1 is for assistive tech and SEO.
+  if (count(html, /<h1[\s>]/g) !== 1) fail(page, `h1 count = ${count(html, /<h1[\s>]/g)}`);
+  if (bioPage && !/<h1[^>]*class="[^"]*\bvh\b/.test(html)) fail(page, 'links page h1 is not screen-reader only');
   if (!/<html[^>]*data-theme="dark"/.test(html)) fail(page, 'html not data-theme="dark"');
   if (/id="nav-theme-toggle"/.test(html)) fail(page, 'theme toggle rendered');
   for (const icon of ['favicon.ico', 'favicon.svg', 'favicon-32.png', 'apple-touch-icon.png']) {
