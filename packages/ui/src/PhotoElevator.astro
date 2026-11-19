@@ -37,6 +37,7 @@ export interface Props {
   photos: DisplayPhoto[];
   emptyText?: string;
   embedded?: boolean;
+  compact?: boolean;
   /** Where the credit line's name links. The homepage passes "#about"
       (its own section); elsewhere it is the About page. */
   aboutHref?: string;
@@ -50,6 +51,7 @@ const {
   photos: displayPhotos,
   aboutHref,
   embedded = false,
+  compact = false,
   kicker = 'Photography',
   title = 'Shot on the job.',
   lede = 'Bar and beverage photography. The work behind Capture Create Caffeinate. Available for select photography work.',
@@ -83,7 +85,12 @@ const cccUrl = `${siteBase}/ccc/`;
 const SETS = [0, 1];
 ---
 
-<Wrapper id="photos" class:list={['photo-section', { 'photo-section--embedded': embedded }]} aria-labelledby="photography-title">
+<Wrapper
+  id="photos"
+  class:list={['photo-section', { 'photo-section--embedded': embedded, 'photo-section--compact': compact, 'section-hairline': compact && !embedded }]}
+  data-photo-compact={compact ? '' : undefined}
+  aria-labelledby="photography-title"
+>
   <div class="photo-zoom-backdrop" aria-hidden="true"></div>
   <div class="photo-intro">
     <SectionHeader
@@ -98,10 +105,22 @@ const SETS = [0, 1];
   {displayPhotos.length === 0 ? (
     <p class="photo-empty">The photographs could not be loaded right now. Please check back soon.</p>
   ) : (
-  <div class="photo-grid-container">
-    <div class="photo-stage-wrap">
-      <div id="camera-stage" class="camera-stage">
-        <div class="photo-wall" role="region" aria-label="Photography portfolio, vertical image reels" data-photo-total={displayPhotos.length}>
+  <div class="photo-grid-container" data-photo-root>
+    <div class="photo-viewport" data-photo-viewport>
+      {compact && (
+        <button
+          type="button"
+          class="photo-fs-close"
+          data-photo-fs-close
+          hidden
+          aria-label="Close fullscreen photography viewer"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+      )}
+      <div class="photo-stage-wrap">
+        <div id="camera-stage" class="camera-stage">
+          <div class="photo-wall" role="region" aria-label="Photography portfolio, vertical image reels" data-photo-total={displayPhotos.length}>
     {columns.map((col, ci) => (
       <div
         class="photo-column"
@@ -172,6 +191,7 @@ const SETS = [0, 1];
         </div><!-- /.photo-wall -->
       </div><!-- /#camera-stage -->
     </div><!-- /.photo-stage-wrap -->
+    </div><!-- /.photo-viewport -->
   </div><!-- /.photo-grid-container -->
   )}
   {/* Persistent elevator HUD: progress counter (Item X of Y) + Close control */}
@@ -235,6 +255,15 @@ const SETS = [0, 1];
   .photo-section--embedded {
     padding-top: 0;
   }
+  .photo-section--compact {
+    border-top: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
+    margin-top: 0;
+    padding: var(--space-section) 0;
+  }
+  .photo-section.is-fullscreen {
+    overflow: visible;
+    z-index: 1000;
+  }
   /* Header, grid and note sit on the site's .container measure, so this
      section lines up with every other section (it used its own max-width
      plus padding and sat ~20px further in). */
@@ -260,6 +289,11 @@ const SETS = [0, 1];
     width: min(100% - clamp(2rem, 4vw, 5rem), var(--maxw));
     margin: 2rem auto 0;
     position: relative;
+  }
+
+  .photo-viewport {
+    position: relative;
+    width: 100%;
   }
 
   .photo-wall {
@@ -966,16 +1000,187 @@ const SETS = [0, 1];
       transition-delay: 0ms !important;
     }
   }
+
+  /* Compact homepage viewer: half height, active scrolling columns, camera zoom to fullscreen */
+  .photo-section--compact .photo-viewport:not(.is-fullscreen) .photo-wall {
+    height: clamp(270px, 38vh, 800px);
+    min-height: 260px;
+  }
+  @media (max-width: 767px) {
+    .photo-section--compact .photo-viewport:not(.is-fullscreen) .photo-wall {
+      height: 37vh;
+      min-height: 240px;
+    }
+  }
+  @media (orientation: landscape) and (max-height: 500px) and (prefers-reduced-motion: no-preference) {
+    .photo-section--compact .photo-viewport:not(.is-fullscreen) .photo-wall {
+      height: calc((100svh - var(--nav-bar-h, 76px) - 1.5rem) * 0.55);
+      min-height: 180px;
+    }
+  }
+  .photo-section--compact .photo-viewport:not(.is-fullscreen) .photo-stage-wrap {
+    cursor: zoom-in;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    transition: border-color 0.25s ease;
+  }
+  .photo-section--compact .photo-viewport:not(.is-fullscreen) .photo-stage-wrap:hover {
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+  .photo-section--compact .photo-viewport:not(.is-fullscreen) .photo-wall.js-reels,
+  .photo-section--compact .photo-viewport:not(.is-fullscreen) .photo-item {
+    cursor: zoom-in;
+  }
+  .photo-section--compact .photo-viewport:not(.is-fullscreen) .photo-tag {
+    display: none;
+  }
+
+  .photo-viewport::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: var(--bg, #0a0a0a);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 700ms ease-in-out,
+      visibility 0s linear 700ms;
+  }
+  .photo-viewport.is-fullscreen-open::before {
+    opacity: 1;
+    visibility: visible;
+    transition:
+      opacity 700ms ease-in-out,
+      visibility 0s linear 0s;
+  }
+  .photo-viewport.is-fullscreen {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 1000;
+    overflow: hidden;
+    touch-action: none;
+    overscroll-behavior: none;
+  }
+  .photo-viewport.is-fullscreen .photo-stage-wrap {
+    position: relative;
+    z-index: 1;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    border-color: transparent;
+    transform-origin: 0 0;
+    will-change: transform, clip-path;
+  }
+  .photo-section--compact .photo-viewport.is-fullscreen .photo-wall {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    max-height: none;
+    padding-inline: clamp(12px, 1.5vw, 24px);
+    box-sizing: border-box;
+  }
+
+  .photo-fs-close {
+    position: fixed;
+    top: calc(1rem + env(safe-area-inset-top, 0px));
+    right: calc(1rem + env(safe-area-inset-right, 0px));
+    z-index: 1100;
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    min-height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    color: #f5f5f5;
+    font-size: 2.25rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85);
+    transition: opacity 260ms ease-in-out, color 180ms ease-in-out, transform 300ms ease-in-out;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .photo-fs-close[hidden] {
+    display: none;
+  }
+  .photo-viewport.is-fullscreen-open:not(.is-photo-focused) .photo-fs-close {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .photo-fs-close:hover,
+  .photo-fs-close:focus-visible {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    color: #bdbdbd;
+    opacity: 0.72;
+  }
+  .photo-fs-close:hover {
+    transform: rotate(90deg);
+  }
+  .photo-fs-close:focus-visible {
+    outline: 2px solid var(--focus-ring, #f5f5f5);
+    outline-offset: 2px;
+  }
+  .photo-section.is-fullscreen .photo-zoom-backdrop {
+    display: none;
+  }
+  .photo-section.is-fullscreen .photo-actions {
+    z-index: 1110;
+  }
+  .photo-section.is-fullscreen .photo-hud {
+    z-index: 1120;
+  }
+  :global(html.photo-fullscreen-open .photo-player) {
+    z-index: 1115;
+  }
+  :global(html.photo-fullscreen-open [data-page-main]) {
+    view-transition-name: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .photo-viewport::before,
+    .photo-fs-close,
+    .photo-viewport.is-fullscreen .photo-stage-wrap {
+      transition-duration: 0.01ms !important;
+      transition-delay: 0ms !important;
+    }
+    .photo-viewport.is-fullscreen {
+      overflow-y: auto;
+      touch-action: pan-y;
+    }
+    .photo-section--compact .photo-viewport:not(.is-fullscreen) .photo-wall,
+    .photo-section--compact .photo-viewport.is-fullscreen .photo-wall {
+      height: auto;
+      min-height: 0;
+    }
+  }
 </style>
 
 <script>
   import { createPageScope } from './scripts/page-scope';
   // Manual reel control: AUTO MOVEMENT + USER CONTROL + CAMERA ZOOM
   function initPhotoElevator() {
-    const wall = document.querySelector<HTMLElement>('.photo-wall');
-    const stage = document.getElementById('camera-stage');
-    const stageWrap = document.querySelector<HTMLElement>('.photo-stage-wrap');
     const photoSection = document.querySelector<HTMLElement>('.photo-section');
+    const wall = photoSection?.querySelector<HTMLElement>('.photo-wall') ?? document.querySelector<HTMLElement>('.photo-wall');
+    const stage = photoSection?.querySelector<HTMLElement>('#camera-stage') ?? document.getElementById('camera-stage');
+    const stageWrap = photoSection?.querySelector<HTMLElement>('.photo-stage-wrap') ?? document.querySelector<HTMLElement>('.photo-stage-wrap');
+    const photoRoot = photoSection?.querySelector<HTMLElement>('[data-photo-root]') ?? null;
+    const photoViewport = photoSection?.querySelector<HTMLElement>('[data-photo-viewport]') ?? null;
+    const fsCloseBtn = photoSection?.querySelector<HTMLButtonElement>('[data-photo-fs-close]') ?? null;
+    const isCompact = Boolean(photoSection?.hasAttribute('data-photo-compact'));
     if (!wall || !stage || !stageWrap || !('requestAnimationFrame' in window)) return;
     if (wall.dataset.elevatorWired) return;
     wall.dataset.elevatorWired = '1';
@@ -987,9 +1192,17 @@ const SETS = [0, 1];
     const IDLE_RESUME_MS = 2500;
     const DRAG_THRESHOLD_PX = 8;
     const WHEEL_NUDGE = 1.2;
+    const FS_EASE = 'ease-in-out';
+    const FS_MS = 700;
     const totalItems = Math.max(1, parseInt(wall.dataset.photoTotal || '1', 10));
 
     let zoomPaused = false;
+    let isFullscreen = false;
+    let isFsClosing = false;
+    let fsCloseTimer = 0;
+    let fsLastFocus: HTMLElement | null = null;
+    let fsSavedScrollY = 0;
+    let fsPrevScrollRestoration: ScrollRestoration = 'auto';
     let isZoomed = false;
     let isClosing = false;
     let expectPop = false;
@@ -1095,7 +1308,7 @@ const SETS = [0, 1];
       };
 
       column.addEventListener('mouseenter', () => {
-        if (isZoomed || isClosing) return;
+        if (isZoomed || isClosing || (isCompact && !isFullscreen)) return;
         reel.hoverPaused = true;
         updatePlayState();
       });
@@ -1110,7 +1323,7 @@ const SETS = [0, 1];
       let isPointerActive = false;
 
       column.addEventListener('pointerdown', (e) => {
-        if (isZoomed || isClosing) return;
+        if (isZoomed || isClosing || (isCompact && !isFullscreen)) return;
         if (e.isPrimary === false) return;
         /* Touch scrolling scrolls the page naturally; mouse/pen drags scrub the reel. */
         if (e.pointerType === 'touch') return;
@@ -1122,7 +1335,7 @@ const SETS = [0, 1];
       });
 
       column.addEventListener('pointermove', (e) => {
-        if (!isPointerActive || isZoomed || isClosing || e.isPrimary === false) return;
+        if (!isPointerActive || isZoomed || isClosing || (isCompact && !isFullscreen) || e.isPrimary === false) return;
         const dy = e.clientY - startY;
         moved = Math.max(moved, Math.abs(dy));
         if (moved > DRAG_THRESHOLD_PX) {
@@ -1167,7 +1380,7 @@ const SETS = [0, 1];
       column.addEventListener(
         'wheel',
         (e) => {
-          if (isZoomed || isClosing || reel.dragging || !reel.anim) return;
+          if (isZoomed || isClosing || reel.dragging || !reel.anim || (isCompact && !isFullscreen)) return;
           const dy = (e.deltaY || 0) * WHEEL_NUDGE;
           const dt = (dy / reel.setH) * reel.baseDuration * 1000;
           const cur = reel.anim.currentTime ?? 0;
@@ -1283,7 +1496,7 @@ const SETS = [0, 1];
       const uy = (tr.top - sr.top) / curS;
       const uw = target.offsetWidth || tr.width / curS || 1;
       const uh = target.offsetHeight || tr.height / curS || 1;
-      const top = navBottom();
+      const top = isFullscreen ? 48 : navBottom();
       const vw = document.documentElement.clientWidth;
       const vh = window.innerHeight;
       const hasWatch = Boolean(target.dataset.videoUrl);
@@ -1316,7 +1529,9 @@ const SETS = [0, 1];
       X = nextX;
       Y = top + availH / 2 - originY - s * (uy + uh / 2);
       apply(ms);
-      updateStageClip(true, ms);
+      if (!isFullscreen) {
+        updateStageClip(true, ms);
+      }
     }
 
     // Persistent HUD: Item X of Y progress indicator + Close button
@@ -1551,13 +1766,15 @@ const SETS = [0, 1];
       if (orientationOrWidthChanged) {
         openVpW = vw;
         openVpH = vh;
-        const top = navBottom();
-        const wrapTop = layoutTop(stageWrap);
-        const wrapH = stageWrap.offsetHeight;
-        const targetScreenTop = top + Math.max(0, (vh - top - wrapH) / 2);
-        savedScrollY = Math.max(0, Math.round(wrapTop - targetScreenTop));
-        instantScrollTo(savedScrollY);
-      } else if (Math.abs(window.scrollY - savedScrollY) > 2) {
+        if (!isFullscreen) {
+          const top = navBottom();
+          const wrapTop = layoutTop(stageWrap);
+          const wrapH = stageWrap.offsetHeight;
+          const targetScreenTop = top + Math.max(0, (vh - top - wrapH) / 2);
+          savedScrollY = Math.max(0, Math.round(wrapTop - targetScreenTop));
+          instantScrollTo(savedScrollY);
+        }
+      } else if (!isFullscreen && Math.abs(window.scrollY - savedScrollY) > 2) {
         instantScrollTo(savedScrollY);
       }
 
@@ -1586,6 +1803,193 @@ const SETS = [0, 1];
     on(window, 'resize', onResizeOrRotate, { passive: true });
     on(window, 'orientationchange', onResizeOrRotate, { passive: true });
     window.visualViewport?.addEventListener('resize', onResizeOrRotate, { passive: true });
+
+    function openFullscreen(triggerEl: HTMLElement | null) {
+      if (!isCompact || !photoRoot || !photoViewport || isFullscreen || isFsClosing) return;
+      window.clearTimeout(fsCloseTimer);
+      fsLastFocus = triggerEl;
+
+      const rest = stageWrap.getBoundingClientRect();
+      photoRoot.style.height = `${photoRoot.offsetHeight}px`;
+
+      fsSavedScrollY = window.scrollY;
+      fsPrevScrollRestoration = 'scrollRestoration' in history ? history.scrollRestoration : 'auto';
+      if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+      }
+
+      const clientWBefore = document.documentElement.clientWidth;
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      const gutter = Math.max(0, document.documentElement.clientWidth - clientWBefore);
+      if (gutter > 0) document.body.style.paddingRight = `${gutter}px`;
+      document.documentElement.classList.remove('photo-zoom-closing');
+      document.documentElement.classList.add('photo-zoom-open', 'photo-fullscreen-open');
+      document.documentElement.dataset.historyView = 'photo';
+
+      if (!history.state?.photoFullscreen) {
+        history.pushState({ ...(history.state ?? {}), photoFullscreen: true }, '');
+      }
+
+      reels.forEach((r) => {
+        r.hoverPaused = false;
+        r.updatePlayState?.();
+      });
+
+      isFullscreen = true;
+      photoViewport.classList.add('is-fullscreen');
+      photoSection?.classList.add('is-fullscreen');
+      if (fsCloseBtn) fsCloseBtn.hidden = false;
+
+      const fullW = stageWrap.offsetWidth || window.innerWidth;
+      const fullH = stageWrap.offsetHeight || window.innerHeight;
+      const s0 = rest.width > 0 && fullW > 0 ? rest.width / fullW : 1;
+      const tx0 = rest.left;
+      const ty0 = rest.top;
+      const clipBottom0 = Math.max(0, fullH - rest.height / s0);
+
+      stageWrap.style.transition = 'none';
+      if (reduced()) {
+        stageWrap.style.transform = 'none';
+        stageWrap.style.clipPath = 'inset(0px 0px 0px 0px)';
+        photoViewport.classList.add('is-fullscreen-open');
+      } else {
+        stageWrap.style.transform = `translate3d(${tx0}px, ${ty0}px, 0) scale(${s0})`;
+        stageWrap.style.clipPath = `inset(0px 0px ${clipBottom0}px 0px)`;
+        void stageWrap.offsetWidth;
+        stageWrap.style.transition = `transform ${FS_MS}ms ${FS_EASE}, clip-path ${FS_MS}ms ${FS_EASE}`;
+        stageWrap.style.transform = 'translate3d(0px, 0px, 0) scale(1)';
+        stageWrap.style.clipPath = 'inset(0px 0px 0px 0px)';
+        photoViewport.classList.add('is-fullscreen-open');
+      }
+
+      reels.forEach((r) => {
+        measure(r);
+        r.updatePlayState?.();
+      });
+      fsCloseBtn?.focus({ preventScroll: true });
+    }
+
+    function closeFullscreen(fromHistory = false) {
+      if (!photoRoot || !photoViewport || !isFullscreen || isFsClosing) return;
+
+      if (isZoomed || isClosing) {
+        window.clearTimeout(closeTimer);
+        stopPlayer();
+        isZoomed = false;
+        isClosing = false;
+        s = 1;
+        X = 0;
+        Y = 0;
+        stage.style.transition = 'none';
+        stage.style.transform = '';
+        stage.classList.remove('is-zoomed');
+        stageWrap.classList.remove('is-zoomed', 'is-closing');
+        photoSection?.classList.remove('is-zoomed', 'is-camera');
+        photoViewport.classList.remove('is-photo-focused');
+        setWatch(null);
+        setHud(null);
+        if (activeTarget) {
+          activeTarget.classList.remove('is-active');
+          activeTarget = null;
+        }
+        setFrozen(null);
+      }
+
+      isFsClosing = true;
+      document.documentElement.classList.add('photo-zoom-closing');
+
+      if (!fromHistory && history.state?.photoFullscreen) {
+        expectPop = true;
+        document.documentElement.dataset.viewPop = '1';
+        window.setTimeout(() => delete document.documentElement.dataset.viewPop, 80);
+        history.back();
+      }
+
+      const rest = photoRoot.getBoundingClientRect();
+      const fullW = stageWrap.offsetWidth || window.innerWidth;
+      const fullH = stageWrap.offsetHeight || window.innerHeight;
+      const s0 = rest.width > 0 && fullW > 0 ? rest.width / fullW : 1;
+      const tx0 = rest.left;
+      const ty0 = rest.top;
+      const clipBottom0 = Math.max(0, fullH - rest.height / s0);
+
+      photoViewport.classList.remove('is-fullscreen-open');
+
+      const onFsEnd = (e: TransitionEvent) => {
+        if (e.target === stageWrap && (e.propertyName === 'transform' || e.propertyName === 'clip-path')) {
+          finishFullscreenClose();
+        }
+      };
+
+      const finishFullscreenClose = () => {
+        if (!isFsClosing) return;
+        window.clearTimeout(fsCloseTimer);
+        stageWrap.removeEventListener('transitionend', onFsEnd);
+        isFullscreen = false;
+        isFsClosing = false;
+        stageWrap.style.transition = 'none';
+        stageWrap.style.transform = '';
+        stageWrap.style.clipPath = '';
+        photoViewport.classList.remove('is-fullscreen', 'is-fullscreen-open', 'is-photo-focused');
+        photoSection?.classList.remove('is-fullscreen');
+        photoRoot.style.height = '';
+        if (fsCloseBtn) fsCloseBtn.hidden = true;
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        document.documentElement.classList.remove('photo-zoom-open', 'photo-zoom-closing', 'photo-fullscreen-open');
+        if (!expectPop && document.documentElement.dataset.historyView === 'photo') {
+          delete document.documentElement.dataset.historyView;
+        }
+        if ('scrollRestoration' in history) {
+          history.scrollRestoration = fsPrevScrollRestoration;
+        }
+        if (Math.abs(window.scrollY - fsSavedScrollY) > 2) {
+          instantScrollTo(fsSavedScrollY);
+        }
+        requestAnimationFrame(() => {
+          stageWrap.style.transition = '';
+        });
+        reels.forEach((r) => {
+          measure(r);
+          r.hoverPaused = false;
+          r.updatePlayState?.();
+        });
+        fsLastFocus?.focus?.({ preventScroll: true });
+        fsLastFocus = null;
+      };
+
+      if (reduced()) {
+        finishFullscreenClose();
+      } else {
+        void stageWrap.offsetWidth;
+        stageWrap.style.transition = `transform ${FS_MS}ms ${FS_EASE}, clip-path ${FS_MS}ms ${FS_EASE}`;
+        stageWrap.style.transform = `translate3d(${tx0}px, ${ty0}px, 0) scale(${s0})`;
+        stageWrap.style.clipPath = `inset(0px 0px ${clipBottom0}px 0px)`;
+        stageWrap.addEventListener('transitionend', onFsEnd);
+        fsCloseTimer = window.setTimeout(finishFullscreenClose, FS_MS + 60);
+      }
+    }
+
+    fsCloseBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeFullscreen();
+    });
+
+    // In compact resting mode, any tap or click zooms into the fullscreen elevator first.
+    stageWrap.addEventListener(
+      'click',
+      (e) => {
+        if (isCompact && !isFullscreen && !isFsClosing) {
+          e.preventDefault();
+          e.stopPropagation();
+          openFullscreen(e.target instanceof HTMLElement ? e.target : stageWrap);
+        }
+      },
+      true
+    );
 
     // Delegated click listener on wall so every item click (original or loop) is handled reliably
     wall.addEventListener('click', (e) => {
@@ -1631,23 +2035,27 @@ const SETS = [0, 1];
       // Freeze ONLY the selected photo's reel; the neighbours keep moving.
       setFrozen(target);
 
-      savedScrollY = window.scrollY;
       openVpW = document.documentElement.clientWidth;
       openVpH = window.innerHeight;
-      prevScrollRestoration = 'scrollRestoration' in history ? history.scrollRestoration : 'auto';
-      if ('scrollRestoration' in history) {
-        history.scrollRestoration = 'manual';
-      }
+      if (isFullscreen) {
+        photoViewport?.classList.add('is-photo-focused');
+      } else {
+        savedScrollY = window.scrollY;
+        prevScrollRestoration = 'scrollRestoration' in history ? history.scrollRestoration : 'auto';
+        if ('scrollRestoration' in history) {
+          history.scrollRestoration = 'manual';
+        }
 
-      // Lock scrolling without the page reflowing under the camera.
-      // Because html has scrollbar-gutter: stable, only pad body if clientWidth actually changes.
-      const clientWBefore = document.documentElement.clientWidth;
-      document.body.style.overflow = 'hidden';
-      const gutter = Math.max(0, document.documentElement.clientWidth - clientWBefore);
-      if (gutter > 0) document.body.style.paddingRight = `${gutter}px`;
-      document.documentElement.classList.remove('photo-zoom-closing');
-      document.documentElement.classList.add('photo-zoom-open');
-      document.documentElement.dataset.historyView = 'photo';
+        // Lock scrolling without the page reflowing under the camera.
+        // Because html has scrollbar-gutter: stable, only pad body if clientWidth actually changes.
+        const clientWBefore = document.documentElement.clientWidth;
+        document.body.style.overflow = 'hidden';
+        const gutter = Math.max(0, document.documentElement.clientWidth - clientWBefore);
+        if (gutter > 0) document.body.style.paddingRight = `${gutter}px`;
+        document.documentElement.classList.remove('photo-zoom-closing');
+        document.documentElement.classList.add('photo-zoom-open');
+        document.documentElement.dataset.historyView = 'photo';
+      }
 
       if (!history.state?.photoZoom) {
         history.pushState({ ...(history.state ?? {}), photoZoom: true }, '');
@@ -1729,7 +2137,9 @@ const SETS = [0, 1];
       stopPlayer();
       isZoomed = false;
       isClosing = true;
-      document.documentElement.classList.add('photo-zoom-closing');
+      if (!isFullscreen) {
+        document.documentElement.classList.add('photo-zoom-closing');
+      }
 
       if (!fromHistory && history.state?.photoZoom) {
         expectPop = true;
@@ -1738,7 +2148,7 @@ const SETS = [0, 1];
         history.back();
       }
 
-      if (Math.abs(window.scrollY - savedScrollY) > 2) {
+      if (!isFullscreen && Math.abs(window.scrollY - savedScrollY) > 2) {
         instantScrollTo(savedScrollY);
       }
 
@@ -1753,7 +2163,9 @@ const SETS = [0, 1];
       stageWrap.classList.add('is-closing');
       photoSection?.classList.remove('is-zoomed');
       apply(ms);
-      updateStageClip(false, ms);
+      if (!isFullscreen) {
+        updateStageClip(false, ms);
+      }
       setWatch(null);
       setHud(null);
       if (activeTarget) {
@@ -1766,21 +2178,26 @@ const SETS = [0, 1];
         isClosing = false;
         stage.style.transition = '';
         stage.style.transform = '';
-        stageWrap.style.transition = '';
-        stageWrap.style.clipPath = '';
+        if (!isFullscreen) {
+          stageWrap.style.transition = '';
+          stageWrap.style.clipPath = '';
+        }
         stage.classList.remove('is-zoomed');
         stageWrap.classList.remove('is-zoomed', 'is-closing');
         photoSection?.classList.remove('is-camera');
-        document.body.style.overflow = '';
-        document.body.style.paddingRight = '';
-        document.documentElement.classList.remove('photo-zoom-open', 'photo-zoom-closing');
-        if (!expectPop && document.documentElement.dataset.historyView === 'photo') delete document.documentElement.dataset.historyView;
-        if ('scrollRestoration' in history) {
-          history.scrollRestoration = prevScrollRestoration;
+        photoViewport?.classList.remove('is-photo-focused');
+        if (!isFullscreen) {
+          document.body.style.overflow = '';
+          document.body.style.paddingRight = '';
+          document.documentElement.classList.remove('photo-zoom-open', 'photo-zoom-closing');
+          if (!expectPop && document.documentElement.dataset.historyView === 'photo') delete document.documentElement.dataset.historyView;
+          if ('scrollRestoration' in history) {
+            history.scrollRestoration = prevScrollRestoration;
+          }
         }
         setFrozen(null);
         reels.forEach((r) => {
-          r.hoverPaused = r.column.matches(':hover');
+          r.hoverPaused = !isFullscreen && r.column.matches(':hover');
           r.updatePlayState?.();
         });
       };
@@ -1793,9 +2210,13 @@ const SETS = [0, 1];
     const preventBgTouch = (e: Event) => {
       // The player's own controls (scrubbing, volume) need their touches.
       if (player && e.target instanceof Node && player.contains(e.target)) return;
-      if (isZoomed || isClosing) e.preventDefault();
+      if (isZoomed || isClosing || ((isFullscreen || isFsClosing) && !reduced())) e.preventDefault();
     };
     const handleZoomWheel = (e: WheelEvent) => {
+      if ((isFullscreen || isFsClosing) && !isZoomed && !isClosing) {
+        e.preventDefault();
+        return;
+      }
       if (!isZoomed && !isClosing) return;
       e.preventDefault();
       if (!isZoomed || isClosing || isReelOpen) return;
@@ -1852,6 +2273,11 @@ const SETS = [0, 1];
         if (isZoomed) {
           e.preventDefault();
           resetZoom();
+          return;
+        }
+        if (isFullscreen) {
+          e.preventDefault();
+          closeFullscreen();
         }
         return;
       }
@@ -1867,20 +2293,24 @@ const SETS = [0, 1];
     });
 
     const closeFromHistory = () => {
-      if (!isZoomed && !expectPop) return;
+      if (!isZoomed && !isFullscreen && !expectPop) return;
       const wasExpected = expectPop;
       expectPop = false;
-      if (document.documentElement.dataset.historyView === 'photo') delete document.documentElement.dataset.historyView;
+      const stayingFullscreen = isZoomed && isFullscreen;
+      if (!stayingFullscreen && document.documentElement.dataset.historyView === 'photo') {
+        delete document.documentElement.dataset.historyView;
+      }
       document.documentElement.dataset.viewPop = '1';
       window.setTimeout(() => delete document.documentElement.dataset.viewPop, 80);
       if (isZoomed) resetZoom(true);
+      else if (isFullscreen) closeFullscreen(true);
       else if (wasExpected && Math.abs(window.scrollY - savedScrollY) > 2) instantScrollTo(savedScrollY);
     };
     on(window, 'andrew:view-pop', (event) => {
       if (event.detail.owner === 'photo') closeFromHistory();
     });
     on(window, 'popstate', (event) => {
-      if (!isZoomed && !expectPop) return;
+      if (!isZoomed && !isFullscreen && !expectPop) return;
       event.stopImmediatePropagation();
       closeFromHistory();
     }, { capture: true });
@@ -1890,15 +2320,17 @@ const SETS = [0, 1];
       clearTimeout(settleTimer2);
       clearTimeout(hudTimer);
       clearTimeout(closeTimer);
+      clearTimeout(fsCloseTimer);
       reels.forEach((reel) => { reel.anim?.cancel(); clearTimeout(reel.idleTimer); });
       window.visualViewport?.removeEventListener('resize', onResizeOrRotate);
-      if (isZoomed || isClosing) {
+      if (isZoomed || isClosing || isFullscreen || isFsClosing) {
         stopPlayer();
+        document.documentElement.style.overflow = '';
         document.body.style.overflow = '';
         document.body.style.paddingRight = '';
-        document.documentElement.classList.remove('photo-zoom-open', 'photo-zoom-closing');
+        document.documentElement.classList.remove('photo-zoom-open', 'photo-zoom-closing', 'photo-fullscreen-open');
         if (!expectPop && document.documentElement.dataset.historyView === 'photo') delete document.documentElement.dataset.historyView;
-        history.scrollRestoration = prevScrollRestoration;
+        history.scrollRestoration = isFullscreen || isFsClosing ? fsPrevScrollRestoration : prevScrollRestoration;
       }
     });
   }
