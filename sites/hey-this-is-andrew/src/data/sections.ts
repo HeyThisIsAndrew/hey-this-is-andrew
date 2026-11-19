@@ -5,8 +5,8 @@ export type PageSection = { id: string; label: string; kicker?: string };
 export const HOME_SECTIONS: PageSection[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'directory', label: 'Brands' },
-  { id: 'services', label: 'What I do' },
   { id: 'gear', label: 'Gear' },
+  { id: 'services', label: 'What I do' },
   { id: 'newsletter', label: 'Newsletter' }
 ];
 

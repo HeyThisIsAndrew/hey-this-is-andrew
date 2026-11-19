@@ -38,6 +38,7 @@ export interface Props {
   emptyText?: string;
   embedded?: boolean;
   compact?: boolean;
+  inline?: boolean;
   /** Where the credit line's name links. The homepage passes "#about"
       (its own section); elsewhere it is the About page. */
   aboutHref?: string;
@@ -52,12 +53,13 @@ const {
   aboutHref,
   embedded = false,
   compact = false,
+  inline = false,
   kicker = 'Photography',
   title = 'Shot on the job.',
   lede = 'Bar and beverage photography. The work behind Capture Create Caffeinate. Available for select photography work.',
   showBrandCredit = true,
 } = Astro.props;
-const Wrapper = embedded ? 'div' : 'section';
+const Wrapper = embedded || inline ? 'div' : 'section';
 
 const categoryLabels: Record<string, string> = {
   cocktails: 'Cocktails',
@@ -86,21 +88,31 @@ const SETS = [0, 1];
 ---
 
 <Wrapper
-  id="photos"
-  class:list={['photo-section', { 'photo-section--embedded': embedded, 'photo-section--compact': compact, 'section-hairline': compact && !embedded }]}
+  id={inline ? undefined : 'photos'}
+  class:list={[
+    'photo-section',
+    {
+      'photo-section--embedded': embedded,
+      'photo-section--compact': compact,
+      'photo-section--inline': inline,
+      'section-hairline': compact && !embedded && !inline,
+    },
+  ]}
   data-photo-compact={compact ? '' : undefined}
-  aria-labelledby="photography-title"
+  aria-labelledby={inline ? undefined : 'photography-title'}
 >
   <div class="photo-zoom-backdrop" aria-hidden="true"></div>
-  <div class="photo-intro">
-    <SectionHeader
-      kicker={kicker}
-      title={title}
-      lede={lede}
-      id="photography-title"
-      as={embedded ? 'h3' : 'h2'}
-    />
-  </div>
+  {!inline && (
+    <div class="photo-intro">
+      <SectionHeader
+        kicker={kicker}
+        title={title}
+        lede={lede}
+        id="photography-title"
+        as={embedded ? 'h3' : 'h2'}
+      />
+    </div>
+  )}
 
   {displayPhotos.length === 0 ? (
     <p class="photo-empty">The photographs could not be loaded right now. Please check back soon.</p>
@@ -135,22 +147,18 @@ const SETS = [0, 1];
               const p = displayPhotos[pi];
               if (!p) return null;
               const playable = p.video && Boolean(p.videoSrc);
-              const instagramUrl = p.video && !playable ? p.permalink : undefined;
-              const Tile = instagramUrl ? 'a' : 'button';
+              const instagramOnly = p.video && !playable;
               return (
-                <Tile
-                  type={Tile === 'button' ? 'button' : undefined}
-                  href={instagramUrl}
-                  target={instagramUrl ? '_blank' : undefined}
-                  rel={instagramUrl ? 'noopener' : undefined}
+                <button
+                  type="button"
                   class="photo-item"
-                  data-camera-zoom={instagramUrl ? undefined : ''}
+                  data-camera-zoom=""
                   data-photo-index={pi}
                   data-video-url={p.video ? p.permalink : undefined}
                   data-video-src={playable ? p.videoSrc : undefined}
                   tabindex={set === 1 ? -1 : undefined}
                   style={`aspect-ratio: ${p.image.width} / ${p.image.height}`}
-                  aria-label={instagramUrl ? `Watch video on Instagram: ${p.caption}` : playable ? `Open video: ${p.caption}` : `View photo: ${p.caption}`}
+                  aria-label={playable ? `Open video: ${p.caption}` : instagramOnly ? `Watch on Instagram: ${p.caption}` : `View photo: ${p.caption}`}
                 >
                   <Image
                     src={p.image}
@@ -180,7 +188,12 @@ const SETS = [0, 1];
                       {p.duration && <span class="photo-play-duration">{p.duration}</span>}
                     </div>
                   )}
-                </Tile>
+                  {instagramOnly && (
+                    <span class="photo-ig-badge">
+                      Watch on Instagram <span aria-hidden="true">&#8599;</span>
+                    </span>
+                  )}
+                </button>
               );
             })}
           </div>
@@ -214,10 +227,10 @@ const SETS = [0, 1];
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <path d="M8 5v14l11-7z" />
       </svg>
-      <span>Play<span class="photo-label-long"> Video</span></span>
+      <span>Play</span>
     </button>
     <a class="btn btn-secondary photo-watch" href="#" target="_blank" rel="noopener" data-photo-watch aria-label="Watch video on Instagram">
-      <span><span class="photo-label-long">Watch video on </span>Instagram</span>
+      <span>Watch on Instagram</span>
       <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
         <path d="M2 12L12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
       </svg>
@@ -259,6 +272,19 @@ const SETS = [0, 1];
     border-top: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
     margin-top: 0;
     padding: var(--space-section) 0;
+  }
+  .photo-section--inline {
+    padding: 0;
+    border-top: 0;
+    margin: 0;
+  }
+  .photo-section--inline .photo-grid-container {
+    width: 100%;
+    margin: 0;
+  }
+  .photo-section--inline .photo-note {
+    width: 100%;
+    margin: 0.75rem auto 0;
   }
   .photo-section.is-fullscreen {
     overflow: visible;
@@ -444,9 +470,43 @@ const SETS = [0, 1];
     transform: translateY(0);
   }
   .camera-stage.is-zoomed .photo-tag,
-  .photo-stage-wrap.is-closing .photo-tag {
+  .photo-stage-wrap.is-closing .photo-tag,
+  .camera-stage.is-zoomed .photo-ig-badge,
+  .photo-stage-wrap.is-closing .photo-ig-badge {
     opacity: 0 !important;
     transform: translateY(4px) !important;
+  }
+  .camera-stage.is-zoomed .photo-ig-badge,
+  .photo-stage-wrap.is-closing .photo-ig-badge {
+    transform: translate(-50%, 4px) !important;
+  }
+
+  .photo-ig-badge {
+    position: absolute;
+    left: 50%;
+    bottom: 0.65rem;
+    transform: translate(-50%, 0);
+    z-index: 6;
+    max-width: calc(100% - 1rem);
+    box-sizing: border-box;
+    padding: 0.35rem 0.6rem;
+    background: rgba(10, 10, 10, 0.86);
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    border-radius: 0;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #f5f5f5;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1.25;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: break-word;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
   }
 
   .photo-empty {
@@ -579,7 +639,16 @@ const SETS = [0, 1];
   .photo-stage-wrap.is-closing,
   .photo-section.is-camera {
     overflow: visible;
+  }
+  .photo-stage-wrap.is-zoomed,
+  .photo-stage-wrap.is-closing,
+  .photo-section.is-camera:not(.is-fullscreen) {
     z-index: 50;
+  }
+  .photo-section.is-fullscreen,
+  .photo-section.is-fullscreen.is-camera {
+    overflow: visible;
+    z-index: 1000;
   }
 
   /* Bottom actions dock for video reels */
@@ -588,10 +657,13 @@ const SETS = [0, 1];
     left: 50%;
     bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
     z-index: 60;
+    width: min(100% - 2rem, max-content);
     display: inline-flex;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: center;
     gap: 0.75rem;
-    white-space: nowrap;
+    white-space: normal;
     opacity: 0;
     transform: translate3d(-50%, 14px, 0);
     pointer-events: none;
@@ -632,7 +704,11 @@ const SETS = [0, 1];
     border: 1px solid rgba(255, 255, 255, 0.28) !important;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    white-space: nowrap;
+    white-space: normal;
+    text-align: center;
+    max-width: 100%;
+    height: auto;
+    min-height: 44px;
     transition:
       opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1),
       transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
@@ -1999,13 +2075,14 @@ const SETS = [0, 1];
       e.preventDefault();
       e.stopPropagation();
 
-      // A video zooms in exactly like a photo; it never plays from the
-      // wall. Zoomed onto it, a second tap plays it in place.
-      const isVideo = Boolean(item.dataset.videoUrl || item.dataset.videoSrc);
+      // A video zooms in into the elevator camera view just like a photo.
+      // Only from inside the camera view does Play run locally or Watch on
+      // Instagram open Instagram.
+      const hasLocalVideo = Boolean(item.dataset.videoSrc);
 
       if (isZoomed) {
         if (item === activeTarget) {
-          if (isVideo) {
+          if (hasLocalVideo) {
             if (!isReelOpen) playInPlace(item);
             return;
           }

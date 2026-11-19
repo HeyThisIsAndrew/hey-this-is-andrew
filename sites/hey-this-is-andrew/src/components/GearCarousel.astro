@@ -10,7 +10,7 @@ import { getCollection } from 'astro:content';
 import { getImage } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import SpotlightBar, { type SpotlightSlide } from '@andrew/ui/SpotlightBar.astro';
-import { gearSectionId, gearChipLabel } from '../lib/gear-anchor';
+import { gearSectionId } from '../lib/gear-anchor';
 
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
@@ -38,12 +38,11 @@ const slides: SpotlightSlide[] = (
         .find(({ photo }) => photo);
       if (!lead?.photo) return null;
       const hero = await getImage({ src: lead.photo, widths: [480, 800, 1200], format: 'webp' });
-      const chip = gearChipLabel(cat.id, cat.data.category);
       return {
-        eyebrow: cat.data.kicker || chip,
+        tag: cat.data.kicker || cat.data.category,
         title: cat.data.category,
         subtitle: previewSubtitles[cat.id] ?? cat.data.subtitle,
-        cta: `Open ${chip}`,
+        cta: 'Open',
         href: `${base}/gear/#${gearSectionId(cat.id)}`,
         imageSrc: hero.src,
         imageSrcset: hero.srcSet.attribute,
@@ -63,6 +62,8 @@ const slides: SpotlightSlide[] = (
     label="Gear sections"
     height="clamp(210px, 22vw, 320px)"
     fullBleed={true}
+    actionLabel="See all gear"
+    actionHref={`${base}/gear/`}
   />
 </div>
 

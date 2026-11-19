@@ -1,15 +1,15 @@
 ---
 /**
- * WorkWithAndrew: "What I do". Displays all five service lines from
- * src/data/services.ts in one balanced visual grid, followed by the
- * project logistics ledger and brand partnership actions.
+ * WorkWithAndrew: "What I do". Top three service cards, the compact photo
+ * elevator inline (no side cards), two service cards beneath, and the UGC
+ * and Press flip cards at the bottom.
  */
 import type { ImageMetadata } from 'astro';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
 import FlipCard from '@andrew/ui/FlipCard.astro';
+import PhotographyPortfolio from './PhotographyPortfolio.astro';
 import {
   SERVICES,
-  SERVICES_CLIENT_BLOCK,
   UGC_INQUIRY_HREF,
   COHLEY_PROFILE_URL,
 } from '../data/services';
@@ -62,21 +62,16 @@ const SERVICE_VISUALS: Record<string, ServiceVisual> = {
 
 const serviceCards = SERVICES.map((service, index) => {
   const visual = SERVICE_VISUALS[service.title] ?? {};
-  const isWide = index >= 3;
+  const desc = index === 0 ? `${service.desc} ${CCC_TURNAROUND}` : service.desc;
   return {
     ...service,
-    isWide,
+    desc,
     visual,
   };
 });
 
-/* Turnaround and client details come from the shared brand facts (src/data/ccc.ts
-   and src/data/services.ts). Pricing is not shown on the website. */
-const logisticsItems = [
-  { value: CCC_TURNAROUND },
-  { value: SERVICES_CLIENT_BLOCK.deliverablesAndUsage },
-  { value: SERVICES_CLIENT_BLOCK.clientResults },
-].filter((item): item is { value: string } => Boolean(item.value && item.value.trim()));
+const topServiceCards = serviceCards.slice(0, 3);
+const bottomServiceCards = serviceCards.slice(3, 5);
 ---
 <section id="services" aria-labelledby="services-heading" class="section-hairline work-section">
   <div class="container">
@@ -85,12 +80,9 @@ const logisticsItems = [
       title="What I do"
     />
 
-    <div class="work-grid">
-      {serviceCards.map((s, i) => (
-        <div
-          class:list={['work-card-wrap', 'reveal', { 'work-card-wrap--wide': s.isWide }]}
-          style={`--rd: ${i * 70}ms`}
-        >
+    <div class="work-row work-row--top">
+      {topServiceCards.map((s, i) => (
+        <div class="work-card-wrap reveal" style={`--rd: ${i * 70}ms`}>
           <FlipCard
             value={s.title}
             backText={s.desc}
@@ -108,34 +100,86 @@ const logisticsItems = [
       ))}
     </div>
 
-    {logisticsItems.length > 0 && (
-      <div class="client-block reveal" data-client-block>
-        <div class="logistics-ledger">
-          {logisticsItems.map((item) => (
-            <div class="logistics-item">
-              <p class="logistics-value">{item.value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    )}
+    <div class="work-elevator">
+      <PhotographyPortfolio inline />
+    </div>
 
-    <div class="work-cta reveal">
-      <p class="work-cta-caption">Brands: send a product to review, or ask about a partnership.</p>
-      <div class="btn-group">
-        <a class="btn btn-primary" href={UGC_INQUIRY_HREF}>
-          Send a product <span aria-hidden="true">&rarr;</span>
-        </a>
-        <a class="btn btn-secondary" href={COHLEY_PROFILE_URL} target="_blank" rel="noopener">
-          Cohley profile
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-            <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </a>
+    <div class="work-row work-row--pair">
+      {bottomServiceCards.map((s, i) => (
+        <div class="work-card-wrap reveal" style={`--rd: ${i * 70}ms`}>
+          <FlipCard
+            value={s.title}
+            backText={s.desc}
+            image={s.visual.src}
+            imageAlt={s.visual.alt}
+            imagePosition={s.visual.objectPosition}
+            isLogo={s.visual.isLogo}
+            slateLabel={s.visual.slateLabel}
+            imageSide="front"
+            idPrefix="service-card"
+            index={i + 3}
+            class="work-flip-card"
+          />
+        </div>
+      ))}
+    </div>
+
+    <div class="work-row work-row--actions">
+      <div class="work-card-wrap reveal" style="--rd: 0ms">
+        <FlipCard
+          value="UGC"
+          idPrefix="work-action"
+          index={0}
+          class="work-flip-card work-flip-card--action"
+        >
+          <div slot="back-action" class="flip-action-group">
+            <a
+              class="btn btn-primary flip-action-btn font-mono"
+              href={UGC_INQUIRY_HREF}
+              tabindex="-1"
+              aria-hidden="true"
+              data-no-flip
+            >
+              Send a product <span aria-hidden="true">&rarr;</span>
+            </a>
+            <a
+              class="btn btn-secondary flip-action-btn font-mono"
+              href={COHLEY_PROFILE_URL}
+              target="_blank"
+              rel="noopener"
+              tabindex="-1"
+              aria-hidden="true"
+              data-no-flip
+            >
+              Cohley profile
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </a>
+          </div>
+        </FlipCard>
       </div>
-      <p class="work-press-note">
-        Press or media inquiry? <a href={`${base}/about/#press`}>Visit the press kit <span aria-hidden="true">&rarr;</span></a>
-      </p>
+
+      <div class="work-card-wrap reveal" style="--rd: 70ms">
+        <FlipCard
+          value="Press"
+          idPrefix="work-action"
+          index={1}
+          class="work-flip-card work-flip-card--action"
+        >
+          <div slot="back-action" class="flip-action-group">
+            <a
+              class="btn btn-primary flip-action-btn font-mono"
+              href={`${base}/about/#press`}
+              tabindex="-1"
+              aria-hidden="true"
+              data-no-flip
+            >
+              Visit the press kit <span aria-hidden="true">&rarr;</span>
+            </a>
+          </div>
+        </FlipCard>
+      </div>
     </div>
   </div>
 </section>
@@ -146,27 +190,33 @@ const logisticsItems = [
     margin: 0;
   }
 
-  .work-grid {
+  .work-row {
     --flip-accent-border: var(--hairline-strong);
     --flip-accent-shadow: 0 8px 30px rgb(255 255 255 / 0.1);
-    list-style: none;
-    margin: 0;
-    padding: 0;
+    --flip-value-size: clamp(1rem, 1.25vw, 1.45rem);
+    --flip-back-size: clamp(0.84rem, 0.92vw, 0.98rem);
+    --flip-back-size-mobile: 0.85rem;
     display: grid;
     grid-template-columns: 1fr;
-    gap: 1rem;
+    gap: 0.75rem;
   }
 
   @media (min-width: 760px) {
-    .work-grid {
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+    .work-row--top {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
-    .work-card-wrap {
-      grid-column: span 2;
+    .work-row--pair,
+    .work-row--actions {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-    .work-card-wrap--wide {
-      grid-column: span 3;
-    }
+  }
+
+  .work-elevator {
+    margin-block: clamp(1rem, 1.8vw, 1.5rem);
+  }
+
+  .work-row--actions {
+    margin-top: 0.75rem;
   }
 
   .work-card-wrap {
@@ -176,97 +226,24 @@ const logisticsItems = [
   }
 
   .work-card-wrap :global(.stat-card.flip-card) {
-    --flip-value-size: clamp(1.1rem, 1.45vw, 1.75rem);
-    min-height: 210px;
+    min-height: 155px;
+  }
+
+  .work-card-wrap :global(.work-flip-card--action.stat-card.flip-card) {
+    min-height: 135px;
+  }
+
+  .work-card-wrap :global(.flip-card-front),
+  .work-card-wrap :global(.flip-card-back) {
+    padding: clamp(0.85rem, 1.35vw, 1.25rem) clamp(1rem, 1.6vw, 1.4rem);
   }
 
   @media (min-width: 760px) {
     .work-card-wrap :global(.stat-card.flip-card) {
-      min-height: clamp(260px, 20vw, 420px);
+      min-height: clamp(165px, 12.5vw, 220px);
     }
-  }
-
-  /* How projects run: unified specification ledger matching WorkflowStrip. */
-  .client-block {
-    margin-top: clamp(1.5rem, 3vw, 2rem);
-  }
-
-  .logistics-ledger {
-    border: 1px solid var(--line);
-    border-radius: 0;
-    background: var(--surface);
-    padding: clamp(1rem, 2.2vw, 2rem);
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: clamp(0.75rem, 2vw, 2rem);
-  }
-
-  .logistics-item {
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-  }
-
-  .logistics-value {
-    margin: 0;
-    font-family: var(--font-mono);
-    font-size: clamp(0.6875rem, 0.9vw, 0.8rem);
-    line-height: 1.5;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--muted);
-    overflow-wrap: anywhere;
-  }
-
-  .work-cta {
-    margin-top: clamp(1.5rem, 3vw, 2rem);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 0.85rem;
-  }
-
-  .work-cta-caption {
-    margin: 0;
-    font-size: 0.92rem;
-    line-height: 1.55;
-    color: var(--muted);
-  }
-
-  :global(#site) .work-cta .btn:not(:hover, :focus-visible) {
-    background: #000;
-  }
-
-  .work-press-note {
-    margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 0 0.4rem;
-    font-family: var(--font-body);
-    font-size: 0.9rem;
-    line-height: 1.5;
-    color: var(--muted);
-  }
-
-  .work-press-note a {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    min-height: var(--tap-min, 44px);
-    color: var(--ink);
-    text-decoration: underline;
-    text-underline-offset: 4px;
-    text-decoration-color: var(--hairline-strong);
-    transition: text-decoration-color 0.2s ease;
-  }
-
-  .work-press-note a:hover,
-  .work-press-note a:focus-visible {
-    text-decoration-color: currentColor;
+    .work-card-wrap :global(.work-flip-card--action.stat-card.flip-card) {
+      min-height: clamp(135px, 10vw, 175px);
+    }
   }
 </style>
