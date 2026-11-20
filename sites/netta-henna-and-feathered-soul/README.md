@@ -41,6 +41,7 @@ Production environment variables:
 | Name | Value |
 | --- | --- |
 | `NODE_VERSION` | `22` (Astro 7 needs Node >= 22.12; the repo requires >= 22.15, so 20 fails) |
+| `PNPM_VERSION` | `10.18.3` (Pages defaults to pnpm 10.11.1 and ignores the repo's `packageManager` pin) |
 | `BASE_PATH` | `/` |
 | `SITE_URL` | `https://netta-henna-and-feathered-soul.pages.dev` |
 
