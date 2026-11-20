@@ -157,7 +157,9 @@ test.describe('Audit Fixes Verification', () => {
     await backInFullscreen();
 
     // Walking a column, tile after tile, never runs out (2026-11-20): the
-    // next tile up or down is always on screen to click, as a finger would.
+    // next tile up or down is always on screen to click, as a finger would,
+    // and the columns beside it stay full (the camera never climbs off the
+    // wall into black).
     for (const step of [-1, 1]) {
       await zoomIn();
       await page.waitForTimeout(700);
@@ -169,6 +171,15 @@ test.describe('Audit Fixes Verification', () => {
           const items = Array.from(column.querySelectorAll<HTMLElement>('.photo-item'));
           const next = items[items.indexOf(active) + dir];
           if (!next) return 'no tile ' + (dir < 0 ? 'above' : 'below');
+          for (const col of Array.from(document.querySelectorAll<HTMLElement>('#camera-stage .photo-column'))) {
+            const c = col.getBoundingClientRect();
+            if (getComputedStyle(col).display === 'none' || c.right <= 0 || c.left >= innerWidth) continue;
+            const filled = Array.from(col.querySelectorAll('.photo-item')).some((el) => {
+              const t = el.getBoundingClientRect();
+              return t.bottom > innerHeight * 0.3 && t.top < innerHeight * 0.7;
+            });
+            if (!filled) return 'column ' + col.dataset.column + ' is empty on screen';
+          }
           const r = next.getBoundingClientRect();
           const y = dir < 0 ? Math.max(4, r.bottom - 20) : Math.min(innerHeight - 4, r.top + (Math.min(innerHeight, r.bottom) - r.top) * 0.75);
           const x = r.left + r.width / 2;
