@@ -1250,6 +1250,8 @@ const SETS = [0, 1];
       idleTimer: number;
       visible: boolean;
       updatePlayState?: () => void;
+      /** Whole set heights the frozen reel is shifted by (keepRoom). */
+      offsetSets?: number;
     }
 
     const reels: Reel[] = [];
@@ -1261,6 +1263,8 @@ const SETS = [0, 1];
     const measure = (reel: Reel) => {
       const h = reel.track.scrollHeight / 2;
       if (h > 0) reel.setH = h;
+      // A shifted reel (keepRoom) moves by whole sets: re-apply at the new height.
+      if (reel.offsetSets) reel.track.style.translate = `0 ${reel.offsetSets * reel.setH}px`;
     };
 
     const pauseReels = () => {
@@ -1761,8 +1765,49 @@ const SETS = [0, 1];
       const next = reels.find((r) => r.column === column) ?? null;
       const prev = frozenReel;
       frozenReel = next;
-      if (prev && prev !== next) prev.updatePlayState?.();
+      if (prev && prev !== next) {
+        // Its shift is whole sets of identical photos, so clearing it
+        // changes nothing on screen.
+        prev.offsetSets = 0;
+        prev.track.style.translate = '';
+        prev.updatePlayState?.();
+      }
       if (next?.anim && next.anim.playState === 'running') next.anim.pause();
+    }
+
+    /* Room to keep going. A reel holds its photos twice (two identical
+       sets), and it is frozen wherever it stopped, so walking the zoom up
+       (or down) a column reached the first (or last) photo of the track
+       with nothing beyond it: the next tile up did not exist and the
+       elevator looked frozen. When the chosen tile gets within a screen of
+       that edge, the zoom moves to the same photo in the other set and the
+       reel shifts by one set height, so that photo sits exactly where the
+       chosen one was and the column runs on past it. The shift is whole
+       sets of identical photos, so nothing on screen moves. */
+    function keepRoom(target: HTMLElement): HTMLElement {
+      const reel = frozenReel;
+      if (!reel || !reel.track.contains(target) || reel.setH <= 1) return target;
+      const sets = Array.from(reel.track.querySelectorAll<HTMLElement>(':scope > .photo-set'));
+      if (sets.length !== 2) return target;
+      const from = sets.findIndex((set) => set.contains(target));
+      const index = Array.from(sets[from].querySelectorAll<HTMLElement>('.photo-item')).indexOf(target);
+      const trackRect = reel.track.getBoundingClientRect();
+      const scale = reel.track.offsetHeight > 0 ? trackRect.height / reel.track.offsetHeight : 1;
+      const rect = target.getBoundingClientRect();
+      const above = (rect.top - trackRect.top) / scale;
+      const below = (trackRect.bottom - rect.bottom) / scale;
+      const need = window.innerHeight;
+      let to = -1;
+      let step = 0;
+      if (from === 0 && above < need) { to = 1; step = -1; }
+      else if (from === 1 && below < need) { to = 0; step = 1; }
+      if (to < 0) return target;
+      const twin = sets[to].querySelectorAll<HTMLElement>('.photo-item')[index];
+      if (!twin) return target;
+      reel.offsetSets = (reel.offsetSets ?? 0) + step;
+      reel.track.style.translate = `0 ${reel.offsetSets * reel.setH}px`;
+      target.classList.remove('is-active');
+      return twin;
     }
 
     /* If a rotation to mobile portrait hides the column of the currently
@@ -2101,6 +2146,7 @@ const SETS = [0, 1];
       });
       // Freeze ONLY the selected photo's reel; the neighbours keep moving.
       setFrozen(target);
+      target = keepRoom(target);
 
       openVpW = document.documentElement.clientWidth;
       openVpH = window.innerHeight;
@@ -2150,6 +2196,7 @@ const SETS = [0, 1];
       }
       stopPlayer();
       setFrozen(newTarget);
+      newTarget = keepRoom(newTarget);
       activeTarget?.classList.remove('is-active');
       activeTarget = newTarget;
       newTarget.classList.add('is-active');

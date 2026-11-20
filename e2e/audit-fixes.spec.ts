@@ -150,15 +150,39 @@ test.describe('Audit Fixes Verification', () => {
     await page.locator('[data-photo-close]').click();
     await backInFullscreen();
 
-    // Clicking the zoomed photo again.
+    // Clicking the zoomed photo again (the one on screen: near a track end
+    // the zoom moves to its twin in the other set, in the same spot).
     await zoomIn();
-    await page.locator('[data-qa-tile]').evaluate((el) => (el as HTMLElement).click());
+    await page.locator('#camera-stage .photo-item.is-active').evaluate((el) => (el as HTMLElement).click());
     await backInFullscreen();
 
-    // Escape.
-    await zoomIn();
-    await page.keyboard.press('Escape');
-    await backInFullscreen();
+    // Walking a column, tile after tile, never runs out (2026-11-20): the
+    // next tile up or down is always on screen to click, as a finger would.
+    for (const step of [-1, 1]) {
+      await zoomIn();
+      await page.waitForTimeout(700);
+      for (let i = 0; i < 24; i++) {
+        const point = await page.evaluate((dir) => {
+          const active = document.querySelector<HTMLElement>('#camera-stage .photo-item.is-active');
+          const column = active?.closest('.photo-column');
+          if (!active || !column) return 'no active tile';
+          const items = Array.from(column.querySelectorAll<HTMLElement>('.photo-item'));
+          const next = items[items.indexOf(active) + dir];
+          if (!next) return 'no tile ' + (dir < 0 ? 'above' : 'below');
+          const r = next.getBoundingClientRect();
+          const y = dir < 0 ? Math.max(4, r.bottom - 20) : Math.min(innerHeight - 4, r.top + (Math.min(innerHeight, r.bottom) - r.top) * 0.75);
+          const x = r.left + r.width / 2;
+          if (r.bottom <= 0 || r.top >= innerHeight || document.elementFromPoint(x, y)?.closest('.photo-item') !== next) return 'next tile off screen';
+          return { x, y };
+        }, step);
+        expect(point).toEqual(expect.objectContaining({ x: expect.any(Number) }));
+        await page.mouse.click((point as { x: number }).x, (point as { y: number }).y);
+        await expect(stage).toHaveClass(/is-zoomed/);
+        await page.waitForTimeout(650);
+      }
+      await page.keyboard.press('Escape');
+      await backInFullscreen();
+    }
 
     // The browser's back button.
     await zoomIn();
