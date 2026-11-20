@@ -25,7 +25,6 @@ import Disclosure from '@andrew/ui/Disclosure.astro';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { CollectionEntry } from 'astro:content';
-import { AMAZON_STOREFRONT } from '../data/storefront';
 import { sampleAccent, NEUTRAL_ACCENT } from '../lib/gear-accent';
 import { gearItemId, gearSectionId, gearChipLabel } from '../lib/gear-anchor';
 
@@ -88,8 +87,6 @@ const sections = await Promise.all(
         title: cat.data.category,
         kicker: cat.data.kicker || '',
         subtitle: cat.data.subtitle || '',
-        collectionUrl: cat.data.collectionUrl || AMAZON_STOREFRONT,
-        collectionLabel: cat.data.collectionUrl ? cat.data.collectionLabel || 'Amazon list' : 'Storefront',
         items,
       };
     })
@@ -213,20 +210,12 @@ const stateOf = (i: number, n: number) =>
                   <span class="box-subtitle font-mono">{sec.subtitle}</span>
                 </span>
                 <span class="header-chevron" aria-hidden="true">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="6 9 12 15 18 9"></polyline>
                   </svg>
                 </span>
               </button>
             </h2>
-            <div class="gear-header-right btn-group btn-group--row">
-              <a href={sec.collectionUrl} target="_blank" rel="noopener sponsored" class="influencer-pill font-mono">
-                <span class="influencer-text">{sec.collectionLabel.replace(/ list$/i, '')}{/ list$/i.test(sec.collectionLabel) && <span class="influencer-text-long"> list</span>}</span>
-                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                  <path d="M2.5 9.5L9.5 2.5M9.5 2.5H4.5M9.5 2.5V7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </a>
-            </div>
           </div>
 
           <Disclosure class="gear-accordion-body" id={`gear-body-${sec.slug}`} open={open} labelledby={`gear-header-${sec.slug}`}>
@@ -672,42 +661,29 @@ const stateOf = (i: number, n: number) =>
     font-size: 0.74rem;
     color: var(--muted, #888);
   }
+  /* The row's arrow: a quiet hint, not a button (the whole row is the
+     button). Small, thin, muted; it brightens with the row and turns
+     when the row opens. HQ's featured rows carry no control at all. */
   .header-chevron {
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 0;
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    background: #080808;
-    color: #f5f5f5;
-    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    width: 24px;
+    height: 24px;
+    color: rgba(255, 255, 255, 0.4);
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.2s ease;
   }
   .header-chevron svg {
     display: block;
     stroke: currentColor;
   }
-  .gear-accordion-header:is(:hover, :focus-visible) .header-chevron {
-    background: #f5f5f5;
-    color: #080808;
-    border-color: #f5f5f5;
+  .gear-accordion-header:is(:hover, :focus-visible) .header-chevron,
+  .gear-accordion-section.is-expanded .header-chevron {
+    color: rgba(255, 255, 255, 0.8);
   }
   .gear-accordion-section.is-expanded .header-chevron {
     transform: rotate(180deg);
-    color: #f5f5f5;
-    border-color: rgba(255, 255, 255, 0.45);
-  }
-  .gear-accordion-section.is-expanded .gear-accordion-header:is(:hover, :focus-visible) .header-chevron {
-    background: #f5f5f5;
-    color: #080808;
-    border-color: #f5f5f5;
-  }
-  .gear-header-right {
-    --btn-group-gap: 0.5rem;
-    align-items: center;
-    flex-shrink: 0;
   }
   /* The view toggle sits in the toolbar row at its neighbours' height
      (the site-wide #site button rule would make it 46px and wider). */
@@ -730,7 +706,6 @@ const stateOf = (i: number, n: number) =>
       order: 2;
     }
   }
-  .influencer-pill,
   .btn-all-toggle {
     display: inline-flex;
     align-items: center;
@@ -748,7 +723,6 @@ const stateOf = (i: number, n: number) =>
     cursor: pointer;
     transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
-  .influencer-pill:hover,
   .btn-all-toggle:hover {
     background: #fff;
     color: #000;
@@ -1469,35 +1443,12 @@ const stateOf = (i: number, n: number) =>
      Responsive
      ------------------------------------------------------------------ */
   @media (max-width: 768px) {
+    /* One clean row per category: chips, then the quiet arrow. */
     .gear-accordion-header-bar {
-      flex-wrap: wrap;
-      padding: 0 1rem 0.75rem 1rem;
-      gap: 0.25rem 0.5rem;
-    }
-    .gear-accordion-heading {
-      flex: 0 0 100%;
-      width: 100%;
+      padding: 0 1rem;
     }
     .gear-accordion-header {
-      padding: 0.95rem 0 0.5rem 0;
-    }
-    /* The collection link uses its own row under the title. */
-    .gear-header-right {
-      flex: 0 0 100%;
-      width: 100%;
-      margin-left: 0;
-      grid-auto-columns: minmax(0, 1fr);
-    }
-    .gear-header-right > * {
-      padding-left: 0.5rem;
-      padding-right: 0.5rem;
-    }
-    .gear-header-right {
-      align-items: stretch;
-    }
-    /* "Camera Gear" is enough on a phone; the arrow says it is a list. */
-    .influencer-text-long {
-      display: none;
+      padding: 0.95rem 0;
     }
     .gear-item-count-badge {
       display: none;
@@ -1721,7 +1672,6 @@ const stateOf = (i: number, n: number) =>
       sections.forEach((section) => {
         const bar = section.querySelector<HTMLElement>('.gear-accordion-header-bar');
         bar?.addEventListener('click', (e) => {
-          if ((e.target as HTMLElement).closest('.influencer-pill')) return;
           toggleSection(section);
         });
 
