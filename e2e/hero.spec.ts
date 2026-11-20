@@ -13,7 +13,9 @@ test.describe('Hero carousel', () => {
     const vw = page.viewportSize()!.width;
     const w = await lead.locator('.hs-wordmark img').evaluate((el) => el.getBoundingClientRect().width);
     expect(w).toBeLessThanOrEqual(Math.min(vw * 0.46, 360) + 1);
-    await expect(lead.locator('.hs-line')).toHaveText('Creator, Photographer, Coffee Drinker. Building in Public.');
+    // The line is said once, in the meta line beside the controls.
+    await expect(lead.locator('.hs-line')).toHaveCount(0);
+    await expect(page.locator('.hs-carousel [data-spotlight-meta]')).toHaveText('Creator, Photographer, Coffee Drinker. Building in Public.');
     await expect(lead.getByRole('link', { name: /Brands/ })).toBeVisible();
     await expect(lead.getByRole('link', { name: 'Work With Me' })).toBeVisible();
   });
