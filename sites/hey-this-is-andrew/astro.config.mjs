@@ -6,13 +6,17 @@ import localCmsConfig from './local-cms.config.mjs';
 
 const isBuild = process.argv.includes('build') || Boolean(process.env.GITHUB_ACTIONS) || Boolean(process.env.CI);
 const isCloudflare = process.env.CF_WORKERS === '1';
+// Canonical origin. GitHub Pages by default; the Cloudflare build is its own
+// origin (the workers.dev URL until a custom domain is set via ASTRO_SITE).
+const site = process.env.ASTRO_SITE
+  || (isCloudflare ? 'https://hey-this-is-andrew.heythisisandrewb.workers.dev' : 'https://heythisisandrew.github.io');
 const base = process.env.ASTRO_BASE || (isBuild ? '/hey-this-is-andrew' : '/');
 
 const withBase = (path) => `${base.replace(/\/$/, '')}${path}`;
 
 export default defineConfig({
   adapter: isCloudflare ? cloudflare({ imageService: 'passthrough' }) : undefined,
-  site: 'https://heythisisandrew.github.io',
+  site,
   base,
   // Keep legacy paths connected to their current pages or sections.
   redirects: {
@@ -51,5 +55,37 @@ export default defineConfig({
       // Hero concept previews, unlisted dev pages, and the 404 are not pages to index.
       filter: (page) => !page.includes('/preview/') && !page.includes('/404') && !page.includes('/kit/') && !page.includes('/work/') && !page.includes('/goals/') && !page.includes('/services/') && !page.includes('/press/') && !page.includes('/brands/sip-the-magic'),
     }),
+    {
+      name: 'cloudflare-prep',
+      hooks: {
+        'astro:route:setup': ({ route }) => {
+          if (route.component.includes('src/pages/api/contact.ts')) {
+            route.prerender = !isCloudflare;
+          }
+        },
+        'astro:build:done': async ({ dir }) => {
+          const fs = await import('node:fs');
+          const targetDirs = [dir, new URL('client/', dir)].filter((d) => fs.existsSync(d));
+          for (const d of targetDirs) {
+            const sIdx = new URL('sitemap-index.xml', d);
+            const sOut = new URL('sitemap.xml', d);
+            if (fs.existsSync(sIdx)) {
+              fs.copyFileSync(sIdx, sOut);
+            }
+          }
+          // public/robots.txt names the GitHub Pages sitemap; the Cloudflare
+          // build points at its own.
+          if (isCloudflare) {
+            const origin = site.replace(/\/$/, '');
+            for (const d of targetDirs) {
+              const robots = new URL('robots.txt', d);
+              if (fs.existsSync(robots)) {
+                fs.writeFileSync(robots, `User-agent: *\nAllow: /\n\nSitemap: ${origin}/sitemap.xml\nSitemap: ${origin}/sitemap-index.xml\n`);
+              }
+            }
+          }
+        },
+      },
+    },
   ],
 });

@@ -59,13 +59,17 @@ const paneHeading = pane ?? (title.split('·')[0].split('|')[0].trim() || 'HEY_T
 
 import siteData from '../data/site.json';
 
-// Link preview image and canonical URLs: production GitHub Pages path
-const siteUrl = siteData.url;
+// Link preview image and canonical URLs: the build's own origin (config
+// `site`) plus its base path, so the Cloudflare build never points at
+// GitHub Pages and vice versa.
+const siteUrl = Astro.site
+  ? new URL(import.meta.env.BASE_URL, Astro.site).href.replace(/\/$/, '')
+  : siteData.url;
 const ogImage = image ? `${siteUrl}${image}` : `${siteUrl}/og-image.png`;
 const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
 // Canonical: the production origin plus this page's path (which already
 // carries the base path on the production build).
-const canonical = new URL(Astro.url.pathname, new URL(siteData.url).origin).href;
+const canonical = new URL(Astro.url.pathname, new URL(siteUrl).origin).href;
 const isCcc = Astro.url.pathname.includes('/ccc');
 const isClientWork = Astro.url.pathname.replace(/\/+$/, '').endsWith('/work-with-me');
 ---
