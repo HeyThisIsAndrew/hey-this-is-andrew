@@ -38,29 +38,27 @@ previews under it) from `.github/workflows/deploy.yml`, unchanged.
 1. Cloudflare dashboard, My Profile, API Tokens, Create Token, template
    **Edit Cloudflare Workers**, your account, Create. Copy the token.
 2. GitHub repository, Settings, Secrets and variables, Actions, New repository
-   secret: name `CLOUDFLARE_API_TOKEN`, value the token.
-3. Actions tab, **Deploy to Cloudflare**, Run workflow, site `all`.
+   secret: `CLOUDFLARE_API_TOKEN`, value the token.
+3. Same page, another secret: `RESEND_API_KEY`, value your Resend API key
+   (resend.com, API Keys). Later, `RESEND_FROM_EMAIL` once a sending domain
+   is verified in Resend.
+4. Actions tab, **Deploy to Cloudflare**, Run workflow, site `all`.
 
-Until the secret exists the workflow skips with a notice instead of failing.
+Until `CLOUDFLARE_API_TOKEN` exists the workflow skips with a notice instead of
+failing.
 
-## Personal site: contact form email
+## Worker secrets
 
-The contact form sends through Resend. Once, after the first deploy:
+A site lists the secrets its Worker needs in its `cloudflare` block
+(`"secrets": ["RESEND_API_KEY"]`). Each deploy copies any that exist as
+repository secrets onto the Worker; ones that do not exist are left as they
+are on Cloudflare, so a key set by hand with `wrangler secret put` stays.
 
-```bash
-npx wrangler secret put RESEND_API_KEY --name hey-this-is-andrew
-```
-
-Optional, once a sending domain is verified in Resend:
-
-```bash
-npx wrangler secret put RESEND_FROM_EMAIL --name hey-this-is-andrew
-```
-
-Secrets survive later deploys. `/api/contact` on the live site shows
-`"configured": true` when the key is set. Without a verified domain, Resend's
-default sender only delivers to the Resend account's own address, so CCC
-inquiries to `capturecreatecaffeinate@gmail.com` fall back to mailto.
+The personal site's contact form sends through Resend. `/api/contact` on the
+live site shows `"configured": true` once `RESEND_API_KEY` is on the Worker.
+Without a verified domain, Resend's default sender only delivers to the Resend
+account's own address, so CCC inquiries to `capturecreatecaffeinate@gmail.com`
+fall back to mailto.
 
 ## Deploying by hand
 

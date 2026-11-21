@@ -20,6 +20,11 @@
  *
  * Deploying needs Cloudflare credentials: `npx wrangler login` on a laptop, or
  * CLOUDFLARE_API_TOKEN (and optionally CLOUDFLARE_ACCOUNT_ID) in CI.
+ *
+ * Worker secrets: list their names in the block ("secrets": ["RESEND_API_KEY"]).
+ * After a deploy, each one present in the environment is copied onto the
+ * Worker (CI passes them from repository secrets); absent ones are left as
+ * they are on Cloudflare.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -47,6 +52,7 @@ function readSite(dir) {
     dir,
     pkgName: pkg.name,
     worker,
+    secrets: pkg.cloudflare.secrets || [],
     siteUrl: (pkg.cloudflare.siteUrl || `https://${worker}.${WORKERS_SUBDOMAIN}.workers.dev`).replace(/\/$/, ''),
     path: path.join(sitesDir, dir),
   };
@@ -101,6 +107,16 @@ function deploy(site) {
   const config = fs.existsSync(adapterConfig) ? adapterConfig : path.join(site.path, 'wrangler.jsonc');
   if (!fs.existsSync(config)) fail(`${site.dir} has no wrangler.jsonc.`);
   run(pnpm[0], [...pnpm[1], 'exec', 'wrangler', 'deploy', '--config', config], { cwd: site.path });
+  for (const name of site.secrets) {
+    const value = process.env[name];
+    if (!value) continue;
+    console.log(`\n$ wrangler secret put ${name} --name ${site.worker}`);
+    execFileSync(pnpm[0], [...pnpm[1], 'exec', 'wrangler', 'secret', 'put', name, '--name', site.worker], {
+      cwd: site.path,
+      input: value,
+      stdio: ['pipe', 'inherit', 'inherit'],
+    });
+  }
   console.log(`\nLive: ${site.siteUrl}`);
 }
 
