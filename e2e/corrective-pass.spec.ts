@@ -104,26 +104,19 @@ test.describe('Corrective Pass Verification', () => {
     await expect(modal.locator('.ccc-copy-wrap')).toBeHidden();
   });
 
-  test('Gate 8: /api/contact route returns 501 with valid JSON', async () => {
-    // 1. Verify source module export and 501 response
-    const contactRoute = await import('../sites/hey-this-is-andrew/src/pages/api/contact.ts');
-    expect(typeof contactRoute.POST).toBe('function');
-    const res = await contactRoute.POST({} as any);
-    expect(res.status).toBe(501);
-    const json = await res.json();
-    expect(json).toEqual({
-      error: 'not_configured',
-      message: 'Contact endpoint is not live yet.',
-    });
+  test('Gate 8: static /api/contact answers not_configured with valid JSON', async () => {
+    // The route sends through Resend on Cloudflare (it imports astro:env, so
+    // it is not loadable outside Astro). On a static host it is this
+    // prerendered file, and it must carry `error`: the CCC modal reads any
+    // answer without one as "sent".
+    const source = fs.readFileSync(path.resolve('sites/hey-this-is-andrew/src/pages/api/contact.ts'), 'utf8');
+    expect(source).toMatch(/export const POST: APIRoute/);
+    expect(source).toMatch(/export const GET: APIRoute/);
 
-    // 2. Verify static build artifact also exists with matching payload
     const distArtifactPath = path.resolve('sites/hey-this-is-andrew/dist/api/contact');
     expect(fs.existsSync(distArtifactPath)).toBe(true);
     const distContent = JSON.parse(fs.readFileSync(distArtifactPath, 'utf8'));
-    expect(distContent).toEqual({
-      error: 'not_configured',
-      message: 'Contact endpoint is not live yet.',
-    });
+    expect(distContent).toMatchObject({ error: 'not_configured', configured: false });
   });
 
   test('Gate 9: Tiles global single-line text and zero box-boundary overflow', async ({ page }) => {
