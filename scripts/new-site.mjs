@@ -31,7 +31,13 @@ fs.cpSync(from, to, { recursive: true, filter: (src) => !SKIP.has(path.basename(
 const pkgFile = path.join(to, 'package.json');
 const pkg = JSON.parse(fs.readFileSync(pkgFile, 'utf8'));
 pkg.name = name;
+if (pkg.cloudflare) pkg.cloudflare.worker = name;
 fs.writeFileSync(pkgFile, JSON.stringify(pkg, null, 2) + '\n');
+
+const wranglerFile = path.join(to, 'wrangler.jsonc');
+if (fs.existsSync(wranglerFile)) {
+  fs.writeFileSync(wranglerFile, fs.readFileSync(wranglerFile, 'utf8').replaceAll('__SITE__', name));
+}
 
 const deployFile = path.join(to, 'deploy/github-pages.yml');
 fs.writeFileSync(deployFile, fs.readFileSync(deployFile, 'utf8').replaceAll('__SITE__', name));
@@ -50,4 +56,6 @@ Next:
   3. corepack pnpm --filter ${name} dev   then open http://localhost:4321
   4. http://localhost:4321/local-cms      edit posts, brand panels, and gallery
      (saves src/data/*.json; commit and push)
+  5. Push to main: it deploys to https://${name}.heythisisandrewb.workers.dev
+     (or run: corepack pnpm cf deploy ${name})
 `);

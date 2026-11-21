@@ -50,7 +50,9 @@ const noindex = pageNoindex || import.meta.env.REELAY_NOINDEX === '1';
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const site = Astro.site || new URL(SITE.url);
-const canonicalURL = new URL(Astro.url.pathname, site);
+/* No trailing slash, matching the site's own links (/support, not /support/);
+   on Cloudflare (drop-trailing-slash) that is the form served without a redirect. */
+const canonicalURL = new URL(Astro.url.pathname.replace(/(.)\/$/, '$1'), site);
 /* One Open Graph image per page: public/og/<slug>.png (scripts/make-og.mjs). */
 const pagePath = Astro.url.pathname.startsWith(base) ? Astro.url.pathname.slice(base.length) : Astro.url.pathname;
 const slug = pagePath.replace(/^\/|\/$/g, '').replace(/\//g, '-') || 'home';

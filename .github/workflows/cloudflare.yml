@@ -1,0 +1,82 @@
+name: Deploy to Cloudflare
+
+# Every site whose package.json has a "cloudflare" block deploys to its own
+# Worker (scripts/cloudflare.mjs). A push to main deploys only the sites it
+# touched (or all of them when shared packages or the lockfile change). Run it
+# by hand from the Actions tab to deploy one site, or "all".
+#
+# Needs the repository secret CLOUDFLARE_API_TOKEN (Edit Cloudflare Workers
+# template). Without it the workflow skips with a notice instead of failing.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      site:
+        description: 'Site folder under sites/, or "all"'
+        required: true
+        default: all
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Pick sites
+    runs-on: ubuntu-latest
+    outputs:
+      sites: ${{ steps.pick.outputs.sites }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: pick
+        env:
+          HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+          INPUT_SITE: ${{ github.event.inputs.site }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "$HAS_TOKEN" != "true" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN is not set; skipping Cloudflare deploys."
+            echo 'sites=[]' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$INPUT_SITE" = "all" ]; then
+              sites=$(node scripts/cloudflare.mjs changed)
+            else
+              sites=$(node -e 'console.log(JSON.stringify([process.argv[1]]))' "$INPUT_SITE")
+            fi
+          else
+            sites=$(node scripts/cloudflare.mjs changed "$BEFORE" "$GITHUB_SHA")
+          fi
+          echo "Deploying: $sites"
+          echo "sites=$sites" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy ${{ matrix.site }}
+    needs: plan
+    if: needs.plan.outputs.sites != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        site: ${{ fromJson(needs.plan.outputs.sites) }}
+    concurrency:
+      group: cloudflare-${{ matrix.site }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build and deploy
+        run: node scripts/cloudflare.mjs deploy "$SITE"
+        env:
+          SITE: ${{ matrix.site }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

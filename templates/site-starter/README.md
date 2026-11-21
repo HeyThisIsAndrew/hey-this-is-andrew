@@ -15,4 +15,4 @@ the five steps.
 | `/local-cms` (under `pnpm dev`) | the accordion's panels and the posts (`src/data/panels.json`, `posts.json`) |
 | `local-cms.config.mjs` | what the CMS edits; `imageHost` for Sanity images |
 | `src/assets/logo.svg`, `public/favicon.svg` | your logo and favicon |
-| `deploy/github-pages.yml` | how the site goes live |
+| `wrangler.jsonc`, `cloudflare` in `package.json` | its Cloudflare Worker: a push to `main` deploys it (see `CLOUDFLARE.md` at the repo root) |

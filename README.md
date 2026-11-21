@@ -100,11 +100,11 @@ contains it.
 tagline, menu links, social links). The menu and the footer both read it, so
 they always match.
 
-**5. Deploy.** `sites/my-new-site/deploy/github-pages.yml` explains the two
-options: make it this repository's GitHub Pages site, or point a host such
-as Cloudflare Pages or Netlify at the `sites/my-new-site` folder (build
-command `pnpm install && pnpm run build`, output folder `dist`). GitHub
-Pages publishes one site per repository, and the personal site uses it now.
+**5. Deploy.** Commit and push to `main`. The new site already has its own
+Cloudflare Worker set up (`wrangler.jsonc` and the `cloudflare` block in its
+`package.json`), so `.github/workflows/cloudflare.yml` builds and deploys it to
+`https://my-new-site.heythisisandrewb.workers.dev` on its own. Every later push
+that touches the site redeploys it. Details: `CLOUDFLARE.md`.
 
 Preview any site locally first: `corepack pnpm --filter my-new-site dev`.
 
@@ -118,6 +118,7 @@ These need pnpm: put `corepack ` in front if `pnpm` alone is not found.
 | `pnpm build` | builds every site and the starter (a quick "is anything broken?") |
 | `pnpm test` | runs every site's checks |
 | `pnpm new-site <name>` | makes a new site from the starter |
+| `pnpm cf list` / `pnpm cf deploy <site>` | Cloudflare sites, and deploying one by hand (`CLOUDFLARE.md`) |
 | `pnpm --filter <site> dev` | runs one site locally |
 
 The `./site` commands above also exist as `pnpm review`, `pnpm dev`,

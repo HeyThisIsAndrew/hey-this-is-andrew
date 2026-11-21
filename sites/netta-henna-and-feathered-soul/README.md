@@ -26,24 +26,20 @@ corepack pnpm --filter netta-henna-and-feathered-soul build
 
 ## Deployment
 
-Cloudflare Pages project `netta-henna-and-feathered-soul`, connected to this repo
-(production branch `main`). This site depends on `workspace:*` packages, so the
-build runs from the repo root:
+Cloudflare Worker `netta-henna-and-feathered-soul`, live at
+https://netta-henna-and-feathered-soul.heythisisandrewb.workers.dev.
 
-- **Framework preset**: None
-- **Root directory**: *(leave blank, repo root)*
-- **Build command**: `pnpm --filter netta-henna-and-feathered-soul build`
-- **Build output directory**: `sites/netta-henna-and-feathered-soul/dist`
-- **Build watch paths (include)**: `sites/netta-henna-and-feathered-soul/*`, `packages/*`, `pnpm-lock.yaml`
+Pushing to `main` deploys it automatically when this folder (or a shared
+package) changed: `.github/workflows/cloudflare.yml` runs
+`scripts/cloudflare.mjs`, which builds with `SITE_URL` set to the Worker's URL
+and `BASE_PATH=/`, then uploads `dist/` as the Worker's static assets
+(`wrangler.jsonc`). To deploy by hand from a laptop:
 
-Production environment variables:
+```sh
+npx wrangler login
+corepack pnpm cf deploy netta-henna-and-feathered-soul
+```
 
-| Name | Value |
-| --- | --- |
-| `NODE_VERSION` | `22` (Astro 7 needs Node >= 22.12; the repo requires >= 22.15, so 20 fails) |
-| `PNPM_VERSION` | `10.18.3` (Pages defaults to pnpm 10.11.1 and ignores the repo's `packageManager` pin) |
-| `BASE_PATH` | `/` |
-| `SITE_URL` | `https://netta-henna-and-feathered-soul.pages.dev` |
-
-Leave `SITE_URL` unset for Preview so preview builds fall back to `CF_PAGES_URL`.
-Cloudflare installs dependencies automatically from the root `pnpm-lock.yaml`.
+For a custom domain later: add `"siteUrl": "https://the-domain"` to the
+`cloudflare` block in `package.json`, then attach the domain to the Worker in
+the Cloudflare dashboard (Workers & Pages, the Worker, Settings, Domains & Routes).
