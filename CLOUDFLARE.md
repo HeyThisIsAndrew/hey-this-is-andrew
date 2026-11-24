@@ -35,14 +35,32 @@ previews under it) from `.github/workflows/deploy.yml`, unchanged.
 
 ## One-time setup
 
-1. Cloudflare dashboard, My Profile, API Tokens, Create Token, template
-   **Edit Cloudflare Workers**, your account, Create. Copy the token.
-2. GitHub repository, Settings, Secrets and variables, Actions, New repository
-   secret: `CLOUDFLARE_API_TOKEN`, value the token.
-3. Same page, another secret: `RESEND_API_KEY`, value your Resend API key
-   (resend.com, API Keys). Later, `RESEND_FROM_EMAIL` once a sending domain
-   is verified in Resend.
-4. Actions tab, **Deploy to Cloudflare**, Run workflow, site `all`.
+**1. Cloudflare token.** https://dash.cloudflare.com/profile/api-tokens
+
+- Create Token, then Use template next to **Edit Cloudflare Workers**.
+- Token name: anything (e.g. "Monorepo Edit Cloudflare Workers").
+- Zone policy: pencil, Include, **All zones**. (workers.dev needs no zone;
+  this lets custom domains work later.)
+- Account policy: pencil, Include, **your account**.
+- User policy: leave as is.
+- Token expiration: No expiration (or 1 year, with a reminder to replace it).
+- Client IP address filtering: leave empty (GitHub's machines change IPs).
+- Continue to summary, Create Token, copy the token (shown once).
+
+**2. Save it in GitHub.**
+https://github.com/HeyThisIsAndrew/hey-this-is-andrew/settings/secrets/actions/new
+Name `CLOUDFLARE_API_TOKEN`, paste, Add secret.
+
+**3. Resend key.** https://resend.com/api-keys
+Create API Key, any name, Permission **Sending access**, Domain **All domains**,
+Add, copy the key. Then the same GitHub page as step 2: name `RESEND_API_KEY`,
+paste, Add secret. (`RESEND_FROM_EMAIL` later, once a sending domain is
+verified in Resend.)
+
+**4. First deploy.**
+https://github.com/HeyThisIsAndrew/hey-this-is-andrew/actions/workflows/cloudflare.yml
+Run workflow, site `all`, Run workflow. Later pushes to `main` deploy on
+their own.
 
 Until `CLOUDFLARE_API_TOKEN` exists the workflow skips with a notice instead of
 failing.
