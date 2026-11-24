@@ -1,0 +1,771 @@
+---
+/**
+ * MagazineSpread — progressive-enhancement 3-column article showcase.
+ *
+ * Left rail (newest half) | Center feature (swappable) | Right rail (older half).
+ * Server-renders the newest article in the center and real <a href> links in the
+ * rails so SEO crawlers and no-JS environments work natively; client-side clicks
+ * swap the center feature in place without a reload.
+ *
+ * Tokenized via @andrew/tokens custom properties.
+ */
+import type { ArticleCardItem } from './types';
+
+interface Props {
+  articles: ArticleCardItem[];
+  compact?: boolean;
+  readMoreLabel?: string;
+  ariaLabel?: string;
+}
+
+const {
+  articles = [],
+  compact = false,
+  readMoreLabel = 'Read More',
+  ariaLabel = 'Featured articles',
+} = Astro.props;
+
+const FeatureHeading = compact ? 'h3' : 'h2';
+const COMPACT_EXCERPT_CHARS = 170;
+
+function clipPreview(paragraphs: string[], max: number): string {
+  const text = paragraphs
+    .map((p) => (typeof p === 'string' ? p.trim() : ''))
+    .filter(Boolean)
+    .join(' ')
+    .replace(/\s+/g, ' ');
+  if (!text || !(max > 0) || text.length <= max) return text;
+  const cut = text.slice(0, max + 1);
+  const lastSpace = cut.lastIndexOf(' ');
+  const head = (lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : text.slice(0, max)).replace(
+    /[\s,;:.!?\-]+$/,
+    '',
+  );
+  return `${head}…`;
+}
+
+function previewOf(article: ArticleCardItem): string[] {
+  const paras = (article.preview ?? []).filter((p) => typeof p === 'string' && p.trim());
+  const base = paras.length > 0 ? paras : article.excerpt ? [article.excerpt] : [];
+  return compact ? [clipPreview(base, COMPACT_EXCERPT_CHARS)] : base;
+}
+
+function tagsStringOf(article: ArticleCardItem): string {
+  const tags = (article.tags ?? []).filter(Boolean).slice(0, 2);
+  if (tags.length > 0) return tags.join(' | ') + ' | ';
+  return article.category ? `${article.category} | ` : '';
+}
+
+const feature: ArticleCardItem | undefined = articles[0];
+const splitAt = Math.ceil(articles.length / 2);
+const rails = [
+  { side: 'left' as const, items: articles.slice(0, splitAt) },
+  { side: 'right' as const, items: articles.slice(splitAt) },
+];
+const activeSlug = feature?.slug ?? '';
+const FEATURE_SIZES =
+  '(max-width: 900px) 92vw, ' +
+  '(min-width: 3400px) 1180px, (min-width: 2560px) 1050px, (min-width: 1920px) 970px, 720px';
+const THUMB_SIZES = compact
+  ? '(max-width: 560px) 42vw, (max-width: 1100px) 45vw, (min-width: 3400px) 650px, (min-width: 2560px) 540px, (min-width: 1920px) 400px, 300px'
+  : '(max-width: 560px) 75vw, (max-width: 900px) 45vw, (min-width: 3400px) 640px, (min-width: 2560px) 530px, (min-width: 1920px) 410px, 320px';
+---
+
+{
+  feature && (
+    <section
+      class:list={['magazine-spread', { 'magazine-spread--compact': compact }]}
+      aria-label={ariaLabel}
+      data-magazine-spread
+      data-excerpt-chars={compact ? COMPACT_EXCERPT_CHARS : undefined}
+    >
+      {rails.map((rail, railIdx) => (
+        <>
+          {railIdx === 1 && (
+            <article class="magazine-feature" data-magazine-feature aria-live="polite">
+              <a
+                class="magazine-feature-link"
+                data-magazine-feature-link
+                href={feature.link}
+                target={feature.isExternal ? '_blank' : undefined}
+                rel={feature.isExternal ? 'noopener noreferrer' : undefined}
+              >
+                <div class="magazine-feature-image">
+                  <img
+                    data-magazine-feature-img
+                    src={feature.imageSrc || feature.image || ''}
+                    srcset={feature.imageSrcset || undefined}
+                    sizes={feature.imageSrcset ? FEATURE_SIZES : undefined}
+                    alt={feature.image || feature.imageSrc ? `Cover image for ${feature.title}` : ''}
+                    width="1456"
+                    height="816"
+                    loading={compact ? 'lazy' : 'eager'}
+                    decoding="async"
+                    fetchpriority={compact ? 'auto' : 'high'}
+                    hidden={!(feature.image || feature.imageSrc)}
+                  />
+                  <div
+                    data-magazine-feature-fallback
+                    class="magazine-thumb-fallback is-feature"
+                    hidden={Boolean(feature.image || feature.imageSrc)}
+                  >
+                    <span class="magazine-thumb-fallback-title" data-magazine-feature-fallback-title>
+                      {feature.title}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="magazine-feature-copy">
+                  <span class="magazine-feature-meta">
+                    <span data-magazine-feature-tags>{tagsStringOf(feature)}</span>
+                    <span data-magazine-feature-date>{feature.date}</span>
+                  </span>
+
+                  <FeatureHeading class="magazine-feature-title" data-magazine-feature-title>
+                    {feature.title}
+                  </FeatureHeading>
+
+                  <div class="magazine-feature-excerpt" data-magazine-feature-excerpt>
+                    {previewOf(feature).map((paragraph) => <p>{paragraph}</p>)}
+                  </div>
+
+                  <span class="magazine-feature-cta">
+                    {readMoreLabel} <span class="arrow" aria-hidden="true">&rarr;</span>
+                  </span>
+                </div>
+              </a>
+            </article>
+          )}
+
+          <div class:list={['magazine-rail', `magazine-rail-${rail.side}`]}>
+            {rail.items.map((article) => {
+              const tagsStr = tagsStringOf(article);
+              const rawPreview = (article.preview ?? []).filter((p) => typeof p === 'string' && p.trim());
+              const previewText = (
+                rawPreview.length > 0 ? rawPreview : article.excerpt ? [article.excerpt] : []
+              ).join('\n\n');
+              const imgSrc = article.imageSrc || article.image || '';
+              const isActive = article.slug === activeSlug;
+
+              return (
+                <a
+                  class:list={['magazine-rail-item', { active: isActive }]}
+                  aria-current={isActive ? 'true' : undefined}
+                  href={article.link}
+                  target={article.isExternal ? '_blank' : undefined}
+                  rel={article.isExternal ? 'noopener noreferrer' : undefined}
+                  data-magazine-rail-item
+                  data-slug={article.slug}
+                  data-title={article.title}
+                  data-preview={previewText}
+                  data-image={article.image || article.imageSrc || ''}
+                  data-image-src={imgSrc}
+                  data-image-srcset={article.imageSrcset || undefined}
+                  data-tags={tagsStr}
+                  data-date={article.date}
+                  data-href={article.link}
+                  data-external={article.isExternal ? 'true' : 'false'}
+                >
+                  <div class="magazine-rail-thumb">
+                    {imgSrc ? (
+                      <img
+                        src={imgSrc}
+                        srcset={article.imageSrcset || undefined}
+                        sizes={article.imageSrcset ? THUMB_SIZES : undefined}
+                        alt=""
+                        width="640"
+                        height="360"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <div class="magazine-thumb-fallback">
+                        <span class="magazine-thumb-fallback-title">{article.title}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div class="magazine-rail-copy">
+                    <span class="magazine-rail-meta">
+                      {tagsStr}
+                      {article.date}
+                    </span>
+                    <h3 class="magazine-rail-title">{article.title}</h3>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </>
+      ))}
+    </section>
+  )
+}
+
+<script>
+  function clipPreview(paragraphs: string[], max: number): string {
+    const text = paragraphs
+      .map((p) => (typeof p === 'string' ? p.trim() : ''))
+      .filter(Boolean)
+      .join(' ')
+      .replace(/\s+/g, ' ');
+    if (!text || !(max > 0) || text.length <= max) return text;
+    const cut = text.slice(0, max + 1);
+    const lastSpace = cut.lastIndexOf(' ');
+    const head = (lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : text.slice(0, max)).replace(
+      /[\s,;:.!?\-]+$/,
+      '',
+    );
+    return `${head}…`;
+  }
+
+  function initMagazineSpreads() {
+    document.querySelectorAll<HTMLElement>('[data-magazine-spread]').forEach((spread) => {
+      const feature = spread.querySelector<HTMLElement>('[data-magazine-feature]');
+      const link = spread.querySelector<HTMLAnchorElement>('[data-magazine-feature-link]');
+      const image = spread.querySelector<HTMLImageElement>('[data-magazine-feature-img]');
+      const fallback = spread.querySelector<HTMLElement>('[data-magazine-feature-fallback]');
+      const fallbackTitle = spread.querySelector<HTMLElement>(
+        '[data-magazine-feature-fallback-title]',
+      );
+      const title = spread.querySelector<HTMLElement>('[data-magazine-feature-title]');
+      const excerpt = spread.querySelector<HTMLElement>('[data-magazine-feature-excerpt]');
+      const tags = spread.querySelector<HTMLElement>('[data-magazine-feature-tags]');
+      const date = spread.querySelector<HTMLElement>('[data-magazine-feature-date]');
+      const items = Array.from(
+        spread.querySelectorAll<HTMLAnchorElement>('[data-magazine-rail-item]'),
+      );
+
+      if (!feature || !link || items.length === 0) return;
+
+      const markClipped = () => {
+        if (!excerpt) return;
+        excerpt.classList.toggle('is-clipped', excerpt.scrollHeight > excerpt.clientHeight + 1);
+      };
+
+      const paint = (item: HTMLAnchorElement) => {
+        const data = item.dataset;
+        const href = data.href ?? item.getAttribute('href') ?? '';
+        link.setAttribute('href', href);
+
+        if (data.external === 'true') {
+          link.setAttribute('target', '_blank');
+          link.setAttribute('rel', 'noopener noreferrer');
+        } else {
+          link.removeAttribute('target');
+          link.removeAttribute('rel');
+        }
+
+        if (title) title.textContent = data.title ?? '';
+
+        if (excerpt) {
+          const paragraphs = (data.preview ?? '')
+            .split('\n\n')
+            .map((t) => t.trim())
+            .filter(Boolean);
+          const budget = Number(spread.dataset.excerptChars);
+          const lede = budget > 0 ? [clipPreview(paragraphs, budget)] : paragraphs;
+          excerpt.replaceChildren(
+            ...lede.map((text) => {
+              const p = document.createElement('p');
+              p.textContent = text;
+              return p;
+            }),
+          );
+        }
+
+        if (tags) tags.textContent = data.tags ?? '';
+        if (date) date.textContent = data.date ?? '';
+
+        if (data.image || data.imageSrc) {
+          if (image) {
+            image.setAttribute('src', data.imageSrc || data.image || '');
+            if (data.imageSrcset) image.setAttribute('srcset', data.imageSrcset);
+            else image.removeAttribute('srcset');
+            image.setAttribute('alt', `Cover image for ${data.title ?? ''}`);
+            image.removeAttribute('hidden');
+          }
+          if (fallback) fallback.setAttribute('hidden', '');
+        } else {
+          if (image) image.setAttribute('hidden', '');
+          if (fallbackTitle) fallbackTitle.textContent = data.title ?? '';
+          if (fallback) fallback.removeAttribute('hidden');
+        }
+
+        feature.classList.remove('is-swapping');
+        void feature.offsetWidth;
+        feature.classList.add('is-swapping');
+        markClipped();
+      };
+
+      const setActive = (slug: string) => {
+        items.forEach((item) => {
+          const isActive = item.dataset.slug === slug;
+          item.classList.toggle('active', isActive);
+          if (isActive) item.setAttribute('aria-current', 'true');
+          else item.removeAttribute('aria-current');
+        });
+      };
+
+      const select = (item: HTMLAnchorElement) => {
+        paint(item);
+        setActive(item.dataset.slug ?? '');
+      };
+
+      markClipped();
+      if (document.fonts?.ready) document.fonts.ready.then(markClipped).catch(() => {});
+
+      items.forEach((item) => {
+        if (item.dataset.bound) return;
+        item.dataset.bound = 'true';
+
+        item.addEventListener('click', (event) => {
+          const mouseEvent = event as MouseEvent;
+          if (
+            event.defaultPrevented ||
+            mouseEvent.button !== 0 ||
+            mouseEvent.metaKey ||
+            mouseEvent.ctrlKey ||
+            mouseEvent.shiftKey ||
+            mouseEvent.altKey
+          ) {
+            return;
+          }
+
+          event.preventDefault();
+          select(item);
+
+          const slug = item.dataset.slug;
+          if (slug) history.replaceState(history.state, '', `#${slug}`);
+
+          const anchor = feature.closest<HTMLElement>('[data-magazine-scroll-anchor]') ?? feature;
+          const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          anchor.scrollIntoView({
+            block: 'start',
+            behavior: reducedMotion ? 'instant' : 'smooth',
+          });
+        });
+      });
+
+      const hash = decodeURIComponent(window.location.hash.replace('#', ''));
+      if (hash) {
+        const match = items.find((item) => item.dataset.slug === hash);
+        if (match) select(match);
+      }
+    });
+  }
+
+  initMagazineSpreads();
+  document.addEventListener('astro:page-load', initMagazineSpreads);
+</script>
+
+<style>
+  .magazine-spread {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2.15fr) minmax(0, 1fr);
+    gap: 0;
+    margin-bottom: 0;
+    border-top: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
+    border-bottom: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
+  }
+
+  @media (min-width: 2560px) {
+    .magazine-spread {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.85fr) minmax(0, 1fr);
+    }
+  }
+
+  @media (min-width: 3400px) {
+    .magazine-spread {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr) minmax(0, 1fr);
+    }
+  }
+
+  .magazine-rail {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .magazine-rail-left {
+    border-right: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
+  }
+
+  .magazine-rail-right {
+    border-left: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
+  }
+
+  .magazine-rail-item {
+    display: block;
+    padding: 1.75rem 1.5rem;
+    text-decoration: none;
+    border-bottom: 1px solid var(--hairline, rgba(255, 255, 255, 0.08));
+    transition: background-color 0.3s ease;
+  }
+
+  .magazine-rail-item:last-child {
+    border-bottom: 0;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .magazine-rail-item:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .magazine-rail-item:hover .magazine-rail-title {
+      color: var(--color-accent-text, #ededed);
+    }
+
+    .magazine-rail-item:hover .magazine-rail-thumb img {
+      transform: scale(1.06);
+    }
+  }
+
+  .magazine-rail-item:focus-visible,
+  .magazine-feature-link:focus-visible {
+    outline: 2px solid var(--focus-ring, #f0f0f0);
+    outline-offset: -2px;
+  }
+
+  .magazine-rail-item.active {
+    background: var(--surface, #111111);
+    box-shadow: inset 3px 0 0 var(--color-accent, #b2b2b2);
+  }
+
+  .magazine-rail-right .magazine-rail-item.active {
+    box-shadow: inset -3px 0 0 var(--color-accent, #b2b2b2);
+  }
+
+  .magazine-rail-thumb {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--surface, #111111);
+    margin-bottom: 1rem;
+  }
+
+  .magazine-rail-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+  }
+
+  .magazine-rail-meta,
+  .magazine-feature-meta {
+    display: block;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-muted, #9a9a9a);
+  }
+
+  .magazine-feature-meta {
+    margin-inline-start: max(0px, calc((100% - var(--feature-measure)) / 2));
+  }
+
+  .magazine-rail-title {
+    font-family: var(--font-display, system-ui);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--text, #f5f5f5);
+    transition: color 0.3s ease;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: break-word;
+    margin: 0.4rem 0 0;
+  }
+
+  .magazine-feature {
+    min-width: 0;
+  }
+
+  .magazine-feature-link {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    text-decoration: none;
+  }
+
+  .magazine-feature-image {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    flex: 0 0 auto;
+    overflow: hidden;
+    background: var(--surface, #111111);
+  }
+
+  .magazine-feature-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.2, 1);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .magazine-feature-link:hover .magazine-feature-image img {
+      transform: scale(1.03);
+    }
+  }
+
+  .magazine-feature-copy {
+    --feature-measure: 42rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    flex: 1 0 auto;
+    gap: 0.75rem;
+    padding: 2.5rem 2.5rem 3rem;
+    text-align: left;
+  }
+
+  @media (min-width: 2560px) {
+    .magazine-feature-copy {
+      flex: 0 0 auto;
+      justify-content: flex-start;
+    }
+  }
+
+  .magazine-feature-title {
+    margin: 0;
+    margin-inline-start: max(0px, calc((100% - var(--feature-measure)) / 2));
+    max-width: var(--feature-measure);
+    font-family: var(--font-display, system-ui);
+    font-size: clamp(1.6rem, calc(1rem + 1.9vw), 2.75rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: var(--text, #f5f5f5);
+    overflow-wrap: break-word;
+  }
+
+  .magazine-feature-excerpt {
+    --excerpt-lines: 14;
+    --excerpt-leading: 1.6;
+    flex: 0 0 auto;
+    align-self: center;
+    max-height: calc(var(--excerpt-lines) * var(--excerpt-leading) * 1em);
+    overflow: hidden;
+    font-family: var(--font-body, system-ui);
+    font-size: 1.2rem;
+    line-height: var(--excerpt-leading);
+    color: var(--text-muted, #9a9a9a);
+    max-width: var(--feature-measure);
+    width: 100%;
+    margin: 0;
+  }
+
+  .magazine-spread--compact .magazine-feature-excerpt {
+    --excerpt-lines: 4;
+  }
+
+  @media (min-width: 2560px) {
+    .magazine-feature-excerpt {
+      --excerpt-lines: 20;
+    }
+  }
+
+  @media (min-width: 3400px) {
+    .magazine-feature-excerpt {
+      --excerpt-lines: 26;
+    }
+  }
+
+  .magazine-feature-excerpt.is-clipped {
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.5rem), transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 2.5rem), transparent 100%);
+  }
+
+  .magazine-feature-excerpt p {
+    margin: 0 0 1rem;
+  }
+
+  .magazine-feature-excerpt p:first-child {
+    color: var(--ink, #f0f0f0);
+  }
+
+  .magazine-feature-excerpt p:last-child {
+    margin-bottom: 0;
+  }
+
+  .magazine-feature-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink, #f0f0f0);
+    transition:
+      color 0.3s ease,
+      letter-spacing 0.3s ease,
+      transform 0.3s ease;
+    position: relative;
+    width: fit-content;
+    padding-bottom: 4px;
+    margin-inline-start: max(0px, calc((100% - var(--feature-measure)) / 2));
+  }
+
+  .magazine-feature-cta::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: var(--color-accent, #b2b2b2);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.2, 1);
+  }
+
+  .magazine-feature-cta .arrow {
+    color: var(--color-accent-text, #ededed);
+  }
+
+  .magazine-feature-link:hover .magazine-feature-cta {
+    color: var(--color-accent-text, #ededed);
+    letter-spacing: 0.2em;
+    transform: translateX(8px);
+  }
+
+  .magazine-feature-link:hover .magazine-feature-cta::after {
+    transform: scaleX(1);
+  }
+
+  @keyframes magazine-feature-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .magazine-feature.is-swapping .magazine-feature-copy,
+  .magazine-feature.is-swapping .magazine-feature-image {
+    animation: magazine-feature-in 0.45s cubic-bezier(0.25, 0.8, 0.2, 1) both;
+  }
+
+  .magazine-thumb-fallback {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 1rem;
+    text-align: center;
+    background: linear-gradient(135deg, var(--surface-2, #1a1a1a) 0%, var(--bg, #0a0a0a) 100%);
+  }
+
+  .magazine-thumb-fallback-title {
+    font-family: var(--font-display, system-ui);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink, #f0f0f0);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .magazine-thumb-fallback.is-feature .magazine-thumb-fallback-title {
+    font-size: 1.05rem;
+    letter-spacing: 0.1em;
+    -webkit-line-clamp: 4;
+    max-width: 32ch;
+  }
+
+  @media (max-width: 1100px) {
+    .magazine-spread {
+      grid-template-columns: 1fr;
+    }
+
+    .magazine-rail-left,
+    .magazine-rail-right {
+      border-left: 0;
+      border-right: 0;
+      border-top: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
+    }
+
+    .magazine-feature {
+      order: -1;
+    }
+
+    .magazine-feature-excerpt {
+      --excerpt-lines: 7;
+    }
+
+    .magazine-rail {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .magazine-rail-right .magazine-rail-item.active {
+      box-shadow: inset 3px 0 0 var(--color-accent, #b2b2b2);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .magazine-rail {
+      grid-template-columns: 1fr;
+    }
+
+    .magazine-feature-copy {
+      padding: 2rem 1.25rem 2.5rem;
+    }
+
+    .magazine-rail-item {
+      padding: 1.5rem 1.25rem;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .magazine-feature-excerpt p:nth-child(n + 2) {
+      display: none;
+    }
+
+    .magazine-feature-excerpt {
+      --excerpt-lines: 4;
+      font-size: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .magazine-feature-excerpt p:first-child {
+      display: -webkit-box;
+      -webkit-line-clamp: var(--excerpt-lines);
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      font-size: 1rem;
+      margin-bottom: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .magazine-feature.is-swapping .magazine-feature-copy,
+    .magazine-feature.is-swapping .magazine-feature-image {
+      animation: none;
+    }
+
+    .magazine-rail-thumb img,
+    .magazine-feature-image img,
+    .magazine-feature-cta,
+    .magazine-feature-cta::after {
+      transition: none;
+    }
+  }
+</style>

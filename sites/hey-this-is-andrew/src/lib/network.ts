@@ -219,7 +219,7 @@ export async function getNetworkFeed(limit = 8): Promise<NetworkItem[]> {
         date: a.date,
         url: a.url,
         image: a.image,
-        external: true,
+        external: a.isExternal ?? false,
       })
     ),
     ...beArticles,

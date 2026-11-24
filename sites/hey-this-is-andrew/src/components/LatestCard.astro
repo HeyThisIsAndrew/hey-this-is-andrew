@@ -4,10 +4,9 @@ import { SOCIAL_ICONS } from '@andrew/ui/icons';
 
 interface Props { item: LatestItem; compact?: boolean }
 const { item, compact = false } = Astro.props;
-const cta = item.kind === 'video' ? 'Watch the video' : 'Read on Substack';
-// Videos open the in-page player with a spatial zoom from the card.
-// Articles still open externally.
 const isVideo = item.kind === 'video';
+const isExternal = isVideo || item.isExternal !== false;
+const cta = isVideo ? 'Watch the video' : isExternal ? 'Read on Substack' : 'Read article';
 ---
 <article class:list={['latest-card', 'hover-gradient-wash', { reveal: !compact, 'latest-card--compact': compact }]}>
   {isVideo ? (
@@ -20,7 +19,13 @@ const isVideo = item.kind === 'video';
       aria-label={`${item.title} (${cta})`}
     ></button>
   ) : (
-    <a class="stretched" href={item.url} target="_blank" rel="noopener" aria-label={`${item.title} (${cta}, opens in a new tab)`}></a>
+    <a
+      class="stretched"
+      href={item.url}
+      target={isExternal ? '_blank' : undefined}
+      rel={isExternal ? 'noopener' : undefined}
+      aria-label={isExternal ? `${item.title} (${cta}, opens in a new tab)` : `${item.title} (${cta})`}
+    ></a>
   )}
   {item.image && (
     <div class="ambient-glow-wrapper thumb">

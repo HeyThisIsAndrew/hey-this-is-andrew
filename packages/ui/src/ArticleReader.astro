@@ -1,0 +1,345 @@
+---
+/**
+ * ArticleReader — responsive 3-column article layout with sticky TOC,
+ * ~44rem readable prose measure, optional right support rail, and optional
+ * SubstackGallery progressive enhancement.
+ *
+ * Named slots: header, default (prose body), footer, rail.
+ * Styled exclusively via @andrew/tokens custom properties.
+ */
+import SubstackGallery from './SubstackGallery.astro';
+import TableOfContents from './TableOfContents.astro';
+import type { ArticleTocEntry } from './types';
+
+interface Props {
+  toc?: ArticleTocEntry[];
+  tocTitle?: string;
+  enableGallery?: boolean;
+}
+
+const { toc = [], tocTitle = 'Contents', enableGallery = true } = Astro.props;
+const hasToc = toc.length >= 2;
+const hasRail = Astro.slots.has('rail');
+const hasHeader = Astro.slots.has('header');
+const hasFooter = Astro.slots.has('footer');
+---
+
+<div
+  class:list={[
+    'article-reader-layout',
+    { 'has-toc': hasToc, 'has-rail': hasRail },
+  ]}
+>
+  {
+    hasToc && (
+      <aside class="article-reader-toc" aria-label={tocTitle}>
+        <TableOfContents entries={toc} title={tocTitle} />
+      </aside>
+    )
+  }
+
+  <div class="article-reader-column">
+    {
+      hasHeader && (
+        <header class="article-reader-header">
+          <slot name="header" />
+        </header>
+      )
+    }
+
+    <div class="article-prose">
+      <slot />
+    </div>
+
+    {
+      hasFooter && (
+        <footer class="article-reader-footer">
+          <slot name="footer" />
+        </footer>
+      )
+    }
+  </div>
+
+  {
+    hasRail && (
+      <aside class="article-reader-rail">
+        <div class="article-reader-rail-sticky">
+          <slot name="rail" />
+        </div>
+      </aside>
+    )
+  }
+</div>
+
+{enableGallery && <SubstackGallery />}
+
+<style is:global>
+  .article-reader-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 44rem);
+    grid-template-areas: 'column';
+    justify-content: center;
+    gap: 2.5rem;
+    align-items: start;
+    width: 100%;
+  }
+
+  .article-reader-layout.has-toc {
+    grid-template-columns: minmax(0, 14rem) minmax(0, 44rem);
+    grid-template-areas: 'toc column';
+  }
+
+  .article-reader-layout.has-rail {
+    grid-template-columns: minmax(0, 44rem) minmax(0, 14rem);
+    grid-template-areas: 'column rail';
+  }
+
+  .article-reader-layout.has-toc.has-rail {
+    grid-template-columns: minmax(0, 14rem) minmax(0, 44rem) minmax(0, 14rem);
+    grid-template-areas: 'toc column rail';
+    justify-content: space-between;
+  }
+
+  .article-reader-toc {
+    grid-area: toc;
+    position: sticky;
+    top: 7rem;
+    align-self: start;
+  }
+
+  .article-reader-column {
+    grid-area: column;
+    width: 100%;
+    max-width: 44rem;
+    margin-inline: auto;
+    min-width: 0;
+  }
+
+  .article-reader-rail {
+    grid-area: rail;
+    position: sticky;
+    top: 7rem;
+    align-self: start;
+  }
+
+  .article-reader-header {
+    margin-bottom: 3rem;
+  }
+
+  .article-reader-footer {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
+  }
+
+  @media (max-width: 1024px) {
+    .article-reader-layout,
+    .article-reader-layout.has-toc,
+    .article-reader-layout.has-rail,
+    .article-reader-layout.has-toc.has-rail {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        'column'
+        'rail';
+      row-gap: 3rem;
+    }
+
+    .article-reader-toc {
+      display: none;
+    }
+
+    .article-reader-rail {
+      position: static;
+    }
+  }
+
+  /* Sanitized Substack prose styling */
+  .article-prose {
+    font-family: var(--font-body, system-ui);
+    font-size: 1.15rem;
+    line-height: 1.8;
+    color: var(--ink, #f0f0f0);
+    overflow-wrap: break-word;
+  }
+
+  .article-prose > * + * {
+    margin-top: 1.5rem;
+  }
+
+  .article-prose h2,
+  .article-prose h3,
+  .article-prose h4 {
+    font-family: var(--font-display, system-ui);
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--text, #f5f5f5);
+    margin-top: 3rem;
+    margin-bottom: 1rem;
+    scroll-margin-top: 7rem;
+  }
+
+  .article-prose h2 {
+    font-size: 1.75rem;
+  }
+
+  .article-prose h3 {
+    font-size: 1.375rem;
+  }
+
+  .article-prose h4 {
+    font-size: 1.125rem;
+    letter-spacing: 0.02em;
+  }
+
+  @media (max-width: 768px) {
+    .article-prose h2,
+    .article-prose h3,
+    .article-prose h4 {
+      scroll-margin-top: 5.5rem;
+    }
+  }
+
+  .article-prose a {
+    color: var(--text, #f5f5f5);
+    text-decoration: underline;
+    text-decoration-color: var(--color-accent, #b2b2b2);
+    text-underline-offset: 3px;
+    transition: color 0.25s ease;
+  }
+
+  .article-prose a:hover {
+    color: var(--color-accent-text, #ededed);
+  }
+
+  .article-prose strong {
+    color: var(--text, #f5f5f5);
+    font-weight: 700;
+  }
+
+  .article-prose ul,
+  .article-prose ol {
+    padding-left: 1.5rem;
+  }
+
+  .article-prose li + li {
+    margin-top: 0.5rem;
+  }
+
+  .article-prose ul {
+    list-style: disc;
+  }
+
+  .article-prose ol {
+    list-style: decimal;
+  }
+
+  .article-prose blockquote {
+    border-left: 3px solid var(--color-accent, #b2b2b2);
+    padding: 0.35rem 0 0.35rem 1.75rem;
+    margin: 2.25rem 0;
+    font-size: 1.2em;
+    line-height: 1.45;
+    letter-spacing: -0.005em;
+    color: var(--text, #f5f5f5);
+    font-style: italic;
+    font-weight: 600;
+  }
+
+  .article-prose blockquote p {
+    margin: 0;
+  }
+
+  .article-prose blockquote p + p {
+    margin-top: 0.75em;
+  }
+
+  .article-prose blockquote.pullquote {
+    border-left: none;
+    border-top: 1px solid var(--hairline-strong, rgba(255, 255, 255, 0.15));
+    border-bottom: 1px solid var(--hairline-strong, rgba(255, 255, 255, 0.15));
+    padding: 1.5rem 1rem;
+    margin: 2.5rem 0;
+    text-align: center;
+    font-size: 1.28em;
+    line-height: 1.4;
+    font-style: italic;
+    font-weight: 600;
+    color: var(--text, #f5f5f5);
+  }
+
+  .article-prose blockquote.pullquote strong {
+    font-weight: inherit;
+  }
+
+  @media (max-width: 640px) {
+    .article-prose blockquote.pullquote {
+      padding: 1.15rem 0;
+      font-size: 1.15em;
+    }
+  }
+
+  .article-prose img {
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
+  }
+
+  .article-prose figure {
+    margin-block: 2.5rem;
+  }
+
+  .article-prose .article-image-zoom {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: zoom-in;
+  }
+
+  .article-prose .article-image-zoom img {
+    display: block;
+  }
+
+  .article-prose .article-image-zoom:focus-visible {
+    outline: 2px solid var(--focus-ring, #f0f0f0);
+    outline-offset: 3px;
+  }
+
+  .article-prose figcaption {
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    color: var(--text-muted, #9a9a9a);
+    text-align: center;
+  }
+
+  .article-prose pre {
+    background: var(--surface, #111111);
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
+    padding: 1.25rem;
+    overflow-x: auto;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.9rem;
+  }
+
+  .article-prose code {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.9em;
+    background: var(--surface-2, #1a1a1a);
+    padding: 0.15em 0.4em;
+  }
+
+  .article-prose pre code {
+    background: none;
+    padding: 0;
+  }
+
+  .article-prose hr {
+    border: 0;
+    border-top: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
+    margin-block: 3rem;
+  }
+</style>

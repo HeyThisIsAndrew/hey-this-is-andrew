@@ -1,0 +1,319 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ArticleReader from '@andrew/ui/ArticleReader.astro';
+import {
+  RESERVED_SLUGS,
+  SUBSTACK_PUBLICATION_URL,
+  articleHref,
+  base,
+  getNextArticle,
+  getPublishedArticles,
+  getRelatedArticles,
+  isExternalArticle,
+  parseImageDimensions,
+  renderArticleBody,
+  resolveLocalRendition,
+  sanitizeVisibleCopy,
+  type ArticleRecord,
+} from '../../lib/articles';
+
+export async function getStaticPaths() {
+  return getPublishedArticles()
+    .filter((article) => !RESERVED_SLUGS.has(article.slug))
+    .map((article) => ({ params: { slug: article.slug }, props: { article } }));
+}
+
+interface Props {
+  article: ArticleRecord;
+}
+
+const { article } = Astro.props;
+const title = sanitizeVisibleCopy(article.title) || article.title;
+const excerpt = sanitizeVisibleCopy(article.excerpt);
+const tags = article.tags.map((t) => sanitizeVisibleCopy(t)).filter(Boolean).slice(0, 3);
+const { html, entries } = renderArticleBody(article);
+const coverRendition = resolveLocalRendition(article.image);
+const coverSrc = coverRendition?.src || article.image;
+const coverDims = article.image ? parseImageDimensions(article.image) : null;
+const nextArticle = getNextArticle(article.slug);
+const related = getRelatedArticles(article.slug, article.category, 4);
+---
+
+<BaseLayout
+  title={`${title} · HEY_THISISANDREW`}
+  description={excerpt || title}
+  pane="Writing"
+>
+  <article class="container writing-reader-page">
+    <ArticleReader toc={entries} enableGallery={true}>
+      <Fragment slot="header">
+        <nav class="article-back-nav" aria-label="Breadcrumb">
+          <a class="article-back-link font-mono" href={`${base}/writing/`}>
+            <span aria-hidden="true">&larr;</span> All Writing
+          </a>
+        </nav>
+
+        <div class="article-eyebrow font-mono">
+          <time datetime={article.isoDate}>{article.date}</time>
+          {tags.map((tag) => (
+            <>
+              <span class="dot" aria-hidden="true">/</span>
+              <span class="article-tag">{tag}</span>
+            </>
+          ))}
+        </div>
+
+        <h1 class="article-title">{title}</h1>
+
+        {excerpt && <p class="article-standfirst">{excerpt}</p>}
+
+        {coverSrc && (
+          <img
+            class="article-hero"
+            src={coverSrc}
+            srcset={coverRendition?.srcset || undefined}
+            sizes={coverRendition?.srcset ? '(max-width: 900px) 92vw, 720px' : undefined}
+            alt={title}
+            width={coverDims?.width ?? 1456}
+            height={coverDims?.height ?? 816}
+            loading="eager"
+            decoding="async"
+          />
+        )}
+      </Fragment>
+
+      <Fragment set:html={html} />
+
+      <Fragment slot="footer">
+        <div class="article-attribution">
+          <p>
+            Originally published on{' '}
+            <a href={article.link} target="_blank" rel="noopener noreferrer">
+              Coffee Talk on Substack
+            </a>
+            .
+          </p>
+        </div>
+
+        <div class="article-footer-nav">
+          <a class="btn btn-ghost" href={`${base}/writing/`}>
+            &larr; All Writing
+          </a>
+          {nextArticle && (
+            <a
+              class="btn btn-secondary"
+              href={articleHref(nextArticle)}
+              target={isExternalArticle(nextArticle) ? '_blank' : undefined}
+              rel={isExternalArticle(nextArticle) ? 'noopener noreferrer' : undefined}
+            >
+              Next: {sanitizeVisibleCopy(nextArticle.title)} &rarr;
+            </a>
+          )}
+        </div>
+      </Fragment>
+
+      <Fragment slot="rail">
+        {related.length > 0 && (
+          <section class="rail-block" aria-labelledby="rail-more-writing">
+            <p class="rail-head font-mono" id="rail-more-writing">More Writing</p>
+            <ul class="rail-list">
+              {related.map((item) => {
+                const external = isExternalArticle(item);
+                return (
+                  <li>
+                    <a
+                      class="rail-link"
+                      href={articleHref(item)}
+                      target={external ? '_blank' : undefined}
+                      rel={external ? 'noopener noreferrer' : undefined}
+                    >
+                      <span class="rail-date font-mono">{item.date}</span>
+                      <span class="rail-title">{sanitizeVisibleCopy(item.title)}</span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
+        <section class="rail-block rail-subscribe" aria-labelledby="rail-subscribe-head">
+          <p class="rail-head font-mono" id="rail-subscribe-head">Coffee Talk</p>
+          <p class="rail-copy">
+            Notes from the build, creator workflow deep dives, and honest retrospectives.
+          </p>
+          <a
+            class="btn btn-primary rail-cta"
+            href={`${SUBSTACK_PUBLICATION_URL}/subscribe`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Subscribe on Substack
+          </a>
+        </section>
+      </Fragment>
+    </ArticleReader>
+  </article>
+</BaseLayout>
+
+<style>
+  .writing-reader-page {
+    padding-top: clamp(2.5rem, 5vw, 4.5rem);
+    padding-bottom: clamp(4rem, 8vw, 7rem);
+  }
+
+  .article-back-nav {
+    margin-bottom: 1.5rem;
+  }
+
+  .article-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: var(--tap-min, 44px);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .article-back-link:hover {
+    color: var(--ink);
+  }
+
+  .article-eyebrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+
+  .article-eyebrow .dot {
+    opacity: 0.5;
+  }
+
+  .article-tag {
+    color: var(--ink);
+  }
+
+  .article-title {
+    margin: 0 0 1.25rem;
+    font-family: var(--font-display);
+    font-size: clamp(1.85rem, 4vw, 3rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    overflow-wrap: break-word;
+  }
+
+  .article-standfirst {
+    margin: 0 0 1.75rem;
+    font-size: 1.15rem;
+    line-height: 1.65;
+    color: var(--muted);
+  }
+
+  .article-hero {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-block: 1.5rem 0;
+    border: 1px solid var(--hairline);
+  }
+
+  .article-attribution {
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+
+  .article-attribution a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .article-footer-nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .rail-block {
+    margin-bottom: 2.25rem;
+  }
+
+  .rail-head {
+    margin: 0 0 1rem;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid var(--hairline);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  .rail-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .rail-link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--hairline);
+    text-decoration: none;
+    color: var(--ink);
+    transition: color 0.2s ease;
+  }
+
+  .rail-link:hover .rail-title {
+    color: var(--color-accent-text, var(--ink));
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .rail-date {
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .rail-title {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  .rail-copy {
+    margin: 0 0 1rem;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: var(--muted);
+  }
+
+  .rail-cta {
+    width: 100%;
+    text-align: center;
+  }
+</style>

@@ -2,6 +2,8 @@
 import { getLatestArticles, fmtDate, SUBSTACK_URL } from '../lib/latest-content';
 import SectionHeader from '@andrew/ui/SectionHeader.astro';
 
+const rawBase = import.meta.env.BASE_URL;
+const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 const articles = await getLatestArticles(3);
 
 function estimateReadTime(text?: string, index = 0): string {
@@ -15,17 +17,30 @@ function estimateReadTime(text?: string, index = 0): string {
   <div class="container">
     <div class="writing-head">
       <SectionHeader variant="chip" id="writing-heading" title="Notes from the build" lede="Longer thoughts on building in public, from the Substack." />
-      <a class="btn btn-ghost writing-cta" href={SUBSTACK_URL} target="_blank" rel="noopener">
-        Substack
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-          <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </a>
+      <div class="writing-actions">
+        <a class="btn btn-secondary writing-cta" href={`${base}/writing/`}>
+          All Writing
+        </a>
+        <a class="btn btn-ghost writing-cta" href={SUBSTACK_URL} target="_blank" rel="noopener noreferrer">
+          Substack
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </div>
     </div>
 
     <div class="article-grid">
-      {articles.map((a, i) => (
-        <a class="article-card reveal" style={`--rd: ${i * 70}ms`} href={a.url} target="_blank" rel="noopener">
+      {articles.map((a, i) => {
+        const external = a.isExternal !== false;
+        return (
+        <a
+          class="article-card reveal"
+          style={`--rd: ${i * 70}ms`}
+          href={a.url}
+          target={external ? '_blank' : undefined}
+          rel={external ? 'noopener noreferrer' : undefined}
+        >
           {a.image && (
             <span class="article-img" aria-hidden="true">
               <img src={a.image} alt="" loading="lazy" decoding="async" />
@@ -48,7 +63,8 @@ function estimateReadTime(text?: string, index = 0): string {
             </span>
           </span>
         </a>
-      ))}
+        );
+      })}
     </div>
   </div>
 </section>
@@ -67,6 +83,12 @@ function estimateReadTime(text?: string, index = 0): string {
     margin-bottom: clamp(1.75rem, 4vw, 3rem);
   }
   .writing-head .sec-head { margin-bottom: 0; }
+  .writing-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    flex: none;
+  }
   .writing-cta { flex: none; }
   .article-grid {
     display: grid;
