@@ -1,0 +1,80 @@
+name: Sync Substack articles
+
+on:
+  schedule:
+    # Run every 6 hours at :30, staggered from Sync Instagram Media (06:00 UTC)
+    - cron: '30 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      execute:
+        description: 'Write articles and image assets (uncheck for a dry run)'
+        type: boolean
+        default: true
+
+concurrency:
+  group: content-sync-push
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Fetch Coffee Talk articles and images
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter hey-this-is-andrew... --filter .
+
+      - name: Content pipeline tests
+        run: pnpm --filter @andrew/content-pipeline test
+
+      - name: Sync Coffee Talk articles
+        env:
+          SUBSTACK_RELAY_URL: ${{ secrets.SUBSTACK_RELAY_URL }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.execute }}" = "false" ]; then
+            pnpm --filter hey-this-is-andrew sync:articles
+          else
+            pnpm --filter hey-this-is-andrew sync:articles --execute
+          fi
+
+      - name: Build article image renditions
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.execute }}" = "false" ]; then
+            pnpm --filter hey-this-is-andrew sync:article-images
+          else
+            pnpm --filter hey-this-is-andrew sync:article-images --execute || echo "article-image sync degraded; originals still render"
+          fi
+
+      - name: Commit and push updated articles
+        if: github.event_name != 'workflow_dispatch' || inputs.execute
+        env:
+          SYNC_BRANCH: ${{ github.ref_name }}
+        run: |
+          git add sites/hey-this-is-andrew/src/data/articles.json sites/hey-this-is-andrew/src/data/article-images.json sites/hey-this-is-andrew/public/article-images
+          if git diff --cached --quiet; then
+            echo "No Substack content changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(substack): sync latest Coffee Talk articles"
+          git pull --rebase origin "$SYNC_BRANCH"
+          git push origin "HEAD:$SYNC_BRANCH"

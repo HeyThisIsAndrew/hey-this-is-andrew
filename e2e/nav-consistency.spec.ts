@@ -6,7 +6,7 @@ import { test, expect, type Page } from '@playwright/test';
  * its links and Menu shifted. Measured on a fresh load of every top-level
  * page and after moving between them with the header.
  */
-const pages = ['', 'about/', 'brands/', 'gear/', 'work-with-me/', 'events/', 'latest/', 'brands/be-unconventional-hq/'];
+const pages = ['', 'about/', 'brands/', 'gear/', 'work-with-me/', 'events/', 'latest/', 'writing/', 'brands/be-unconventional-hq/'];
 
 const navBoxes = (page: Page) =>
   page.evaluate(() => {

@@ -62,6 +62,11 @@ export function articleHref(
   return href.endsWith('/') ? href : `${href}/`;
 }
 
+/** Look up the unprefixed local optimized WebP path for an image URL (e.g. for BaseLayout OG images). */
+export function resolveLocalRenditionPath(rawUrl: unknown): string | undefined {
+  return lookupRendition(MANIFEST, rawUrl)?.src;
+}
+
 /** Look up a local optimized WebP rendition for an image URL, prefixed with `base`. */
 export function resolveLocalRendition(rawUrl: unknown): ArticleImageRendition | null {
   const hit = lookupRendition(MANIFEST, rawUrl);
