@@ -2,11 +2,13 @@
 /**
  * Cloudflare Workers: one script for every site.
  *
- *   pnpm cf list                     sites that deploy to Cloudflare
- *   pnpm cf build  <site>            build it for Cloudflare
- *   pnpm cf deploy <site>            build, then deploy its Worker
- *   pnpm cf deploy all               every Cloudflare site
- *   pnpm cf changed <base> <head>    sites touched between two commits (CI)
+ *   pnpm cf list                         sites that deploy to Cloudflare
+ *   pnpm cf build  <site>                build it for Cloudflare
+ *   pnpm cf deploy <site>                build, then deploy its Worker
+ *   pnpm cf deploy all                   every Cloudflare site
+ *   pnpm cf preview <site|all> <branch>  build, then upload a preview version
+ *   pnpm cf preview-url <site> <branch>  print the preview URL for a branch
+ *   pnpm cf changed <base> <head>        sites touched between two commits (CI)
  *
  * A site opts in with a "cloudflare" block in its package.json:
  *
@@ -79,18 +81,45 @@ function run(cmd, args, opts = {}) {
   execFileSync(cmd, args, { stdio: 'inherit', cwd: root, ...opts });
 }
 
-const pnpm = process.env.npm_execpath && /pnpm/.test(process.env.npm_execpath)
-  ? [process.execPath, [process.env.npm_execpath]]
-  : ['corepack', ['pnpm']];
+const execPath = process.env.npm_execpath;
+const pnpm = execPath && /pnpm/.test(execPath)
+  ? /\.[cm]?js$/i.test(execPath)
+    ? [process.execPath, [execPath]]
+    : [execPath, []]
+  : ['pnpm', []];
 
-function build(site) {
+function previewAlias(worker, branch) {
+  const maxAliasLen = Math.max(1, 63 - worker.length - 1);
+  const normalized = String(branch || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, maxAliasLen)
+    .replace(/-+$/g, '');
+  return normalized || 'preview';
+}
+
+function previewUrl(site, alias) {
+  return `https://${alias}-${site.worker}.${WORKERS_SUBDOMAIN}.workers.dev`;
+}
+
+function wranglerConfigFor(site) {
+  // The Astro Cloudflare adapter writes a complete config for server sites;
+  // static sites use their own wrangler.jsonc (assets from ./dist).
+  const adapterConfig = path.join(site.path, 'dist/server/wrangler.json');
+  const config = fs.existsSync(adapterConfig) ? adapterConfig : path.join(site.path, 'wrangler.jsonc');
+  if (!fs.existsSync(config)) fail(`${site.dir} has no wrangler.jsonc.`);
+  return config;
+}
+
+function build(site, siteUrlOverride = site.siteUrl) {
   // Every site reads its origin and base path from these. Root-served, so
   // the base is "/" (the GitHub Pages copies use sub-paths instead).
   const env = {
     ...process.env,
     CF_WORKERS: '1',
-    SITE_URL: site.siteUrl,
-    ASTRO_SITE: site.siteUrl,
+    SITE_URL: siteUrlOverride,
+    ASTRO_SITE: siteUrlOverride,
     BASE_PATH: '/',
     ASTRO_BASE: '/',
     ASTRO_TELEMETRY_DISABLED: '1',
@@ -101,11 +130,7 @@ function build(site) {
 
 function deploy(site) {
   build(site);
-  // The Astro Cloudflare adapter writes a complete config for server sites;
-  // static sites use their own wrangler.jsonc (assets from ./dist).
-  const adapterConfig = path.join(site.path, 'dist/server/wrangler.json');
-  const config = fs.existsSync(adapterConfig) ? adapterConfig : path.join(site.path, 'wrangler.jsonc');
-  if (!fs.existsSync(config)) fail(`${site.dir} has no wrangler.jsonc.`);
+  const config = wranglerConfigFor(site);
   run(pnpm[0], [...pnpm[1], 'exec', 'wrangler', 'deploy', '--config', config], { cwd: site.path });
   for (const name of site.secrets) {
     const value = process.env[name];
@@ -118,6 +143,31 @@ function deploy(site) {
     });
   }
   console.log(`\nLive: ${site.siteUrl}`);
+}
+
+function preview(site, branch) {
+  const alias = previewAlias(site.worker, branch);
+  const url = previewUrl(site, alias);
+  build(site, url);
+  const config = wranglerConfigFor(site);
+  run(
+    pnpm[0],
+    [
+      ...pnpm[1],
+      'exec',
+      'wrangler',
+      'versions',
+      'upload',
+      '--config',
+      config,
+      '--preview-alias',
+      alias,
+      '--message',
+      `Preview: ${branch}`,
+    ],
+    { cwd: site.path },
+  );
+  console.log(`\nPreview: ${url}`);
 }
 
 function changed(base, head) {
@@ -147,10 +197,20 @@ switch (command) {
     if (!args[0]) fail('Usage: pnpm cf deploy <site|all>');
     for (const s of args[0] === 'all' ? allSites() : [getSite(args[0])]) deploy(s);
     break;
+  case 'preview':
+    if (!args[0] || !args[1]) fail('Usage: pnpm cf preview <site|all> <branch>');
+    for (const s of args[0] === 'all' ? allSites() : [getSite(args[0])]) preview(s, args[1]);
+    break;
+  case 'preview-url': {
+    if (!args[0] || !args[1]) fail('Usage: pnpm cf preview-url <site> <branch>');
+    const site = getSite(args[0]);
+    console.log(previewUrl(site, previewAlias(site.worker, args[1])));
+    break;
+  }
   case 'changed':
     // JSON array of site folders, for the GitHub Actions matrix.
     console.log(JSON.stringify(changed(args[0], args[1]).map((s) => s.dir)));
     break;
   default:
-    fail('Usage: pnpm cf <list|build|deploy|changed> ...  (see scripts/cloudflare.mjs)');
+    fail('Usage: pnpm cf <list|build|deploy|preview|preview-url|changed> ...  (see scripts/cloudflare.mjs)');
 }

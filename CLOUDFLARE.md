@@ -91,6 +91,21 @@ pnpm cf deploy <site>
 `pnpm cf deploy all` deploys every Cloudflare site; `pnpm cf build <site>`
 builds without deploying.
 
+## Branch & PR previews
+
+Pull requests targeting `main` automatically run
+[`.github/workflows/cloudflare-preview.yml`](.github/workflows/cloudflare-preview.yml),
+which builds every affected site with its preview origin and runs
+`wrangler versions upload --preview-alias <branch>` (`pnpm cf preview <site> <branch>`).
+This publishes an isolated preview URL (`https://<alias>-<worker>.heythisisandrewb.workers.dev`)
+and comments it on the PR without touching production.
+
+> **Important:** Preview versions share production's Worker bindings and secrets,
+> and editing a variable or secret in the Cloudflare dashboard promotes the
+> **newest** uploaded version to production. While a preview version is newest,
+> always set secrets via CLI (`npx wrangler versions secret put <NAME> --name <worker>`)
+> rather than the Cloudflare dashboard.
+
 ## Personal site details
 
 | File | Purpose |

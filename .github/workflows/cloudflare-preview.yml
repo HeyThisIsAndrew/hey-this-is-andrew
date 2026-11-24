@@ -1,0 +1,136 @@
+name: Cloudflare Preview
+
+# Builds and uploads a Cloudflare Worker preview version (`wrangler versions upload`)
+# for every site touched by a Pull Request without modifying production.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      site:
+        description: 'Site folder under sites/, or "all"'
+        required: true
+        default: all
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  plan:
+    name: Pick sites
+    runs-on: ubuntu-latest
+    outputs:
+      sites: ${{ steps.pick.outputs.sites }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: pick
+        env:
+          HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+          INPUT_SITE: ${{ github.event.inputs.site }}
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$HAS_TOKEN" != "true" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN is not set; skipping Cloudflare previews."
+            echo 'sites=[]' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$INPUT_SITE" = "all" ]; then
+              sites=$(node scripts/cloudflare.mjs changed)
+            else
+              sites=$(node -e 'console.log(JSON.stringify([process.argv[1]]))' "$INPUT_SITE")
+            fi
+          else
+            sites=$(node scripts/cloudflare.mjs changed "$BASE_SHA" "$HEAD_SHA")
+          fi
+          echo "Previewing: $sites"
+          echo "sites=$sites" >> "$GITHUB_OUTPUT"
+
+  preview:
+    name: Preview ${{ matrix.site }}
+    needs: plan
+    if: needs.plan.outputs.sites != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        site: ${{ fromJson(needs.plan.outputs.sites) }}
+    concurrency:
+      group: cloudflare-preview-${{ github.head_ref || github.ref_name }}-${{ matrix.site }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Upload preview version
+        id: upload
+        env:
+          SITE: ${{ matrix.site }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node scripts/cloudflare.mjs preview "$SITE" "$BRANCH"
+          URL=$(node scripts/cloudflare.mjs preview-url "$SITE" "$BRANCH")
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Probe preview URL
+        env:
+          URL: ${{ steps.upload.outputs.url }}
+        run: |
+          READY=false
+          for attempt in $(seq 1 6); do
+            CODE=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "$URL/?preview-check=$attempt" || true)
+            if [ "$CODE" = "200" ]; then
+              READY=true
+              break
+            fi
+            echo "Attempt $attempt: HTTP $CODE, waiting 5s..."
+            sleep 5
+          done
+          if [ "$READY" != "true" ]; then
+            echo "::warning::Preview URL $URL did not return HTTP 200 within 30s (DNS propagation may still be in progress)."
+          fi
+
+      - name: Write job summary
+        env:
+          SITE: ${{ matrix.site }}
+          URL: ${{ steps.upload.outputs.url }}
+        run: |
+          {
+            echo "## Cloudflare Preview: \`$SITE\`"
+            echo ""
+            echo "$URL"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment preview URL on PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          SITE: ${{ matrix.site }}
+          URL: ${{ steps.upload.outputs.url }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          MARKER="<!-- cloudflare-preview:${SITE} -->"
+          BODY=$(printf '%s\n**Cloudflare Worker Preview (`%s`)**: %s\n\n_Built from `%s` without modifying production._' "$MARKER" "$SITE" "$URL" "${SHA::7}")
+          EXISTING_ID=$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate \
+            --jq ".[] | select(.body | contains(\"${MARKER}\")) | .id" | head -n 1 || true)
+          if [ -n "$EXISTING_ID" ]; then
+            gh api --method PATCH "repos/${REPO}/issues/comments/${EXISTING_ID}" -f body="$BODY" >/dev/null
+          else
+            gh api --method POST "repos/${REPO}/issues/${PR_NUMBER}/comments" -f body="$BODY" >/dev/null
+          fi
