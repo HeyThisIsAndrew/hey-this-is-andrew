@@ -18,7 +18,7 @@ export default defineConfig({
     // Astro 7 can hand the server to a background process and exit, which
     // Playwright reports as "Process from config.webServer exited early".
     command: `pnpm --filter hey-this-is-andrew exec astro preview --host 0.0.0.0 --port ${port} --ignore-lock`,
-    env: { ASTRO_BASE: '/hey-this-is-andrew/' },
+    env: { BASE_PATH: '/hey-this-is-andrew/' },
     url: `http://localhost:${port}/hey-this-is-andrew/`,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,

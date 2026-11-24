@@ -20,7 +20,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const dist = path.resolve(process.argv[2] || 'dist');
-const base = (process.env.ASTRO_BASE || '/').replace(/\/?$/, '/');
+const base = (process.env.BASE_PATH || process.env.ASTRO_BASE || '/').replace(/\/?$/, '/');
 const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
 const pages = walk(dist).filter((f) => f.endsWith('.html'));
 const failures = [];

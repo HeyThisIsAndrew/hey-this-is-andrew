@@ -12,6 +12,14 @@
  * viewport-fit=cover and painted the strip itself while the header was
  * `sticky`, which is not what HQ does, and the area still showed the page
  * through on an iPhone 17 Pro Max. theme-color stays for other browsers.
+ *
+ * Also the build stamp and preview noindex every site shares (the Cloudflare
+ * deploy script sets both; HQ's Layout.astro stamps the same way):
+ * - PUBLIC_BUILD_SHA set: <meta name="build-sha">, the commit this page was
+ *   built from. CI reads it to skip deploys production already has and to
+ *   prove a deploy went live.
+ * - PUBLIC_NOINDEX === '1' (preview builds): robots noindex, nofollow, so a
+ *   preview address never ends up in search results.
  */
 interface Props {
   /**
@@ -33,6 +41,8 @@ interface Props {
   interactiveWidget?: 'resizes-content' | 'resizes-visual' | 'overlays-content';
 }
 const { color = '#000000', lightColor, interactiveWidget } = Astro.props;
+const buildSha = import.meta.env.PUBLIC_BUILD_SHA;
+const noindex = import.meta.env.PUBLIC_NOINDEX === '1';
 const viewport = ['width=device-width', 'initial-scale=1', interactiveWidget && `interactive-widget=${interactiveWidget}`].filter(Boolean).join(', ');
 // A colour value only; nothing that could close the style element.
 const safe = (c: string) => c.replace(/[<>{};]/g, '');
@@ -44,6 +54,8 @@ const css =
     : '');
 ---
 <meta name="viewport" content={viewport} />
+{buildSha && <meta name="build-sha" content={buildSha} />}
+{noindex && <meta name="robots" content="noindex, nofollow" />}
 {lightColor ? (
   <>
     <meta name="theme-color" content={color} media="(prefers-color-scheme: dark)" />

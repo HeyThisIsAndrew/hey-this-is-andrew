@@ -1,0 +1,156 @@
+# ─── PREVIEWS: every site, every PR (and any branch by hand) ────────────────
+#
+# Builds the branch and uploads it as a PREVIEW VERSION of each affected
+# site's Worker, at its own address:
+#   https://<branch>-<worker>.heythisisandrewb.workers.dev
+# `wrangler versions upload`, never `wrangler deploy`: production keeps serving
+# what cloudflare.yml last put live. Same shape as BE Unconventional HQ's
+# branch-preview.yml, for every site, plus automatic PR runs and comments.
+#
+# Preview builds are marked noindex three ways (robots meta from @andrew/ui
+# ChromeMeta, robots.txt "Disallow: /", and an X-Robots-Tag header).
+#
+# WHEN IT RUNS
+#   - pull requests into main: the sites the PR affects, with one comment per
+#     site on the PR, updated in place on every push;
+#   - by hand on any branch: Actions > Cloudflare previews > Run workflow >
+#     pick the branch, then one site or "all".
+# Pull requests from forks get no secrets, so they skip with a notice.
+#
+# READ BEFORE TESTING FORMS: a preview shares production's secrets and
+# storage (a test contact-form message is a real email). And while a preview
+# is the Worker's newest version, do NOT change a variable or secret in the
+# Cloudflare dashboard: that deploys the newest version, i.e. this branch, to
+# production. See CLOUDFLARE.md.
+name: Cloudflare previews
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      site:
+        description: 'Site folder under sites/, or "all"'
+        required: true
+        default: all
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  plan:
+    name: Pick sites
+    runs-on: ubuntu-latest
+    outputs:
+      sites: ${{ steps.pick.outputs.sites }}
+      sha: ${{ steps.pick.outputs.sha }}
+      branch: ${{ steps.pick.outputs.branch }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The branch itself, not GitHub's merge commit with main.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - id: pick
+        env:
+          HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+          INPUT_SITE: ${{ github.event.inputs.site }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          if [ "$HAS_TOKEN" != "true" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN is not available (not set, or a fork's pull request); skipping previews."
+            echo 'sites=[]' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$INPUT_SITE" = "all" ]; then sites=$(node scripts/cloudflare.mjs changed)
+            else sites=$(node -e 'console.log(JSON.stringify([process.argv[1]]))' "$INPUT_SITE"); fi
+          else
+            # What the PR changes relative to where it branched from main.
+            MERGE_BASE=$(git merge-base "$BASE_SHA" HEAD || echo "$BASE_SHA")
+            sites=$(node scripts/cloudflare.mjs changed "$MERGE_BASE" HEAD)
+          fi
+          echo "Previewing: $sites"
+          echo "sites=$sites" >> "$GITHUB_OUTPUT"
+
+  preview:
+    name: Preview ${{ matrix.site }}
+    needs: plan
+    if: needs.plan.outputs.sites != '[]' && needs.plan.outputs.sites != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        site: ${{ fromJson(needs.plan.outputs.sites) }}
+    concurrency:
+      group: cloudflare-preview-${{ needs.plan.outputs.branch }}-${{ matrix.site }}
+      cancel-in-progress: true
+    env:
+      SITE: ${{ matrix.site }}
+      BRANCH: ${{ needs.plan.outputs.branch }}
+      PUBLIC_BUILD_SHA: ${{ needs.plan.outputs.sha }}
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      ASTRO_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.plan.outputs.sha }}
+
+      - id: info
+        run: |
+          node scripts/cloudflare.mjs info "$SITE" | node -e 'process.stdout.write("pkg="+JSON.parse(require("fs").readFileSync(0)).pkgName+"\n")' >> "$GITHUB_OUTPUT"
+          echo "url=$(node scripts/cloudflare.mjs preview-url "$SITE" "$BRANCH")" >> "$GITHUB_OUTPUT"
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # Only this site, the workspace packages it uses, and the root (wrangler).
+      - name: Install (this site only)
+        env:
+          PKG: ${{ steps.info.outputs.pkg }}
+        run: pnpm install --frozen-lockfile --filter "${PKG}..." --filter .
+
+      - name: Build and upload the preview version (production unchanged)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/cloudflare.mjs preview "$SITE" "$BRANCH"
+
+      - name: Check the preview answers
+        id: check
+        run: |
+          set +e
+          node scripts/cloudflare.mjs preview-check "$SITE" "$BRANCH" --sha "$PUBLIC_BUILD_SHA" --report "$RUNNER_TEMP/preview.md"
+          STATUS=$?
+          cat "$RUNNER_TEMP/preview.md" >> "$GITHUB_STEP_SUMMARY"
+          echo "ok=$([ $STATUS -eq 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          exit $STATUS
+
+      # One comment per site, edited in place on later pushes.
+      - name: Comment on the pull request
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          MARKER="<!-- cloudflare-preview:${SITE} -->"
+          { echo "$MARKER"; cat "$RUNNER_TEMP/preview.md" 2>/dev/null || echo "Preview for \`$SITE\` failed before it could be checked. See the run: $GITHUB_SERVER_URL/$REPO/actions/runs/$GITHUB_RUN_ID"; } > "$RUNNER_TEMP/comment.md"
+          EXISTING=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate \
+            --jq "[.[] | select(.body | contains(\"$MARKER\")) | .id][0] // empty")
+          if [ -n "$EXISTING" ]; then
+            gh api --method PATCH "repos/$REPO/issues/comments/$EXISTING" -F body=@"$RUNNER_TEMP/comment.md" >/dev/null
+          else
+            gh api --method POST "repos/$REPO/issues/$PR_NUMBER/comments" -F body=@"$RUNNER_TEMP/comment.md" >/dev/null
+          fi

@@ -113,16 +113,15 @@ function review(branch) {
 
 function check() {
   needInstall();
+  say('Deploy script tests');
+  run(process.execPath, ['--test', 'scripts/cloudflare.test.mjs']);
   say('Unit tests');
-  // run through pnpm filter
-  // wait, the prompt says "node scripts/site.mjs check: build with ASTRO_BASE=/hey-this-is-andrew/ plus audit-dist." in "Checks before every push".
-  // pnpm --filter site test
   pnpm(['--filter', siteName, 'test']);
   say('Building the site');
-  const env = { ...process.env, ASTRO_BASE: `/${siteName}/`, ASTRO_TELEMETRY_DISABLED: '1' };
-  run('corepack', ['pnpm', '--filter', siteName, 'build'], { cwd: ROOT, env });
+  const env = { ...process.env, BASE_PATH: `/${siteName}/`, ASTRO_TELEMETRY_DISABLED: '1' };
+  pnpm(['--filter', siteName, 'build'], { cwd: ROOT, env });
   say('Checking the built site');
-  run('corepack', ['pnpm', '--filter', siteName, 'exec', 'node', 'scripts/audit-dist.mjs'], { cwd: ROOT, env });
+  pnpm(['--filter', siteName, 'exec', 'node', 'scripts/audit-dist.mjs'], { cwd: ROOT, env });
   console.log('\nAll checks passed.');
 }
 

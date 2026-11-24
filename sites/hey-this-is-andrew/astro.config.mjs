@@ -6,11 +6,13 @@ import localCmsConfig from './local-cms.config.mjs';
 
 const isBuild = process.argv.includes('build') || Boolean(process.env.GITHUB_ACTIONS) || Boolean(process.env.CI);
 const isCloudflare = process.env.CF_WORKERS === '1';
-// Canonical origin. GitHub Pages by default; the Cloudflare build is its own
-// origin (the workers.dev URL until a custom domain is set via ASTRO_SITE).
-const site = process.env.ASTRO_SITE
+// SITE_URL / BASE_PATH, the names every site in the repo reads (ASTRO_SITE /
+// ASTRO_BASE still work, for older scripts). Canonical origin: GitHub Pages by
+// default; the Cloudflare build is its own origin (scripts/cloudflare.mjs sets
+// SITE_URL to the Worker's address, or the preview's).
+const site = process.env.SITE_URL || process.env.ASTRO_SITE
   || (isCloudflare ? 'https://hey-this-is-andrew.heythisisandrewb.workers.dev' : 'https://heythisisandrew.github.io');
-const base = process.env.ASTRO_BASE || (isBuild ? '/hey-this-is-andrew' : '/');
+const base = process.env.BASE_PATH || process.env.ASTRO_BASE || (isBuild ? '/hey-this-is-andrew' : '/');
 
 const withBase = (path) => `${base.replace(/\/$/, '')}${path}`;
 
@@ -74,7 +76,8 @@ export default defineConfig({
             }
           }
           // public/robots.txt names the GitHub Pages sitemap; the Cloudflare
-          // build points at its own.
+          // build points at its own. (Preview builds: scripts/cloudflare.mjs
+          // then replaces it with Disallow: /.)
           if (isCloudflare) {
             const origin = site.replace(/\/$/, '');
             for (const d of targetDirs) {
