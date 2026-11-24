@@ -1,4 +1,6 @@
 import { getCollection } from 'astro:content';
+import { articleHref, getPublishedArticles } from '../../lib/articles';
+import { cleanFeedText } from '../../lib/feed-text';
 
 // The search palette's index (@andrew/ui CommandPalette). Every URL carries
 // the site's base: on GitHub Pages the site lives under /hey-this-is-andrew/,
@@ -10,9 +12,19 @@ export async function GET() {
   const projects = await getCollection('projects');
   const goals = await getCollection('goals');
   const gear = await getCollection('gear');
+  const articles = getPublishedArticles();
 
   const searchData = [
     { id: 'brands-overview', title: 'Brands', kicker: 'The lanes', url: `${base}/brands/`, type: 'page', excludeFromDefault: false },
+    // Published Coffee Talk articles mirrored on /writing/
+    ...articles.map((a) => ({
+      id: `article-${a.slug}`,
+      title: cleanFeedText(a.title),
+      kicker: cleanFeedText(a.tags[0] || 'Writing'),
+      url: articleHref(a),
+      type: 'article',
+      excludeFromDefault: false,
+    })),
     // There is no page per project: a project is a row of Selected Work
     // (it opens in place), or its own external link.
     ...projects.map((p) => ({

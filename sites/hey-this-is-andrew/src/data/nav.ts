@@ -45,7 +45,10 @@ export const NAV_LINKS: NavItem[] = [
     label: 'Build in Public',
     href: page('build'),
     section: 'build',
-    subsections: toSubsections(BUILD_SECTIONS, page('build')),
+    subsections: [
+      ...toSubsections(BUILD_SECTIONS, page('build')),
+      { label: 'Writing', href: page('writing'), kicker: '' },
+    ],
   },
   {
     label: 'Gear',
@@ -67,6 +70,7 @@ export const NAV_LINKS: NavItem[] = [
 
 export const FOOTER_EXPLORE: FooterLink[] = [
   ...NAV_LINKS.map(({ label, href }) => ({ label, href })),
+  { label: 'Writing', href: page('writing') },
   { label: 'Events', href: page('events') },
   // The link-in-bio page: reachable from the site, not only from bios.
   { label: 'Links', href: page('links') },

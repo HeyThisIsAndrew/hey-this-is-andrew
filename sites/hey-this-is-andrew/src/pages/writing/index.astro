@@ -1,0 +1,236 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import MagazineSpread from '@andrew/ui/MagazineSpread.astro';
+import SectionHeader from '@andrew/ui/SectionHeader.astro';
+import {
+  SUBSTACK_PUBLICATION_URL,
+  articleHref,
+  getAllArticles,
+  isExternalArticle,
+  resolveLocalRendition,
+  sanitizeVisibleCopy,
+  toMagazineCard,
+} from '../../lib/articles';
+import { formatFeedDate } from '../../lib/dates';
+
+const MAGAZINE_LIMIT = 8;
+const allArticles = getAllArticles();
+const magazineCards = allArticles.slice(0, MAGAZINE_LIMIT).map(toMagazineCard);
+const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
+---
+
+<BaseLayout
+  title="Writing · HEY_THISISANDREW"
+  description="Notes from the build, essays, and Coffee Talk dispatches by Andrew Baxter."
+  pane="Writing"
+>
+  <div class="container writing-page">
+    <header class="writing-page-head">
+      <p class="writing-kicker font-mono">Coffee Talk · Substack</p>
+      <h1 class="writing-page-title">Notes from the build</h1>
+      <p class="writing-page-lede">
+        Longer thoughts on building in public, creator tools, and learning out loud, published on Coffee Talk and mirrored here.
+      </p>
+      <div class="writing-page-actions">
+        <a
+          class="btn btn-primary"
+          href={SUBSTACK_PUBLICATION_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Read on Substack
+          <span aria-hidden="true">&nearr;</span>
+        </a>
+        <a
+          class="btn btn-ghost"
+          href={`${SUBSTACK_PUBLICATION_URL}/subscribe`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Subscribe
+        </a>
+      </div>
+    </header>
+
+    {magazineCards.length > 0 ? (
+      <section aria-label="Featured articles" class="writing-spread-wrap">
+        <MagazineSpread articles={magazineCards} readMoreLabel="Read Article" />
+      </section>
+    ) : (
+      <p class="writing-empty">No articles imported yet. Run sync:articles to populate the snapshot.</p>
+    )}
+
+    {archiveArticles.length > 0 && (
+      <section class="writing-archive" aria-labelledby="writing-archive-heading">
+        <SectionHeader id="writing-archive-heading" title="Archive" lede="Earlier dispatches and notes." />
+        <div class="writing-archive-grid">
+          {archiveArticles.map((article) => {
+            const href = articleHref(article);
+            const external = isExternalArticle(article);
+            const title = sanitizeVisibleCopy(article.title) || article.title;
+            const excerpt = sanitizeVisibleCopy(article.excerpt);
+            const localImg = resolveLocalRendition(article.image);
+            const imgSrc = localImg?.src || article.image;
+            return (
+              <a
+                class="writing-archive-card"
+                href={href}
+                target={external ? '_blank' : undefined}
+                rel={external ? 'noopener noreferrer' : undefined}
+              >
+                {imgSrc && (
+                  <div class="writing-archive-thumb">
+                    <img
+                      src={imgSrc}
+                      srcset={localImg?.srcset || undefined}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                )}
+                <div class="writing-archive-body">
+                  <span class="writing-archive-meta font-mono">
+                    {formatFeedDate(article.isoDate, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                  <h3 class="writing-archive-title">{title}</h3>
+                  {excerpt && <p class="writing-archive-excerpt">{excerpt}</p>}
+                </div>
+              </a>
+            );
+          })}
+        </div>
+      </section>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+  .writing-page {
+    padding-bottom: clamp(4rem, 8vw, 7rem);
+  }
+
+  .writing-page-head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.9rem;
+    padding-top: clamp(2.5rem, 5vw, 4.5rem);
+    margin-bottom: clamp(2rem, 4vw, 3.25rem);
+  }
+
+  .writing-kicker {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .writing-page-title {
+    font-family: var(--font-display);
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+    margin: 0;
+    line-height: 1.05;
+  }
+
+  .writing-page-lede {
+    font-size: 1.05rem;
+    color: var(--muted);
+    max-width: 58ch;
+    margin: 0;
+    line-height: 1.65;
+  }
+
+  .writing-page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.35rem;
+  }
+
+  .writing-spread-wrap {
+    margin-top: 1rem;
+  }
+
+  .writing-empty {
+    color: var(--muted);
+    padding: 3rem 0;
+  }
+
+  .writing-archive {
+    margin-top: clamp(3.5rem, 7vw, 5.5rem);
+  }
+
+  .writing-archive-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .writing-archive-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    text-decoration: none;
+    color: var(--ink);
+    transition: border-color 0.25s ease, transform 0.25s ease;
+  }
+
+  .writing-archive-card:hover {
+    border-color: var(--key-dim);
+    transform: translateY(-3px);
+  }
+
+  .writing-archive-thumb {
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .writing-archive-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .writing-archive-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.25rem;
+  }
+
+  .writing-archive-meta {
+    font-size: 0.7rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .writing-archive-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .writing-archive-excerpt {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

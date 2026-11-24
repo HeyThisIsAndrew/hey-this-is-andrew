@@ -1,0 +1,188 @@
+---
+/**
+ * TableOfContents — sticky in-rail navigation for article reader pages.
+ * Highlights the active heading via IntersectionObserver and cleans up cleanly
+ * across astro:page-load / astro:before-swap transitions.
+ */
+import type { ArticleTocEntry } from './types';
+
+interface Props {
+  entries: ArticleTocEntry[];
+  title?: string;
+}
+
+const { entries = [], title = 'Contents' } = Astro.props;
+const show = entries.length >= 2;
+---
+
+{
+  show && (
+    <nav class="article-toc" aria-label={title} data-article-toc>
+      <p class="article-toc-head">{title}</p>
+      <ul class="article-toc-list">
+        {entries.map((entry) => (
+          <li class:list={['article-toc-item', { 'is-sub': entry.level >= 3 }]}>
+            <a href={`#${entry.id}`} data-article-toc-link={entry.id}>
+              {entry.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}
+
+<script>
+  let observer: IntersectionObserver | null = null;
+  let teardown: (() => void) | null = null;
+
+  function releaseArticleToc() {
+    observer?.disconnect();
+    observer = null;
+    teardown?.();
+    teardown = null;
+  }
+
+  function initArticleToc() {
+    releaseArticleToc();
+
+    const links = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>('[data-article-toc-link]'),
+    );
+    if (links.length === 0) return;
+
+    const headings = links
+      .map((link) => document.getElementById(link.dataset.articleTocLink ?? ''))
+      .filter((el): el is HTMLElement => Boolean(el));
+    if (headings.length === 0) return;
+
+    const setActive = (id: string) => {
+      links.forEach((link) => {
+        const isActive = link.dataset.articleTocLink === id;
+        link.classList.toggle('active', isActive);
+        if (isActive) link.setAttribute('aria-current', 'location');
+        else link.removeAttribute('aria-current');
+      });
+    };
+
+    const resolveActive = () => {
+      const ZONE_TOP = 80;
+      const ZONE_BOTTOM = window.innerHeight * 0.5;
+
+      const atBottom =
+        Math.ceil(window.innerHeight + window.scrollY) >=
+        document.documentElement.scrollHeight - 10;
+      if (atBottom) {
+        const started = headings.filter((h) => h.getBoundingClientRect().top < window.innerHeight);
+        const last = started[started.length - 1] ?? headings[headings.length - 1];
+        if (last?.id) {
+          setActive(last.id);
+          return;
+        }
+      }
+
+      const onScreen = headings.filter((h) => {
+        const top = h.getBoundingClientRect().top;
+        return top >= ZONE_TOP && top < ZONE_BOTTOM;
+      });
+      if (onScreen[0]?.id) {
+        setActive(onScreen[0].id);
+        return;
+      }
+
+      const passed = headings.filter((h) => h.getBoundingClientRect().top < ZONE_TOP);
+      const fallback = passed.length > 0 ? passed[passed.length - 1] : headings[0];
+      if (fallback?.id) setActive(fallback.id);
+    };
+
+    observer = new IntersectionObserver(
+      () => resolveActive(),
+      { rootMargin: '-80px 0px -50% 0px', threshold: 0 },
+    );
+    headings.forEach((h) => observer!.observe(h));
+    setActive(headings[0].id);
+
+    let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+    const onScroll = () => {
+      if (scrollTimer) clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(resolveActive, 50);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    teardown = () => {
+      window.removeEventListener('scroll', onScroll);
+      if (scrollTimer) clearTimeout(scrollTimer);
+      scrollTimer = null;
+    };
+  }
+
+  initArticleToc();
+  document.addEventListener('astro:page-load', initArticleToc);
+  document.addEventListener('astro:before-swap', releaseArticleToc);
+</script>
+
+<style>
+  .article-toc {
+    position: sticky;
+    top: 7rem;
+  }
+
+  .article-toc-head {
+    margin: 0 0 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
+    font-family: var(--font-display, system-ui);
+    font-size: clamp(0.7rem, 0.495rem + 0.174vw, 1.05rem);
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text, #f5f5f5);
+  }
+
+  .article-toc-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .article-toc-item.is-sub {
+    padding-left: 0.9rem;
+  }
+
+  .article-toc-list a {
+    display: block;
+    font-family: var(--font-body, system-ui);
+    font-size: clamp(0.82rem, 0.592rem + 0.193vw, 1.2rem);
+    line-height: 1.45;
+    color: var(--text-muted, #9a9a9a);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    padding-left: 0.75rem;
+    transition:
+      color 0.25s ease,
+      border-color 0.25s ease;
+  }
+
+  .article-toc-list a:hover {
+    color: var(--text, #f5f5f5);
+  }
+
+  .article-toc-list a:focus-visible {
+    outline: 2px solid var(--focus-ring, #f0f0f0);
+    outline-offset: 2px;
+  }
+
+  .article-toc-list a.active {
+    color: var(--text, #f5f5f5);
+    border-left-color: var(--color-accent, #b2b2b2);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .article-toc-list a {
+      transition: none;
+    }
+  }
+</style>

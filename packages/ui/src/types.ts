@@ -100,3 +100,26 @@ export interface LogoAsset {
    *  Reelay's dark-mode wordmark near-black on the black bar. */
   darkSrc?: string;
 }
+
+/** An article item rendered inside MagazineSpread rails and feature preview. */
+export interface ArticleCardItem {
+  slug: string;
+  title: string;
+  link: string;
+  date: string;
+  excerpt: string;
+  preview?: string[];
+  image?: string;
+  imageSrc?: string;
+  imageSrcset?: string;
+  tags?: string[];
+  category?: string;
+  isExternal?: boolean;
+}
+
+/** A table-of-contents heading anchor entry consumed by TableOfContents & ArticleReader. */
+export interface ArticleTocEntry {
+  id: string;
+  text: string;
+  level: number;
+}

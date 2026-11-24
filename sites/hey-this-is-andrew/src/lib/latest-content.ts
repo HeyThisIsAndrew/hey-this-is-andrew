@@ -1,10 +1,14 @@
 import { formatFeedDate } from './dates';
 // Build-time fetchers for the "Recent work" section.
-// Both sources are keyless: the YouTube channel RSS feed and the
-// public Substack archive API. Anything that fails returns null, so a
-// network hiccup can never break the build; the section falls back
-// to the local project entries. Content refreshes on every build.
+// Videos use the YouTube channel feed with verified local fallbacks; Coffee Talk
+// articles read directly from the committed @andrew/content-pipeline snapshot.
 import { cleanFeedText } from './feed-text';
+import {
+  articleHref,
+  getAllArticles,
+  isExternalArticle,
+  resolveLocalRendition,
+} from './articles';
 
 export interface LatestItem {
   kind: 'video' | 'article';
@@ -16,27 +20,10 @@ export interface LatestItem {
   imageSrcset?: string;
   url: string;
   date: string; // ISO
+  isExternal?: boolean;
   /** True when the real publish date is unknown and `date` is a stand-in
       (never treat such an item as "new"). */
   dateEstimated?: boolean;
-}
-
-
-const SUBSTACK = 'https://thisiscoffeetalk.substack.com';
-
-async function fetchText(url: string, timeoutMs = 10000): Promise<string> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, {
-      signal: ctrl.signal,
-      headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' },
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-    return await res.text();
-  } finally {
-    clearTimeout(t);
-  }
 }
 
 
@@ -65,23 +52,19 @@ export async function getLatestVideo(): Promise<LatestItem | null> {
 }
 
 export async function getLatestArticle(): Promise<LatestItem | null> {
-  try {
-    const json = await fetchText(`${SUBSTACK}/api/v1/archive?sort=new&limit=1`);
-    const posts = JSON.parse(json);
-    const p = posts?.[0];
-    if (!p?.slug) return null;
-    return {
-      kind: 'article',
-      label: 'Latest article',
-      title: cleanFeedText(p.title) || 'Latest article',
-      description: cleanFeedText(p.subtitle ?? p.description).slice(0, 220),
-      image: unwrapSubstackImage(p.cover_image ?? null),
-      url: `${SUBSTACK}/p/${p.slug}`,
-      date: p.post_date ?? new Date().toISOString(),
-    };
-  } catch {
-    return null;
-  }
+  const articles = await getLatestArticles(1);
+  const first = articles[0];
+  if (!first) return null;
+  return {
+    kind: 'article',
+    label: 'Latest article',
+    title: first.title,
+    description: first.subtitle.slice(0, 220),
+    image: first.image,
+    url: first.url,
+    date: first.date,
+    isExternal: first.isExternal,
+  };
 }
 
 export interface ArticleItem {
@@ -90,13 +73,14 @@ export interface ArticleItem {
   date: string; // ISO
   url: string;
   image: string | null;
+  isExternal?: boolean;
 }
 
 export const SUBSTACK_URL = 'https://thisiscoffeetalk.substack.com';
 export const SUBSTACK_TAGLINE = 'Building in Public and Figuring it out as I go';
 
 // Hardcoded fallback: the three latest articles as of Sept 2026. The
-// Writing section never renders empty, even if the API is unreachable.
+// Writing section never renders empty, even if the snapshot is empty.
 const FALLBACK_ARTICLES: ArticleItem[] = [
   {
     title: 'Scaling a One-Person Brand with Open-Source Automation',
@@ -104,6 +88,7 @@ const FALLBACK_ARTICLES: ArticleItem[] = [
     date: '2026-09-01',
     url: 'https://thisiscoffeetalk.substack.com/p/scaling-a-one-person-brand-with-open',
     image: null,
+    isExternal: true,
   },
   {
     title: 'Leveling Up: How Community and AI Are Transforming My Workflow',
@@ -111,6 +96,7 @@ const FALLBACK_ARTICLES: ArticleItem[] = [
     date: '2026-08-31',
     url: 'https://thisiscoffeetalk.substack.com/p/leveling-up-how-community-and-ai',
     image: null,
+    isExternal: true,
   },
   {
     title: 'Dev Diary: My Journey as a Technical Creator',
@@ -118,29 +104,27 @@ const FALLBACK_ARTICLES: ArticleItem[] = [
     date: '2026-08-14',
     url: 'https://thisiscoffeetalk.substack.com/p/dev-diary-my-journey-as-a-technical',
     image: null,
+    isExternal: true,
   },
 ];
 
 export async function getLatestArticles(limit = 3): Promise<ArticleItem[]> {
-  try {
-    const json = await fetchText(`${SUBSTACK}/api/v1/archive?sort=new&limit=${limit}`);
-    const posts = JSON.parse(json);
-    if (!Array.isArray(posts) || posts.length === 0) throw new Error('empty archive');
-    const items = posts
-      .filter((p: any) => p?.slug)
-      .slice(0, limit)
-      .map((p: any): ArticleItem => ({
-        title: cleanFeedText(p.title) || 'Untitled',
-        subtitle: cleanFeedText(p.subtitle ?? p.description),
-        date: p.post_date ?? new Date().toISOString(),
-        url: `${SUBSTACK}/p/${p.slug}`,
-        image: unwrapSubstackImage(p.cover_image ?? null),
-      }));
-    if (!items.length) throw new Error('no usable posts');
-    return items;
-  } catch {
-    return FALLBACK_ARTICLES.slice(0, limit);
+  const snapshotArticles = getAllArticles();
+  if (snapshotArticles.length > 0) {
+    return snapshotArticles.slice(0, limit).map((record): ArticleItem => {
+      const localImg = resolveLocalRendition(record.image);
+      const unwrapped = unwrapSubstackImage(record.image || null);
+      return {
+        title: cleanFeedText(record.title) || 'Untitled',
+        subtitle: cleanFeedText(record.excerpt),
+        date: record.isoDate,
+        url: articleHref(record),
+        image: localImg?.src ?? unwrapped,
+        isExternal: isExternalArticle(record),
+      };
+    });
   }
+  return FALLBACK_ARTICLES.slice(0, limit);
 }
 
 export { fmtDate };
