@@ -1,0 +1,92 @@
+name: Deploy Substack relay
+
+# Deploys the shared multi-publication Substack relay Worker (andrew-substack-relay)
+# used by scheduled/manual sync workflows when Substack blocks GitHub runner IPs.
+on:
+  push:
+    branches: [main]
+    paths:
+      - packages/content-pipeline/worker/**
+      - packages/content-pipeline/src/substack/parser.ts
+      - .github/workflows/deploy-substack-relay.yml
+  workflow_dispatch:
+
+concurrency:
+  group: substack-relay-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy Substack relay
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+    steps:
+      - name: Check deploy token
+        id: token
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN is not set; skipping Substack relay deploy."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.token.outputs.ready == 'true'
+
+      - uses: pnpm/action-setup@v4
+        if: steps.token.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.token.outputs.ready == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.token.outputs.ready == 'true'
+        run: pnpm install --frozen-lockfile --filter @andrew/content-pipeline... --filter .
+
+      - name: Run content-pipeline tests
+        if: steps.token.outputs.ready == 'true'
+        run: pnpm --filter @andrew/content-pipeline test
+
+      - name: Deploy relay Worker
+        if: steps.token.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec wrangler deploy --config packages/content-pipeline/worker/wrangler.jsonc
+
+      - name: Verify live relay endpoint
+        if: steps.token.outputs.ready == 'true'
+        env:
+          URL: https://andrew-substack-relay.heythisisandrewb.workers.dev/posts/thisiscoffeetalk
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            node --input-type=module -e '
+              const res = await fetch(process.env.URL, { signal: AbortSignal.timeout(30000) });
+              const text = await res.text();
+              if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 300)}`);
+              const data = JSON.parse(text);
+              const posts = Array.isArray(data) ? data : data.posts;
+              if (!Array.isArray(posts) || posts.length === 0) {
+                throw new Error(`Expected non-empty posts payload, got ${text.slice(0, 200)}`);
+              }
+              console.log(`Verified ${posts.length} posts from relay (newest: ${posts[0].title})`);
+            ' && exit 0 || true
+            if [ "$attempt" -lt 6 ]; then
+              echo "Relay attempt $attempt did not succeed yet; waiting 5s..."
+              sleep 5
+            fi
+          done
+          echo "::error::Substack relay failed verification after 6 attempts."
+          exit 1
