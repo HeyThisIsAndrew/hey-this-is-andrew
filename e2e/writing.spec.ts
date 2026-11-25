@@ -174,4 +174,38 @@ test.describe('Writing index & Coffee Talk Substack reader', () => {
 
     expect(pageErrors).toEqual([]);
   });
+
+  test('/writing/ scales container and typography up cleanly on 4K (3840x2160)', async ({
+    page,
+    viewport,
+  }) => {
+    test.skip((viewport?.width ?? 1440) < 1000, 'desktop and 4K scaling test');
+
+    await page.setViewportSize({ width: 3840, height: 2160 });
+    await page.goto('./writing/');
+    await page.waitForLoadState('networkidle');
+
+    const metrics = await page.evaluate(() => {
+      const rootFs = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const writing = document.querySelector<HTMLElement>('#writing')!;
+      const spread = document.querySelector<HTMLElement>('#writing .magazine-spread')!;
+      const title = document.querySelector<HTMLElement>('[data-magazine-feature-title]')!;
+      return {
+        rootFs,
+        writingW: writing.getBoundingClientRect().width,
+        spreadPadTop: getComputedStyle(spread).paddingTop,
+        spreadPadBottom: getComputedStyle(spread).paddingBottom,
+        titleFs: parseFloat(getComputedStyle(title).fontSize),
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+      };
+    });
+
+    expect(metrics.writingW).toBeGreaterThanOrEqual(2450);
+    expect(metrics.rootFs).toBeGreaterThanOrEqual(18);
+    expect(metrics.spreadPadTop).toBe('0px');
+    expect(metrics.spreadPadBottom).toBe('0px');
+    expect(metrics.titleFs).toBeGreaterThanOrEqual(44);
+    expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
+  });
 });

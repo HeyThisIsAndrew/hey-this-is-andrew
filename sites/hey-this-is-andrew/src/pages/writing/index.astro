@@ -38,7 +38,7 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
       </div>
       {magazineCards.length > 0 ? (
         <div class="writing-spread-wrap">
-          <MagazineSpread articles={magazineCards} compact readMoreLabel="Read Article" />
+          <MagazineSpread articles={magazineCards} readMoreLabel="Read Article" />
         </div>
       ) : (
         <p class="writing-empty">No articles imported yet. Run sync:articles to populate the snapshot.</p>
@@ -78,7 +78,7 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
                         <img
                           src={imgSrc}
                           srcset={localImg?.srcset || undefined}
-                          sizes={localImg?.srcset ? '(max-width: 640px) 92vw, (max-width: 1023px) 46vw, 430px' : undefined}
+                          sizes={localImg?.srcset ? '(max-width: 640px) 92vw, (max-width: 1023px) 46vw, 720px' : undefined}
                           alt=""
                           width="1456"
                           height="816"
@@ -131,9 +131,40 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
 </BaseLayout>
 
 <style>
+  :global(html:has(.writing-page)) {
+    --writing-measure: 1536px;
+  }
+
+  @media (min-width: 1920px) {
+    :global(html:has(.writing-page)) {
+      --writing-measure: 1920px;
+    }
+  }
+
+  @media (min-width: 2560px) {
+    :global(html:has(.writing-page)) {
+      --writing-measure: 2240px;
+    }
+  }
+
+  @media (min-width: 3400px) {
+    :global(html:has(.writing-page)) {
+      --writing-measure: 2600px;
+      font-size: 115%;
+    }
+  }
+
+  @media (min-width: 1600px) {
+    :global(html[data-screen-4k]:has(.writing-page)) {
+      font-size: 115%;
+    }
+  }
+
   .writing-page {
-    --writing-measure: 1360px;
-    padding-block: clamp(24px, 3vw, 40px) clamp(48px, 6vw, 96px);
+    width: min(100% - clamp(2rem, 4vw, 5rem), var(--writing-measure));
+    max-inline-size: var(--writing-measure);
+    margin-inline: auto;
+    padding-block: clamp(1.5rem, 2.5vw, 2.5rem) clamp(3rem, 5vw, 6rem);
     min-inline-size: 0;
     border-radius: 0;
   }
@@ -155,32 +186,32 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
   }
 
   .writing-spread-section {
-    padding-block: 0 clamp(40px, 4.5vw, 64px);
+    padding-block: 0 clamp(2.5rem, 4vw, 4rem);
   }
 
   .writing-goals-section {
-    padding-block: 0 clamp(36px, 4vw, 56px);
+    padding-block: 0 clamp(2.25rem, 3.8vw, 3.75rem);
   }
 
   .writing-articles-section {
-    padding-block: 0 clamp(36px, 4vw, 56px);
+    padding-block: 0 clamp(2.25rem, 3.8vw, 3.75rem);
   }
 
   .writing-pill-row {
     display: flex;
     align-items: center;
-    margin-block-end: clamp(16px, 2vw, 24px);
+    margin-block-end: clamp(1rem, 1.5vw, 1.5rem);
     min-inline-size: 0;
   }
 
-  /* Match BrandAccordion .bacc-chip + .bacc-chip--brand value for value. */
+  /* Match BrandAccordion .bacc-chip + .bacc-chip--brand, scaled in rem. */
   .writing-pill {
     display: inline-flex;
     align-items: center;
     max-inline-size: 100%;
     box-sizing: border-box;
     margin: 0;
-    padding: 0.35rem 0.65rem;
+    padding: 0.4rem 0.75rem;
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-inline-start: 2px solid var(--accordion-edge, #f0f0f0);
     border-radius: 0;
@@ -189,7 +220,7 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
     -webkit-backdrop-filter: blur(8px);
     font-family: var(--font-body, sans-serif);
     font-weight: 600;
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     line-height: 1.2;
@@ -204,90 +235,72 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
     border-radius: 0;
   }
 
-  /* Match BE Unconventional HQ's compact MagazineSpread framing inside the 1360px column. */
-  .writing-spread-wrap :global(.magazine-spread--compact) {
+  /* Reset global section padding so MagazineSpread sits flush inside its frame. */
+  .writing-spread-wrap :global(.magazine-spread) {
     margin: 0;
+    padding-block: 0;
     border-radius: 0;
   }
 
-  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-image),
-  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-image img),
-  .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-thumb),
-  .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-thumb img) {
+  .writing-spread-wrap :global(.magazine-spread .magazine-feature-image),
+  .writing-spread-wrap :global(.magazine-spread .magazine-feature-image img),
+  .writing-spread-wrap :global(.magazine-spread .magazine-rail-thumb),
+  .writing-spread-wrap :global(.magazine-spread .magazine-rail-thumb img) {
     border-radius: 0;
   }
 
-  .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-item),
-  .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-title),
-  .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-thumb img),
-  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-image img),
-  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-cta),
-  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-cta::after) {
+  .writing-spread-wrap :global(.magazine-spread .magazine-rail-item),
+  .writing-spread-wrap :global(.magazine-spread .magazine-rail-title),
+  .writing-spread-wrap :global(.magazine-spread .magazine-rail-thumb img),
+  .writing-spread-wrap :global(.magazine-spread .magazine-feature-image img),
+  .writing-spread-wrap :global(.magazine-spread .magazine-feature-cta),
+  .writing-spread-wrap :global(.magazine-spread .magazine-feature-cta::after) {
     transition-timing-function: ease-in-out;
   }
 
-  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-excerpt) {
-    --excerpt-lines: 4;
+  .writing-spread-wrap :global(.magazine-spread .magazine-feature-copy) {
+    justify-content: flex-start;
   }
 
-  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-title) {
-    font-size: clamp(1.3rem, 1.9vw, 1.9rem);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    line-clamp: 2;
-    overflow: hidden;
+  .writing-spread-wrap :global(.magazine-spread .magazine-feature-excerpt) {
+    --excerpt-lines: 6;
   }
 
-  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-copy) {
-    padding-block: 1.5rem 1.75rem;
+  @media (min-width: 2560px) {
+    .writing-spread-wrap :global(.magazine-spread .magazine-feature-excerpt) {
+      --excerpt-lines: 8;
+    }
   }
 
-  .writing-spread-wrap :global(.magazine-spread--compact :focus-visible) {
+  @media (min-width: 3400px) {
+    .writing-spread-wrap :global(.magazine-spread .magazine-feature-excerpt) {
+      --excerpt-lines: 10;
+    }
+  }
+
+  .writing-spread-wrap :global(.magazine-spread :focus-visible) {
     outline-offset: -3px;
     border-radius: 0;
   }
 
-  @media (min-width: 1101px) {
-    .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature) {
-      contain: size;
-    }
-
-    .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-image) {
-      aspect-ratio: auto;
-      flex: 1 1 0;
-      min-height: 0;
-    }
-
-    .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-image img) {
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-copy) {
-      flex: 0 0 auto;
-      justify-content: flex-start;
-    }
-  }
-
   @media (max-width: 767px) {
-    .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-excerpt) {
-      --excerpt-lines: 3;
+    .writing-spread-wrap :global(.magazine-spread .magazine-feature-excerpt) {
+      --excerpt-lines: 4;
     }
 
-    .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail) {
+    .writing-spread-wrap :global(.magazine-spread .magazine-rail) {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-item) {
+    .writing-spread-wrap :global(.magazine-spread .magazine-rail-item) {
       padding: 1rem 0.75rem;
     }
 
-    .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-title) {
+    .writing-spread-wrap :global(.magazine-spread .magazine-rail-title) {
       font-size: 0.9rem;
     }
 
-    .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-meta) {
+    .writing-spread-wrap :global(.magazine-spread .magazine-rail-meta) {
       display: block;
       white-space: nowrap;
       overflow: hidden;
@@ -298,16 +311,16 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
   .writing-empty {
     inline-size: 100%;
     color: var(--muted);
-    font-size: 15px;
+    font-size: 1rem;
     line-height: 1.6;
-    padding-block: 24px;
+    padding-block: 1.5rem;
     margin: 0;
   }
 
   .writing-card-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: clamp(18px, 2vw, 24px);
+    gap: clamp(1.25rem, 1.6vw, 2rem);
     list-style: none;
     margin: 0;
     padding: 0;
@@ -323,7 +336,7 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
   @media (max-width: 640px) {
     .writing-card-grid {
       grid-template-columns: minmax(0, 1fr);
-      gap: 20px;
+      gap: 1.25rem;
     }
   }
 
@@ -380,8 +393,8 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
   .writing-card-body {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: clamp(18px, 1.8vw, 24px);
+    gap: 0.65rem;
+    padding: clamp(1.2rem, 1.5vw, 1.75rem);
     min-inline-size: 0;
     flex: 1 1 auto;
   }
@@ -389,7 +402,7 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
   .writing-card-title {
     margin: 0;
     font-family: var(--font-display);
-    font-size: clamp(18px, 1.4vw, 21px);
+    font-size: clamp(1.15rem, 1.35vw, 1.55rem);
     font-weight: 700;
     line-height: 1.25;
     color: var(--ink);
@@ -398,7 +411,7 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
 
   .writing-card-date {
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 0.78rem;
     font-weight: 500;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -410,7 +423,7 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
     margin: 0;
     font-family: var(--font-body);
     color: var(--muted);
-    font-size: clamp(14.5px, 1.05vw, 15.5px);
+    font-size: clamp(0.95rem, 1vw, 1.12rem);
     line-height: 1.6;
     overflow-wrap: break-word;
     display: -webkit-box;
@@ -448,7 +461,7 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 12px 18px;
+    gap: 0.85rem 1.25rem;
   }
 
   .writing-page-actions :global(.btn) {
