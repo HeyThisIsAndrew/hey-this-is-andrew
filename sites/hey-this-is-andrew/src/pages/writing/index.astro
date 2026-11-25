@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import GoalsSection from '../../components/GoalsSection.astro';
+import MagazineSpread from '@andrew/ui/MagazineSpread.astro';
 import {
   SUBSTACK_PUBLICATION_URL,
   articleHref,
@@ -8,13 +9,14 @@ import {
   isExternalArticle,
   resolveLocalRendition,
   sanitizeVisibleCopy,
+  toMagazineCard,
 } from '../../lib/articles';
 import { formatFeedDate } from '../../lib/dates';
 
-const FEATURED_LIMIT = 4;
+const MAGAZINE_LIMIT = 4;
 const allArticles = getAllArticles();
-const featuredArticles = allArticles.slice(0, FEATURED_LIMIT);
-const remainingArticles = allArticles.slice(FEATURED_LIMIT);
+const magazineCards = allArticles.slice(0, MAGAZINE_LIMIT).map(toMagazineCard);
+const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
 ---
 
 <BaseLayout
@@ -50,58 +52,19 @@ const remainingArticles = allArticles.slice(FEATURED_LIMIT);
       </div>
     </header>
 
-    <section id="writing" class="writing-tiles-section" aria-labelledby="writing-heading">
+    <section
+      id="writing"
+      class="writing-spread-section"
+      aria-labelledby="writing-heading"
+      data-magazine-scroll-anchor
+    >
       <header class="writing-section-head">
         <h2 id="writing-heading" class="writing-section-heading">Writing</h2>
       </header>
-      {featuredArticles.length > 0 ? (
-        <ul class="writing-tiles-grid" role="list">
-          {featuredArticles.map((article, index) => {
-            const href = articleHref(article);
-            const external = isExternalArticle(article);
-            const title = sanitizeVisibleCopy(article.title) || article.title;
-            const formattedDate = formatFeedDate(article.isoDate, {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-            });
-            const localImg = resolveLocalRendition(article.image);
-            const imgSrc = localImg?.src || article.image;
-            return (
-              <li class="writing-tile-item">
-                <a
-                  class="writing-tile"
-                  href={href}
-                  target={external ? '_blank' : undefined}
-                  rel={external ? 'noopener noreferrer' : undefined}
-                >
-                  {imgSrc && (
-                    <div class="writing-tile-media">
-                      <img
-                        src={imgSrc}
-                        srcset={localImg?.srcset || undefined}
-                        alt=""
-                        loading={index < 2 ? 'eager' : 'lazy'}
-                        decoding="async"
-                      />
-                    </div>
-                  )}
-                  <div class="writing-tile-body">
-                    {formattedDate && (
-                      <time
-                        class="writing-tile-date font-mono"
-                        datetime={article.isoDate || undefined}
-                      >
-                        {formattedDate}
-                      </time>
-                    )}
-                    <h3 class="writing-tile-title">{title}</h3>
-                  </div>
-                </a>
-              </li>
-            );
-          })}
-        </ul>
+      {magazineCards.length > 0 ? (
+        <div class="writing-spread-wrap">
+          <MagazineSpread articles={magazineCards} compact readMoreLabel="Read Article" />
+        </div>
       ) : (
         <p class="writing-empty">No articles imported yet. Run sync:articles to populate the snapshot.</p>
       )}
@@ -174,7 +137,7 @@ const remainingArticles = allArticles.slice(FEATURED_LIMIT);
 
 <style>
   .writing-page {
-    --writing-measure: 1200px;
+    --writing-measure: 1360px;
     padding-block-end: clamp(48px, 6vw, 96px);
     min-inline-size: 0;
     border-radius: 0;
@@ -188,7 +151,7 @@ const remainingArticles = allArticles.slice(FEATURED_LIMIT);
     flex-direction: column;
     align-items: flex-start;
     gap: 14px;
-    padding-block: clamp(36px, 4.5vw, 68px) clamp(28px, 3.5vw, 48px);
+    padding-block: clamp(32px, 4vw, 60px) clamp(24px, 3vw, 42px);
     min-inline-size: 0;
     border-radius: 0;
   }
@@ -240,21 +203,25 @@ const remainingArticles = allArticles.slice(FEATURED_LIMIT);
     transition-timing-function: ease-in-out;
   }
 
-  .writing-tiles-section,
+  .writing-spread-section,
   .writing-goals-section,
   .writing-articles-section {
     inline-size: 100%;
     max-inline-size: var(--writing-measure);
     margin-inline: auto;
-    padding-block: clamp(36px, 4.2vw, 60px);
+    padding-block: clamp(32px, 3.8vw, 54px);
     border-block-start: 1px solid var(--hairline);
     border-radius: 0;
     min-inline-size: 0;
   }
 
+  .writing-spread-section {
+    scroll-margin-top: calc(var(--nav-bar-h, 76px) + 1rem);
+  }
+
   .writing-section-head {
     inline-size: 100%;
-    margin-block-end: clamp(22px, 2.5vw, 34px);
+    margin-block-end: clamp(20px, 2.2vw, 30px);
     min-inline-size: 0;
   }
 
@@ -270,117 +237,99 @@ const remainingArticles = allArticles.slice(FEATURED_LIMIT);
     overflow-wrap: break-word;
   }
 
-  .writing-tiles-grid {
-    list-style: none;
+  .writing-spread-wrap {
+    inline-size: 100%;
+    min-inline-size: 0;
+    border-radius: 0;
+  }
+
+  /* Match BE Unconventional HQ's compact MagazineSpread framing inside the 1360px column. */
+  .writing-spread-wrap :global(.magazine-spread--compact) {
     margin: 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: clamp(1.25rem, 2.2vw, 2rem);
-    min-inline-size: 0;
     border-radius: 0;
   }
 
-  .writing-tile-item {
-    display: flex;
-    min-inline-size: 0;
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-image),
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-image img),
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-thumb),
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-thumb img) {
     border-radius: 0;
   }
 
-  .writing-tile {
-    display: flex;
-    flex-direction: column;
-    inline-size: 100%;
-    min-inline-size: 0;
-    text-decoration: none;
-    color: var(--ink);
-    background: var(--surface);
-    border: 1px solid var(--hairline);
-    border-radius: 0;
-    overflow: clip;
-    transition: border-color 0.22s ease-in-out, background-color 0.22s ease-in-out;
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-item),
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-title),
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-thumb img),
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-image img),
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-cta),
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-cta::after) {
+    transition-timing-function: ease-in-out;
   }
 
-  .writing-tile:focus-visible {
-    outline: 2px solid var(--focus-ring);
-    outline-offset: 3px;
-    border-color: var(--ink);
-    border-radius: 0;
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-excerpt) {
+    --excerpt-lines: 4;
   }
 
-  .writing-tile-media {
-    aspect-ratio: 16 / 9;
-    inline-size: 100%;
-    overflow: clip;
-    background: var(--surface-2);
-    border-block-end: 1px solid var(--hairline);
-    border-radius: 0;
-    flex: 0 0 auto;
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-title) {
+    font-size: clamp(1.3rem, 1.9vw, 1.9rem);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
-  .writing-tile-media img {
-    display: block;
-    inline-size: 100%;
-    block-size: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    border-radius: 0;
-    transition: transform 0.28s ease-in-out;
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-copy) {
+    padding-block: 1.5rem 1.75rem;
   }
 
-  .writing-tile-body {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-block: clamp(16px, 1.5vw, 22px);
-    padding-inline: clamp(16px, 1.6vw, 24px);
-    flex: 1 1 auto;
-    min-inline-size: 0;
+  .writing-spread-wrap :global(.magazine-spread--compact :focus-visible) {
+    outline-offset: -3px;
     border-radius: 0;
   }
 
-  .writing-tile-date {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 500;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted);
-    line-height: 1.3;
-  }
-
-  .writing-tile-title {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: clamp(18px, 1.55vw, 22px);
-    font-weight: 700;
-    line-height: 1.28;
-    letter-spacing: 0.01em;
-    color: var(--ink);
-    overflow-wrap: break-word;
-    transition: color 0.22s ease-in-out;
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .writing-tile:hover {
-      border-color: var(--ink);
-      background: var(--surface-2);
+  @media (min-width: 1101px) {
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature) {
+      contain: size;
     }
 
-    .writing-tile:hover .writing-tile-title {
-      text-decoration: underline;
-      text-underline-offset: 0.22em;
-      text-decoration-thickness: 1px;
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-image) {
+      aspect-ratio: auto;
+      flex: 1 1 0;
+      min-height: 0;
     }
 
-    .writing-tile:hover .writing-tile-media img {
-      transform: scale(1.02);
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-image img) {
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-copy) {
+      flex: 0 0 auto;
+      justify-content: flex-start;
     }
   }
 
   @media (max-width: 767px) {
-    .writing-tiles-grid {
-      grid-template-columns: minmax(0, 1fr);
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-excerpt) {
+      --excerpt-lines: 3;
+    }
+
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-item) {
+      padding: 1rem 0.75rem;
+    }
+
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-title) {
+      font-size: 0.9rem;
+    }
+
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-meta) {
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   }
 
@@ -513,16 +462,9 @@ const remainingArticles = allArticles.slice(FEATURED_LIMIT);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .writing-tile,
-    .writing-tile-media img,
-    .writing-tile-title,
     .writing-archive-row,
     .writing-archive-thumb {
       transition: none;
-    }
-
-    .writing-tile:hover .writing-tile-media img {
-      transform: none;
     }
   }
 </style>

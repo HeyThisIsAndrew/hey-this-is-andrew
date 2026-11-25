@@ -8,7 +8,7 @@ import GoalModal, {
 } from './GoalModal.astro';
 
 const goalsCollection = await getCollection('goals');
-goalsCollection.sort((a, b) => a.data.order - b.data.order);
+const bigGoalsEntry = goalsCollection.find((group) => group.id === 'big-goals') ?? goalsCollection[0];
 
 // The Core Engine milestones and Andrew's ACTUAL status for each. Every one
 // serves a Big Goal (goals.json): m1 Build the Reelay tool, m2 Get
@@ -101,35 +101,38 @@ const formatStageProgress = (stages: GoalStageItem[]): string => {
   return `${currentStage} / ${stages.length} stages`;
 };
 
+const bigGoalsItems = bigGoalsEntry
+  ? bigGoalsEntry.data.items.map((item) => ({
+      title: item.label,
+      desc: item.note,
+      status: normalizeStatus(item.status),
+      statusLabel: formatStatusLabel(item.status),
+    }))
+  : [];
+const bigGoalsDone = bigGoalsItems.filter((item) => item.status === 'done').length;
+
+const coreEngineItems = MILESTONES.map((m) => ({
+  title: m.title,
+  desc: m.desc,
+  status: normalizeStatus(m.status),
+  statusLabel: formatStatusLabel(m.status),
+  milestoneId: m.id,
+}));
+
 const modalGroups: GoalModalGroup[] = [
-  ...goalsCollection.map((group): GoalModalGroup => {
-    const groupDoneCount = group.data.items.filter((i) => i.status === 'done').length;
-    const total = group.data.items.length;
-    return {
-      id: group.id,
-      kind: 'checklist',
-      title: group.data.title,
-      progressText: `${groupDoneCount} / ${total}`,
-      items: group.data.items.map((item) => ({
-        title: item.label,
-        desc: item.note,
-        status: normalizeStatus(item.status),
-        statusLabel: formatStatusLabel(item.status),
-      })),
-    };
-  }),
+  {
+    id: bigGoalsEntry?.id ?? 'big-goals',
+    kind: 'checklist',
+    title: bigGoalsEntry?.data.title ?? 'The Big Goals',
+    progressText: `${bigGoalsDone} / ${bigGoalsItems.length}`,
+    items: bigGoalsItems,
+  },
   {
     id: 'core-engine',
     kind: 'checklist',
     title: 'Core Engine',
     progressText: `${doneCount} / ${MILESTONES.length}`,
-    items: MILESTONES.map((m) => ({
-      title: m.title,
-      desc: m.desc,
-      status: normalizeStatus(m.status),
-      statusLabel: formatStatusLabel(m.status),
-      milestoneId: m.id,
-    })),
+    items: coreEngineItems,
   },
   {
     id: 'be',
@@ -148,6 +151,41 @@ const modalGroups: GoalModalGroup[] = [
     stages: CCC_STAGES,
   },
 ];
+
+interface PreviewGoal {
+  label: string;
+  statusLabel: string;
+  checklistStatus?: NormalizedStatus;
+  stageNumber?: string;
+  stageStatus?: GoalStageItem['status'];
+  totalCount: number;
+}
+
+const previewForGroup = (group: GoalModalGroup): PreviewGoal => {
+  if (group.kind === 'checklist') {
+    const picked =
+      group.items.find((item) => item.status === 'in-progress') ??
+      group.items.find((item) => item.status !== 'done') ??
+      group.items[0];
+    return {
+      label: picked?.title ?? group.title,
+      statusLabel: picked?.statusLabel ?? 'Queued',
+      checklistStatus: picked?.status ?? 'queued',
+      totalCount: group.items.length,
+    };
+  }
+  const activeIdx = group.stages.findIndex((stage) => stage.status === 'active');
+  const achievedIdx = group.stages.findIndex((stage) => stage.status === 'achieved');
+  const pickedIdx = activeIdx >= 0 ? activeIdx : achievedIdx >= 0 ? achievedIdx : 0;
+  const picked = group.stages[pickedIdx] ?? group.stages[0];
+  return {
+    label: picked?.name ?? group.title,
+    statusLabel: picked?.statusLabel ?? 'Active',
+    stageNumber: String(pickedIdx + 1).padStart(2, '0'),
+    stageStatus: picked?.status ?? 'active',
+    totalCount: group.stages.length,
+  };
+};
 ---
 
 <div class="goals-column">
@@ -157,23 +195,55 @@ const modalGroups: GoalModalGroup[] = [
   </header>
 
   <div class="goals-row" role="list" aria-label="Goal groups">
-    {modalGroups.map((group) => (
-      <div class="goals-row-item" role="listitem" id={group.id}>
-        <button
-          type="button"
-          class="goal-box"
-          data-goal-trigger={group.id}
-          aria-haspopup="dialog"
-          aria-controls="goal-modal"
-        >
-          <span class="goal-box-top">
-            {group.kicker && <span class="goal-box-kicker font-mono">{group.kicker}</span>}
-            <span class="goal-box-title">{group.title}</span>
-          </span>
-          <span class="goal-box-progress font-mono">{group.progressText}</span>
-        </button>
-      </div>
-    ))}
+    {modalGroups.map((group) => {
+      const preview = previewForGroup(group);
+      return (
+        <div class="goals-row-item" role="listitem" id={group.id}>
+          <button
+            type="button"
+            class="goal-box"
+            data-goal-trigger={group.id}
+            aria-haspopup="dialog"
+            aria-controls="goal-modal"
+          >
+            <span class="goal-box-head">
+              <span class="goal-box-title-wrap">
+                {group.kicker && <span class="goal-box-kicker font-mono">{group.kicker}</span>}
+                <span class="goal-box-title">{group.title}</span>
+              </span>
+              <span class="goal-box-progress font-mono">{group.progressText}</span>
+            </span>
+
+            <span class="goal-box-preview">
+              <span class="goal-preview-row">
+                {preview.checklistStatus ? (
+                  <span
+                    class:list={['preview-mark', `is-${preview.checklistStatus}`]}
+                    aria-hidden="true"
+                  >
+                    {preview.checklistStatus === 'done' && (
+                      <svg viewBox="0 0 16 16" width="10" height="10" fill="none">
+                        <path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="square" />
+                      </svg>
+                    )}
+                  </span>
+                ) : (
+                  <span class="preview-stage-num font-mono">{preview.stageNumber}</span>
+                )}
+                <span class="goal-preview-label">{preview.label}</span>
+              </span>
+              <span class="goal-preview-badge font-mono" data-status={preview.checklistStatus || preview.stageStatus}>
+                {preview.statusLabel}
+              </span>
+            </span>
+
+            <span class="goal-box-cta font-mono">
+              View all {preview.totalCount} <span class="goal-box-arrow" aria-hidden="true">&rarr;</span>
+            </span>
+          </button>
+        </div>
+      );
+    })}
   </div>
 
   <GoalModal groups={modalGroups} cccPageHref={CCC_PAGE} />
@@ -182,7 +252,7 @@ const modalGroups: GoalModalGroup[] = [
 <style>
   .goals-column {
     inline-size: 100%;
-    max-inline-size: 1200px;
+    max-inline-size: 1360px;
     margin-inline: auto;
     min-inline-size: 0;
     border-radius: 0;
@@ -192,7 +262,7 @@ const modalGroups: GoalModalGroup[] = [
     display: flex;
     flex-direction: column;
     gap: 10px;
-    margin-block-end: clamp(22px, 2.5vw, 34px);
+    margin-block-end: clamp(20px, 2.2vw, 30px);
     min-inline-size: 0;
   }
 
@@ -220,8 +290,8 @@ const modalGroups: GoalModalGroup[] = [
 
   .goals-row {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
     inline-size: 100%;
     max-inline-size: 100%;
     min-inline-size: 0;
@@ -239,14 +309,14 @@ const modalGroups: GoalModalGroup[] = [
     appearance: none;
     inline-size: 100%;
     block-size: 100%;
-    min-block-size: 148px;
+    min-block-size: 196px;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 16px;
-    padding-block: 16px;
-    padding-inline: 14px;
+    gap: 14px;
+    padding-block: 18px;
+    padding-inline: 18px;
     border: 1px solid var(--hairline);
     border-radius: 0;
     background: var(--surface);
@@ -264,8 +334,12 @@ const modalGroups: GoalModalGroup[] = [
       background: var(--surface-2);
     }
 
-    .goal-box:hover .goal-box-progress {
+    .goal-box:hover .goal-box-cta {
       color: var(--ink);
+    }
+
+    .goal-box:hover .goal-box-arrow {
+      transform: translateX(3px);
     }
   }
 
@@ -276,50 +350,169 @@ const modalGroups: GoalModalGroup[] = [
     border-radius: 0;
   }
 
-  .goal-box-top {
+  .goal-box-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    inline-size: 100%;
+    min-inline-size: 0;
+  }
+
+  .goal-box-title-wrap {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 6px;
-    inline-size: 100%;
+    gap: 5px;
     min-inline-size: 0;
   }
 
   .goal-box-kicker {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 600;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--muted);
-    line-height: 1.35;
+    line-height: 1.3;
     overflow-wrap: break-word;
   }
 
   .goal-box-title {
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: clamp(13px, 1.02vw, 15px);
+    font-size: clamp(14px, 1.15vw, 17px);
     letter-spacing: 0.03em;
     text-transform: uppercase;
     color: var(--ink);
-    line-height: 1.24;
+    line-height: 1.22;
     overflow-wrap: break-word;
   }
 
   .goal-box-progress {
+    flex: 0 0 auto;
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--muted);
-    line-height: 1.2;
+    line-height: 1.3;
     white-space: nowrap;
+    margin-block-start: 2px;
+  }
+
+  .goal-box-preview {
+    inline-size: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding-block-start: 12px;
+    border-block-start: 1px solid var(--hairline);
+    border-radius: 0;
+    min-inline-size: 0;
+  }
+
+  .goal-preview-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    inline-size: 100%;
+    min-inline-size: 0;
+  }
+
+  .preview-mark {
+    display: inline-grid;
+    place-items: center;
+    margin-block-start: 3px;
+    inline-size: 14px;
+    block-size: 14px;
+    flex: 0 0 auto;
+    border: 1px solid var(--hairline-strong);
+    border-radius: 0;
+    color: var(--bg);
+    background: transparent;
+  }
+
+  .preview-mark.is-done {
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+
+  .preview-mark.is-in-progress {
+    border-color: var(--ink);
+  }
+
+  .preview-mark.is-in-progress::after {
+    content: '';
+    inline-size: 5px;
+    block-size: 5px;
+    background: var(--ink);
+    border-radius: 0;
+  }
+
+  .preview-stage-num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    line-height: 1.45;
+    flex: 0 0 auto;
+  }
+
+  .goal-preview-label {
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--ink);
+    overflow-wrap: break-word;
+    min-inline-size: 0;
+  }
+
+  .goal-preview-badge {
+    display: inline-block;
+    padding-block: 3px;
+    padding-inline: 7px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1.2;
+    border: 1px solid var(--hairline-strong);
+    border-radius: 0;
+    color: var(--ink);
+    background: transparent;
+    white-space: nowrap;
+  }
+
+  .goal-preview-badge[data-status='done'] {
+    background: var(--surface-2);
+  }
+
+  .goal-box-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    line-height: 1.2;
     transition: color 0.22s ease-in-out;
   }
 
-  @media (max-width: 1024px) {
+  .goal-box-arrow {
+    display: inline-block;
+    transition: transform 0.22s ease-in-out;
+  }
+
+  @media (max-width: 960px) {
     .goals-row {
       display: flex;
       flex-wrap: nowrap;
@@ -334,25 +527,30 @@ const modalGroups: GoalModalGroup[] = [
     }
 
     .goals-row-item {
-      flex: 0 0 min(70vw, 220px);
+      flex: 0 0 min(78vw, 290px);
       scroll-snap-align: start;
     }
 
     .goal-box {
-      min-block-size: 144px;
+      min-block-size: 184px;
       padding-block: 16px;
       padding-inline: 16px;
     }
 
     .goal-box-title {
-      font-size: 14.5px;
+      font-size: 15px;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .goal-box,
-    .goal-box-progress {
+    .goal-box-cta,
+    .goal-box-arrow {
       transition: none;
+    }
+
+    .goal-box:hover .goal-box-arrow {
+      transform: none;
     }
   }
 </style>
