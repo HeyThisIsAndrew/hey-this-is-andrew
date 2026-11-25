@@ -1,51 +1,66 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Writing index & Coffee Talk Substack reader', () => {
-  test('/writing/ renders MagazineSpread and swaps center feature cleanly', async ({ page }) => {
+  test('/writing/ renders Coffee Talk pill, uniform article card grid, Goals pill, and bottom Substack actions', async ({
+    page,
+    viewport,
+  }) => {
     const pageErrors: Error[] = [];
     page.on('pageerror', (err) => pageErrors.push(err));
 
     await page.goto('./writing/');
     await page.waitForLoadState('networkidle');
 
-    const spread = page.locator('[data-magazine-spread]');
-    await expect(spread).toBeVisible();
+    await expect(page.locator('.writing-page-head')).toHaveCount(0);
+    await expect(page.locator('#articles')).toHaveCount(0);
+    await expect(page.locator('main hr')).toHaveCount(0);
+    await expect(page.locator('#writing')).toHaveCSS('border-top-width', '0px');
+    await expect(page.locator('#goals')).toHaveCSS('border-top-width', '0px');
 
-    const railItems = page.locator('[data-magazine-rail-item]');
-    await expect(railItems).toHaveCount(4);
-    await expect(page.locator('.magazine-rail-left [data-magazine-rail-item]')).toHaveCount(2);
-    await expect(page.locator('.magazine-rail-right [data-magazine-rail-item]')).toHaveCount(2);
-    expect(await page.locator('#articles .writing-archive-row').count()).toBeGreaterThanOrEqual(1);
+    await expect(page.locator('.writing-pill')).toHaveText('Coffee Talk');
+    await expect(page.locator('.goals-pill')).toHaveText('Goals');
 
-    const featureImg = page.locator('[data-magazine-feature-img]');
-    await expect(featureImg).toBeVisible();
-    await expect
-      .poll(() =>
-        featureImg.evaluate((el) => {
-          const img = el as HTMLImageElement;
-          return img.complete && img.naturalWidth > 0;
-        }),
-      )
-      .toBe(true);
+    const cards = page.locator('#writing .writing-card-link');
+    await expect(cards).toHaveCount(5);
 
-    const featureTitle = page.locator('[data-magazine-feature-title]');
-    const featureLink = page.locator('[data-magazine-feature-link]');
-    const initialTitle = (await featureTitle.innerText()).trim();
-    const initialHref = await featureLink.getAttribute('href');
-
-    const nextRailItem = page.locator('[data-magazine-rail-item]:not(.active)').first();
-    const expectedTitle = (await nextRailItem.getAttribute('data-title'))?.trim();
-    const expectedHref = await nextRailItem.getAttribute('data-href');
-
-    await nextRailItem.click();
-    await expect(page).toHaveURL(/\/writing\/(#.+)?$/);
-    await expect(featureTitle).not.toHaveText(initialTitle);
-    if (expectedTitle) {
-      await expect(featureTitle).toHaveText(expectedTitle);
+    const xs = await cards.evaluateAll((els) =>
+      Array.from(new Set(els.map((el) => Math.round(el.getBoundingClientRect().left)))),
+    );
+    if ((viewport?.width ?? 1440) >= 768) {
+      expect(xs.length).toBe(2);
+    } else {
+      expect(xs.length).toBe(1);
     }
-    if (expectedHref && expectedHref !== initialHref) {
-      await expect(featureLink).toHaveAttribute('href', expectedHref);
+
+    const cardCount = await cards.count();
+    for (let i = 0; i < cardCount; i++) {
+      const card = cards.nth(i);
+      const img = card.locator('.writing-card-media img');
+      await img.scrollIntoViewIfNeeded();
+      await expect
+        .poll(() =>
+          img.evaluate((el) => {
+            const image = el as HTMLImageElement;
+            return image.complete && image.naturalWidth > 0;
+          }),
+        )
+        .toBe(true);
+      await expect(card.locator('.writing-card-title')).not.toHaveText('');
+      await expect(card.locator('.writing-card-date')).not.toHaveText('');
+      await expect(card.locator('.writing-card-excerpt')).not.toHaveText('');
     }
+
+    const actions = page.locator('.writing-page-actions a');
+    await expect(actions).toHaveCount(2);
+    await expect(actions.nth(0)).toHaveAttribute('href', 'https://thisiscoffeetalk.substack.com');
+    await expect(actions.nth(1)).toHaveAttribute('href', 'https://thisiscoffeetalk.substack.com/subscribe');
+    await expect(page.locator('main a[href*="substack.com"]')).toHaveCount(2);
+
+    const goalsBox = await page.locator('#goals').boundingBox();
+    const actionsBox = await page.locator('.writing-page-actions').boundingBox();
+    expect(goalsBox).not.toBeNull();
+    expect(actionsBox).not.toBeNull();
+    expect(actionsBox!.y).toBeGreaterThanOrEqual(goalsBox!.y + goalsBox!.height - 1);
 
     expect(pageErrors).toEqual([]);
   });

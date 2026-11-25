@@ -11,7 +11,6 @@ export const HOME_SECTIONS: PageSection[] = [
 export const BUILD_SECTIONS: PageSection[] = [
   { id: 'writing', label: 'Writing' },
   { id: 'goals', label: 'Goals' },
-  { id: 'articles', label: 'Articles' },
 ];
 
 export const ABOUT_SECTIONS: PageSection[] = [

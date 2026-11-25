@@ -225,6 +225,30 @@ test.describe('Global QA', () => {
     }
   });
 
+  test('Brands mobile footer stays single-row with no overflow at 390px', async ({ page, viewport }) => {
+    if (viewport?.width !== 390) test.skip();
+    await page.goto('./brands/');
+    await page.waitForLoadState('networkidle');
+
+    const metrics = await page.evaluate(() => {
+      const footer = document.querySelector<HTMLElement>('.site-footer');
+      const items = Array.from(document.querySelectorAll<HTMLElement>('.site-footer .socials li'));
+      const ys = items.map((el) => Math.round(el.getBoundingClientRect().top));
+      return {
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+        socialCount: items.length,
+        rowSpread: ys.length > 0 ? Math.max(...ys) - Math.min(...ys) : -1,
+        footerHeight: footer ? footer.getBoundingClientRect().height : -1,
+      };
+    });
+
+    expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
+    expect(metrics.socialCount).toBe(7);
+    expect(metrics.rowSpread).toBeLessThanOrEqual(2);
+    expect(metrics.footerHeight).toBeLessThan(140);
+  });
+
   test('What I Do pillar cards flip in place; the UGC back carries its two links', async ({ page }) => {
     await page.goto('./');
     const homepage = page.url();

@@ -28,6 +28,8 @@ test.describe('Gear page', () => {
 
     await expect(toggle(page)).toHaveText('Show all products');
     await expect(page.locator('#gear-all-products')).toBeHidden();
+    await expect(page.locator('.box-idx')).toHaveCount(0);
+    await expect(page.locator('.box-title')).toHaveText(['Cameras', 'Lenses', 'Lighting', 'Tools and Support', 'Audio', 'Cafe Bar', 'Gaming']);
     const sections = page.locator('.gear-accordion-section');
     await expect(sections).toHaveCount(IDS.length);
     for (let i = 0; i < IDS.length; i++) await expect(sections.nth(i)).toHaveId(IDS[i]);
