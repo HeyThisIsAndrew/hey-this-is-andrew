@@ -1,7 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import GoalsSection from '../../components/GoalsSection.astro';
-import MagazineSpread from '@andrew/ui/MagazineSpread.astro';
 import {
   SUBSTACK_PUBLICATION_URL,
   articleHref,
@@ -9,14 +8,13 @@ import {
   isExternalArticle,
   resolveLocalRendition,
   sanitizeVisibleCopy,
-  toMagazineCard,
 } from '../../lib/articles';
 import { formatFeedDate } from '../../lib/dates';
 
-const MAGAZINE_LIMIT = 8;
+const FEATURED_LIMIT = 4;
 const allArticles = getAllArticles();
-const magazineCards = allArticles.slice(0, MAGAZINE_LIMIT).map(toMagazineCard);
-const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
+const featuredArticles = allArticles.slice(0, FEATURED_LIMIT);
+const remainingArticles = allArticles.slice(FEATURED_LIMIT);
 ---
 
 <BaseLayout
@@ -52,79 +50,123 @@ const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
       </div>
     </header>
 
+    <section id="writing" class="writing-tiles-section" aria-labelledby="writing-heading">
+      <header class="writing-section-head">
+        <h2 id="writing-heading" class="writing-section-heading">Writing</h2>
+      </header>
+      {featuredArticles.length > 0 ? (
+        <ul class="writing-tiles-grid" role="list">
+          {featuredArticles.map((article, index) => {
+            const href = articleHref(article);
+            const external = isExternalArticle(article);
+            const title = sanitizeVisibleCopy(article.title) || article.title;
+            const formattedDate = formatFeedDate(article.isoDate, {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+            });
+            const localImg = resolveLocalRendition(article.image);
+            const imgSrc = localImg?.src || article.image;
+            return (
+              <li class="writing-tile-item">
+                <a
+                  class="writing-tile"
+                  href={href}
+                  target={external ? '_blank' : undefined}
+                  rel={external ? 'noopener noreferrer' : undefined}
+                >
+                  {imgSrc && (
+                    <div class="writing-tile-media">
+                      <img
+                        src={imgSrc}
+                        srcset={localImg?.srcset || undefined}
+                        alt=""
+                        loading={index < 2 ? 'eager' : 'lazy'}
+                        decoding="async"
+                      />
+                    </div>
+                  )}
+                  <div class="writing-tile-body">
+                    {formattedDate && (
+                      <time
+                        class="writing-tile-date font-mono"
+                        datetime={article.isoDate || undefined}
+                      >
+                        {formattedDate}
+                      </time>
+                    )}
+                    <h3 class="writing-tile-title">{title}</h3>
+                  </div>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p class="writing-empty">No articles imported yet. Run sync:articles to populate the snapshot.</p>
+      )}
+    </section>
+
     <section id="goals" class="writing-goals-section" aria-labelledby="goals-heading">
       <GoalsSection />
     </section>
 
-    <section id="writing" class="writing-list-section" aria-labelledby="writing-heading">
+    <section id="articles" class="writing-articles-section" aria-labelledby="articles-heading">
       <header class="writing-section-head">
-        <h2 id="writing-heading" class="writing-section-heading">Writing</h2>
+        <h2 id="articles-heading" class="writing-section-heading">Articles</h2>
       </header>
-
-      {magazineCards.length > 0 ? (
-        <div class="writing-spread-wrap">
-          <MagazineSpread articles={magazineCards} readMoreLabel="Read Article" />
-        </div>
-      ) : (
-        <p class="writing-empty">No articles imported yet. Run sync:articles to populate the snapshot.</p>
-      )}
-
-      {archiveArticles.length > 0 && (
-        <div class="writing-archive" aria-labelledby="writing-archive-heading">
-          <header class="writing-archive-head">
-            <h2 id="writing-archive-heading" class="writing-archive-heading">Archive</h2>
-            <p class="writing-archive-lede">Earlier dispatches and notes.</p>
-          </header>
-          <ul class="writing-archive-list" role="list">
-            {archiveArticles.map((article) => {
-              const href = articleHref(article);
-              const external = isExternalArticle(article);
-              const title = sanitizeVisibleCopy(article.title) || article.title;
-              const excerpt = sanitizeVisibleCopy(article.excerpt);
-              const formattedDate = formatFeedDate(article.isoDate, {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              });
-              const localImg = resolveLocalRendition(article.image);
-              const imgSrc = localImg?.src || article.image;
-              return (
-                <li class="writing-archive-item">
-                  <a
-                    class="writing-archive-row"
-                    href={href}
-                    target={external ? '_blank' : undefined}
-                    rel={external ? 'noopener noreferrer' : undefined}
-                  >
-                    <div class="writing-archive-body">
-                      {formattedDate && (
-                        <time
-                          class="writing-archive-meta font-mono"
-                          datetime={article.isoDate || undefined}
-                        >
-                          {formattedDate}
-                        </time>
-                      )}
-                      <h3 class="writing-archive-title">{title}</h3>
-                      {excerpt && <p class="writing-archive-excerpt">{excerpt}</p>}
-                    </div>
-                    {imgSrc && (
-                      <div class="writing-archive-thumb">
-                        <img
-                          src={imgSrc}
-                          srcset={localImg?.srcset || undefined}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      </div>
+      {remainingArticles.length > 0 ? (
+        <ul class="writing-archive-list" role="list">
+          {remainingArticles.map((article) => {
+            const href = articleHref(article);
+            const external = isExternalArticle(article);
+            const title = sanitizeVisibleCopy(article.title) || article.title;
+            const excerpt = sanitizeVisibleCopy(article.excerpt);
+            const formattedDate = formatFeedDate(article.isoDate, {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+            });
+            const localImg = resolveLocalRendition(article.image);
+            const imgSrc = localImg?.src || article.image;
+            return (
+              <li class="writing-archive-item">
+                <a
+                  class="writing-archive-row"
+                  href={href}
+                  target={external ? '_blank' : undefined}
+                  rel={external ? 'noopener noreferrer' : undefined}
+                >
+                  <div class="writing-archive-body">
+                    {formattedDate && (
+                      <time
+                        class="writing-archive-meta font-mono"
+                        datetime={article.isoDate || undefined}
+                      >
+                        {formattedDate}
+                      </time>
                     )}
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+                    <h3 class="writing-archive-title">{title}</h3>
+                    {excerpt && <p class="writing-archive-excerpt">{excerpt}</p>}
+                  </div>
+                  {imgSrc && (
+                    <div class="writing-archive-thumb">
+                      <img
+                        src={imgSrc}
+                        srcset={localImg?.srcset || undefined}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    </div>
+                  )}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p class="writing-empty">More articles coming soon.</p>
       )}
     </section>
   </div>
@@ -132,21 +174,21 @@ const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
 
 <style>
   .writing-page {
-    --substack-measure: 700px;
-    padding-block-end: clamp(4rem, 8vw, 7rem);
+    --writing-measure: 1200px;
+    padding-block-end: clamp(48px, 6vw, 96px);
     min-inline-size: 0;
     border-radius: 0;
   }
 
   .writing-page-head {
     inline-size: 100%;
-    max-inline-size: var(--substack-measure);
+    max-inline-size: var(--writing-measure);
     margin-inline: auto;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.9rem;
-    padding-block: clamp(2.5rem, 5vw, 4.5rem) clamp(2rem, 4vw, 3.25rem);
+    gap: 14px;
+    padding-block: clamp(36px, 4.5vw, 68px) clamp(28px, 3.5vw, 48px);
     min-inline-size: 0;
     border-radius: 0;
   }
@@ -154,7 +196,7 @@ const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
   .writing-kicker {
     margin: 0;
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.2em;
     text-transform: uppercase;
@@ -164,7 +206,7 @@ const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
 
   .writing-page-title {
     font-family: var(--font-display);
-    font-size: clamp(2.1rem, 4.8vw, 3.6rem);
+    font-size: clamp(32px, 4vw, 54px);
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.01em;
@@ -176,11 +218,11 @@ const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
 
   .writing-page-lede {
     font-family: var(--font-body);
-    font-size: 1.05rem;
+    font-size: clamp(15.5px, 1.25vw, 18px);
     color: var(--muted);
-    max-inline-size: 58ch;
+    max-inline-size: 60ch;
     margin: 0;
-    line-height: 1.65;
+    line-height: 1.62;
     overflow-wrap: break-word;
   }
 
@@ -188,18 +230,23 @@ const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.75rem 1.15rem;
-    margin-block-start: 0.35rem;
+    gap: 12px 18px;
+    margin-block-start: 6px;
     max-inline-size: 100%;
   }
 
   .writing-page-actions :global(.btn) {
     border-radius: 0;
+    transition-timing-function: ease-in-out;
   }
 
+  .writing-tiles-section,
   .writing-goals-section,
-  .writing-list-section {
-    padding-block: clamp(2.5rem, 5vw, 4.25rem);
+  .writing-articles-section {
+    inline-size: 100%;
+    max-inline-size: var(--writing-measure);
+    margin-inline: auto;
+    padding-block: clamp(36px, 4.2vw, 60px);
     border-block-start: 1px solid var(--hairline);
     border-radius: 0;
     min-inline-size: 0;
@@ -207,9 +254,7 @@ const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
 
   .writing-section-head {
     inline-size: 100%;
-    max-inline-size: var(--substack-measure);
-    margin-inline: auto;
-    margin-block-end: clamp(1.75rem, 3.5vw, 2.5rem);
+    margin-block-end: clamp(22px, 2.5vw, 34px);
     min-inline-size: 0;
   }
 
@@ -217,7 +262,7 @@ const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
     margin: 0;
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-size: clamp(24px, 2.4vw, 34px);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--ink);
@@ -225,69 +270,127 @@ const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
     overflow-wrap: break-word;
   }
 
-  .writing-spread-wrap {
+  .writing-tiles-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(1.25rem, 2.2vw, 2rem);
+    min-inline-size: 0;
+    border-radius: 0;
+  }
+
+  .writing-tile-item {
+    display: flex;
+    min-inline-size: 0;
+    border-radius: 0;
+  }
+
+  .writing-tile {
+    display: flex;
+    flex-direction: column;
     inline-size: 100%;
     min-inline-size: 0;
+    text-decoration: none;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 0;
     overflow: clip;
+    transition: border-color 0.22s ease-in-out, background-color 0.22s ease-in-out;
+  }
+
+  .writing-tile:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
+    border-color: var(--ink);
     border-radius: 0;
   }
 
-  .writing-spread-wrap :global(.magazine-spread) {
-    padding-block: 0;
+  .writing-tile-media {
+    aspect-ratio: 16 / 9;
+    inline-size: 100%;
+    overflow: clip;
+    background: var(--surface-2);
+    border-block-end: 1px solid var(--hairline);
+    border-radius: 0;
+    flex: 0 0 auto;
+  }
+
+  .writing-tile-media img {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 0;
+    transition: transform 0.28s ease-in-out;
+  }
+
+  .writing-tile-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-block: clamp(16px, 1.5vw, 22px);
+    padding-inline: clamp(16px, 1.6vw, 24px);
+    flex: 1 1 auto;
+    min-inline-size: 0;
     border-radius: 0;
   }
 
-  .writing-spread-wrap :global(.magazine-feature-image),
-  .writing-spread-wrap :global(.magazine-feature-image img),
-  .writing-spread-wrap :global(.magazine-rail-thumb),
-  .writing-spread-wrap :global(.magazine-rail-thumb img) {
-    border-radius: 0;
+  .writing-tile-date {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    line-height: 1.3;
+  }
+
+  .writing-tile-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(18px, 1.55vw, 22px);
+    font-weight: 700;
+    line-height: 1.28;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+    overflow-wrap: break-word;
+    transition: color 0.22s ease-in-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .writing-tile:hover {
+      border-color: var(--ink);
+      background: var(--surface-2);
+    }
+
+    .writing-tile:hover .writing-tile-title {
+      text-decoration: underline;
+      text-underline-offset: 0.22em;
+      text-decoration-thickness: 1px;
+    }
+
+    .writing-tile:hover .writing-tile-media img {
+      transform: scale(1.02);
+    }
+  }
+
+  @media (max-width: 767px) {
+    .writing-tiles-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   .writing-empty {
     inline-size: 100%;
-    max-inline-size: var(--substack-measure);
-    margin-inline: auto;
     color: var(--muted);
-    padding-block: 2.5rem;
-    margin-block: 0;
-  }
-
-  .writing-archive {
-    inline-size: 100%;
-    max-inline-size: var(--substack-measure);
-    margin-inline: auto;
-    margin-block-start: clamp(3rem, 6vw, 4.5rem);
-    min-inline-size: 0;
-    border-radius: 0;
-  }
-
-  .writing-archive-head {
-    display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
-    margin-block-end: 1.5rem;
-    min-inline-size: 0;
-  }
-
-  .writing-archive-heading {
+    font-size: 15px;
+    line-height: 1.6;
+    padding-block: 24px;
     margin: 0;
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: clamp(1.25rem, 2.2vw, 1.65rem);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--ink);
-    line-height: 1.18;
-    overflow-wrap: break-word;
-  }
-
-  .writing-archive-lede {
-    margin: 0;
-    font-family: var(--font-body);
-    font-size: 0.96rem;
-    line-height: 1.55;
-    color: var(--muted);
   }
 
   .writing-archive-list {
@@ -310,13 +413,13 @@ const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
-    gap: 1rem 1.5rem;
-    padding-block: 1.4rem;
+    gap: 16px 24px;
+    padding-block: clamp(18px, 1.6vw, 24px);
     padding-inline: 0;
     text-decoration: none;
     color: var(--ink);
     border-radius: 0;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
+    transition: background-color 0.22s ease-in-out, border-color 0.22s ease-in-out;
   }
 
   .writing-archive-row:focus-visible {
@@ -333,20 +436,20 @@ const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
     }
 
     .writing-archive-row:hover .writing-archive-thumb {
-      border-color: var(--hairline-strong);
+      border-color: var(--ink);
     }
   }
 
   .writing-archive-body {
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
+    gap: 8px;
     min-inline-size: 0;
   }
 
   .writing-archive-meta {
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: 12px;
     font-weight: 500;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -357,9 +460,9 @@ const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
   .writing-archive-title {
     margin: 0;
     font-family: var(--font-display);
-    font-size: clamp(1.05rem, 1.8vw, 1.3rem);
+    font-size: clamp(18px, 1.5vw, 22px);
     font-weight: 700;
-    line-height: 1.3;
+    line-height: 1.28;
     color: var(--ink);
     overflow-wrap: break-word;
   }
@@ -368,8 +471,9 @@ const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
     margin: 0;
     font-family: var(--font-body);
     color: var(--muted);
-    font-size: 0.94rem;
-    line-height: 1.58;
+    font-size: clamp(14.5px, 1.05vw, 15.5px);
+    line-height: 1.6;
+    max-inline-size: 68ch;
     overflow-wrap: break-word;
     display: -webkit-box;
     -webkit-line-clamp: 3;
@@ -385,7 +489,7 @@ const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
     border: 1px solid var(--hairline);
     border-radius: 0;
     flex: 0 0 auto;
-    transition: border-color 0.2s ease;
+    transition: border-color 0.22s ease-in-out;
   }
 
   .writing-archive-thumb img {
@@ -400,7 +504,7 @@ const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
   @media (max-width: 600px) {
     .writing-archive-row {
       grid-template-columns: minmax(0, 1fr);
-      gap: 0.9rem;
+      gap: 14px;
     }
 
     .writing-archive-thumb {
@@ -409,9 +513,16 @@ const archiveArticles = allArticles.slice(MAGAZINE_LIMIT);
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .writing-tile,
+    .writing-tile-media img,
+    .writing-tile-title,
     .writing-archive-row,
     .writing-archive-thumb {
       transition: none;
+    }
+
+    .writing-tile:hover .writing-tile-media img {
+      transform: none;
     }
   }
 </style>

@@ -1,0 +1,864 @@
+---
+export type NormalizedStatus = 'done' | 'in-progress' | 'queued';
+export type StageStatus = 'achieved' | 'active' | 'upcoming' | 'target';
+
+export interface GoalChecklistItem {
+  title: string;
+  desc?: string;
+  status: NormalizedStatus;
+  statusLabel: string;
+  milestoneId?: string;
+}
+
+export interface GoalStageItem {
+  status: StageStatus;
+  statusLabel: string;
+  name: string;
+  detail: string;
+}
+
+export type GoalModalGroup =
+  | {
+      id: string;
+      kind: 'checklist';
+      title: string;
+      kicker?: string;
+      progressText: string;
+      items: GoalChecklistItem[];
+    }
+  | {
+      id: string;
+      kind: 'stages';
+      title: string;
+      kicker?: string;
+      progressText: string;
+      stages: GoalStageItem[];
+    };
+
+interface Props {
+  groups: GoalModalGroup[];
+  cccPageHref: string;
+}
+
+const { groups, cccPageHref } = Astro.props;
+---
+
+<dialog
+  id="goal-modal"
+  class="goal-modal"
+  closedby="any"
+  aria-labelledby="goal-modal-title"
+  tabindex="-1"
+  data-goal-modal
+>
+  <header class="goal-modal-head">
+    <div class="goal-modal-titles">
+      <p class="goal-modal-kicker font-mono" data-goal-modal-kicker hidden></p>
+      <h2 id="goal-modal-title" class="goal-modal-title" data-goal-modal-title>Goal details</h2>
+      <span class="goal-progress font-mono" data-goal-modal-progress></span>
+    </div>
+    <button
+      type="button"
+      class="goal-modal-close"
+      data-goal-modal-close
+      aria-label="Close goal details"
+    >&times;</button>
+  </header>
+
+  <div class="goal-modal-body" data-goal-modal-body>
+    {groups.map((group) => (
+      <div
+        class="goal-modal-panel"
+        data-goal-panel={group.id}
+        data-goal-kicker={group.kicker || ''}
+        data-goal-title={group.title}
+        data-goal-progress={group.progressText}
+        hidden
+      >
+        {group.kind === 'checklist' ? (
+          <ul class="checklist-container" role="list">
+            {group.items.map((item) => (
+              <li
+                class:list={['checklist-card', { completed: item.status === 'done' }]}
+                data-milestone-card={item.milestoneId || undefined}
+              >
+                <div class="checklist-left">
+                  <span
+                    class:list={['checklist-mark', `is-${item.status}`, { 'is-done': item.status === 'done' }]}
+                    aria-hidden="true"
+                  >
+                    {item.status === 'done' && (
+                      <svg viewBox="0 0 16 16" width="12" height="12" fill="none">
+                        <path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="square" />
+                      </svg>
+                    )}
+                  </span>
+                  <div class="checklist-info">
+                    <h3 class="checklist-title">{item.title}</h3>
+                    {item.desc && <p class="checklist-desc">{item.desc}</p>}
+                  </div>
+                </div>
+                <span class="status-badge font-mono" data-status={item.status}>{item.statusLabel}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <ol class="progression-stages-list" role="list">
+            {group.stages.map((stage, index) => (
+              <li class="progression-stage-item" data-stage-status={stage.status}>
+                <div class="stage-head">
+                  <span class="stage-number font-mono">{String(index + 1).padStart(2, '0')}</span>
+                  <div class:list={['stage-bar', stage.status]} aria-hidden="true"></div>
+                  <span class:list={['stage-badge', 'font-mono', stage.status]}>{stage.statusLabel}</span>
+                </div>
+                <div class="stage-body">
+                  <h3 class="stage-name">{stage.name}</h3>
+                  <p class="stage-detail">{stage.detail}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+
+        {group.id === 'ccc' && (
+          <p class="ccc-page-link">
+            <a class="btn btn-ghost" href={cccPageHref}>CCC <span aria-hidden="true">&rarr;</span></a>
+          </p>
+        )}
+      </div>
+    ))}
+  </div>
+</dialog>
+
+<style>
+  .goal-modal {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    padding: 0;
+    inline-size: min(92vw, 720px);
+    max-inline-size: calc(100vw - 2rem);
+    max-block-size: min(86svh, 760px);
+    border: 1px solid var(--hairline-strong);
+    border-radius: 0;
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85);
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(10px);
+    transition-property: opacity, transform, display, overlay;
+    transition-duration: 0.24s;
+    transition-timing-function: ease-in-out;
+    transition-behavior: allow-discrete;
+  }
+
+  .goal-modal[open] {
+    display: flex;
+    flex-direction: column;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @starting-style {
+    .goal-modal[open] {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+  }
+
+  .goal-modal[data-closing='true'] {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  dialog:modal {
+    overscroll-behavior: contain;
+  }
+
+  .goal-modal:focus {
+    outline: none;
+  }
+
+  .goal-modal:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: 0;
+  }
+
+  dialog::backdrop {
+    background: rgb(0 0 0 / 0.84);
+    overflow: hidden;
+    overscroll-behavior: contain;
+    opacity: 0;
+    transition-property: opacity, display, overlay;
+    transition-duration: 0.24s;
+    transition-timing-function: ease-in-out;
+    transition-behavior: allow-discrete;
+  }
+
+  .goal-modal[open]::backdrop {
+    opacity: 1;
+  }
+
+  @starting-style {
+    .goal-modal[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  .goal-modal[data-closing='true']::backdrop {
+    opacity: 0;
+  }
+
+  .goal-modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding-block: clamp(18px, 1.8vw, 24px);
+    padding-inline: clamp(18px, 2.2vw, 28px);
+    border-block-end: 1px solid var(--hairline);
+    border-radius: 0;
+    background: var(--surface);
+    flex: 0 0 auto;
+    min-inline-size: 0;
+  }
+
+  .goal-modal-titles {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-inline-size: 0;
+  }
+
+  .goal-modal-kicker {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    line-height: 1.3;
+  }
+
+  .goal-modal-kicker[hidden] {
+    display: none;
+  }
+
+  .goal-modal-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(20px, 2vw, 26px);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink);
+    line-height: 1.15;
+    overflow-wrap: break-word;
+  }
+
+  .goal-progress {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+    line-height: 1.25;
+  }
+
+  .goal-modal-close {
+    appearance: none;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 0;
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 28px;
+    font-weight: 300;
+    line-height: 1;
+    padding: 0;
+    margin: -6px -6px 0 0;
+    inline-size: 44px;
+    block-size: 44px;
+    min-inline-size: 44px;
+    min-block-size: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex: 0 0 auto;
+    outline: none;
+    box-shadow: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity 0.2s ease-in-out, color 0.2s ease-in-out, border-color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .goal-modal-close:hover {
+      border-color: var(--hairline-strong);
+      background: var(--surface-2);
+    }
+  }
+
+  .goal-modal-close:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: 0;
+  }
+
+  .goal-modal-body {
+    flex: 1 1 auto;
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-block: clamp(16px, 1.8vw, 22px) clamp(20px, 2.2vw, 28px);
+    padding-inline: clamp(18px, 2.2vw, 28px);
+    border-radius: 0;
+  }
+
+  .goal-modal-panel {
+    border-radius: 0;
+  }
+
+  .goal-modal-panel[hidden] {
+    display: none;
+  }
+
+  .checklist-container {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    border-block-start: 1px solid var(--hairline);
+    border-radius: 0;
+  }
+
+  .checklist-card {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px 20px;
+    padding-block: 16px;
+    padding-inline: 0;
+    border-block-end: 1px solid var(--hairline);
+    border-radius: 0;
+    min-inline-size: 0;
+  }
+
+  .checklist-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    flex: 1 1 auto;
+    min-inline-size: 0;
+  }
+
+  .checklist-mark {
+    display: inline-grid;
+    place-items: center;
+    margin-block-start: 2px;
+    inline-size: 18px;
+    block-size: 18px;
+    flex: 0 0 auto;
+    border: 1px solid var(--hairline-strong);
+    border-radius: 0;
+    color: var(--bg);
+    background: transparent;
+  }
+
+  .checklist-mark.is-done {
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+
+  .checklist-mark.is-in-progress {
+    border-color: var(--ink);
+  }
+
+  .checklist-mark.is-in-progress::after {
+    content: '';
+    inline-size: 6px;
+    block-size: 6px;
+    background: var(--ink);
+    border-radius: 0;
+  }
+
+  .checklist-info {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .checklist-title {
+    margin: 0;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 15.5px;
+    line-height: 1.42;
+    color: var(--ink);
+    overflow-wrap: break-word;
+  }
+
+  .checklist-card.completed .checklist-title {
+    color: var(--muted);
+  }
+
+  .checklist-desc {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--muted);
+    overflow-wrap: break-word;
+  }
+
+  .status-badge {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    margin-block-start: 1px;
+    padding-block: 4px;
+    padding-inline: 9px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1.25;
+    border: 1px solid var(--border);
+    border-radius: 0;
+    color: var(--muted);
+    background: transparent;
+    white-space: nowrap;
+  }
+
+  .status-badge[data-status='done'] {
+    color: var(--ink);
+    border-color: var(--hairline-strong);
+    background: var(--surface-2);
+  }
+
+  .status-badge[data-status='in-progress'] {
+    color: var(--ink);
+    border-color: var(--hairline-strong);
+    background: var(--surface);
+  }
+
+  .progression-stages-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    border-block-start: 1px solid var(--hairline);
+    border-radius: 0;
+  }
+
+  .progression-stage-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-block: 16px;
+    padding-inline: 0;
+    border-block-end: 1px solid var(--hairline);
+    border-radius: 0;
+    min-inline-size: 0;
+  }
+
+  .stage-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-inline-size: 0;
+  }
+
+  .stage-number {
+    flex: 0 0 auto;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    line-height: 1.25;
+  }
+
+  .stage-bar {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    block-size: 3px;
+    border-radius: 0;
+    background: var(--hairline);
+  }
+
+  .stage-bar.achieved {
+    background: var(--ink);
+  }
+
+  .stage-bar.active {
+    background: linear-gradient(
+      to right,
+      var(--ink) 0%,
+      var(--ink) 55%,
+      var(--hairline) 55%,
+      var(--hairline) 100%
+    );
+  }
+
+  .stage-bar.upcoming {
+    background: var(--hairline-strong);
+  }
+
+  .stage-bar.target {
+    background: var(--hairline);
+  }
+
+  .stage-badge {
+    flex: 0 0 auto;
+    padding-block: 4px;
+    padding-inline: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1.25;
+    border: 1px solid var(--border);
+    border-radius: 0;
+    color: var(--muted);
+    background: transparent;
+    white-space: nowrap;
+  }
+
+  .stage-badge.achieved {
+    color: var(--ink);
+    border-color: var(--hairline-strong);
+    background: var(--surface-2);
+  }
+
+  .stage-badge.active {
+    color: var(--ink);
+    border-color: var(--hairline-strong);
+    background: var(--surface);
+  }
+
+  .stage-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-inline-size: 0;
+  }
+
+  .stage-name {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink);
+    line-height: 1.3;
+    overflow-wrap: break-word;
+  }
+
+  .stage-detail {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--muted);
+    overflow-wrap: break-word;
+  }
+
+  .ccc-page-link {
+    margin-block: 20px 0;
+    margin-inline: 0;
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .ccc-page-link :global(.btn) {
+    border-radius: 0;
+    transition-timing-function: ease-in-out;
+  }
+
+  @media (max-width: 540px) {
+    .goal-modal {
+      inline-size: calc(100vw - 1.5rem);
+      max-inline-size: calc(100vw - 1.5rem);
+      max-block-size: 88svh;
+    }
+
+    .checklist-card {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .status-badge {
+      margin-block-start: 0;
+      margin-inline-start: calc(18px + 14px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .goal-modal,
+    .goal-modal[open],
+    .goal-modal[data-closing='true'] {
+      transform: none;
+      transition-property: opacity, display, overlay;
+      transition-duration: 0.12s;
+      transition-timing-function: ease-in-out;
+      transition-behavior: allow-discrete;
+    }
+
+    @starting-style {
+      .goal-modal[open] {
+        opacity: 0;
+        transform: none;
+      }
+    }
+
+    dialog::backdrop {
+      transition-duration: 0.12s;
+      transition-timing-function: ease-in-out;
+    }
+
+    .goal-modal-close {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  import { createPageScope } from '@andrew/ui/scripts/page-scope.ts';
+
+  function initGoalModal() {
+    const dialog = document.querySelector<HTMLDialogElement>('[data-goal-modal]');
+    if (!dialog || dialog.dataset.goalModalReady === 'true') return;
+    dialog.dataset.goalModalReady = 'true';
+
+    const { on, cleanup, timeout } = createPageScope(dialog);
+    const kickerEl = dialog.querySelector<HTMLElement>('[data-goal-modal-kicker]');
+    const titleEl = dialog.querySelector<HTMLElement>('[data-goal-modal-title]');
+    const progressEl = dialog.querySelector<HTMLElement>('[data-goal-modal-progress]');
+    const closeBtn = dialog.querySelector<HTMLButtonElement>('[data-goal-modal-close]');
+    const bodyEl = dialog.querySelector<HTMLElement>('[data-goal-modal-body]');
+    const panels = Array.from(dialog.querySelectorAll<HTMLElement>('[data-goal-panel]'));
+    const triggers = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-goal-trigger]'));
+
+    const supportsDiscreteOverlay =
+      typeof CSS !== 'undefined' &&
+      typeof CSS.supports === 'function' &&
+      CSS.supports('transition-behavior', 'allow-discrete') &&
+      CSS.supports('overlay', 'auto');
+
+    const prefersReducedMotion = () =>
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let lastTrigger: HTMLElement | null = null;
+    let isClosing = false;
+    let touchStartY = 0;
+    let scrollGuardActive = false;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (!dialog.open) return;
+      const target = e.target as Node | null;
+      if (bodyEl && target && bodyEl.contains(target)) {
+        const canScroll = bodyEl.scrollHeight > bodyEl.clientHeight + 1;
+        if (!canScroll) {
+          e.preventDefault();
+          return;
+        }
+        const atTop = bodyEl.scrollTop <= 0;
+        const atBottom = bodyEl.scrollTop + bodyEl.clientHeight >= bodyEl.scrollHeight - 1;
+        if ((atTop && e.deltaY < 0) || (atBottom && e.deltaY > 0)) {
+          e.preventDefault();
+        }
+        return;
+      }
+      e.preventDefault();
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        touchStartY = e.touches[0].clientY;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!dialog.open) return;
+      const target = e.target as Node | null;
+      if (bodyEl && target && bodyEl.contains(target)) {
+        const canScroll = bodyEl.scrollHeight > bodyEl.clientHeight + 1;
+        if (!canScroll) {
+          e.preventDefault();
+          return;
+        }
+        const currentY = e.touches.length > 0 ? e.touches[0].clientY : touchStartY;
+        const deltaY = currentY - touchStartY;
+        const atTop = bodyEl.scrollTop <= 0;
+        const atBottom = bodyEl.scrollTop + bodyEl.clientHeight >= bodyEl.scrollHeight - 1;
+        if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) {
+          e.preventDefault();
+        }
+        return;
+      }
+      e.preventDefault();
+    };
+
+    const attachScrollGuard = () => {
+      if (scrollGuardActive) return;
+      scrollGuardActive = true;
+      document.addEventListener('wheel', handleWheel, { passive: false });
+      document.addEventListener('touchstart', handleTouchStart, { passive: true });
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    };
+
+    const detachScrollGuard = () => {
+      if (!scrollGuardActive) return;
+      scrollGuardActive = false;
+      document.removeEventListener('wheel', handleWheel);
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+    };
+
+    cleanup(detachScrollGuard);
+
+    const openModal = (triggerBtn: HTMLButtonElement) => {
+      const groupId = triggerBtn.dataset.goalTrigger;
+      if (!groupId) return;
+      const targetPanel = panels.find((panel) => panel.dataset.goalPanel === groupId);
+      if (!targetPanel) return;
+
+      lastTrigger = triggerBtn;
+      isClosing = false;
+      dialog.removeAttribute('data-closing');
+
+      panels.forEach((panel) => {
+        panel.hidden = panel !== targetPanel;
+      });
+
+      const kicker = targetPanel.dataset.goalKicker || '';
+      if (kickerEl) {
+        kickerEl.textContent = kicker;
+        kickerEl.hidden = !kicker;
+      }
+      if (titleEl) {
+        titleEl.textContent = targetPanel.dataset.goalTitle || '';
+      }
+      if (progressEl) {
+        progressEl.textContent = targetPanel.dataset.goalProgress || '';
+      }
+
+      if (!dialog.open) {
+        dialog.showModal();
+      }
+      if (bodyEl) {
+        bodyEl.scrollTop = 0;
+      }
+      attachScrollGuard();
+      dialog.focus({ preventScroll: true });
+    };
+
+    const finishClose = () => {
+      isClosing = false;
+      dialog.removeAttribute('data-closing');
+      if (dialog.open) {
+        dialog.close();
+      }
+    };
+
+    const closeModal = () => {
+      if (!dialog.open) return;
+      if (supportsDiscreteOverlay || prefersReducedMotion()) {
+        finishClose();
+        return;
+      }
+      if (isClosing) return;
+      isClosing = true;
+      dialog.dataset.closing = 'true';
+
+      const animations = typeof dialog.getAnimations === 'function' ? dialog.getAnimations() : [];
+      if (animations.length === 0) {
+        finishClose();
+        return;
+      }
+
+      let settled = false;
+      const done = () => {
+        if (settled) return;
+        settled = true;
+        finishClose();
+      };
+      Promise.allSettled(animations.map((anim) => anim.finished)).then(done);
+      timeout(done, 280);
+    };
+
+    triggers.forEach((btn) => {
+      on(btn, 'click', () => {
+        openModal(btn);
+      });
+    });
+
+    if (closeBtn) {
+      on(closeBtn, 'click', () => {
+        closeModal();
+      });
+    }
+
+    on(dialog, 'cancel', (e) => {
+      if (supportsDiscreteOverlay || prefersReducedMotion()) return;
+      e.preventDefault();
+      closeModal();
+    });
+
+    on(dialog, 'close', () => {
+      isClosing = false;
+      dialog.removeAttribute('data-closing');
+      detachScrollGuard();
+      panels.forEach((panel) => {
+        panel.hidden = true;
+      });
+      const triggerToFocus = lastTrigger;
+      lastTrigger = null;
+      if (triggerToFocus && triggerToFocus.isConnected) {
+        triggerToFocus.focus({ preventScroll: true });
+      }
+    });
+
+    if (!('closedBy' in HTMLDialogElement.prototype)) {
+      const isOutside = (e: PointerEvent) => {
+        const rect = dialog.getBoundingClientRect();
+        return (
+          e.clientX < rect.left ||
+          e.clientX > rect.right ||
+          e.clientY < rect.top ||
+          e.clientY > rect.bottom
+        );
+      };
+      let pressedOutside = false;
+      on(dialog, 'pointerdown', (e) => {
+        pressedOutside = dialog.open && isOutside(e as PointerEvent);
+      });
+      on(dialog, 'pointerup', (e) => {
+        const shouldClose = pressedOutside && dialog.open && isOutside(e as PointerEvent);
+        pressedOutside = false;
+        if (shouldClose) closeModal();
+      });
+      on(dialog, 'pointercancel', () => {
+        pressedOutside = false;
+      });
+    }
+  }
+
+  initGoalModal();
+  document.addEventListener('astro:page-load', initGoalModal);
+</script>
