@@ -274,7 +274,13 @@ test.describe('Global QA', () => {
     const about = page.locator('#about');
     await expect(about.locator('.about-portrait')).toBeVisible();
     await expect(about.locator('.about-headline')).toBeVisible();
-    await expect(about.locator('.about-body')).toHaveText([/I'm building three brands/i, /My workflow uses/i]);
+    await expect(about.locator('.about-body')).toHaveText([
+      /building three brands in public/i,
+      /My workflow uses/i,
+      /The through line is simple/i,
+    ]);
+    await expect(page.locator('#writing')).toHaveCount(0);
+    await expect(page.locator('.press-bio')).toHaveCount(0);
     await expect(page.locator('#goals')).toHaveCount(0);
   });
 
@@ -319,11 +325,15 @@ test.describe('Global QA', () => {
     await expect(page.locator('#command-palette a[href^="/hey-this-is-andrew/"]').first()).toBeVisible();
   });
 
-  test('About quote: left aligned, all caps', async ({ page }) => {
+  test('About quote: cinematic serif, sentence case, responsive attribution', async ({ page, isMobile }) => {
     await page.goto('./about/');
-    const q = page.locator('.quote-band blockquote p');
-    await expect(q).toHaveCSS('text-align', 'left');
-    await expect(q).toHaveCSS('text-transform', 'uppercase');
+    const q = page.locator('.quote-band--cinematic blockquote p');
+    await expect(q).toHaveCSS('text-transform', 'none');
+    await expect(q).toHaveCSS('font-family', /Cinzel/i);
+    await expect(page.locator('.quote-band--cinematic cite')).toHaveCSS(
+      'text-align',
+      isMobile ? 'left' : 'center',
+    );
   });
 
   test('Gear is its own page, reached from the nav', async ({ page, isMobile }) => {

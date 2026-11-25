@@ -8,6 +8,7 @@ const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 const STATS = pressData.stats;
 const ASSETS = pressData.assets.map(a => ({...a, href: `${base}${a.href}`}));
+const PRIMARY_ASSET = ASSETS[0];
 ---
   <section id="press" class="press-section" aria-labelledby="press-heading">
     <div class="container">
@@ -17,55 +18,23 @@ const ASSETS = pressData.assets.map(a => ({...a, href: `${base}${a.href}`}));
         lede="Everything a brand or outlet needs to feature Andrew. For anything else, reach out directly."
       />
 
-      <div class="press-grid">
-        <div class="press-bio reveal">
-          <h2 class="press-subhead">Bio</h2>
-          {pressData.bio.map(pText => (
-            <p set:html={pText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')} />
+      <div class="press-stats reveal" style="--rd: 80ms">
+        <h2 class="press-subhead">Audience</h2>
+        <dl class="stats-list">
+          {/* Only confirmed numbers are listed; a row with no value yet
+              (Newsletter, Monthly reach) stays out until it has one. */}
+          {STATS.filter((s) => s.value).map((s) => (
+            <div class="stat-row">
+              <dt class="stat-value">
+                {s.value ?? (<><span class="stat-pending" aria-hidden="true"></span><span class="vh">Not yet confirmed</span></>)}
+              </dt>
+              <dd class="stat-label">{s.label}</dd>
+              <dd class="stat-note">{s.note}</dd>
+            </div>
           ))}
-        </div>
-
-        <div class="press-stats reveal" style="--rd: 80ms">
-          <h2 class="press-subhead">Audience</h2>
-          <dl class="stats-list">
-            {/* Only confirmed numbers are listed; a row with no value yet
-                (Newsletter, Monthly reach) stays out until it has one. */}
-            {STATS.filter((s) => s.value).map((s) => (
-              <div class="stat-row">
-                <dt class="stat-value">
-                  {s.value ?? (<><span class="stat-pending" aria-hidden="true"></span><span class="vh">Not yet confirmed</span></>)}
-                </dt>
-                <dd class="stat-label">{s.label}</dd>
-                <dd class="stat-note">{s.note}</dd>
-              </div>
-            ))}
-          </dl>
-          <p class="stats-footnote">
-            Numbers are updated as they are confirmed. No estimates published here.
-          </p>
-        </div>
-      </div>
-
-      <div class="press-assets reveal" style="--rd: 120ms">
-        <h2 class="press-subhead">Brand assets</h2>
-        <ul class="asset-list">
-          {ASSETS.map((a) => (
-            <li class="asset-item">
-              <div class="asset-copy">
-                <h3 class="asset-name">{a.name}</h3>
-                <p class="asset-desc">{a.desc}</p>
-              </div>
-              <a class="btn btn-ghost asset-btn" href={a.href} download={a.filename}>
-                Download
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                  <path d="M7 1v9m0 0L3 6m4 4l4-4M1 13h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </a>
-            </li>
-          ))}
-        </ul>
-        <p class="assets-footnote">
-          High resolution versions, product shots, and additional formats are available on request.
+        </dl>
+        <p class="stats-footnote">
+          Numbers are updated as they are confirmed. No estimates published here.
         </p>
       </div>
 
@@ -83,12 +52,25 @@ const ASSETS = pressData.assets.map(a => ({...a, href: `${base}${a.href}`}));
           For screeners, review copies, event credentials, partnerships, and
           media inquiries, email works best.
         </p>
-        <a class="btn btn-primary" href={'mailto:' + CONTACT_EMAIL + '?subject=' + encodeURIComponent('Press inquiry')}>
-          {CONTACT_EMAIL}
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-            <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </a>
+        <div class="press-contact-actions">
+          <a class="btn btn-primary" href={'mailto:' + CONTACT_EMAIL + '?subject=' + encodeURIComponent('Press inquiry')}>
+            {CONTACT_EMAIL}
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+          {PRIMARY_ASSET && (
+            <a class="btn btn-primary" href={PRIMARY_ASSET.href} download={PRIMARY_ASSET.filename}>
+              Brand assets
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M7 1v9m0 0L3 6m4 4l4-4M1 13h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+          )}
+        </div>
+        <p class="assets-footnote">
+          High resolution versions, product shots, and additional formats are available on request.
+        </p>
       </div>
     </div>
   </section>
@@ -97,13 +79,8 @@ const ASSETS = pressData.assets.map(a => ({...a, href: `${base}${a.href}`}));
   .press-section {
     padding: clamp(2rem, 5vw, 4rem) 0 clamp(4rem, 8vw, 7rem);
   }
-  .press-grid {
-    display: grid;
-    gap: clamp(2rem, 5vw, 4rem);
-    margin-top: clamp(2rem, 5vw, 3.5rem);
-  }
-  @media (min-width: 900px) {
-    .press-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); }
+  .press-stats {
+    margin-top: clamp(2rem, 4vw, 3rem);
   }
   .press-subhead {
     font-family: var(--font-display);
@@ -113,18 +90,17 @@ const ASSETS = pressData.assets.map(a => ({...a, href: `${base}${a.href}`}));
     text-transform: uppercase;
     margin: 0 0 1.25rem;
   }
-  .press-bio p {
-    color: rgba(245, 245, 245, 0.78);
-    font-size: 1rem;
-    line-height: 1.75;
-    margin: 0 0 1.25rem;
-    max-width: 58ch;
-  }
-  .press-bio p strong { color: var(--ink); }
   .stats-list {
     margin: 0;
     padding: 0;
     border-top: 1px solid var(--line);
+  }
+  @media (min-width: 720px) {
+    .stats-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: clamp(2rem, 4vw, 3.5rem);
+    }
   }
   .stat-row {
     display: grid;
@@ -174,44 +150,11 @@ const ASSETS = pressData.assets.map(a => ({...a, href: `${base}${a.href}`}));
     text-transform: uppercase;
     color: var(--muted);
   }
-  .press-assets,
   .press-partners,
   .press-contact {
     margin-top: clamp(2.5rem, 5vw, 4rem);
     padding-top: clamp(2rem, 4vw, 3rem);
     border-top: 1px solid var(--line);
-  }
-  .asset-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    border-top: 1px solid var(--line);
-  }
-  .asset-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1.5rem;
-    padding: 1.25rem 0;
-    border-bottom: 1px solid var(--line);
-  }
-  .asset-name {
-    margin: 0 0 0.35rem;
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1rem;
-  }
-  .asset-desc {
-    margin: 0;
-    color: var(--muted);
-    font-size: 0.9rem;
-    line-height: 1.6;
-  }
-  .asset-btn {
-    flex: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
   }
   .assets-footnote {
     margin: 1rem 0 0;
@@ -238,11 +181,20 @@ const ASSETS = pressData.assets.map(a => ({...a, href: `${base}${a.href}`}));
     margin: 0 0 1.5rem;
     max-width: 52ch;
   }
-  .press-contact .btn {
+  .press-contact-actions {
+    display: inline-grid;
+    grid-template-columns: max-content;
+    gap: 0.75rem;
+  }
+  .press-contact-actions .btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.6rem;
+    width: 100%;
+    border-radius: 0;
     word-break: break-all;
+    transition: background-color 180ms ease-in-out, color 180ms ease-in-out, border-color 180ms ease-in-out;
   }
   @media (max-width: 600px) {
     .press-contact {
@@ -251,9 +203,11 @@ const ASSETS = pressData.assets.map(a => ({...a, href: `${base}${a.href}`}));
       align-items: center;
       text-align: center;
     }
-    .press-contact .btn {
+    .press-contact-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-auto-rows: 1fr;
       width: 100%;
-      justify-content: center;
     }
   }
 </style>

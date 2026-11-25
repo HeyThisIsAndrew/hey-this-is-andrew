@@ -15,7 +15,6 @@ export const BUILD_SECTIONS: PageSection[] = [
 
 export const ABOUT_SECTIONS: PageSection[] = [
   { id: 'story', label: 'Story' },
-  { id: 'writing', label: 'Writing' },
   { id: 'press', label: 'Press kit' },
   { id: 'contact', label: 'Contact' }
 ];
