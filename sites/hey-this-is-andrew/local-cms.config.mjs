@@ -165,39 +165,6 @@ export default {
       ]
     },
     {
-      name: 'events',
-      label: 'Events',
-      file: 'src/data/events.json',
-      itemLabel: 'name',
-      help: 'Upcoming and past events coverage.',
-      fields: [
-        {
-          key: 'upcoming',
-          label: 'Upcoming Events',
-          type: 'array',
-          fields: [
-            { key: 'name', label: 'Event Name', type: 'text' },
-            { key: 'location', label: 'Location', type: 'text' },
-            { key: 'dates', label: 'Dates', type: 'text' },
-            { key: 'blurb', label: 'Blurb', type: 'textarea' },
-            { key: 'url', label: 'URL', type: 'url' }
-          ]
-        },
-        {
-          key: 'past',
-          label: 'Past Coverage',
-          type: 'array',
-          fields: [
-            { key: 'name', label: 'Event Name', type: 'text' },
-            { key: 'location', label: 'Location', type: 'text' },
-            { key: 'dates', label: 'Dates', type: 'text' },
-            { key: 'blurb', label: 'Blurb', type: 'textarea' },
-            { key: 'url', label: 'URL', type: 'url' }
-          ]
-        }
-      ]
-    },
-    {
       name: 'press',
       label: 'Press Kit',
       file: 'src/data/press.json',

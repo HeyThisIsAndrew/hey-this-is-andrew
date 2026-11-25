@@ -57,17 +57,13 @@ export const NAV_LINKS: NavItem[] = [
     label: 'About',
     href: page('about'),
     section: 'about',
-    subsections: [
-      ...toSubsections(ABOUT_SECTIONS, page('about')),
-      { label: 'Events', href: page('events'), kicker: '' },
-    ],
+    subsections: toSubsections(ABOUT_SECTIONS, page('about')),
   },
   { label: 'Work With Me', href: WORK_WITH_ME_HREF, section: 'client-work', subsections: [] },
 ];
 
 export const FOOTER_EXPLORE: FooterLink[] = [
   ...NAV_LINKS.map(({ label, href }) => ({ label, href })),
-  { label: 'Events', href: page('events') },
   // The link-in-bio page: reachable from the site, not only from bios.
   { label: 'Links', href: page('links') },
 ];
