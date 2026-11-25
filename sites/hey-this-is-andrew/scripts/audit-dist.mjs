@@ -168,15 +168,16 @@ for (const page of pages) {
       for (const link of mainLinks) {
         if (!link.startsWith('http') && !link.startsWith('#') && !link.startsWith(base + '#')) {
           const allowed = [base + 'about/', base + 'about/#press', base + 'gear/', base + 'latest/', base + 'rss.xml', base + 'work-with-me/'];
-          // Explore links to Build, which also supports direct goal links.
+          // Explore and hero SpotlightBar link to Build/Writing and hosted articles.
           const isBuildRow = link === base + 'build/' || link.startsWith(base + 'build/#');
+          const isWriting = link === base + 'writing/' || link.startsWith(base + 'writing/');
           // The Gear carousel's cards open their section on /gear/
           // (GearCarousel.astro); /gear/ also opens an item a link names.
           const isGearItem = link.startsWith(base + 'gear/#');
           // The Capture Create Caffeinate and BE Unconventional HQ cards open their brand hub pages.
           const isCcc = link.startsWith(base + 'ccc/');
           const isBrands = link.startsWith(base + 'brands/');
-          if (!allowed.includes(link) && !isBuildRow && !isGearItem && !isCcc && !isBrands && !link.startsWith('mailto:')) {
+          if (!allowed.includes(link) && !isBuildRow && !isWriting && !isGearItem && !isCcc && !isBrands && !link.startsWith('mailto:')) {
             fail(page, 'homepage main link to another internal page not allowed: ' + link);
           }
         }
