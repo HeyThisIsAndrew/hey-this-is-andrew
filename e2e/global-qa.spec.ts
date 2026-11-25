@@ -183,20 +183,14 @@ test.describe('Global QA', () => {
     expect(await unfiltered('video')).toBe(0);
   });
 
-  test('/build: one accordion row per goal group, one open at a time', async ({ page }) => {
+  test('/build redirects to /writing/#goals and /writing goals modal works', async ({ page }) => {
     await page.goto('./build/');
-    const rows = page.locator('#goals [data-accordion-row]');
-    const headers = page.locator('#goals [data-accordion-header]');
-    expect(await headers.count()).toBeGreaterThanOrEqual(3);
-    await expect(rows.first()).toHaveClass(/is-expanded/);
-    for (let i = 1; i < (await headers.count()); i++) {
-      await headers.nth(i).click();
-      await expect(headers.nth(i)).toHaveAttribute('aria-expanded', 'true');
-      await expect(page.locator('#goals [data-accordion-row].is-expanded')).toHaveCount(1);
-      await expect(rows.nth(i).locator('.accordion-body-inner')).toBeVisible();
-    }
-    await headers.last().click();
-    await expect(page.locator('#goals [data-accordion-row].is-expanded')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/writing\/#goals$/);
+
+    const boxes = page.locator('#goals .goal-box');
+    await expect(boxes).toHaveCount(4);
+    await expect(page.locator('#goals .goal-preview-label')).toHaveCount(4);
+
     // No empty anchor sections: every id on the page is unique.
     const dupes = await page.evaluate(() => {
       const seen = new Map<string, number>();
@@ -204,11 +198,31 @@ test.describe('Global QA', () => {
       return [...seen].filter(([, n]) => n > 1).map(([id]) => id);
     });
     expect(dupes).toEqual([]);
-    // A deep link opens its row, and its progress bar shows.
-    await page.goto('./build/#content-engine');
-    await expect(page.locator('#content-engine')).toHaveClass(/is-expanded/);
-    await expect(page.locator('#content-engine .accordion-progress-bar-bg')).toBeVisible();
-    await expect(page.locator('#content-engine .checklist-card').first()).toBeVisible();
+
+    const boxCount = await boxes.count();
+    for (let i = 0; i < boxCount; i++) {
+      const box = boxes.nth(i);
+      const groupId = await box.getAttribute('data-goal-trigger');
+      await box.scrollIntoViewIfNeeded();
+      await box.click();
+
+      const modal = page.locator('dialog#goal-modal[open]');
+      await expect(modal).toBeVisible();
+      const visiblePanels = modal.locator('[data-goal-panel]:not([hidden])');
+      await expect(visiblePanels).toHaveCount(1);
+      expect(await visiblePanels.first().getAttribute('data-goal-panel')).toBe(groupId);
+
+      if (i === 0) {
+        await modal.locator('[data-goal-modal-close]').click();
+      } else if (i === 1) {
+        await page.keyboard.press('Escape');
+      } else {
+        await page.mouse.move(5, 5);
+        await page.mouse.down();
+        await page.mouse.up();
+      }
+      await expect(page.locator('dialog#goal-modal[open]')).toHaveCount(0);
+    }
   });
 
   test('What I Do pillar cards flip in place; the UGC back carries its two links', async ({ page }) => {

@@ -12,8 +12,10 @@ test.describe('Writing index & Coffee Talk Substack reader', () => {
     await expect(spread).toBeVisible();
 
     const railItems = page.locator('[data-magazine-rail-item]');
-    const railCount = await railItems.count();
-    expect(railCount).toBeGreaterThanOrEqual(5);
+    await expect(railItems).toHaveCount(4);
+    await expect(page.locator('.magazine-rail-left [data-magazine-rail-item]')).toHaveCount(2);
+    await expect(page.locator('.magazine-rail-right [data-magazine-rail-item]')).toHaveCount(2);
+    expect(await page.locator('#articles .writing-archive-row').count()).toBeGreaterThanOrEqual(1);
 
     const featureImg = page.locator('[data-magazine-feature-img]');
     await expect(featureImg).toBeVisible();
