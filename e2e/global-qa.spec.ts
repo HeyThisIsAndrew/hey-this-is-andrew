@@ -276,7 +276,7 @@ test.describe('Global QA', () => {
     await expect(about.locator('.about-headline')).toBeVisible();
     await expect(about.locator('.about-body')).toHaveText([
       /building three brands in public/i,
-      /My workflow uses/i,
+      /I shoot on Sony Alpha/i,
       /The through line is simple/i,
     ]);
     await expect(page.locator('#writing')).toHaveCount(0);
