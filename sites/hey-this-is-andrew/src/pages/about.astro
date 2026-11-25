@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import AboutSection from '../components/AboutSection.astro';
 import QuoteBand from '@andrew/ui/QuoteBand.astro';
+import SectionHeader from '@andrew/ui/SectionHeader.astro';
 import StorefrontCTA from '../components/StorefrontCTA.astro';
 import PressSection from '../components/PressSection.astro';
 ---
@@ -9,32 +10,101 @@ import PressSection from '../components/PressSection.astro';
   title="About · HEY_THISISANDREW"
   description="HEY_THISISANDREW: Andrew Baxter, creator, photographer, coffee drinker, building in public and figuring it out as I go."
 >
-  <h1 class="vh">About Andrew Baxter</h1>
-  <div class="page-head" aria-hidden="true"></div>
-  {/* Quote band, story, referrals, then the press kit. The nav anchors are
-      the sections' own ids (story, press, contact), never empty placeholder
-      <section>s, which stacked blank section padding and caught the links. */}
-  <QuoteBand
-    variant="cinematic"
-    eyebrow="A quote I live by"
-    label="A quote Andrew lives by"
-    quote="Nothing is ever as good or as bad as it seems, and when you look back on your life, you won't be upset about the thing that happened to you; you'll be upset about how you responded to it."
-    attribution="Scott Galloway"
-    attributionHref="https://www.instagram.com/profgalloway/"
-  />
+  <div class="about-page">
+    <h1 class="vh">About Andrew Baxter</h1>
+    {/* Flush top cinematic quote band directly below the fixed navbar,
+        followed by story, referrals, and the press kit. Nav anchors stay on
+        the sections' own ids (story, press, contact). */}
+    <QuoteBand
+      variant="cinematic"
+      eyebrow="A quote I live by"
+      label="A quote Andrew lives by"
+      quote="Nothing is ever as good or as bad as it seems, and when you look back on your life, you won't be upset about the thing that happened to you; you'll be upset about how you responded to it."
+      attribution="Scott Galloway"
+      attributionHref="https://www.instagram.com/profgalloway/"
+    />
 
-  <div id="story"><AboutSection full /></div>
+    <div id="story"><AboutSection full /></div>
 
-  <div class="container shop-wrap">
-    <StorefrontCTA label="Referrals and kit" eyebrow="Referrals & Kit" />
+    <section class="about-referrals" aria-labelledby="referrals-heading">
+      <div class="container shop-wrap">
+        <SectionHeader variant="chip" id="referrals-heading" title="Referrals & Kit" />
+        <StorefrontCTA label="Referrals and kit" />
+      </div>
+    </section>
+
+    <PressSection />
   </div>
-
-  <PressSection />
 </BaseLayout>
 
 <style>
-  /* Fixed nav clearance. */
-  .page-head { height: clamp(4.5rem, 8vw, 6rem); }
-  .shop-wrap { padding-block: clamp(2rem, 5vw, 3.5rem); border-top: 1px solid var(--line); }
-  .shop-wrap .storefront { margin-top: 0; }
+  :global(html:has(.about-page)) {
+    --about-measure: 1360px;
+  }
+
+  @media (min-width: 1920px) {
+    :global(html:has(.about-page)) {
+      --about-measure: 1560px;
+    }
+  }
+
+  @media (min-width: 2560px) {
+    :global(html:has(.about-page)) {
+      --about-measure: 1840px;
+    }
+  }
+
+  @media (min-width: 3400px) {
+    :global(html:has(.about-page)) {
+      --about-measure: 2160px;
+      font-size: 115%;
+    }
+  }
+
+  @media (min-width: 1600px) {
+    :global(html[data-screen-4k]:has(.about-page)) {
+      font-size: 115%;
+    }
+  }
+
+  .about-page {
+    --maxw: var(--about-measure);
+  }
+
+  /* Match writing-pill sizing for chip headers on /about/ so every section
+     shares the same pill hierarchy and 4K root scaling. */
+  .about-page :global(.sec-chip) {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  /* Flush directly under the fixed navbar; keeps border-top off so only the
+     navbar's bottom hairline and drop shadow frame the top edge. */
+  .about-page > :global(.quote-band--cinematic) {
+    border-top: 0;
+    background: #050505;
+  }
+
+  /* Work With Me is consolidated into the Press kit button row on /about/. */
+  :global(body:has(.about-page) .client-work-footer-contact) {
+    display: none;
+  }
+
+  .about-referrals {
+    padding-block: clamp(2rem, 4vw, 3.25rem);
+    border-top: 1px solid var(--line);
+  }
+
+  .shop-wrap {
+    padding-block: 0;
+    border-top: 0;
+  }
+
+  .shop-wrap :global(.storefront) {
+    margin-top: 0;
+  }
+
+  .about-page :global(.press-section) {
+    border-top: 1px solid var(--line);
+  }
 </style>

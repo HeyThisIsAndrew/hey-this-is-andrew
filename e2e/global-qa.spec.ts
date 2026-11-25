@@ -269,16 +269,55 @@ test.describe('Global QA', () => {
     await expect(actions.nth(1)).toHaveAttribute('href', 'https://connect.cohley.com/public/profile/andrew-baxter/');
   });
 
-  test('Creator portrait, headline and story are available on the About page', async ({ page }) => {
+  test('Creator portrait, story, flush quote, and streamlined press row on the About page', async ({ page, isMobile }) => {
     await page.goto('./about/');
+
+    // QuoteBand sits flush right below the fixed navbar with zero extra spacer gap.
+    const seam = await page.evaluate(() => {
+      const nav = document.querySelector<HTMLElement>('.site-nav');
+      const quote = document.querySelector<HTMLElement>('.quote-band--cinematic');
+      return {
+        navBottom: nav ? nav.getBoundingClientRect().bottom : -1,
+        quoteTop: quote ? quote.getBoundingClientRect().top : -1,
+      };
+    });
+    expect(Math.abs(seam.quoteTop - seam.navBottom)).toBeLessThanOrEqual(2);
+
     const about = page.locator('#about');
     await expect(about.locator('.about-portrait')).toBeVisible();
-    await expect(about.locator('.about-headline')).toBeVisible();
+    await expect(about.locator('.about-headline')).toHaveCount(0);
+    await expect(about.locator('.about-ctas')).toHaveCount(0);
     await expect(about.locator('.about-body')).toHaveText([
       /building three brands in public/i,
       /I shoot on Sony Alpha/i,
       /The through line is simple/i,
     ]);
+    await expect(about.locator('.about-punchline')).toBeVisible();
+    await expect(about.locator('.about-punchline')).toHaveText('BUILDING IN PUBLIC.');
+
+    // Streamlined Press kit: no subheaders, Past partnerships hidden, and a 3-button single row.
+    const press = page.locator('#press');
+    await expect(press.locator('.press-partners')).toHaveCount(0);
+    await expect(press.locator('.press-subhead')).toHaveCount(0);
+    const pressButtons = press.locator('.press-contact-actions .btn');
+    await expect(pressButtons).toHaveCount(3);
+    await expect(pressButtons).toHaveText([/Press contact/i, /Brand assets/i, /Work with me/i]);
+    if (!isMobile) {
+      const boxes = await pressButtons.evaluateAll((els) =>
+        els.map((el) => {
+          const r = el.getBoundingClientRect();
+          return { top: r.top, width: r.width, height: r.height };
+        })
+      );
+      const tops = boxes.map((b) => b.top);
+      const widths = boxes.map((b) => b.width);
+      const heights = boxes.map((b) => b.height);
+      expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(2);
+      expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(2);
+      expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(2);
+    }
+
+    await expect(page.locator('.client-work-footer-contact')).toBeHidden();
     await expect(page.locator('#writing')).toHaveCount(0);
     await expect(page.locator('.press-bio')).toHaveCount(0);
     await expect(page.locator('#goals')).toHaveCount(0);

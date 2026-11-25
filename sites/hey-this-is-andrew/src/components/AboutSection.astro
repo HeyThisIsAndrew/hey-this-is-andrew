@@ -50,7 +50,7 @@ const FULL_BIO = [
       </figure>
 
       <div class="about-copy">
-        <h3 class="display about-headline">The reality of it all.</h3>
+        {!full && <h3 class="display about-headline">The reality of it all.</h3>}
         {full && FULL_BIO.map((para) => <p class="about-body">{para}</p>)}
         <p class="about-punchline">BUILDING IN PUBLIC.</p>
         {!full && (
@@ -99,14 +99,16 @@ const FULL_BIO = [
           </div>
         )}
 
-        <div class="about-ctas">
-          <a class="btn btn-primary" href={SUBSTACK_URL} target="_blank" rel="noopener">
-            Substack
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </a>
-        </div>
+        {!full && (
+          <div class="about-ctas">
+            <a class="btn btn-primary" href={SUBSTACK_URL} target="_blank" rel="noopener">
+              Substack
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+          </div>
+        )}
       </div>
     </div>
   </div>
@@ -120,19 +122,17 @@ const FULL_BIO = [
     position: relative;
     z-index: 2;
     clear: both;
+    padding-block: clamp(2.25rem, 4.5vw, 4rem);
   }
 
   @media (min-width: 1920px) {
-    .about-section { --u: calc(100vw / 1512); }
+    .about-section { --u: clamp(1px, calc(100vw / 1512), 1.25px); }
   }
-  @media (max-width: 767px) {
-  }
-
 
   .about-grid {
     display: grid;
-    grid-template-columns: minmax(0, calc(320 * var(--u))) minmax(0, 1fr);
-    gap: clamp(calc(25.6 * var(--u)), 5vw, calc(64 * var(--u)));
+    grid-template-columns: minmax(0, clamp(240px, 19vw, 360px)) minmax(0, 1fr);
+    gap: clamp(1.75rem, 3.5vw, 3.5rem);
     align-items: start;
   }
   @media (max-width: 767px) {
@@ -149,15 +149,15 @@ const FULL_BIO = [
       transform: none;
     }
     .about-portrait figcaption { text-align: center; }
-    .about-grid .about-portrait figcaption strong { font-size: 1rem; }
-    .about-grid .about-portrait figcaption span { font-size: 0.7rem; }
+    .about-grid .about-portrait figcaption strong { font-size: 0.95rem; }
+    .about-grid .about-portrait figcaption span { font-size: 0.68rem; }
   }
 
   /* Taped portrait frame, HQ style: vertical portrait format. */
   .about-portrait {
     position: relative;
-    margin: 0.5rem 0 0;
-    max-width: calc(320 * var(--u));
+    margin: 0.25rem 0 0;
+    max-width: clamp(240px, 19vw, 360px);
     width: 100%;
     transform: rotate(-2deg);
     border: 1px solid rgba(255, 255, 255, 0.25);
@@ -192,21 +192,21 @@ const FULL_BIO = [
     z-index: 2;
   }
   .about-portrait figcaption {
-    padding: calc(12.8 * var(--u)) 0.4rem 1rem;
+    padding: 0.85rem 0.4rem 0.95rem;
   }
   .about-portrait figcaption strong {
     display: block;
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: calc(12.8 * var(--u));
+    font-size: 0.9rem;
     line-height: 1.1;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
   .about-portrait figcaption span {
     display: block;
-    margin-top: calc(3.2 * var(--u));
-    font-size: calc(8.96 * var(--u));
+    margin-top: 0.22rem;
+    font-size: 0.68rem;
     line-height: 1.2;
     font-weight: 600;
     letter-spacing: 0.2em;
@@ -217,8 +217,11 @@ const FULL_BIO = [
   .about-copy {
     min-width: 0;
   }
+  .about-copy > .about-body:first-child {
+    margin-top: 0;
+  }
   .about-headline {
-    font-size: clamp(calc(21.76 * var(--u)), 2.6vw, calc(40.96 * var(--u)));
+    font-size: clamp(1.35rem, 1.1rem + 1vw, 2.35rem);
     font-weight: 800;
     line-height: 1.04;
     letter-spacing: normal;
@@ -229,32 +232,34 @@ const FULL_BIO = [
     text-wrap: balance;
   }
   .about-body {
-    margin: calc(17.92 * var(--u)) 0 0;
-    max-width: 78ch;
-    font-size: max(calc(13.44 * var(--u)), min(1.05vw, calc(19 * var(--u))));
+    margin: 1.15rem 0 0;
+    max-width: 68ch;
+    font-size: clamp(1rem, 0.95rem + 0.22vw, 1.18rem);
     line-height: 1.7;
-    color: rgba(255, 255, 255, 0.68);
+    text-wrap: pretty;
+    color: rgba(255, 255, 255, 0.72);
   }
   .about-punchline {
     display: flex;
     flex-wrap: wrap;
-    column-gap: calc(14.08 * var(--u));
-    row-gap: calc(2.56 * var(--u));
-    margin: calc(25.6 * var(--u)) 0 0;
+    column-gap: 0.85rem;
+    row-gap: 0.2rem;
+    margin: 1.65rem 0 0;
     font-family: var(--font-display);
-    font-size: clamp(calc(12.8 * var(--u)), 1.6vw, calc(19.2 * var(--u)));
+    font-size: clamp(0.95rem, 0.85rem + 0.25vw, 1.2rem);
     font-weight: 800;
     line-height: 1.2;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--ink);
   }
   @media (max-width: 767px) {
     .about-headline { font-size: clamp(1.6rem, 7.5vw, 2.2rem); }
-    .about-body { margin-top: 1.4rem; font-size: 1.05rem; }
-    .about-punchline { margin-top: 2rem; font-size: 1rem; }
-    .about-portrait figcaption { padding-top: 1rem; }
-    .about-portrait figcaption span { margin-top: 0.25rem; }
+    .about-body { margin-top: 1.15rem; font-size: 1rem; }
+    .about-copy > .about-body:first-child { margin-top: 0; }
+    .about-punchline { margin-top: 1.5rem; font-size: 0.95rem; }
+    .about-portrait figcaption { padding-top: 0.85rem; }
+    .about-portrait figcaption span { margin-top: 0.22rem; }
   }
 
   /* Open editorial dossier (homepage) */
