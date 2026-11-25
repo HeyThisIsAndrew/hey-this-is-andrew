@@ -9,8 +9,9 @@ export const HOME_SECTIONS: PageSection[] = [
 ];
 
 export const BUILD_SECTIONS: PageSection[] = [
-  { id: 'goals', label: 'Goals' },
   { id: 'writing', label: 'Writing' },
+  { id: 'goals', label: 'Goals' },
+  { id: 'articles', label: 'Articles' },
 ];
 
 export const ABOUT_SECTIONS: PageSection[] = [
