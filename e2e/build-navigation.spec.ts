@@ -25,7 +25,7 @@ for (const start of ['./', './gear/']) {
 
       for (let visit = 0; visit < 2; visit++) {
         await navigate(page, 'Build in Public', 'writing');
-        await expect(page.locator('#writing .writing-card-grid')).toBeVisible();
+        await expect(page.locator('#writing [data-magazine-spread]')).toBeVisible();
 
         const boxes = page.locator('#goals .goal-box');
         await expect(boxes).toHaveCount(4);
@@ -67,9 +67,10 @@ test('Build redirect stub and /writing/ remain readable without JavaScript', asy
   await page.goto('./writing/');
   await expect(page.locator('#writing')).toBeVisible();
   await expect(page.locator('#writing .writing-pill')).toHaveText('Coffee Talk');
-  await expect(page.locator('#writing .writing-card-link')).toHaveCount(5);
+  await expect(page.locator('#writing [data-magazine-spread]')).toBeVisible();
   await expect(page.locator('#goals .goals-pill')).toHaveText('Goals');
   await expect(page.locator('#goals .goal-box')).toHaveCount(4);
   await expect(page.locator('#goals .goal-preview-label')).toHaveCount(4);
+  await expect(page.locator('#articles .writing-card-link')).toHaveCount(1);
   await context.close();
 });

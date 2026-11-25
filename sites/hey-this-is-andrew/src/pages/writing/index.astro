@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import GoalsSection from '../../components/GoalsSection.astro';
+import MagazineSpread from '@andrew/ui/MagazineSpread.astro';
 import {
   SUBSTACK_PUBLICATION_URL,
   articleHref,
@@ -8,10 +9,14 @@ import {
   isExternalArticle,
   resolveLocalRendition,
   sanitizeVisibleCopy,
+  toMagazineCard,
 } from '../../lib/articles';
 import { formatFeedDate } from '../../lib/dates';
 
+const MAGAZINE_LIMIT = 4;
 const allArticles = getAllArticles();
+const magazineCards = allArticles.slice(0, MAGAZINE_LIMIT).map(toMagazineCard);
+const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
 ---
 
 <BaseLayout
@@ -22,13 +27,32 @@ const allArticles = getAllArticles();
   <div class="container writing-page">
     <h1 class="vh">Build in Public</h1>
 
-    <section id="writing" class="writing-articles-section" aria-labelledby="writing-heading">
+    <section
+      id="writing"
+      class="writing-spread-section"
+      aria-labelledby="writing-heading"
+      data-magazine-scroll-anchor
+    >
       <div class="writing-pill-row" data-sec-head>
         <h2 id="writing-heading" class="writing-pill">Coffee Talk</h2>
       </div>
-      {allArticles.length > 0 ? (
+      {magazineCards.length > 0 ? (
+        <div class="writing-spread-wrap">
+          <MagazineSpread articles={magazineCards} compact readMoreLabel="Read Article" />
+        </div>
+      ) : (
+        <p class="writing-empty">No articles imported yet. Run sync:articles to populate the snapshot.</p>
+      )}
+    </section>
+
+    <section id="goals" class="writing-goals-section" aria-labelledby="goals-heading">
+      <GoalsSection />
+    </section>
+
+    {remainingArticles.length > 0 && (
+      <section id="articles" class="writing-articles-section" aria-label="More articles">
         <ul class="writing-card-grid" role="list">
-          {allArticles.map((article, index) => {
+          {remainingArticles.map((article, index) => {
             const href = articleHref(article);
             const external = isExternalArticle(article);
             const title = sanitizeVisibleCopy(article.title) || article.title;
@@ -54,11 +78,11 @@ const allArticles = getAllArticles();
                         <img
                           src={imgSrc}
                           srcset={localImg?.srcset || undefined}
-                          sizes={localImg?.srcset ? '(max-width: 767px) 92vw, 660px' : undefined}
+                          sizes={localImg?.srcset ? '(max-width: 640px) 92vw, (max-width: 1023px) 46vw, 430px' : undefined}
                           alt=""
                           width="1456"
                           height="816"
-                          loading={index < 2 ? 'eager' : 'lazy'}
+                          loading={index < 3 ? 'eager' : 'lazy'}
                           decoding="async"
                         />
                       </div>
@@ -81,14 +105,8 @@ const allArticles = getAllArticles();
             );
           })}
         </ul>
-      ) : (
-        <p class="writing-empty">No articles imported yet. Run sync:articles to populate the snapshot.</p>
-      )}
-    </section>
-
-    <section id="goals" class="writing-goals-section" aria-labelledby="goals-heading">
-      <GoalsSection />
-    </section>
+      </section>
+    )}
 
     <div class="writing-page-actions">
       <a
@@ -97,7 +115,8 @@ const allArticles = getAllArticles();
         target="_blank"
         rel="noopener noreferrer"
       >
-        Read on Substack <span aria-hidden="true">&nearr;</span>
+        Read on Substack
+        <span aria-hidden="true">&nearr;</span>
       </a>
       <a
         class="btn btn-ghost"
@@ -119,22 +138,31 @@ const allArticles = getAllArticles();
     border-radius: 0;
   }
 
-  .writing-articles-section,
-  .writing-goals-section {
+  .writing-spread-section,
+  .writing-goals-section,
+  .writing-articles-section {
     inline-size: 100%;
     max-inline-size: var(--writing-measure);
     margin-inline: auto;
     border: 0;
     border-radius: 0;
     min-inline-size: 0;
+  }
+
+  .writing-spread-section,
+  .writing-goals-section {
     scroll-margin-top: calc(var(--nav-bar-h, 76px) + 1rem);
   }
 
-  .writing-articles-section {
+  .writing-spread-section {
     padding-block: 0 clamp(40px, 4.5vw, 64px);
   }
 
   .writing-goals-section {
+    padding-block: 0 clamp(36px, 4vw, 56px);
+  }
+
+  .writing-articles-section {
     padding-block: 0 clamp(36px, 4vw, 56px);
   }
 
@@ -145,6 +173,7 @@ const allArticles = getAllArticles();
     min-inline-size: 0;
   }
 
+  /* Match BrandAccordion .bacc-chip + .bacc-chip--brand value for value. */
   .writing-pill {
     display: inline-flex;
     align-items: center;
@@ -169,32 +198,129 @@ const allArticles = getAllArticles();
     overflow-wrap: break-word;
   }
 
-  .writing-page-actions {
+  .writing-spread-wrap {
     inline-size: 100%;
-    max-inline-size: min(100%, var(--writing-measure));
-    margin: 0;
-    margin-inline: auto;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 12px 18px;
     min-inline-size: 0;
+    border-radius: 0;
+  }
+
+  /* Match BE Unconventional HQ's compact MagazineSpread framing inside the 1360px column. */
+  .writing-spread-wrap :global(.magazine-spread--compact) {
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-image),
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-image img),
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-thumb),
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-thumb img) {
+    border-radius: 0;
+  }
+
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-item),
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-title),
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-thumb img),
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-image img),
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-cta),
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-cta::after) {
+    transition-timing-function: ease-in-out;
+  }
+
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-excerpt) {
+    --excerpt-lines: 4;
+  }
+
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-title) {
+    font-size: clamp(1.3rem, 1.9vw, 1.9rem);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+
+  .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-copy) {
+    padding-block: 1.5rem 1.75rem;
+  }
+
+  .writing-spread-wrap :global(.magazine-spread--compact :focus-visible) {
+    outline-offset: -3px;
+    border-radius: 0;
+  }
+
+  @media (min-width: 1101px) {
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature) {
+      contain: size;
+    }
+
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-image) {
+      aspect-ratio: auto;
+      flex: 1 1 0;
+      min-height: 0;
+    }
+
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-image img) {
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-copy) {
+      flex: 0 0 auto;
+      justify-content: flex-start;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-feature-excerpt) {
+      --excerpt-lines: 3;
+    }
+
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-item) {
+      padding: 1rem 0.75rem;
+    }
+
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-title) {
+      font-size: 0.9rem;
+    }
+
+    .writing-spread-wrap :global(.magazine-spread--compact .magazine-rail-meta) {
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .writing-empty {
+    inline-size: 100%;
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.6;
+    padding-block: 24px;
+    margin: 0;
   }
 
   .writing-card-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: clamp(20px, 2.2vw, 28px);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(18px, 2vw, 24px);
     list-style: none;
     margin: 0;
     padding: 0;
     border-radius: 0;
   }
 
-  @media (max-width: 767px) {
+  @media (max-width: 1023px) {
+    .writing-card-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
     .writing-card-grid {
       grid-template-columns: minmax(0, 1fr);
       gap: 20px;
@@ -215,6 +341,12 @@ const allArticles = getAllArticles();
     border-radius: 0;
   }
 
+  .writing-card-link:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: 0;
+  }
+
   .writing-card {
     display: flex;
     flex-direction: column;
@@ -223,9 +355,7 @@ const allArticles = getAllArticles();
     background: var(--surface);
     border: 1px solid var(--hairline);
     border-radius: 0;
-    transition:
-      border-color 0.22s ease-in-out,
-      background-color 0.22s ease-in-out;
+    transition: border-color 0.22s ease-in-out, background-color 0.22s ease-in-out;
   }
 
   .writing-card-media {
@@ -259,7 +389,7 @@ const allArticles = getAllArticles();
   .writing-card-title {
     margin: 0;
     font-family: var(--font-display);
-    font-size: clamp(18px, 1.5vw, 22px);
+    font-size: clamp(18px, 1.4vw, 21px);
     font-weight: 700;
     line-height: 1.25;
     color: var(--ink);
@@ -290,14 +420,6 @@ const allArticles = getAllArticles();
     overflow: clip;
   }
 
-  .writing-empty {
-    margin: 0;
-    font-family: var(--font-body);
-    color: var(--muted);
-    font-size: 15px;
-    line-height: 1.6;
-  }
-
   @media (hover: hover) and (pointer: fine) {
     .writing-card-link:hover .writing-card {
       border-color: var(--ink);
@@ -315,10 +437,18 @@ const allArticles = getAllArticles();
     }
   }
 
-  .writing-card-link:focus-visible {
-    outline: 2px solid var(--focus-ring);
-    outline-offset: 2px;
+  .writing-page-actions {
+    inline-size: 100%;
+    max-inline-size: var(--writing-measure);
+    margin: 0;
+    margin-inline: auto;
+    padding: 0;
+    border: 0;
     border-radius: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 18px;
   }
 
   .writing-page-actions :global(.btn) {
@@ -328,8 +458,7 @@ const allArticles = getAllArticles();
 
   @media (prefers-reduced-motion: reduce) {
     .writing-card,
-    .writing-card-media img,
-    .writing-page-actions :global(.btn) {
+    .writing-card-media img {
       transition: none;
     }
 
