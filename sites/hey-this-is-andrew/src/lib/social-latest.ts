@@ -55,6 +55,21 @@ export function getSocialLatest(): SocialLatestSnapshot {
   return rawSnapshot as SocialLatestSnapshot;
 }
 
+/**
+ * Resolve a snapshot thumbnail for the current deploy.
+ * Absolute https URLs (YouTube) pass through. Cached `/social-thumbs/...` paths get the site base
+ * prefixed, so they work on Cloudflare Workers (base `/`) and GitHub Pages (base `/hey-this-is-andrew/`).
+ */
+export function resolveSocialThumbnailUrl(
+  thumbnail: string | null,
+  baseUrl: string = import.meta.env?.BASE_URL ?? '/',
+): string | null {
+  if (!thumbnail) return null;
+  if (/^https?:\/\//i.test(thumbnail)) return thumbnail;
+  const base = baseUrl.replace(/\/$/, '');
+  return `${base}${thumbnail.startsWith('/') ? '' : '/'}${thumbnail}`;
+}
+
 export function isSocialSnapshotStale(
   snapshot: Pick<SocialLatestSnapshot, 'generated_at'>,
   now: Date = new Date(),
