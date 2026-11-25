@@ -64,6 +64,11 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
             });
             const localImg = resolveLocalRendition(article.image);
             const imgSrc = localImg?.src || article.image;
+            const cardTags = (article.tags ?? [])
+              .map((tag) => sanitizeVisibleCopy(tag))
+              .filter(Boolean)
+              .slice(0, 2);
+            const tagLine = cardTags.length > 0 ? cardTags.join(' | ') : article.category || '';
             return (
               <li class="writing-card-item">
                 <a
@@ -78,25 +83,29 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
                         <img
                           src={imgSrc}
                           srcset={localImg?.srcset || undefined}
-                          sizes={localImg?.srcset ? '(max-width: 640px) 92vw, (max-width: 1023px) 46vw, 720px' : undefined}
+                          sizes={localImg?.srcset ? '(max-width: 560px) 92vw, (max-width: 1100px) 46vw, 24vw' : undefined}
                           alt=""
                           width="1456"
                           height="816"
                           loading={index < 3 ? 'eager' : 'lazy'}
                           decoding="async"
                         />
+                        <span class="writing-card-format" aria-hidden="true">Article</span>
                       </div>
                     )}
                     <div class="writing-card-body">
-                      <h3 class="writing-card-title">{title}</h3>
-                      {formattedDate && (
-                        <time
-                          class="writing-card-date font-mono"
-                          datetime={article.isoDate || undefined}
-                        >
-                          {formattedDate}
-                        </time>
+                      {(tagLine || formattedDate) && (
+                        <div class="writing-card-meta">
+                          {tagLine && <span class="writing-card-tags">{tagLine}</span>}
+                          {tagLine && formattedDate && <span class="writing-card-sep" aria-hidden="true">|</span>}
+                          {formattedDate && (
+                            <time class="writing-card-date" datetime={article.isoDate || undefined}>
+                              {formattedDate}
+                            </time>
+                          )}
+                        </div>
                       )}
+                      <h3 class="writing-card-title">{title}</h3>
                       {excerpt && <p class="writing-card-excerpt">{excerpt}</p>}
                     </div>
                   </article>
@@ -262,6 +271,16 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
     justify-content: flex-start;
   }
 
+  .writing-spread-wrap :global(.magazine-spread .magazine-feature-title) {
+    text-transform: none;
+    letter-spacing: -0.01em;
+  }
+
+  .writing-spread-wrap :global(.magazine-spread .magazine-rail-title) {
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
   .writing-spread-wrap :global(.magazine-spread .magazine-feature-excerpt) {
     --excerpt-lines: 6;
   }
@@ -319,21 +338,22 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
 
   .writing-card-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: clamp(1.25rem, 1.6vw, 2rem);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.5rem;
     list-style: none;
     margin: 0;
     padding: 0;
     border-radius: 0;
   }
 
-  @media (max-width: 1023px) {
+  @media (max-width: 1100px) {
     .writing-card-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.25rem;
     }
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 560px) {
     .writing-card-grid {
       grid-template-columns: minmax(0, 1fr);
       gap: 1.25rem;
@@ -366,17 +386,18 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
     inline-size: 100%;
     min-inline-size: 0;
     background: var(--surface);
-    border: 1px solid var(--hairline);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 0;
-    transition: border-color 0.22s ease-in-out, background-color 0.22s ease-in-out;
+    overflow: hidden;
+    transition: transform 0.25s ease-in-out, border-color 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
   }
 
   .writing-card-media {
+    position: relative;
     inline-size: 100%;
     aspect-ratio: 16 / 9;
-    overflow: clip;
+    overflow: hidden;
     background: var(--surface-2);
-    border-block-end: 1px solid var(--hairline);
     border-radius: 0;
   }
 
@@ -387,66 +408,125 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
     aspect-ratio: 16 / 9;
     object-fit: cover;
     border-radius: 0;
-    transition: transform 0.6s ease-in-out;
+    filter: brightness(1);
+    transition: transform 0.45s ease-in-out, filter 0.35s ease-in-out;
+  }
+
+  .writing-card-format {
+    position: absolute;
+    left: 0.5rem;
+    bottom: 0.5rem;
+    z-index: 2;
+    padding: 0.15rem 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 0;
+    background: rgba(0, 0, 0, 0.68);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    font-family: var(--font-body, sans-serif);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    line-height: 1.3;
+    color: rgba(255, 255, 255, 0.92);
+    pointer-events: none;
   }
 
   .writing-card-body {
     display: flex;
     flex-direction: column;
-    gap: 0.65rem;
-    padding: clamp(1.2rem, 1.5vw, 1.75rem);
-    min-inline-size: 0;
     flex: 1 1 auto;
+    gap: 0.35rem;
+    padding: 0.85rem 1rem;
+    background: var(--surface);
+    border-block-start: 1px solid rgba(255, 255, 255, 0.05);
+    min-inline-size: 0;
+  }
+
+  @media (max-width: 640px) {
+    .writing-card-body {
+      padding: 0.65rem 0.75rem;
+      gap: 0.25rem;
+    }
+  }
+
+  .writing-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+
+  .writing-card-sep {
+    opacity: 0.45;
+  }
+
+  .writing-card-date {
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: inherit;
+    line-height: inherit;
   }
 
   .writing-card-title {
     margin: 0;
     font-family: var(--font-display);
-    font-size: clamp(1.15rem, 1.35vw, 1.55rem);
+    font-size: 0.95rem;
     font-weight: 700;
-    line-height: 1.25;
+    line-height: 1.35;
+    letter-spacing: 0;
+    text-transform: none;
     color: var(--ink);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
     overflow-wrap: break-word;
-  }
-
-  .writing-card-date {
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    font-weight: 500;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted);
-    line-height: 1.3;
+    min-block-size: calc(2 * 1.35em);
+    transition: color 0.25s ease-in-out;
   }
 
   .writing-card-excerpt {
-    margin: 0;
+    margin: 0.15rem 0 0;
     font-family: var(--font-body);
     color: var(--muted);
-    font-size: clamp(0.95rem, 1vw, 1.12rem);
-    line-height: 1.6;
+    font-size: 0.82rem;
+    line-height: 1.45;
     overflow-wrap: break-word;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
-    line-clamp: 3;
-    overflow: clip;
+    overflow: hidden;
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .writing-card-link:hover .writing-card {
+    .writing-card-link:hover .writing-card,
+    .writing-card-link:focus-visible .writing-card {
+      transform: translateY(-6px);
       border-color: var(--ink);
-      background: var(--surface-2);
+      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255, 255, 255, 0.15);
     }
 
     .writing-card-link:hover .writing-card-media img {
-      transform: scale(1.03);
+      transform: scale(1.06);
+      filter: brightness(1.12);
     }
 
     .writing-card-link:hover .writing-card-title {
-      text-decoration: underline;
-      text-underline-offset: 0.22em;
-      text-decoration-thickness: 1px;
+      color: #fff;
     }
   }
 
@@ -471,8 +551,14 @@ const remainingArticles = allArticles.slice(MAGAZINE_LIMIT);
 
   @media (prefers-reduced-motion: reduce) {
     .writing-card,
-    .writing-card-media img {
+    .writing-card-media img,
+    .writing-card-title {
       transition: none;
+    }
+
+    .writing-card-link:hover .writing-card,
+    .writing-card-link:focus-visible .writing-card {
+      transform: none;
     }
 
     .writing-card-link:hover .writing-card-media img {
