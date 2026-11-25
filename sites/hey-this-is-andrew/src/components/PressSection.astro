@@ -3,23 +3,24 @@ import SectionHeader from '@andrew/ui/SectionHeader.astro';
 import pressData from '../data/press.json';
 
 import { CONTACT } from '../data/contact';
+import { WORK_WITH_ME_HREF } from '../data/nav';
 const CONTACT_EMAIL = CONTACT.press;
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
 const STATS = pressData.stats;
 const ASSETS = pressData.assets.map(a => ({...a, href: `${base}${a.href}`}));
 const PRIMARY_ASSET = ASSETS[0];
+// Keep the Past partnerships block hidden until confirmed brand partnerships are added.
+const PARTNERSHIPS: Array<{ name: string; note?: string; href?: string }> = [];
 ---
   <section id="press" class="press-section" aria-labelledby="press-heading">
     <div class="container">
       <SectionHeader variant="chip"
         id="press-heading"
         title="Press kit"
-        lede="Everything a brand or outlet needs to feature Andrew. For anything else, reach out directly."
       />
 
       <div class="press-stats reveal" style="--rd: 80ms">
-        <h2 class="press-subhead">Audience</h2>
         <dl class="stats-list">
           {/* Only confirmed numbers are listed; a row with no value yet
               (Newsletter, Monthly reach) stays out until it has one. */}
@@ -38,38 +39,52 @@ const PRIMARY_ASSET = ASSETS[0];
         </p>
       </div>
 
-      <div class="press-partners reveal" style="--rd: 160ms">
-        <h2 class="press-subhead">Past partnerships</h2>
-        <p class="empty-state">
-          No brand partnerships to list yet. The first ones will be documented
-          here, the same way everything else on this site is documented.
-        </p>
-      </div>
+      {PARTNERSHIPS.length > 0 && (
+        <div class="press-partners reveal" style="--rd: 120ms">
+          <ul class="stats-list">
+            {PARTNERSHIPS.map((partner) => (
+              <li class="stat-row">
+                <span class="stat-label">{partner.name}</span>
+                {partner.note && <span class="stat-note">{partner.note}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-      <div class="press-contact reveal" id="contact" style="--rd: 200ms">
-        <h2 class="press-subhead">Press contact</h2>
+      <div class="press-contact reveal" id="contact" style="--rd: 140ms">
         <p class="contact-copy">
           For screeners, review copies, event credentials, partnerships, and
-          media inquiries, email works best.
+          media inquiries, reach out directly or grab brand assets below.
         </p>
-        <div class="press-contact-actions">
-          <a class="btn btn-primary" href={'mailto:' + CONTACT_EMAIL + '?subject=' + encodeURIComponent('Press inquiry')}>
-            {CONTACT_EMAIL}
+        <div class="btn-group press-contact-actions">
+          <a
+            class="btn btn-primary"
+            href={'mailto:' + CONTACT_EMAIL + '?subject=' + encodeURIComponent('Press inquiry')}
+            title={CONTACT_EMAIL}
+          >
+            Press contact
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
               <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </a>
           {PRIMARY_ASSET && (
-            <a class="btn btn-primary" href={PRIMARY_ASSET.href} download={PRIMARY_ASSET.filename}>
+            <a class="btn btn-secondary" href={PRIMARY_ASSET.href} download={PRIMARY_ASSET.filename}>
               Brand assets
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                 <path d="M7 1v9m0 0L3 6m4 4l4-4M1 13h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </a>
           )}
+          <a class="btn btn-secondary" href={WORK_WITH_ME_HREF}>
+            Work with me
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
         </div>
         <p class="assets-footnote">
-          High resolution versions, product shots, and additional formats are available on request.
+          {CONTACT_EMAIL} · High resolution versions, product shots, and additional formats are available on request.
         </p>
       </div>
     </div>
@@ -77,18 +92,10 @@ const PRIMARY_ASSET = ASSETS[0];
 
 <style>
   .press-section {
-    padding: clamp(2rem, 5vw, 4rem) 0 clamp(4rem, 8vw, 7rem);
+    padding: clamp(2.25rem, 4.5vw, 4rem) 0 clamp(4rem, 7vw, 6.5rem);
   }
   .press-stats {
-    margin-top: clamp(2rem, 4vw, 3rem);
-  }
-  .press-subhead {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.05rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin: 0 0 1.25rem;
+    margin-top: clamp(1.5rem, 3vw, 2.25rem);
   }
   .stats-list {
     margin: 0;
@@ -104,19 +111,20 @@ const PRIMARY_ASSET = ASSETS[0];
   }
   .stat-row {
     display: grid;
-    grid-template-columns: 96px minmax(0, 1fr);
-    gap: 0.25rem 1rem;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.25rem 1.25rem;
     align-items: baseline;
-    padding: 1.1rem 0;
+    padding: 1.15rem 0;
     border-bottom: 1px solid var(--line);
   }
   .stat-value {
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: 1.75rem;
+    font-size: clamp(1.65rem, 1.4rem + 0.5vw, 2.25rem);
     color: var(--ink);
     margin: 0;
     line-height: 1;
+    min-width: 4.5rem;
   }
   .stat-pending {
     display: inline-block;
@@ -136,7 +144,7 @@ const PRIMARY_ASSET = ASSETS[0];
   }
   .stat-note {
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: 0.74rem;
     letter-spacing: 0.1em;
     color: var(--muted);
     margin: 0;
@@ -145,45 +153,37 @@ const PRIMARY_ASSET = ASSETS[0];
   .stats-footnote {
     margin: 1rem 0 0;
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: 0.74rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--muted);
   }
   .press-partners,
   .press-contact {
-    margin-top: clamp(2.5rem, 5vw, 4rem);
-    padding-top: clamp(2rem, 4vw, 3rem);
+    margin-top: clamp(2.25rem, 4vw, 3.25rem);
+    padding-top: clamp(1.75rem, 3.5vw, 2.75rem);
     border-top: 1px solid var(--line);
   }
   .assets-footnote {
     margin: 1rem 0 0;
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: 0.74rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--muted);
-  }
-  .empty-state {
-    border: 1px solid var(--line);
-    background: var(--surface);
-    padding: clamp(1.5rem, 4vw, 2.5rem);
-    color: var(--muted);
-    font-size: 0.95rem;
-    line-height: 1.7;
-    max-width: 62ch;
-    margin: 0;
+    overflow-wrap: anywhere;
   }
   .contact-copy {
     color: var(--muted);
-    font-size: 0.95rem;
+    font-size: clamp(0.95rem, 0.9rem + 0.18vw, 1.1rem);
     line-height: 1.7;
+    text-wrap: pretty;
     margin: 0 0 1.5rem;
-    max-width: 52ch;
+    max-width: 62ch;
   }
-  .press-contact-actions {
-    display: inline-grid;
-    grid-template-columns: max-content;
+  :global(#site) .press-contact .press-contact-actions {
+    margin-inline: 0;
+    justify-content: start;
     gap: 0.75rem;
   }
   .press-contact-actions .btn {
@@ -193,21 +193,30 @@ const PRIMARY_ASSET = ASSETS[0];
     gap: 0.6rem;
     width: 100%;
     border-radius: 0;
-    word-break: break-all;
+    white-space: nowrap;
     transition: background-color 180ms ease-in-out, color 180ms ease-in-out, border-color 180ms ease-in-out;
   }
-  @media (max-width: 600px) {
+  @media (min-width: 2560px) {
+    :global(#site) .press-contact .press-contact-actions .btn {
+      min-height: 52px;
+      padding: 0.85rem 1.65rem;
+      font-size: 15px;
+    }
+  }
+  @media (max-width: 640px) {
     .press-contact {
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
     }
-    .press-contact-actions {
-      display: grid;
-      grid-template-columns: 1fr;
-      grid-auto-rows: 1fr;
+    :global(#site) .press-contact .press-contact-actions {
+      grid-auto-flow: row;
       width: 100%;
+      justify-content: stretch;
+    }
+    .press-contact-actions .btn {
+      white-space: normal;
     }
   }
 </style>
