@@ -39,7 +39,11 @@ const logoSrcs = new Map(
   await Promise.all(
     picks
       .filter((pick) => pick.logo)
-      .map(async (pick) => [pick.title, (await getImage({ src: pick.logo!, width: 240, format: 'webp' })).src] as const)
+      .map(async (pick) => {
+        const logo = pick.logo!;
+        const src = logo.format === 'svg' ? logo.src : (await getImage({ src: logo, width: 240, format: 'webp' })).src;
+        return [pick.title, src] as const;
+      })
   )
 );
 const artFor = (pick: StorefrontPick) =>

@@ -13,24 +13,19 @@ import { sampleAccent, NEUTRAL_ACCENT } from '../lib/gear-accent';
 
 const gear = (await getCollection('gear')).sort((a, b) => a.data.order - b.data.order);
 
-// Andrew's Amazon collection pages: one per shelf of the kit.
+// Andrew's Amazon collection pages: one per shelf of the kit, each with a sharp studio lead photo.
 const COLLECTIONS = [
-  { label: 'Camera Gear', url: 'https://a.co/d/00WeFxoS' },
-  { label: 'Cafe Bar', url: 'https://a.co/d/0fSswpx1' },
-  { label: 'Command Station Desk', url: 'https://a.co/d/070Rc6h9' },
+  { label: 'Camera Gear', url: 'https://a.co/d/00WeFxoS', image: '/gear/sony-a7iv.jpg' },
+  { label: 'Cafe Bar', url: 'https://a.co/d/0fSswpx1', image: '/gear/ascaso-steel-duo.jpg' },
+  { label: 'Command Station Desk', url: 'https://a.co/d/070Rc6h9', image: '/gear/shure-mv6.jpg' },
 ];
 
-// Each tile's ambient glow is the lead photo of the first gear category
-// that links the same list (Camera Gear: Cameras; Cafe Bar: the Cafe Bar).
-// A list no category links (the desk) keeps the neutral glow.
 const rawBase = import.meta.env.BASE_URL;
 const siteBase = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
 const collectionTiles = await Promise.all(
   COLLECTIONS.map(async (c) => {
-    const cat = gear.find((g) => g.data.collectionUrl === c.url);
-    const lead = cat?.data.items.find((it) => it.stores.length > 0 && it.image);
-    const accent = lead?.image ? await sampleAccent(path.join(process.cwd(), 'public', lead.image)) : NEUTRAL_ACCENT;
-    return { ...c, accent, glow: lead?.image ? `${siteBase}${lead.image}` : '' };
+    const accent = c.image ? await sampleAccent(path.join(process.cwd(), 'public', c.image)) : NEUTRAL_ACCENT;
+    return { ...c, accent, imageSrc: `${siteBase}${c.image}` };
   })
 );
 ---
@@ -66,9 +61,11 @@ const collectionTiles = await Promise.all(
                 href={c.url}
                 target="_blank"
                 rel="noopener sponsored"
-                style={`--accent: ${c.accent};${c.glow ? ` --glow-img: url('${c.glow}');` : ''}`}
+                style={`--accent: ${c.accent};`}
               >
                 <span class="gear-collection-glow" aria-hidden="true"></span>
+                <img class="gear-collection-img" src={c.imageSrc} alt="" loading="lazy" decoding="async" />
+                <span class="gear-collection-scrim" aria-hidden="true"></span>
                 <span class="gear-collection-name">{c.label}</span>
                 <span class="gear-collection-arrow" aria-hidden="true">&#8599;</span>
               </a>
@@ -168,27 +165,46 @@ const collectionTiles = await Promise.all(
   }
   .gear-collection-glow {
     position: absolute;
-    inset: -20%;
-    z-index: -1;
-    background-image:
-      radial-gradient(ellipse 55% 60% at 50% 50%, rgba(var(--accent), 0.55), rgba(var(--accent), 0) 72%),
-      var(--glow-img, none);
-    background-size: cover, 70% auto;
-    background-position: center;
-    background-repeat: no-repeat;
-    filter: blur(48px) saturate(1.5);
-    opacity: 0.75;
-    transition: opacity 0.8s var(--hover-ease), transform 0.8s var(--hover-ease);
+    inset: 0;
+    z-index: 0;
+    background: radial-gradient(ellipse 65% 65% at 50% 42%, rgba(var(--accent), 0.24), transparent 72%);
+    opacity: 0.85;
+    transition: opacity 0.6s var(--hover-ease);
+    pointer-events: none;
+  }
+  .gear-collection-img {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center 42%;
+    padding: clamp(0.9rem, 1.8vw, 1.5rem) clamp(1.25rem, 2.5vw, 2rem) clamp(2.8rem, 4.5vw, 3.8rem);
+    box-sizing: border-box;
+    pointer-events: none;
+    transition: transform 0.8s var(--hover-ease);
+  }
+  .gear-collection-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(180deg, rgba(13, 13, 13, 0) 35%, rgba(8, 8, 8, 0.88) 100%);
+    pointer-events: none;
   }
   .gear-collection-name {
+    position: relative;
+    z-index: 2;
     font-family: var(--font-display);
     font-size: clamp(1.15rem, 2.1vw, 1.9rem);
     font-weight: 800;
     line-height: 1.05;
     text-transform: uppercase;
-    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.85);
   }
   .gear-collection-arrow {
+    position: relative;
+    z-index: 2;
     flex: 0 0 auto;
     display: inline-grid;
     place-items: center;
@@ -210,7 +226,9 @@ const collectionTiles = await Promise.all(
     }
     .gear-collection-tile:hover .gear-collection-glow {
       opacity: 1;
-      transform: scale(1.03);
+    }
+    .gear-collection-tile:hover .gear-collection-img {
+      transform: scale(1.04);
     }
   }
   .gear-collection-tile:is(:hover, :focus-visible) .gear-collection-arrow {
@@ -227,12 +245,17 @@ const collectionTiles = await Promise.all(
     }
     .gear-collection-tile {
       aspect-ratio: auto;
-      min-height: 7.5rem;
+      min-height: 8.5rem;
+    }
+    .gear-collection-img {
+      object-position: right center;
+      padding: 0.75rem 3.75rem 0.75rem 1rem;
     }
   }
   @media (prefers-reduced-motion: reduce) {
     .gear-collection-tile,
-    .gear-collection-glow {
+    .gear-collection-glow,
+    .gear-collection-img {
       transition: none;
     }
   }
