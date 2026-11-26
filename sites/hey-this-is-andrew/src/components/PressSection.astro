@@ -4,10 +4,20 @@ import pressData from '../data/press.json';
 
 import { CONTACT } from '../data/contact';
 import { WORK_WITH_ME_HREF } from '../data/nav';
+import { getSocialLatest } from '../lib/social-latest';
 const CONTACT_EMAIL = CONTACT.press;
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase === '/' ? '' : rawBase.replace(/\/$/, '');
-const STATS = pressData.stats;
+const socialTotals = getSocialLatest().totals;
+const formatCount = (n: number) => new Intl.NumberFormat('en-US').format(n);
+const LIVE_STAT_VALUES: Record<string, string | undefined> = {
+  YouTube: typeof socialTotals.youtube?.subscribers === 'number' ? formatCount(socialTotals.youtube.subscribers) : undefined,
+  Instagram: typeof socialTotals.instagram?.followers === 'number' ? formatCount(socialTotals.instagram.followers) : undefined,
+};
+const STATS = pressData.stats.map((s) => ({
+  ...s,
+  value: LIVE_STAT_VALUES[s.label] ?? s.value,
+}));
 const ASSETS = pressData.assets.map(a => ({...a, href: `${base}${a.href}`}));
 const PRIMARY_ASSET = ASSETS[0];
 // Keep the Past partnerships block hidden until confirmed brand partnerships are added.
