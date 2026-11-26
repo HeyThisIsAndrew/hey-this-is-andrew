@@ -1,0 +1,39 @@
+name: Renew YouTube WebSub Subscription
+
+on:
+  schedule:
+    # Run every 3 days at 04:00 UTC
+    - cron: '0 4 */3 * *'
+  workflow_dispatch:
+
+jobs:
+  renew:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check secret and subscribe
+        env:
+          WEBSUB_SECRET: ${{ secrets.WEBSUB_SECRET }}
+        run: |
+          if [ -z "$WEBSUB_SECRET" ]; then
+            echo "WEBSUB_SECRET is not configured; skipping YouTube WebSub renewal."
+            exit 0
+          fi
+
+          CALLBACK_URL="https://hey-this-is-andrew.heythisisandrewb.workers.dev/api/youtube-webhook"
+          TOPIC_URL="https://www.youtube.com/xml/feeds/videos.xml?channel_id=UCNn5badDO7pbspeS6noInCw"
+
+          echo "Subscribing to WebSub hub for topic: $TOPIC_URL"
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST https://pubsubhubbub.appspot.com/subscribe \
+            -d "hub.callback=$CALLBACK_URL" \
+            -d "hub.mode=subscribe" \
+            -d "hub.topic=$TOPIC_URL" \
+            -d "hub.secret=$WEBSUB_SECRET")
+
+          HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | cut -d':' -f2)
+          echo "Response status: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" -ne 202 ] && [ "$HTTP_STATUS" -ne 204 ]; then
+            echo "Warning: Subscription returned status $HTTP_STATUS"
+          else
+            echo "Subscription request accepted by hub."
+          fi

@@ -61,7 +61,7 @@ export default defineConfig({
       name: 'cloudflare-prep',
       hooks: {
         'astro:route:setup': ({ route }) => {
-          if (route.component.includes('src/pages/api/contact.ts')) {
+          if (route.component.includes('src/pages/api/contact.ts') || route.component.includes('src/pages/api/youtube-webhook.ts')) {
             route.prerender = !isCloudflare;
           }
         },

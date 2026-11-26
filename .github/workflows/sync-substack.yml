@@ -2,14 +2,16 @@ name: Sync Substack articles
 
 on:
   schedule:
-    # Run every 6 hours at :30, staggered from Sync Instagram Media (06:00 UTC)
-    - cron: '30 */6 * * *'
+    # Run hourly at :30, staggered from Sync YouTube videos (:00)
+    - cron: '30 * * * *'
   workflow_dispatch:
     inputs:
       execute:
         description: 'Write articles and image assets (uncheck for a dry run)'
         type: boolean
         default: true
+  repository_dispatch:
+    types: [content-published]
 
 concurrency:
   group: content-sync-push

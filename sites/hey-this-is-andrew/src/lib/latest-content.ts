@@ -1,6 +1,7 @@
 import { formatFeedDate } from './dates';
+import committedVideos from '../data/videos.json';
 // Build-time fetchers for the "Recent work" section.
-// Videos use the YouTube channel feed with verified local fallbacks; Coffee Talk
+// Videos use the committed videos.json snapshot from sync-youtube, with verified fallbacks; Coffee Talk
 // articles read directly from the committed @andrew/content-pipeline snapshot.
 import { cleanFeedText } from './feed-text';
 import {
@@ -237,6 +238,24 @@ export async function getVideoThumbs(videoId: string): Promise<VideoThumb> {
     videos padding any shortfall so the hero always has its full slide
     count. Shorts and live streams are excluded. */
 export async function getLatestVideos(limit = 3): Promise<LatestItem[]> {
+  // 1. Read directly from committed videos.json populated by sync-youtube
+  if (Array.isArray(committedVideos) && committedVideos.length > 0) {
+    const list: LatestItem[] = committedVideos.slice(0, limit).map((v: any) => ({
+      kind: 'video',
+      label: 'Latest video',
+      title: cleanFeedText(v.title || ''),
+      description: v.description || '',
+      image: v.thumbnail || `https://i.ytimg.com/vi/${v.id}/maxresdefault.jpg`,
+      imageSrcset: v.imageSrcset || `https://i.ytimg.com/vi/${v.id}/maxresdefault.jpg 1280w, https://i.ytimg.com/vi/${v.id}/sddefault.jpg 640w`,
+      url: v.url || `https://www.youtube.com/watch?v=${v.id}`,
+      date: v.published_at || v.date || new Date().toISOString(),
+      dateEstimated: false,
+    }));
+    if (list.length >= limit) {
+      return list;
+    }
+  }
+
   const fallback = REAL_YOUTUBE_VIDEOS.slice(0, limit);
   try {
     // 1. Try YouTube channel videos tab directly (fetches live long-form uploads)
