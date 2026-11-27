@@ -8,7 +8,7 @@ import { test, expect, type Page } from '@playwright/test';
 
 const IDS = ['gear-bodies', 'gear-lenses', 'gear-lighting', 'gear-tools', 'gear-audio', 'gear-desk', 'brew', 'gear-gaming'];
 const CHIPS = ['cameras', 'lenses', 'lighting', 'support', 'audio', 'desk', 'cafe', 'gaming'];
-const COUNTS: Record<string, number> = { cameras: 5, lenses: 9, lighting: 2, support: 9, audio: 7, desk: 7, cafe: 13, gaming: 1 };
+const COUNTS: Record<string, number> = { cameras: 5, lenses: 9, lighting: 2, support: 9, audio: 8, desk: 7, cafe: 13, gaming: 1 };
 const count = (page: Page) => page.locator('[data-grid-count]');
 const toggle = (page: Page) => page.locator('[data-all-toggle]');
 const showAll = async (page: Page) => {
@@ -36,7 +36,7 @@ test.describe('Gear page', () => {
     await expect(page.locator('.gear-accordion-section.is-expanded')).toHaveCount(1);
     await expect(page.locator('#gear-bodies')).toHaveClass(/is-expanded/);
     await expect(page.locator('#gear-bodies .deck-card.active .card-title')).toHaveText('Sony a7IV');
-    await expect(count(page)).toHaveText('53 products');
+    await expect(count(page)).toHaveText('54 products');
 
     // The active thumbnail: a thin red outline; the rest dimmed.
     const active = page.locator('#gear-bodies .deck-thumb-tile.is-active');
@@ -94,6 +94,7 @@ test.describe('Gear page', () => {
     const expectedLinks: [string, string][] = [
       ['Sony a7IV', 'https://link.amazon/B0ikMLJoW'],
       ['Sony a7CR', 'https://link.amazon/B05NYlnyx'],
+      ['Shure MV6 Gen 1', 'https://link.amazon/B0cAAzs9L'],
       ['Shure MV6 USB Microphone (Gen 2, Black)', 'https://link.amazon/B0e10Bwnq'],
       ['Shure MV88', 'https://link.amazon/B0il7wQlr'],
       ['iVANKY 20-in-1 Docking Station', 'https://link.amazon/B0bw1t11T'],
@@ -139,7 +140,7 @@ test.describe('Gear page', () => {
     await expect(page.locator('#gear-empty-state')).toBeVisible();
     await expect(page.locator('.all-grid-section:visible')).toHaveCount(0);
     await page.locator('#gear-reset-btn').click();
-    await expect(count(page)).toHaveText('53 products');
+    await expect(count(page)).toHaveText('54 products');
     await expect(page.locator('.all-grid-section:visible')).toHaveCount(CHIPS.length);
 
     await select.selectOption('cafe');
