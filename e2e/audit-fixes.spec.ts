@@ -66,6 +66,31 @@ test.describe('Audit Fixes Verification', () => {
     expect(sections).toEqual(['overview', 'directory', 'gear', 'services', 'newsletter']);
   });
 
+  test('Homepage Contents panel includes clickable Brands entry', async ({ page }) => {
+    await page.goto('./');
+    const labels = await page.locator('#page-nav .pn-label').allTextContents();
+    expect(labels.map(t => t.trim())).toEqual(['Overview', 'Brands', 'Gear', 'What I do', 'Newsletter']);
+
+    const brandsLink = page.locator('#page-nav [data-pn-link="directory"]');
+    await expect(brandsLink.locator('.pn-label')).toHaveText('Brands');
+
+    await page.locator('.pn-dock-btn').click();
+    await expect(page.locator('#page-nav')).toHaveClass(/\bis-open\b/);
+    await brandsLink.click();
+
+    await expect.poll(() => new URL(page.url()).hash).toBe('#directory');
+    await expect.poll(async () => {
+      return page.evaluate(() => {
+        const nav = document.querySelector('.site-nav');
+        const dir = document.getElementById('directory');
+        if (!dir) return false;
+        const navBottom = nav ? nav.getBoundingClientRect().bottom : 0;
+        const rect = dir.getBoundingClientRect();
+        return rect.top >= navBottom - 2 && rect.top < window.innerHeight;
+      });
+    }).toBe(true);
+  });
+
   test('Elevator reels zoom in, then play locally or open Instagram from the dock', async ({ page }) => {
     await page.goto('./');
     const originals = page.locator('.photo-set:not([aria-hidden])');
