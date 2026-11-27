@@ -180,7 +180,10 @@ const lifecycle = ['pending', 'approved', 'executed', 'failed', 'stale', 'reject
     background: var(--r-panel);
     box-shadow: var(--r-panel-shadow);
   }
-  .ex-tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.25rem; }
+  /* Five tabs never wrap into an uneven 2-2-1: one row where they fit,
+     one column where they don't. */
+  .ex-tabs { display: grid; grid-template-columns: repeat(5, max-content); gap: 0.4rem; margin-bottom: 1.25rem; }
+  @media (max-width: 839px) { .ex-tabs { grid-template-columns: minmax(0, 1fr); } }
   .ex-tab { min-height: 40px; padding: 0 1rem; border: 0; border-radius: 999px; background: var(--r-fill-2); color: var(--r-ink-2); font-size: 0.92rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; }
   .ex-tab:hover { color: var(--r-ink); }
   .ex-tab[aria-selected='true'] { background: var(--r-ink); color: var(--r-on-ink); }
