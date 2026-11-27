@@ -364,15 +364,33 @@ test.describe('Global QA', () => {
     await expect(page.locator('#command-palette a[href^="/hey-this-is-andrew/"]').first()).toBeVisible();
   });
 
-  test('About quote: cinematic serif, sentence case, responsive attribution', async ({ page, isMobile }) => {
+  test('About quote: cinematic serif, sentence case, centered quote and attribution', async ({ page }) => {
     await page.goto('./about/');
     const q = page.locator('.quote-band--cinematic blockquote p');
+    const cite = page.locator('.quote-band--cinematic cite');
     await expect(q).toHaveCSS('text-transform', 'none');
     await expect(q).toHaveCSS('font-family', /Cinzel/i);
-    await expect(page.locator('.quote-band--cinematic cite')).toHaveCSS(
-      'text-align',
-      isMobile ? 'left' : 'center',
-    );
+    await expect(q).toHaveCSS('text-align', 'center');
+    await expect(cite).toHaveCSS('text-align', 'center');
+
+    const deltas = await page.evaluate(() => {
+      const inner = document.querySelector<HTMLElement>('.quote-band--cinematic .quote-band-inner');
+      const quoteP = document.querySelector<HTMLElement>('.quote-band--cinematic blockquote p');
+      const attr = document.querySelector<HTMLElement>('.quote-band--cinematic .quote-attribution-link');
+      if (!inner || !quoteP || !attr) return null;
+      const center = (el: HTMLElement) => {
+        const r = el.getBoundingClientRect();
+        return r.left + r.width / 2;
+      };
+      const innerCenter = center(inner);
+      return {
+        quoteDelta: Math.abs(center(quoteP) - innerCenter),
+        attrDelta: Math.abs(center(attr) - innerCenter),
+      };
+    });
+    expect(deltas).not.toBeNull();
+    expect(deltas!.quoteDelta).toBeLessThanOrEqual(2);
+    expect(deltas!.attrDelta).toBeLessThanOrEqual(2);
   });
 
   test('Gear is its own page, reached from the nav', async ({ page, isMobile }) => {
