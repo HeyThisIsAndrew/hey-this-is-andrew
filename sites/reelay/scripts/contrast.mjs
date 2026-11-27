@@ -69,7 +69,9 @@ for (const [name, s] of Object.entries(SCHEMES)) {
     layers[`row in panel ${c}`] = over([242, 246, 252], 0.05, panelTop);
     layers[`field in panel ${c}`] = over([11, 15, 23], 0.42, panelTop);
   }
-  Object.assign(layers, { 'card top': '#282e3b', 'card mid': '#1c2436', 'card hover': '#2c3340', raised: '#1c2436', hover: '#253047', 'chip on': '#22344f', button: '#2d3546' });
+  // A hovered card's top stop (#353b47) lies under its thumbnail: text starts
+  // below the picture, where the hovered fill is #293142 or darker.
+  Object.assign(layers, { 'card top': '#282e3b', 'card mid': '#1c2436', 'card hover mid': '#293142', raised: '#1c2436', surface: '#131926', hover: '#253047', 'chip on': '#28384f', 'chip on foot': '#1b2c44', button: '#2d3546', 'caption card': '#272e40' });
   for (const [ln, bg] of Object.entries(layers)) {
     for (const [tn, [fg, min]] of Object.entries(INK)) {
       const r = ratio(fg, bg);
@@ -81,10 +83,19 @@ for (const [name, s] of Object.entries(SCHEMES)) {
       if (r < 4.5) { bad++; console.log(`✗ glass ${tn} on ${ln}: ${r.toFixed(2)}`); }
     }
   }
-  // The checked segment (#545b69 → #474e5e) carries only ink, as a control
-  // label: 4.5:1. The app's own value; it doesn't reach 7:1 (see APP_DESIGN_BRIEF.md).
+  // The checked segment is a gradient, #545b69 at the top -> #474e5e at the
+  // foot (theme.py glass_tokens segment_on): ink is 6.29:1 on the top stop and
+  // 7.69:1 on the foot. It carries only a control label, so 4.5:1 is its bar;
+  // the top stop doesn't reach the 7:1 ink target (see APP_DESIGN_BRIEF.md).
   for (const [fg, bg, min, what] of [
-    ['#f2f6fc', '#545b69', 4.5, 'ink on the checked segment'],
+    ['#f2f6fc', '#545b69', 4.5, 'ink on the checked segment (top)'],
+    ['#f2f6fc', '#474e5e', 4.5, 'ink on the checked segment (foot)'],
+    ['#aebcd4', '#2d3546', 4.5, 'ink-2 on an unchecked segment'],
+    ['#5ad670', '#203b33', 4.5, 'Connected pill'],
+    ['#f2b84b', '#3b362d', 4.5, 'Needs attention pill'],
+    ['#aebcd4', '#1c2436', 4.5, 'Not connected / Posted by hand pill'],
+    ['#4da3ff', '#1b2c44', 4.5, 'accent on accent-soft (Mine, on)'],
+    ['#07111f', '#4da3ff', 3, 'on-accent play glyph'],
     ['#07111f', '#70b6ff', 4.5, 'on-accent on primary (top)'],
     ['#07111f', '#4da3ff', 4.5, 'on-accent on primary (bottom)'],
     ['#0b0f17', '#5ad670', 4.5, 'badge ink on ok'],
