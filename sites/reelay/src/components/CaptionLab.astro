@@ -4,6 +4,8 @@
  * Reelay does (README, "Board (content tickets)"): YouTube's description in
  * bytes, Bluesky in graphemes and bytes, Threads with emoji counted as their
  * UTF-8 bytes, Instagram's hashtag cap. Over a limit is reported, never cut.
+ * Drawn in the app's Spatial Glass theme: the editor and the meters are
+ * frosted panels on the glass canvas.
  */
 import PlatformIcon from './ui/PlatformIcon.astro';
 import { OPEN_TICKET } from '../data/demo';
@@ -35,8 +37,8 @@ const LONG =
 <div class="lab" data-caption-lab data-long={LONG}>
   <div class="lab-editor">
     <div class="lab-editor-head">
-      <span>Caption</span>
-      <button type="button" class="lab-swap" data-lab-swap aria-pressed="false">Try a longer caption</button>
+      <span class="glass-heading">Caption</span>
+      <button type="button" class="lab-swap glass-btn" data-lab-swap aria-pressed="false">Try a longer caption</button>
     </div>
     <label class="sr-only" for="lab-input">Caption to count</label>
     <textarea id="lab-input" class="lab-input" rows="6" spellcheck="false" data-lab-input>{OPEN_TICKET.caption}</textarea>
@@ -48,7 +50,7 @@ const LONG =
       <li class="meter" data-meter data-limit={r.limit} data-unit={r.unit} data-tags={'tags' in r ? r.tags : undefined}>
         <span class="m-icon"><PlatformIcon name={r.key} /></span>
         <span class="m-name">{r.name}<small>{r.rule}</small></span>
-        <span class="m-count"><b data-count>{initial[i].toLocaleString('en-US')}</b> / {r.limit.toLocaleString('en-US')}</span>
+        <span class="m-count tnum"><b data-count>{initial[i].toLocaleString('en-US')}</b> / {r.limit.toLocaleString('en-US')}</span>
         <span class="m-bar" aria-hidden="true"><i data-bar style={`width:${Math.max(1.5, (initial[i] / r.limit) * 100)}%`}></i></span>
         <span class="m-flag" data-flag hidden></span>
       </li>
@@ -59,17 +61,22 @@ const LONG =
 <style>
   .lab {
     display: grid;
-    gap: clamp(1.5rem, 3vw, 3rem);
+    gap: clamp(1rem, 2.5vw, 1.5rem);
     align-items: start;
+    padding: clamp(0.75rem, 2.5vw, 1.5rem);
+    border-radius: var(--radius-xl);
+    background: var(--glass-canvas);
+    box-shadow: var(--glass-frame);
+    color: var(--app-ink);
   }
   @media (min-width: 900px) {
     .lab { grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); }
   }
   .lab-editor {
     padding: clamp(1.25rem, 2.5vw, 1.75rem);
-    border-radius: var(--radius-lg);
-    background: var(--r-panel);
-    box-shadow: var(--r-panel-shadow);
+    border-radius: 18px;
+    background: var(--glass-panel);
+    box-shadow: inset 0 0 0 1px var(--glass-line), inset 0 1px 0 var(--glass-top);
   }
   .lab-editor-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; font-size: 0.9rem; font-weight: 600; }
   .lab-swap {
@@ -77,15 +84,14 @@ const LONG =
     padding: 0.4rem 0.9rem;
     border: 0;
     border-radius: 999px;
-    background: var(--r-fill-3);
-    color: var(--r-ink);
     font-size: 0.82rem;
     font-weight: 500;
     cursor: pointer;
     transition: background-color 0.2s ease;
   }
-  .lab-swap:hover { background: var(--r-fill-3); }
-  .lab-swap[aria-pressed='true'] { background: var(--r-amber-soft); color: var(--r-amber-text); }
+  .lab-swap:hover { background: linear-gradient(180deg, #353e51, #222b3f); }
+  .lab-swap[aria-pressed='true'] { background: var(--glass-chip-on); box-shadow: inset 0 0 0 1px var(--app-accent-ring), inset 0 1px 0 rgba(242, 246, 252, 0.12); }
+  .lab-swap:focus-visible { outline: 2px solid var(--app-accent); outline-offset: 2px; }
   .lab-input {
     width: 100%;
     min-height: 11rem;
@@ -93,40 +99,39 @@ const LONG =
     padding: 1rem 1.1rem;
     border: 0;
     border-radius: 14px;
-    background: var(--r-input);
-    color: var(--r-ink);
+    background: rgba(11, 15, 23, 0.42);
+    color: var(--app-ink);
     font: 400 1.02rem/1.55 var(--font-body);
     letter-spacing: -0.01em;
-    box-shadow: inset 0 0 0 1px var(--hairline);
+    box-shadow: inset 0 0 0 1px var(--glass-line);
     transition: box-shadow 0.2s ease;
   }
-  .lab-input:focus { outline: none; box-shadow: inset 0 0 0 1px rgba(245, 197, 107, 0.6), 0 0 0 4px rgba(240, 180, 76, 0.12); }
-  .lab-note { margin-top: 0.85rem; font-size: 0.8rem; color: var(--r-ink-4); }
+  .lab-input:focus { outline: none; box-shadow: inset 0 0 0 1px var(--app-accent-ring), 0 0 0 4px color-mix(in srgb, var(--app-accent) 16%, transparent); }
+  .lab-note { margin-top: 0.85rem; font-size: 0.8rem; color: var(--app-muted); }
 
-  .lab-meters { list-style: none; display: grid; }
+  .lab-meters { list-style: none; display: grid; padding: 0.25rem 1.1rem; border-radius: 18px; background: var(--glass-panel); box-shadow: inset 0 0 0 1px var(--glass-line), inset 0 1px 0 var(--glass-top); }
   .meter {
     display: grid;
     grid-template-columns: 2rem minmax(0, 1fr) auto;
     grid-template-areas: 'icon name count' 'icon bar bar' 'icon flag flag';
     align-items: center;
     column-gap: 0.9rem;
-    padding: 1rem 0;
-    border-top: 1px solid var(--hairline);
+    padding: 0.9rem 0;
   }
-  .meter:last-child { border-bottom: 1px solid var(--hairline); }
-  .m-icon { grid-area: icon; align-self: start; padding-top: 0.15rem; color: var(--r-ink-2); }
+  .meter + .meter { border-top: 1px solid var(--app-divider); }
+  .m-icon { grid-area: icon; align-self: start; padding-top: 0.15rem; color: var(--app-ink-2); }
   .m-icon :global(svg) { width: 1.35rem; height: 1.35rem; }
   .m-name { grid-area: name; font-weight: 600; font-size: 1rem; }
-  .m-name small { display: block; font-weight: 400; font-size: 0.82rem; color: var(--r-ink-3); margin-top: 0.1rem; }
-  .m-count { grid-area: count; font-size: 0.9rem; color: var(--r-ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .m-count b { color: var(--r-ok); font-weight: 600; }
-  .m-bar { grid-area: bar; height: 3px; margin-top: 0.7rem; border-radius: 3px; background: var(--r-fill-3); overflow: hidden; }
-  .m-bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--r-ok); transition: width 0.35s var(--r-ease), background-color 0.3s ease; }
-  .m-flag { grid-area: flag; margin-top: 0.55rem; font-size: 0.82rem; color: var(--r-bad-text); }
-  .meter.is-near .m-count b { color: var(--r-warn); }
-  .meter.is-near .m-bar i { background: var(--r-warn); }
-  .meter.is-over .m-count b { color: var(--r-bad); }
-  .meter.is-over .m-bar i { background: var(--r-bad); }
+  .m-name small { display: block; font-weight: 400; font-size: 0.82rem; color: var(--app-muted); margin-top: 0.1rem; }
+  .m-count { grid-area: count; font-size: 0.9rem; color: var(--app-muted); white-space: nowrap; }
+  .m-count b { color: var(--app-ok); font-weight: 600; }
+  .m-bar { grid-area: bar; height: 3px; margin-top: 0.7rem; border-radius: 3px; background: var(--glass-track); overflow: hidden; }
+  .m-bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--app-ok); transition: width 0.35s var(--r-ease), background-color 0.3s ease; }
+  .m-flag { grid-area: flag; margin-top: 0.55rem; font-size: 0.82rem; color: var(--app-bad); }
+  .meter.is-near .m-count b { color: var(--app-warn); }
+  .meter.is-near .m-bar i { background: var(--app-warn); }
+  .meter.is-over .m-count b { color: var(--app-bad); }
+  .meter.is-over .m-bar i { background: var(--app-bad); }
 </style>
 
 <script>

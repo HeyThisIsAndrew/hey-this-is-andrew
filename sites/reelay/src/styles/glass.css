@@ -1,0 +1,194 @@
+/* Spatial Glass: the app's glass painting as CSS, shared by every rendering
+ * of the app (AppWindow and the scenes). The colours are tokens in
+ * theme.css; this file is the geometry and the layering. Everything is in em,
+ * so a scene still scales from one font-size (.scale-stage).
+ *
+ * Map to the app (Content_Downloader, reelay/gui):
+ *   .glass-canvas    the window body behind everything (theme.glass_tokens)
+ *   .glass-sidebar   the sidebar, with its 1px right edge
+ *   .glass-panel     inspector, integration cards, settings cards (r 18)
+ *   .glass-well      Board columns and the Library well (r 18)
+ *   .glass-card      video cards: fill, rim, catchlight, shadow, hover bloom,
+ *                    selected ring (cards.py draw_glass_frame, finish_frame)
+ *   .glass-nav       NavButton's glass pill (chrome.py)
+ *   .glass-btn       buttons; --primary for the accent one
+ *   .glass-seg       segmented controls (Grid / List, theme picker)
+ *   .glass-chip      "Posting to" chips
+ *   .glass-ring      ReadinessRing._paint_glass (ticket_widgets.py)
+ *   .glass-dock      the inspector's action dock (r 14, inside the panel's 4px pad)
+ *   .glass-scroll    thin scrollbars
+ * At 16px to 1em: 18px = 1.125em, 17px = 1.0625em, 14px = 0.875em, 11px = 0.6875em, 1px = 0.0625em.
+ */
+
+.glass-canvas { background: var(--glass-canvas); color: var(--app-ink); }
+
+.glass-sidebar {
+  background: var(--glass-sidebar);
+  box-shadow: inset -0.0625em 0 0 var(--glass-edge);
+}
+
+.glass-panel {
+  border-radius: 1.125em;
+  background: var(--glass-panel);
+  box-shadow: inset 0 0 0 0.0625em var(--glass-line), inset 0 0.0625em 0 var(--glass-top);
+}
+
+.glass-well {
+  border-radius: 1.125em;
+  background: var(--glass-well);
+  box-shadow: inset 0 0 0 0.0625em var(--glass-line);
+}
+
+/* Video cards. ::before is the inner rim (a gradient border, bright at the
+   top and gone by a third of the way down); ::after is the catchlight along
+   the top edge, drawn over the thumbnail. */
+.glass-card {
+  position: relative;
+  isolation: isolate;
+  border-radius: 0.875em;
+  background: var(--glass-card);
+  /* Ambient shadow: the pane repeated 1, 2 and 3px lower, unblurred, at .20,
+     .14 and .10 black, each a half pixel wider than the last. */
+  --glass-shadow: 0 0.0625em 0 -0.03125em rgba(0, 0, 0, 0.2), 0 0.125em 0 0 rgba(0, 0, 0, 0.14), 0 0.1875em 0 0.03125em rgba(0, 0, 0, 0.1);
+  box-shadow: var(--glass-shadow);
+  transition: box-shadow 0.18s ease, background 0.18s ease;
+}
+.glass-card::before,
+.glass-card::after { content: ''; position: absolute; pointer-events: none; z-index: 3; }
+.glass-card::before {
+  inset: 0;
+  padding: 0.0625em;
+  border-radius: inherit;
+  background: var(--glass-rim);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.glass-card::after {
+  top: 0;
+  left: 0.525em;   /* 60% of the radius */
+  right: 0.525em;
+  height: 0.0625em;
+  background: var(--glass-spec);
+}
+/* Hover: the pane lifts, its rim turns accent-ring (.9) and a 3px bloom of
+   #66afff sits just outside it (.18, .12, .07 from the edge out). */
+.glass-card:hover {
+  background: var(--glass-card-hover);
+  box-shadow: 0 0 0 0.0625em rgba(102, 175, 255, 0.18), 0 0 0 0.125em rgba(102, 175, 255, 0.12),
+    0 0 0 0.1875em rgba(102, 175, 255, 0.07), var(--glass-shadow);
+}
+.glass-card:hover::before { background: rgba(51, 101, 157, 0.9); }
+/* Selected: a 2px accent ring inside the edge, over the picture, and a 3px
+   accent halo at .25 outside it. No hover bloom. */
+.glass-card.is-selected,
+.glass-card.is-selected:hover { box-shadow: 0 0 0 0.1875em rgba(77, 163, 255, 0.25), var(--glass-shadow); }
+.glass-card.is-selected::before { padding: 0.125em; background: var(--app-accent); }
+
+/* Navigation: the selected item is a frosted pill with a faint catchlight.
+   No left accent bar in glass. */
+.glass-nav > * { position: relative; border-radius: 1.0625em; }
+.glass-nav > :hover { background: var(--glass-nav-hover); }
+.glass-nav > .on {
+  background: var(--glass-nav-on);
+  box-shadow: inset 0 0 0 0.0625em var(--glass-nav-line);
+  color: var(--app-ink);
+}
+.glass-nav > .on::after {
+  content: '';
+  position: absolute;
+  top: 0.0625em;                    /* 1px inside the pill, 12px in from each end */
+  left: 0.8125em;
+  right: 0.8125em;
+  height: 0.0625em;
+  background: linear-gradient(90deg, transparent 0.125em, var(--glass-catch) 50%, transparent calc(100% - 0.125em));
+}
+
+/* Buttons (app.qss QPushButton): an 11px radius, a 1px #32415c border whose
+   top edge is .20 ink. Primary: the accent gradient with a 1px accent border. */
+.glass-btn {
+  border-radius: 0.6875em;
+  background: var(--glass-btn);
+  box-shadow: inset 0 0 0 0.0625em var(--app-border), inset 0 0.0625em 0 var(--glass-btn-top);
+  color: var(--app-ink);
+}
+.glass-btn:hover { background: var(--glass-btn-hover); }
+.glass-btn--primary {
+  background: var(--glass-primary);
+  box-shadow: inset 0 0 0 0.0625em var(--app-accent);
+  color: var(--app-on-accent);
+}
+.glass-btn--primary:hover { background: var(--glass-primary-hover); box-shadow: inset 0 0 0 0.0625em var(--app-accent-hover); }
+
+/* Segmented control (app.qss QPushButton[segment], ViewToggle): buttons
+   joined edge to edge, each with the button fill and a 1px #32415c border,
+   overlapping by 1px; only the outer ends are rounded (11px). The checked
+   segment is a lighter frosted fill (#545b69 -> #474e5e), a .24 ink border,
+   ink text at 600, never the accent colour. */
+.glass-seg { display: inline-flex; }
+.glass-seg > * {
+  position: relative;
+  background: var(--glass-btn);
+  box-shadow: inset 0 0 0 0.0625em var(--app-border);
+  color: var(--app-ink-2);
+}
+.glass-seg > * + * { margin-left: -0.0625em; }
+.glass-seg > :first-child { border-radius: 0.6875em 0 0 0.6875em; }
+.glass-seg > :last-child { border-radius: 0 0.6875em 0.6875em 0; }
+.glass-seg > .on,
+.glass-seg > [aria-pressed='true'] {
+  z-index: 1;
+  background: var(--glass-seg-on);
+  box-shadow: inset 0 0 0 0.0625em var(--glass-seg-line);
+  color: var(--app-ink);
+  font-weight: 600;
+}
+
+/* "Posting to" chips (app.qss PlatformChip): 11px radius, a .10 ink border;
+   checked is accent-soft lit a little at the top, with an accent-ring border. */
+.glass-chip { border-radius: 0.6875em; color: var(--app-ink-2); box-shadow: inset 0 0 0 0.0625em var(--glass-line); }
+.glass-chip.on {
+  background: var(--glass-chip-on);
+  box-shadow: inset 0 0 0 0.0625em var(--app-accent-ring);
+  color: var(--app-ink);
+  font-weight: 600;
+}
+
+/* Readiness ring (ReadinessRing._paint_glass), as an SVG in the widget's own
+   40px box: <svg class="glass-ring" viewBox="0 0 40 40">. The ring is a 34px
+   circle (r 17); inside it a glassy disc (r 15) lit from above (#202633 at .9
+   -> #131926 at .6); a 3.5px .12 ink track; a 7px .22 accent halo under a
+   3.5px arc that runs accent-hover -> accent -> accent-hover. "4/4" in ink,
+   semibold. Parts: .ring-disc (fill a radial gradient), .ring-track,
+   .ring-halo, .ring-arc. */
+.glass-ring { overflow: visible; }
+.glass-ring .ring-track { fill: none; stroke: var(--glass-track); stroke-width: 3.5; }
+.glass-ring .ring-halo { fill: none; stroke: rgba(77, 163, 255, 0.22); stroke-width: 7; stroke-linecap: round; }
+.glass-ring .ring-arc { fill: none; stroke-width: 3.5; stroke-linecap: round; }
+.glass-ring text { fill: var(--app-ink); font-weight: 600; font-variant-numeric: tabular-nums; font-family: var(--font-body); }
+
+.glass-dock {
+  background: var(--glass-dock);
+  box-shadow: inset 0 0.0625em 0 var(--glass-dock-top);
+  border-radius: 0 0 0.875em 0.875em;      /* 14px: it sits 4px inside the 18px panel */
+}
+
+.glass-scroll { scrollbar-width: thin; scrollbar-color: var(--glass-scroll) transparent; }
+.glass-scroll:hover { scrollbar-color: var(--glass-scroll-hover) transparent; }
+.glass-scroll::-webkit-scrollbar { width: 0.375em; height: 0.375em; }
+.glass-scroll::-webkit-scrollbar-thumb { border-radius: 1em; background: var(--glass-scroll); }
+.glass-scroll:hover::-webkit-scrollbar-thumb { background: var(--glass-scroll-hover); }
+.glass-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* Type, as the glass theme sets it. */
+.glass-title { font-weight: 600; letter-spacing: -0.025em; }   /* -0.4px at 16px */
+.glass-heading { letter-spacing: 0.019em; }                     /* +0.3px */
+.tnum { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-card, .glass-btn, .glass-nav > * { transition: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass-dock { background: var(--app-surface); }
+  .glass-nav > .on::after, .glass-card::after { display: none; }
+}

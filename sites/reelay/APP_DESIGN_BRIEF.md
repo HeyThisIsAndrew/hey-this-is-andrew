@@ -15,7 +15,7 @@ The Reelay marketing site draws the app's screens in a cleaner, more spatial sty
 - **To run it locally** (needs Node 22 and pnpm), from that repo's root:
   `pnpm install && pnpm --filter reelay dev`
   Then open http://localhost:3000.
-- **Colours are already shared.** The renderings use `--app-*` tokens in `sites/reelay/src/styles/theme.css`, which were copied from this repo's `reelay/gui/theme.py` palettes. So the gap is layout, geometry and hierarchy, not colour.
+- **Colours are already shared.** The renderings use `--app-*` tokens in `sites/reelay/src/styles/theme.css`, copied from this repo's `reelay/gui/theme.py` palettes. The site now draws every rendering in the app's **Spatial Glass** theme (`THEMES["glass"]`), in both of the site's colour schemes; see "Spatial Glass on the site" below. The older Light and Dark `--app-*` blocks are still in `theme.css`, so the site can go back to them. The gap is layout, geometry and hierarchy, not colour.
 - **Every rendering is sized in `em`** inside `sites/reelay/src/components/ui/AppWindow.astro`. With the base size at about 16 px:
   - 1em ≈ 16 px;
   - 0.75em gaps ≈ 12 px;
@@ -35,6 +35,47 @@ The Reelay marketing site draws the app's screens in a cleaner, more spatial sty
 | `SearchScene.astro` | the Board's archive search |
 | `CaptionLab.astro`, `PublishSection.astro` | ticket copy and the hand-off (`post_panel.py`, `handoff_dialog.py`) |
 | `ui/AppWindow.astro` | the window chrome |
+
+## Spatial Glass on the site
+
+The renderings follow the app's Spatial Glass theme (Settings → Appearance → Spatial Glass). Where each part of the app is drawn:
+
+| App (`reelay/gui`) | Site |
+|---|---|
+| `theme.py` `THEMES["glass"]`, the `glass_*` Palette properties, `glass_tokens()` | `src/styles/theme.css`: the `--app-*` and `--glass-*` tokens in "The app: Spatial Glass" |
+| `styles/app.qss`, `cards.py` `draw_glass_frame()` / `finish_frame()`, `chrome.py` NavButton, `ticket_widgets.py` `ReadinessRing._paint_glass` | `src/styles/glass.css`: `.glass-canvas`, `-sidebar`, `-panel`, `-well`, `-card`, `-nav`, `-btn`, `-seg`, `-chip`, `-ring`, `-dock`, `-scroll` |
+
+The values the scenes use:
+- **Palette:** bg `#0b0f17` · surface `#131926` · raised `#1c2436` · hover `#253047` · border `#32415c` · divider `#1e2738`; ink `#f2f6fc` · ink-2 `#aebcd4` · muted `#8e9fbc`; accent `#4da3ff` · accent-hover `#70b6ff` · on-accent `#07111f` · accent-soft `#1b2c44` · accent-ring `#33659d`; ok `#5ad670` · bad `#ff8078` · warn `#f2b84b` · info `#58a6ff` · badge ink `#0b0f17`.
+- **Canvas:** one radial gradient from the top left (8% −10%, about 135%): `#141c39` → `#0f1526` 42% → `#0b0f17` 80% → `#131427`. Nothing else.
+- **Sidebar:** `rgba(32,38,51,.66)` → `rgba(19,25,38,.66)`, with a right edge of `rgba(242,246,252,.08)`.
+- **Panels:** `rgba(32,38,51,.88)` → `rgba(19,25,38,.84)` 35% → `rgba(19,25,38,.80)`, with a 1px `rgba(242,246,252,.10)` border, a `.26` top edge and an 18px radius.
+- **Wells:** `rgba(11,15,23,.42)` → `.29`, with the same border.
+- **Video cards** (14px radius):
+  - fill `#282e3b` → `#1c2436` 28% → `#181f2f`; hovered `#353b47` → `#293142` 28% → `#181f2f`;
+  - rim `.22` → `.07` at 35% → `.05`;
+  - a `#5f646f` catchlight (peak `.95`) on the top edge, from 0.6 of the radius in at each end;
+  - ambient shadow: the pane repeated 1, 2 and 3px lower, unblurred, at `.20`, `.14` and `.10` black;
+  - hover: the rim turns `#33659d` (`.9`) and a 3px `#66afff` bloom sits outside it (`.18`, `.12`, `.07`);
+  - selected: a 2px `#4da3ff` ring inside the edge and a 3px `#4da3ff` halo at `.25` outside it.
+- **Nav:** a frosted pill (17px radius, `.17` → `.10`, with a `.16` border) and no accent bar. A `#5f646f` catchlight at `.8` runs along its top, 12px in from each end.
+- **Buttons:** 11px radius, `#2d3546` → `#1c2436`, a 1px `#32415c` border whose top edge is `.20` ink; hover `#374257` → `#253047`. Primary: `#70b6ff` → `#4da3ff` with a 1px `#4da3ff` border (hover `#84c0ff` → `#70b6ff`).
+- **Fields** (search, link, caption, per-page): solid `#1c2436`, 1px `#32415c`, 11px radius; focused, the border turns `#70b6ff`.
+- **Segmented controls** (Grid / List, the theme picker): buttons joined edge to edge, each a button fill with a `#32415c` border, overlapping by 1px, only the outer ends rounded (11px). Not a pill track. The checked segment is `#545b69` → `#474e5e` with a `.24` ink border and ink text at 600.
+- **Chips:** 11px radius with a `.10` border; a checked "Posting to" chip is `#28384f` → `#1b2c44` with a `#33659d` border.
+- **Readiness:** a glass card. The ring is the 40px widget's own drawing: a 34px ring, a disc lit from above (`#202633` at `.9` → `#131926` at `.6`), a 3.5px `.12` track, a 7px `.22` accent halo under a 3.5px accent arc, and "4/4" in semibold ink. With every platform ready the line beside the ring is empty and hidden, so the ring sits alone; otherwise it only names what blocks ("Not ready for Facebook."). Rows have no fill: each is divided from the last by a `.08` hairline.
+- **Player:** the picture with a large `#4da3ff` play button (on-accent glyph), and under it a bar on `#131926`: play, an accent scrubber on a `#2e3b56` groove with a 12px accent handle, the time, speed.
+- **Caption cards** ("YouTube ▸ Preparing"): `#272e40` → `#1c2436`, a `.10` border, a `.26` top edge, 18px radius.
+- **Small pills:** the column count is `#1c2436` with a `#28344a` hairline; the stage pill is `#1c2436` with a `#1e2738` hairline; both 9px radius. Column titles are ink at 700.
+- **Status pills** (Accounts): no border, 9px radius, semibold. Connected `#203b33` / `#5ad670`; Needs attention `#3b362d` / `#f2b84b`; Not connected and Posted by hand `#1c2436` / ink-2. "Manage…" is an underlined ink link.
+- **Selection strip, Download Sources sections:** solid, not glass. The strip is `#1c2436` with a `#32415c` border (11px); each source platform is `#1c2436` with a `#1e2738` hairline (18px), its source rows `#131926`.
+- **Dock:** `rgba(32,38,51,.94)` → `rgba(19,25,38,.96)`, a `.12` top edge, 14px bottom corners (it sits 4px inside the 18px panel).
+
+What the site needs from the app:
+- **Contrast.** `scripts/contrast.mjs` checks every layer composited over the canvas: ink ≥ 7:1, ink-2 ≥ 4.5:1, muted ≥ 3:1. Everything passes except one. The checked segment is a gradient, not a flat `#545b69`: `#545b69` is its top stop (`mix(raised, ink, .26)`) and `#474e5e` its foot (`segment_on`, `mix(raised, ink, .20)`). Ink is **6.29:1** at the top and 7.69:1 at the foot. That clears AA for a control label, but the top doesn't reach the 7:1 ink target. If the app darkens that pill, change it in `theme.css` too.
+- **Accessibility settings.** The site honours *Reduce transparency* (every glass layer falls back to solid surface, raised or bg) and *Reduce motion* (no hover transitions). The app should do the same.
+- **Branding.** `BrandingScene` shows the **Custom** theme, built from a profile's colours. Only its window frame is glass; the inside keeps the brand colours. That's correct: Custom and Spatial Glass are separate, mutually exclusive modes (`theme.py` `MODES`; `derive_custom` builds on Dark or Light, never glass, and Spatial Glass's accent is a fixed `#4da3ff`, never the profile's brand colour). If the app ever combines the two, tell the site.
+- **Screenshots.** `public/screens/*@2x.png` are still the real Light and Dark captures, used as platform-review evidence. They aren't regenerated as glass.
 
 ## Ground rules
 

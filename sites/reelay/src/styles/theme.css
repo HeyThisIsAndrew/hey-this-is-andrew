@@ -207,3 +207,96 @@
     --selection-ink: #ffffff;
   }
 }
+
+/* ── The app: Spatial Glass ─────────────────────────────────────────────
+ * The app's Spatial Glass theme (Settings → Appearance → Spatial Glass;
+ * reelay/gui/theme.py THEMES["glass"] and glass_tokens()). The demo uses it
+ * in both site schemes: it's a dark app look either way. Coming after the
+ * light block, it wins in both. To go back to the app's Light and Dark
+ * palettes above, delete this block and the reduced-transparency one under
+ * it. --app-frame is left alone: the real captures (public/screens) use it.
+ *
+ * Translucent layers sit on --glass-canvas, which every rendering paints
+ * first, so what you see (and what scripts/contrast.mjs checks) is the layer
+ * composited over the canvas, never over the page.
+ */
+:root {
+  --app-bg: #0b0f17;
+  --app-surface: #131926;
+  --app-raised: #1c2436;
+  --app-hover: #253047;
+  --app-pressed: #2e3b56;
+  --app-border: #32415c;
+  --app-divider: #1e2738;
+  --app-ink: #f2f6fc;
+  --app-ink-2: #aebcd4;
+  --app-muted: #8e9fbc;
+  --app-accent: #4da3ff;
+  --app-accent-hover: #70b6ff;
+  --app-on-accent: #07111f;
+  --app-accent-soft: #1b2c44;
+  --app-accent-ring: #33659d;
+  --app-ok: #5ad670;
+  --app-bad: #ff8078;
+  --app-warn: #f2b84b;
+  --app-info: #58a6ff;
+  --app-badge-ink: #0b0f17;
+  --app-chrome: linear-gradient(180deg, rgba(32, 38, 51, 0.9), rgba(19, 25, 38, 0.86));
+
+  /* Window body: one radial light from the top left (aura #141c39), out to the
+     fainter violet aura_far (#131427) at the far corner. Nothing else. */
+  --glass-canvas: radial-gradient(135% 135% at 8% -10%, #141c39 0%, #0f1526 42%, #0b0f17 80%, #131427 100%);
+  --glass-sidebar: linear-gradient(180deg, rgba(32, 38, 51, 0.66), rgba(19, 25, 38, 0.66));
+  --glass-edge: rgba(242, 246, 252, 0.08);        /* sidebar's right edge */
+  --glass-line: rgba(242, 246, 252, 0.10);        /* panel and well border */
+  --glass-top: rgba(242, 246, 252, 0.26);         /* panel top border */
+  --glass-panel: linear-gradient(180deg, rgba(32, 38, 51, 0.88), rgba(19, 25, 38, 0.84) 35%, rgba(19, 25, 38, 0.80));
+  --glass-well: linear-gradient(180deg, rgba(11, 15, 23, 0.42), rgba(11, 15, 23, 0.29));
+  /* Video cards (cards.py draw_glass_frame / finish_frame) */
+  --glass-card: linear-gradient(180deg, #282e3b, #1c2436 28%, #181f2f);
+  --glass-card-hover: linear-gradient(180deg, #353b47, #293142 28%, #181f2f);
+  --glass-rim: linear-gradient(180deg, rgba(242, 246, 252, 0.22), rgba(242, 246, 252, 0.07) 35%, rgba(242, 246, 252, 0.05));
+  /* The catchlight line starts 0.6r in from each corner; its gradient runs from r to r, so the
+     first 0.4r (5.6px = 0.35em) at each end is clear. Peak alpha .95. */
+  --glass-spec: linear-gradient(90deg, transparent 0.35em, rgba(95, 100, 111, 0.95) 50%, transparent calc(100% - 0.35em));
+  --glass-bloom: #66afff;
+  /* Nav pill (chrome.py NavButton) */
+  --glass-nav-on: linear-gradient(180deg, rgba(242, 246, 252, 0.17), rgba(242, 246, 252, 0.10));
+  --glass-nav-line: rgba(242, 246, 252, 0.16);
+  --glass-nav-hover: rgba(242, 246, 252, 0.07);
+  /* Buttons: a 1px #32415c border (app.qss border) with a lighter top edge */
+  --glass-btn: linear-gradient(180deg, #2d3546, #1c2436);
+  --glass-btn-hover: linear-gradient(180deg, #374257, #253047);
+  --glass-btn-top: rgba(242, 246, 252, 0.20);
+  --glass-primary: linear-gradient(180deg, #70b6ff, #4da3ff);
+  --glass-primary-hover: linear-gradient(180deg, #84c0ff, #70b6ff);
+  /* Segmented controls: a frosted pill, never the accent */
+  --glass-seg-on: linear-gradient(180deg, #545b69, #474e5e);
+  --glass-seg-line: rgba(242, 246, 252, 0.24);
+  /* "Posting to" chip, checked */
+  --glass-chip-on: linear-gradient(180deg, #28384f, #1b2c44);
+  --glass-dock: linear-gradient(180deg, rgba(32, 38, 51, 0.94), rgba(19, 25, 38, 0.96));
+  --glass-dock-top: rgba(242, 246, 252, 0.12);
+  --glass-track: rgba(242, 246, 252, 0.12);       /* readiness ring track */
+  --glass-catch: rgba(95, 100, 111, 0.8);         /* nav pill catchlight: glass_catchlight #5f646f at .8 */
+  --glass-scroll: rgba(242, 246, 252, 0.16);
+  --glass-scroll-hover: rgba(242, 246, 252, 0.32);
+  --glass-frame: 0 0 0 1px rgba(242, 246, 252, 0.14), 0 0 0 2px rgba(0, 0, 0, 0.7), 0 40px 96px -16px rgba(0, 0, 0, 0.9);
+}
+@media (prefers-color-scheme: light) {
+  /* The same dark window on a white page: a softer drop, a crisper edge. */
+  :root { --glass-frame: 0 0 0 1px rgba(11, 15, 23, 0.55), 0 40px 96px -24px rgba(11, 15, 23, 0.45), 0 8px 24px rgba(11, 15, 23, 0.12); }
+}
+/* Reduce transparency: solid surface, raised and bg in place of every glass layer. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --app-chrome: var(--app-surface);
+    --glass-canvas: var(--app-bg);
+    --glass-sidebar: var(--app-surface);
+    --glass-panel: var(--app-surface);
+    --glass-well: var(--app-bg);
+    --glass-nav-on: var(--app-hover);
+    --glass-nav-hover: var(--app-raised);
+    --glass-chip-on: var(--app-accent-soft);
+  }
+}

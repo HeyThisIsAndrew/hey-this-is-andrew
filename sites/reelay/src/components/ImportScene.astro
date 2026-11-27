@@ -5,7 +5,8 @@
  * the Grid / List toggle and the settings gear; Download Sources ▾ beside the
  * link field and List Videos; the platform tabs (All · TikTok · YouTube); the
  * picture grid, each video badged with the logo of where it came from; and the
- * selection strip that always says what is selected.
+ * selection strip that always says what is selected. Drawn in the app's
+ * Spatial Glass theme (src/styles/glass.css).
  */
 import AppWindow from './ui/AppWindow.astro';
 import PlatformIcon from './ui/PlatformIcon.astro';
@@ -32,13 +33,13 @@ const STATUS = { done: '✓ Downloaded', pick: 'Selected', none: 'Not downloaded
     <AppWindow title="Reelay: Library" label="Reelay's Library: Download Sources beside the link field, and a grid of the creator's own videos, three of them ticked for download.">
       <div class="ibody">
         <div class="lhead">
-          <span class="ltitle">Library</span>
-          <span class="lcount">1–24 of 86 · 2 downloaded</span>
+          <span class="ltitle glass-title">Library</span>
+          <span class="lcount tnum">1–24 of 86 · 2 downloaded</span>
           <span class="lsearch">
             <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5 14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
             Search captions, hashtags, products, names
           </span>
-          <span class="lbtn">
+          <span class="lbtn glass-btn">
             <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4h11M4.5 8h7M6.5 12h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
             Filter
           </span>
@@ -47,7 +48,7 @@ const STATUS = { done: '✓ Downloaded', pick: 'Selected', none: 'Not downloaded
             <span class="slider"><i></i></span>
             <svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 7h4M7 5v4M10.4 10.4 13.5 13.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
           </span>
-          <span class="toggle" aria-hidden="true">
+          <span class="toggle glass-seg" aria-hidden="true">
             <span class="on"><svg viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="9" y="2.5" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="2.5" y="9" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="9" y="9" width="4.5" height="4.5" rx="1" fill="currentColor"/></svg></span>
             <span><svg viewBox="0 0 16 16"><path d="M3 4.5h10M3 8h10M3 11.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
           </span>
@@ -55,40 +56,40 @@ const STATUS = { done: '✓ Downloaded', pick: 'Selected', none: 'Not downloaded
         </div>
 
         <div class="intake">
-          <span class="srcbtn">Download Sources&nbsp;&nbsp;▾</span>
+          <span class="srcbtn glass-btn">Download Sources&nbsp;&nbsp;▾</span>
           <span class="url">
             <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.8 9.2a2.6 2.6 0 0 0 3.7 0l2.2-2.2a2.6 2.6 0 0 0-3.7-3.7l-.8.8M9.2 6.8a2.6 2.6 0 0 0-3.7 0L3.3 9a2.6 2.6 0 0 0 3.7 3.7l.8-.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
             tiktok.com/@juniperlane
           </span>
-          <span class="listbtn">List Videos</span>
+          <span class="listbtn glass-btn glass-btn--primary">List Videos</span>
         </div>
         <span class="note">Only import media you own or have permission to manage.</span>
 
         <div class="ptabs" aria-hidden="true">
           {TABS.map((t, i) => (
             <span class:list={['ptab', { on: i === 0 }]}>
-              {t.source && <PlatformIcon name={t.source} brand />}{t.label}<em>{t.count}</em>
+              {t.source && <PlatformIcon name={t.source} brand />}{t.label}<em class="tnum">{t.count}</em>
             </span>
           ))}
         </div>
 
         <div class="strip">
           <span><b>3 selected</b> · 2 already downloaded</span>
-          <span class="sbtn">Select All</span>
-          <span class="sbtn">More</span>
+          <span class="sbtn glass-btn">Select All</span>
+          <span class="sbtn glass-btn">More</span>
         </div>
 
-        <div class="vtiles">
+        <div class="vtiles glass-well">
           {tiles.map((t) => (
-            <div class:list={['vtile', { picked: t.state === 'pick' }]}>
+            <div class:list={['vtile', 'glass-card', { 'is-selected': t.state === 'pick' }]}>
               <div class={`tcover still still--${t.still}`}>
                 <SourceBadge source={t.source} kind="Short · 1080p" />
-                <span class="tlen">{t.len}</span>
+                <span class="tlen tnum">{t.len}</span>
                 <span class:list={['tick', { ticked: t.state === 'pick', got: t.state === 'done' }]} aria-hidden="true">{t.state === 'none' ? '' : '✓'}</span>
               </div>
               <div class="tbody">
                 <span class="ttitle">{t.title}</span>
-                <span class="tmeta">{t.date} · {t.views} views</span>
+                <span class="tmeta tnum">{t.date} · {t.views} views</span>
                 <span class={`tstate tstate--${t.state}`}>{STATUS[t.state]}</span>
               </div>
             </div>
@@ -96,8 +97,8 @@ const STATUS = { done: '✓ Downloaded', pick: 'Selected', none: 'Not downloaded
         </div>
 
         <div class="foot">
-          <span class="muted">24 per page ▾</span>
-          <span class="dl">Download</span>
+          <span class="perpage">24 per page ▾</span>
+          <span class="dl glass-btn glass-btn--primary">Download</span>
         </div>
       </div>
     </AppWindow>
@@ -107,38 +108,37 @@ const STATUS = { done: '✓ Downloaded', pick: 'Selected', none: 'Not downloaded
 <style>
   .scale-stage { container-type: inline-size; width: 100%; }
   .iscene { font-size: calc(100cqw / 52); }
-  .ibody { padding: 1.1em 1.2em 1em; background: var(--app-bg); color: var(--app-ink); display: grid; gap: 0.75em; }
+  .ibody { padding: 1.1em 1.2em 1em; color: var(--app-ink); display: grid; gap: 0.75em; }
   .lhead { display: flex; align-items: center; gap: 0.55em; min-width: 0; }
-  .ltitle { font-size: 1.2em; font-weight: 700; letter-spacing: -0.02em; }
+  .ltitle { font-size: 1.2em; }
   .lcount { font-size: 0.7em; color: var(--app-muted); white-space: nowrap; margin-right: auto; }
-  .lsearch { flex: 0 1 17em; min-width: 0; display: flex; align-items: center; gap: 0.5em; height: 2.1em; padding: 0 0.75em; border-radius: 0.6em; background: var(--app-raised); box-shadow: inset 0 0 0 0.0625em var(--app-border); font-size: 0.68em; color: var(--app-muted); white-space: nowrap; overflow: hidden; }
+  .lsearch { flex: 0 1 17em; min-width: 0; display: flex; align-items: center; gap: 0.5em; height: 2.1em; padding: 0 0.75em; border-radius: 0.6875em; background: var(--app-raised); box-shadow: inset 0 0 0 0.0625em var(--app-border); font-size: 0.68em; color: var(--app-muted); white-space: nowrap; overflow: hidden; }
   .lsearch svg, .lbtn svg { width: 1em; height: 1em; flex: none; }
-  .lbtn { display: inline-flex; align-items: center; gap: 0.45em; font-size: 0.68em; font-weight: 600; padding: 0.5em 0.85em; border-radius: 0.6em; background: var(--app-raised); box-shadow: inset 0 0 0 0.0625em var(--app-border); white-space: nowrap; }
+  .lbtn { display: inline-flex; align-items: center; gap: 0.45em; font-size: 0.68em; font-weight: 600; padding: 0.5em 0.85em; white-space: nowrap; }
   .zoom { display: inline-flex; align-items: center; gap: 0.25em; color: var(--app-ink-2); }
   .zoom svg { width: 0.85em; height: 0.85em; }
-  .slider { position: relative; width: 4.5em; height: 0.2em; border-radius: 1em; background: var(--app-border); }
-  .slider i { position: absolute; left: 40%; top: 50%; width: 0.75em; height: 0.75em; margin: -0.375em 0 0 -0.375em; border-radius: 50%; background: var(--app-surface); box-shadow: 0 0 0 0.0625em var(--app-border), 0 0.0625em 0.2em rgba(0, 0, 0, 0.25); }
-  .toggle { display: inline-flex; padding: 0.12em; border-radius: 0.5em; background: var(--app-raised); box-shadow: inset 0 0 0 0.0625em var(--app-border); }
-  .toggle span { display: grid; place-items: center; width: 1.45em; height: 1.3em; border-radius: 0.4em; color: var(--app-ink-2); }
-  .toggle span.on { background: var(--app-surface); color: var(--app-ink); box-shadow: 0 0 0 0.0625em var(--app-border); }
+  /* TileSlider (app.qss): a 4px pressed-colour groove, accent up to the handle, a 12px ink handle. */
+  .slider { position: relative; width: 4.5em; height: 0.25em; border-radius: 1em; background: linear-gradient(90deg, var(--app-accent) 40%, var(--app-pressed) 40%); }
+  .slider i { position: absolute; left: 40%; top: 50%; width: 0.75em; height: 0.75em; margin: -0.375em 0 0 -0.375em; border-radius: 50%; background: var(--app-ink); }
+  .toggle span { display: grid; place-items: center; width: 1.6em; height: 1.3em; }
   .toggle svg, .gear svg { width: 0.8em; height: 0.8em; }
   .gear { display: grid; place-items: center; width: 1.6em; height: 1.6em; color: var(--app-ink-2); }
 
   .intake { display: flex; align-items: center; gap: 0.5em; font-size: 0.74em; }
-  .srcbtn { flex: none; font-weight: 600; padding: 0.55em 0.9em; border-radius: 0.6em; background: var(--app-raised); box-shadow: inset 0 0 0 0.0625em var(--app-border); white-space: nowrap; }
-  .url { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.5em; padding: 0.55em 0.8em; border-radius: 0.6em; background: var(--app-surface); box-shadow: inset 0 0 0 0.0625em var(--app-border); white-space: nowrap; overflow: hidden; }
+  .srcbtn { flex: none; font-weight: 600; padding: 0.55em 0.9em; white-space: nowrap; }
+  .url { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.5em; padding: 0.55em 0.8em; border-radius: 0.6875em; background: var(--app-raised); box-shadow: inset 0 0 0 0.0625em var(--app-border); white-space: nowrap; overflow: hidden; }
   .url svg { width: 1em; height: 1em; flex: none; color: var(--app-muted); }
-  .listbtn { flex: none; font-weight: 700; padding: 0.55em 1em; border-radius: 0.6em; background: var(--app-accent); color: var(--app-on-accent); white-space: nowrap; }
+  .listbtn { flex: none; font-weight: 600; padding: 0.55em 1em; white-space: nowrap; }
   .note { font-size: 0.62em; color: var(--app-muted); margin-top: -0.6em; }
 
-  .strip { display: flex; align-items: center; gap: 0.6em; padding: 0.55em 0.8em; border-radius: 0.7em; background: var(--app-surface); box-shadow: inset 0 0 0 0.0625em var(--app-border); font-size: 0.72em; }
+  /* SelectionStrip (app.qss): solid raised with a #32415c border and an 11px radius, not a glass panel. */
+  .strip { display: flex; align-items: center; gap: 0.6em; padding: 0.55em 0.8em; font-size: 0.72em; border-radius: 0.6875em; background: var(--app-raised); box-shadow: inset 0 0 0 0.0625em var(--app-border); }
   .strip > span:first-child { flex: 1; color: var(--app-ink-2); }
   .strip b { color: var(--app-ink); }
-  .sbtn { padding: 0.35em 0.75em; border-radius: 0.5em; background: var(--app-raised); font-weight: 600; }
+  .sbtn { padding: 0.35em 0.8em; font-weight: 600; }
 
-  .vtiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.7em; }
-  .vtile { border-radius: 0.875em; overflow: hidden; background: var(--app-surface); box-shadow: 0 0 0 0.0625em var(--app-border); }
-  .vtile.picked { box-shadow: 0 0 0 0.12em var(--app-accent); }
+  .vtiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.7em; padding: 0.7em; }
+  .vtile { overflow: hidden; }
   .tcover { position: relative; aspect-ratio: 9 / 12; }
   .tlen { position: absolute; z-index: 1; font-size: 0.5em; font-weight: 700; padding: 0.18em 0.45em; border-radius: 0.35em; background: rgba(0, 0, 0, 0.6); color: #fff; white-space: nowrap; }
   .tcover :global(.src-badge) { font-size: 0.62em; }
@@ -160,8 +160,9 @@ const STATUS = { done: '✓ Downloaded', pick: 'Selected', none: 'Not downloaded
   .tstate--none { color: var(--app-ink-2); font-weight: 500; }
 
   .foot { display: flex; align-items: center; justify-content: space-between; font-size: 0.74em; }
-  .muted { color: var(--app-ink-2); }
-  .dl { padding: 0.55em 1.1em; border-radius: 0.6em; background: var(--app-accent); color: var(--app-on-accent); font-weight: 700; }
+  /* Per page is a combo box: a field like the others. */
+  .perpage { padding: 0.4em 0.75em; color: var(--app-ink); border-radius: 0.6875em; background: var(--app-raised); box-shadow: inset 0 0 0 0.0625em var(--app-border); }
+  .dl { padding: 0.55em 1.1em; font-weight: 600; }
   @container (max-width: 560px) {
     .iscene { font-size: calc(100cqw / 26); }
     .lsearch, .zoom, .lcount { display: none; }

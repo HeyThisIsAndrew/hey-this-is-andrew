@@ -3,7 +3,8 @@
  * SearchScene: the Board's archive search (store.py: an FTS5 index over
  * titles, original captions, transcripts, every platform's copy, tags,
  * topic, keywords and notes). A card found by its spoken words shows the
- * quote. Transcripts come from the original post's captions.
+ * quote. Transcripts come from the original post's captions. Drawn in the
+ * app's Spatial Glass theme: a frosted panel on the glass canvas.
  */
 const results = [
   { still: 'dusk', title: 'Golden hour at Big Sur', where: 'Found in what was said', quote: ['Look at the water, it is completely ', 'gold', ' right now.'], spoken: true },
@@ -15,7 +16,7 @@ const results = [
   <div class="sbar">
     <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5 14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
     <span class="q">gold<span class="caret"></span></span>
-    <span class="hits">3 videos</span>
+    <span class="hits tnum">3 videos</span>
   </div>
   <ul class="results">
     {results.map((r) => (
@@ -35,9 +36,9 @@ const results = [
   .search-scene {
     padding: clamp(1rem, 2.5vw, 1.5rem);
     border-radius: var(--radius-xl);
-    background:
-      var(--r-panel);
-    box-shadow: var(--r-panel-shadow);
+    background: var(--glass-panel), var(--glass-canvas);
+    box-shadow: var(--glass-frame), inset 0 0 0 1px var(--glass-line), inset 0 1px 0 var(--glass-top);
+    color: var(--app-ink);
   }
   .sbar {
     display: flex;
@@ -45,16 +46,17 @@ const results = [
     gap: 0.75rem;
     min-height: 3.25rem;
     padding: 0 1.1rem;
-    border-radius: 16px;
-    background: var(--r-input);
-    box-shadow: inset 0 0 0 1px rgba(245, 197, 107, 0.45), 0 0 0 5px rgba(240, 180, 76, 0.08);
+    border-radius: 11px;
+    background: var(--app-raised);
+    /* Focused: as the app draws a focused field (app.qss), the border turns the focus colour, #70b6ff. */
+    box-shadow: inset 0 0 0 1px var(--app-accent-hover);
   }
-  .sbar svg { width: 1.1rem; height: 1.1rem; color: var(--r-ink-3); flex: none; }
+  .sbar svg { width: 1.1rem; height: 1.1rem; color: var(--app-muted); flex: none; }
   .q { font-size: 1.15rem; font-weight: 500; }
-  .caret { display: inline-block; width: 2px; height: 1.15em; margin-left: 2px; vertical-align: -0.2em; background: var(--r-amber); animation: blink 1.1s steps(2, start) infinite; }
+  .caret { display: inline-block; width: 2px; height: 1.15em; margin-left: 2px; vertical-align: -0.2em; background: var(--app-accent); animation: blink 1.1s steps(2, start) infinite; }
   @keyframes blink { to { visibility: hidden; } }
   @media (prefers-reduced-motion: reduce) { .caret { animation: none; } }
-  .hits { margin-left: auto; font-size: 0.82rem; color: var(--r-ink-3); }
+  .hits { margin-left: auto; font-size: 0.82rem; color: var(--app-muted); }
   .results { list-style: none; display: grid; gap: 0.5rem; margin-top: 0.9rem; }
   .res {
     display: grid;
@@ -64,14 +66,14 @@ const results = [
     padding: 0.7rem;
     border-radius: 16px;
   }
-  .res.spoken { background: var(--r-fill-2); }
+  .res.spoken { background: var(--glass-chip-on); box-shadow: inset 0 0 0 1px var(--app-accent-ring), inset 0 1px 0 rgba(242, 246, 252, 0.12); }
   .rthumb { width: 4.25rem; height: 5.6rem; border-radius: 10px; }
   .rbody { display: grid; gap: 0.3rem; min-width: 0; }
-  .rbody strong { font-size: 1rem; }
-  .rwhere { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--r-ink-3); }
-  .res.spoken .rwhere { color: var(--r-amber-text); }
+  .rbody strong { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+  .rwhere { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--app-muted); }
+  .res.spoken .rwhere { color: var(--app-info); }
   .rwhere svg { width: 0.9rem; height: 0.9rem; }
-  .rquote { font-size: 0.92rem; color: var(--r-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .res.spoken .rquote { white-space: normal; color: var(--r-ink); font-size: 1rem; }
-  mark { background: var(--r-amber-soft); color: var(--r-ink); border-radius: 4px; padding: 0 0.12em; }
+  .rquote { font-size: 0.92rem; color: var(--app-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .res.spoken .rquote { white-space: normal; color: var(--app-ink); font-size: 1rem; }
+  mark { background: color-mix(in srgb, var(--app-accent) 30%, transparent); color: var(--app-ink); border-radius: 4px; padding: 0 0.12em; }
 </style>
