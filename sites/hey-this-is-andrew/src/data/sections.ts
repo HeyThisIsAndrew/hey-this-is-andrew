@@ -25,6 +25,7 @@ export const GEAR_SECTIONS: PageSection[] = [
   { id: 'gear-lighting', label: 'Lighting', kicker: 'Lights' },
   { id: 'gear-tools', label: 'Support & Power', kicker: 'Tools' },
   { id: 'gear-audio', label: 'Audio', kicker: 'Sound' },
+  { id: 'gear-desk', label: 'Desk', kicker: 'Command Station' },
   { id: 'brew', label: 'The Cafe', kicker: 'Coffee' },
   { id: 'gear-gaming', label: 'Gaming', kicker: 'Desk' }
 ];

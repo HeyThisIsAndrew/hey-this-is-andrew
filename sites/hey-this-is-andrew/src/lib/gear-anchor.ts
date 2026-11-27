@@ -20,7 +20,7 @@ export function gearItemId(name: string): string {
 // site search): every category is gear-<id> except the Cafe Bar, #brew.
 const SECTION_ID: Record<string, string> = { cafe: 'brew' };
 // The short names the /gear/ filter chips use.
-const CHIP: Record<string, string> = { bodies: 'Cameras', tools: 'Support', cafe: 'Cafe' };
+const CHIP: Record<string, string> = { bodies: 'Cameras', tools: 'Support', desk: 'Desk', cafe: 'Cafe' };
 
 /** The id of a category's section on /gear/, e.g. gear-lenses, brew. */
 export function gearSectionId(categoryId: string): string {

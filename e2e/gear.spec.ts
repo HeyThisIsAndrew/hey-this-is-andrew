@@ -6,9 +6,9 @@ import { test, expect, type Page } from '@playwright/test';
  * small tile, grouped by category. Data: sites/hey-this-is-andrew/src/data/gear.json.
  */
 
-const IDS = ['gear-bodies', 'gear-lenses', 'gear-lighting', 'gear-tools', 'gear-audio', 'brew', 'gear-gaming'];
-const CHIPS = ['cameras', 'lenses', 'lighting', 'support', 'audio', 'cafe', 'gaming'];
-const COUNTS: Record<string, number> = { cameras: 5, lenses: 9, lighting: 2, support: 9, audio: 6, cafe: 13, gaming: 1 };
+const IDS = ['gear-bodies', 'gear-lenses', 'gear-lighting', 'gear-tools', 'gear-audio', 'gear-desk', 'brew', 'gear-gaming'];
+const CHIPS = ['cameras', 'lenses', 'lighting', 'support', 'audio', 'desk', 'cafe', 'gaming'];
+const COUNTS: Record<string, number> = { cameras: 5, lenses: 9, lighting: 2, support: 9, audio: 7, desk: 7, cafe: 13, gaming: 1 };
 const count = (page: Page) => page.locator('[data-grid-count]');
 const toggle = (page: Page) => page.locator('[data-all-toggle]');
 const showAll = async (page: Page) => {
@@ -29,14 +29,14 @@ test.describe('Gear page', () => {
     await expect(toggle(page)).toHaveText('Show all products');
     await expect(page.locator('#gear-all-products')).toBeHidden();
     await expect(page.locator('.box-idx')).toHaveCount(0);
-    await expect(page.locator('.box-title')).toHaveText(['Cameras', 'Lenses', 'Lighting', 'Tools and Support', 'Audio', 'Cafe Bar', 'Gaming']);
+    await expect(page.locator('.box-title')).toHaveText(['Cameras', 'Lenses', 'Lighting', 'Tools and Support', 'Audio', 'Command Station Desk', 'Cafe Bar', 'Gaming']);
     const sections = page.locator('.gear-accordion-section');
     await expect(sections).toHaveCount(IDS.length);
     for (let i = 0; i < IDS.length; i++) await expect(sections.nth(i)).toHaveId(IDS[i]);
     await expect(page.locator('.gear-accordion-section.is-expanded')).toHaveCount(1);
     await expect(page.locator('#gear-bodies')).toHaveClass(/is-expanded/);
     await expect(page.locator('#gear-bodies .deck-card.active .card-title')).toHaveText('Sony a7IV');
-    await expect(count(page)).toHaveText('45 products');
+    await expect(count(page)).toHaveText('53 products');
 
     // The active thumbnail: a thin red outline; the rest dimmed.
     const active = page.locator('#gear-bodies .deck-thumb-tile.is-active');
@@ -74,7 +74,7 @@ test.describe('Gear page', () => {
       await expect(sections.nth(i)).toHaveAttribute('data-chip', chip);
       await expect(sections.nth(i).locator('.all-grid-card')).toHaveCount(COUNTS[chip]);
     }
-    await expect(page.locator('.all-grid-section-title')).toHaveText(['Cameras', 'Lenses', 'Lighting', 'Tools and Support', 'Audio', 'Cafe Bar', 'Gaming']);
+    await expect(page.locator('.all-grid-section-title')).toHaveText(['Cameras', 'Lenses', 'Lighting', 'Tools and Support', 'Audio', 'Command Station Desk', 'Cafe Bar', 'Gaming']);
     for (const hidden of ['Amaran PT1c', 'Light Dome Mini II', 'Weebill 3']) {
       await expect(page.locator('.all-grid-card', { hasText: hidden })).toHaveCount(0);
     }
@@ -91,6 +91,26 @@ test.describe('Gear page', () => {
     await expect(viltrox.locator('.all-card-cta', { hasText: 'View on Amazon' })).toHaveAttribute('href', 'https://link.amazon/B03iIx6Ml');
     await expect(viltrox.locator('.all-card-cta', { hasText: 'View on Viltrox' })).toHaveAttribute('href', 'https://viltrox.com/products/af-85mm-f2-0-fe?ref=thisisviltrox');
 
+    const expectedLinks: [string, string][] = [
+      ['Sony a7IV', 'https://link.amazon/B0ikMLJoW'],
+      ['Sony a7CR', 'https://link.amazon/B05NYlnyx'],
+      ['Shure MV6 USB Microphone (Gen 2, Black)', 'https://link.amazon/B0e10Bwnq'],
+      ['Shure MV88', 'https://link.amazon/B0il7wQlr'],
+      ['iVANKY 20-in-1 Docking Station', 'https://link.amazon/B0bw1t11T'],
+      ['Dell Monitors', 'https://link.amazon/B0ag9JenR'],
+      ['VIVO AeroPoise Dual Monitor Stand', 'https://link.amazon/B0h9dvZzN'],
+      ['iPad Pro 13-inch (M4)', 'https://link.amazon/B03Qy9Mwe'],
+      ['Apple Magic Keyboard for iPad Pro 13-inch (M4 and M5)', 'https://link.amazon/B03JskWrW'],
+      ['Elgato 4K X Capture Card', 'https://link.amazon/B0aHqNl1N'],
+      ['Elgato Cam Link 4K', 'https://link.amazon/B075xTDni'],
+    ];
+    for (const [name, href] of expectedLinks) {
+      const card = page.locator('.all-grid-card').filter({
+        has: page.locator('.all-card-name', { hasText: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }),
+      });
+      await expect(card.locator('.all-card-cta', { hasText: 'View on Amazon' })).toHaveAttribute('href', href);
+    }
+
     // Back to the carousel.
     await toggle(page).click();
     await expect(page.locator('#gear-decks-view')).toBeVisible();
@@ -101,7 +121,7 @@ test.describe('Gear page', () => {
     await page.goto('/hey-this-is-andrew/gear/');
     const input = page.locator('#gear-search-input');
     const select = page.locator('#gear-category-select');
-    await expect(select.locator('option')).toHaveCount(8);
+    await expect(select.locator('option')).toHaveCount(9);
 
     // Carousel: the matching section opens; the rest hide.
     await input.fill('90mm');
@@ -119,7 +139,7 @@ test.describe('Gear page', () => {
     await expect(page.locator('#gear-empty-state')).toBeVisible();
     await expect(page.locator('.all-grid-section:visible')).toHaveCount(0);
     await page.locator('#gear-reset-btn').click();
-    await expect(count(page)).toHaveText('45 products');
+    await expect(count(page)).toHaveText('53 products');
     await expect(page.locator('.all-grid-section:visible')).toHaveCount(CHIPS.length);
 
     await select.selectOption('cafe');
