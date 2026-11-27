@@ -14,6 +14,9 @@
  * Each card's name has a small "?" (Learn more) beside it, and a card with an
  * account attached shows "Manage…" on its account line (accounts_page.py
  * account_line).
+ *
+ * Drawn in the app's Spatial Glass theme: each integration card is a frosted
+ * glass panel on the glass canvas (src/styles/glass.css).
  */
 import AppWindow from './ui/AppWindow.astro';
 import PlatformIcon from './ui/PlatformIcon.astro';
@@ -34,13 +37,13 @@ const total = cards.length;
     <AppWindow title="Reelay: Accounts" label={`Reelay's Accounts page: six platform cards of equal size in two rows of three, ${connected} of ${total} connected, each with a status pill and one action. Snapchat, which is posted by hand, sits in a strip below.`}>
       <div class="abody">
         <div class="ahead">
-          <span class="aname">Accounts</span>
-          <span class="acount">{connected} of {total} connected</span>
+          <span class="aname glass-title">Accounts</span>
+          <span class="acount tnum">{connected} of {total} connected</span>
         </div>
         <p class="asub">Where Juniper Lane’s videos go out. Each profile has its own accounts, so creators stay separate.</p>
         <div class="agrid">
           {cards.map((c) => (
-            <div class="acard">
+            <div class="acard glass-panel">
               <div class="ac-top">
                 <PlatformIcon name={c.key} brand />
                 <span class="ac-names"><span class="ac-title"><b>{c.name}</b><span class="ac-help" aria-hidden="true">?</span></span><span class="ac-mode">{c.mode}</span></span>
@@ -48,13 +51,13 @@ const total = cards.length;
               </div>
               <p class="ac-line"><span>{c.line}</span>{c.tone !== 'off' && <span class="ac-link">Manage…</span>}</p>
               <div class="ac-foot">
-                <span class:list={['ac-btn', { primary: c.action.startsWith('Sign in') || c.action.startsWith('Connect') }]}>{c.action}</span>
+                <span class:list={['ac-btn', 'glass-btn', { 'glass-btn--primary': c.action.startsWith('Sign in') || c.action.startsWith('Connect') }]}>{c.action}</span>
                 {'extra' in c && <span class="ac-more">{c.extra}…</span>}
               </div>
             </div>
           ))}
         </div>
-        <div class="astrip">
+        <div class="astrip glass-panel">
           <PlatformIcon name="snapchat" brand />
           <b>Snapchat</b>
           <span class="pill pill--off">Posted manually</span>
@@ -68,14 +71,14 @@ const total = cards.length;
 <style>
   .scale-stage { container-type: inline-size; width: 100%; }
   .ascene { font-size: calc(100cqw / 56); }
-  .abody { padding: 1.1em 1.2em 1.3em; background: var(--app-bg); color: var(--app-ink); }
+  .abody { padding: 1.1em 1.2em 1.3em; color: var(--app-ink); }
   .ahead { display: flex; align-items: baseline; gap: 0.8em; }
-  .aname { font-size: 1.3em; font-weight: 700; letter-spacing: -0.02em; }
+  .aname { font-size: 1.3em; }
   .acount { font-size: 0.78em; font-weight: 600; color: var(--app-ink-2); }
   .asub { margin: 0.35em 0 1em; font-size: 0.76em; color: var(--app-ink-2); }
   /* Equal columns AND equal rows: every card is the size of the largest. */
   .agrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 0.75em; }
-  .acard { display: flex; flex-direction: column; gap: 0.55em; min-width: 0; padding: 0.95em; border-radius: 0.9em; background: var(--app-surface); box-shadow: 0 0 0 0.0625em var(--app-border); }
+  .acard { display: flex; flex-direction: column; gap: 0.55em; min-width: 0; padding: 1em; }
   .ac-top { display: flex; align-items: center; gap: 0.6em; }
   .ac-top :global(svg) { flex: none; width: 1.6em; height: 1.6em; }
   .ac-names { display: grid; min-width: 0; line-height: 1.25; }
@@ -84,18 +87,17 @@ const total = cards.length;
   .pill { margin-left: auto; flex: none; font-size: 0.6em; font-weight: 700; padding: 0.3em 0.6em; border-radius: 1em; white-space: nowrap; }
   .pill--ok { background: color-mix(in srgb, var(--app-ok) 18%, transparent); color: var(--app-ok); }
   .pill--warn { background: color-mix(in srgb, var(--app-warn) 18%, transparent); color: var(--app-warn); }
-  .pill--off { background: var(--app-raised); color: var(--app-ink-2); }
+  .pill--off { background: rgba(242, 246, 252, 0.07); box-shadow: inset 0 0 0 0.1em var(--glass-line); color: var(--app-ink-2); }
   .ac-title { display: flex; align-items: center; gap: 0.35em; min-width: 0; }
-  .ac-help { display: inline-grid; place-items: center; flex: none; width: 1.25em; height: 1.25em; border-radius: 50%; font-size: 0.6em; font-weight: 700; color: var(--app-muted); box-shadow: inset 0 0 0 0.1em var(--app-border); }
+  .ac-help { display: inline-grid; place-items: center; flex: none; width: 1.25em; height: 1.25em; border-radius: 50%; font-size: 0.6em; font-weight: 700; color: var(--app-muted); box-shadow: inset 0 0 0 0.1em var(--glass-nav-line); }
   .ac-line { display: flex; gap: 0.7em; min-width: 0; font-size: 0.7em; color: var(--app-ink-2); white-space: nowrap; }
   .ac-line > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .ac-link { flex: none; color: var(--app-info); font-weight: 600; }
   /* The action sits on the card's bottom edge, so a row of cards lines up. */
   .ac-foot { margin-top: auto; display: flex; align-items: center; gap: 0.8em; padding-top: 0.2em; }
-  .ac-btn { font-size: 0.68em; font-weight: 600; padding: 0.4em 0.8em; border-radius: 0.5em; background: var(--app-raised); color: var(--app-ink); white-space: nowrap; }
-  .ac-btn.primary { background: var(--app-accent); color: var(--app-on-accent); }
+  .ac-btn { font-size: 0.68em; font-weight: 600; padding: 0.45em 0.9em; border-radius: 0.75em; white-space: nowrap; }
   .ac-more { font-size: 0.64em; color: var(--app-muted); white-space: nowrap; }
-  .astrip { display: flex; align-items: center; gap: 0.6em; margin-top: 0.75em; padding: 0.7em 0.95em; border-radius: 0.9em; background: var(--app-surface); box-shadow: 0 0 0 0.0625em var(--app-border); }
+  .astrip { display: flex; align-items: center; gap: 0.6em; margin-top: 0.75em; padding: 0.7em 1em; }
   .astrip b { font-size: 0.8em; }
   .astrip .pill { margin-left: 0; }
   .astrip-line { font-size: 0.66em; color: var(--app-ink-2); min-width: 0; }

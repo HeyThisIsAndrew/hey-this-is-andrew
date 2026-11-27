@@ -1,0 +1,171 @@
+/* Spatial Glass: the app's glass painting as CSS, shared by every rendering
+ * of the app (AppWindow and the scenes). The colours are tokens in
+ * theme.css; this file is the geometry and the layering. Everything is in em,
+ * so a scene still scales from one font-size (.scale-stage).
+ *
+ * Map to the app (Content_Downloader, reelay/gui):
+ *   .glass-canvas    the window body behind everything (theme.glass_tokens)
+ *   .glass-sidebar   the sidebar, with its 1px right edge
+ *   .glass-panel     inspector, integration cards, settings cards (r 18)
+ *   .glass-well      Board columns and the Library well (r 18)
+ *   .glass-card      video cards: fill, rim, catchlight, shadow, hover bloom,
+ *                    selected ring (cards.py draw_glass_frame, finish_frame)
+ *   .glass-nav       NavButton's glass pill (chrome.py)
+ *   .glass-btn       buttons; --primary for the accent one
+ *   .glass-seg       segmented controls (Grid / List, theme picker)
+ *   .glass-chip      "Posting to" chips
+ *   .glass-ring      ReadinessRing._paint_glass (ticket_widgets.py)
+ *   .glass-dock      the inspector's action dock
+ *   .glass-scroll    thin scrollbars
+ * At 16px to 1em: 18px = 1.125em, 17px = 1.0625em, 14px = 0.875em, 1px = 0.0625em.
+ */
+
+.glass-canvas { background: var(--glass-canvas); color: var(--app-ink); }
+
+.glass-sidebar {
+  background: var(--glass-sidebar);
+  box-shadow: inset -0.0625em 0 0 var(--glass-edge);
+}
+
+.glass-panel {
+  border-radius: 1.125em;
+  background: var(--glass-panel);
+  box-shadow: inset 0 0 0 0.0625em var(--glass-line), inset 0 0.0625em 0 var(--glass-top);
+}
+
+.glass-well {
+  border-radius: 1.125em;
+  background: var(--glass-well);
+  box-shadow: inset 0 0 0 0.0625em var(--glass-line);
+}
+
+/* Video cards. ::before is the inner rim (a gradient border, bright at the
+   top and gone by a third of the way down); ::after is the catchlight along
+   the top edge, drawn over the thumbnail. */
+.glass-card {
+  position: relative;
+  isolation: isolate;
+  border-radius: 0.875em;
+  background: var(--glass-card);
+  box-shadow: 0 0.0625em 0.0625em rgba(0, 0, 0, 0.2), 0 0.125em 0.125em rgba(0, 0, 0, 0.14), 0 0.1875em 0.1875em rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.18s ease, background 0.18s ease;
+}
+.glass-card::before,
+.glass-card::after { content: ''; position: absolute; pointer-events: none; z-index: 3; }
+.glass-card::before {
+  inset: 0;
+  padding: 0.0625em;
+  border-radius: inherit;
+  background: var(--glass-rim);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.glass-card::after {
+  top: 0;
+  left: 0.525em;   /* 60% of the radius */
+  right: 0.525em;
+  height: 0.0625em;
+  background: var(--glass-spec);
+}
+.glass-card:hover {
+  background: var(--glass-card-hover);
+  box-shadow: 0 0 0 0.0625em var(--app-accent-ring), 0 0 0.1875em 0.0625em color-mix(in srgb, var(--glass-bloom) 45%, transparent),
+    0 0.125em 0.125em rgba(0, 0, 0, 0.14), 0 0.1875em 0.1875em rgba(0, 0, 0, 0.1);
+}
+.glass-card.is-selected,
+.glass-card.is-selected:hover {
+  box-shadow: 0 0 0 0.125em var(--app-accent), 0 0 0.9em color-mix(in srgb, var(--app-accent) 28%, transparent),
+    0 0.1875em 0.1875em rgba(0, 0, 0, 0.1);
+}
+
+/* Navigation: the selected item is a frosted pill with a faint catchlight.
+   No left accent bar in glass. */
+.glass-nav > * { position: relative; border-radius: 1.0625em; }
+.glass-nav > :hover { background: var(--glass-nav-hover); }
+.glass-nav > .on {
+  background: var(--glass-nav-on);
+  box-shadow: inset 0 0 0 0.0625em var(--glass-nav-line);
+  color: var(--app-ink);
+}
+.glass-nav > .on::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0.65em;
+  right: 0.65em;
+  height: 0.0625em;
+  background: linear-gradient(90deg, transparent, rgba(242, 246, 252, 0.3), transparent);
+}
+
+.glass-btn {
+  background: var(--glass-btn);
+  box-shadow: inset 0 0 0 0.0625em var(--glass-line), inset 0 0.0625em 0 var(--glass-btn-top);
+  color: var(--app-ink);
+}
+.glass-btn--primary {
+  background: var(--glass-primary);
+  box-shadow: inset 0 0.0625em 0 rgba(255, 255, 255, 0.28);
+  color: var(--app-on-accent);
+}
+.glass-btn--primary:hover { background: var(--glass-primary-hover); }
+
+/* Segmented control: a recessed track; the checked segment is a frosted
+   pill with ink text, not the accent colour. */
+.glass-seg {
+  display: inline-flex;
+  padding: 0.125em;
+  border-radius: 999px;
+  background: rgba(11, 15, 23, 0.42);
+  box-shadow: inset 0 0 0 0.0625em var(--glass-line);
+}
+.glass-seg > * { border-radius: 999px; color: var(--app-ink-2); }
+.glass-seg > .on,
+.glass-seg > [aria-pressed='true'] {
+  background: var(--glass-seg-on);
+  box-shadow: inset 0 0 0 0.0625em var(--glass-seg-line);
+  color: var(--app-ink);
+}
+
+/* "Posting to" chips: checked is accent-soft with a slight top sheen. */
+.glass-chip { color: var(--app-ink-2); box-shadow: inset 0 0 0 0.0625em var(--glass-line); }
+.glass-chip.on {
+  background: var(--glass-chip-on);
+  box-shadow: inset 0 0 0 0.0625em var(--app-accent-ring), inset 0 0.0625em 0 rgba(242, 246, 252, 0.12);
+  color: var(--app-ink);
+}
+
+/* Readiness ring, as an SVG: <svg class="glass-ring" viewBox="0 0 36 36">
+   with a defs gradient #glass-ring-arc, .ring-disc, .ring-track and .ring-arc. */
+.glass-ring { overflow: visible; }
+.glass-ring .ring-disc { fill: rgba(242, 246, 252, 0.06); stroke: rgba(242, 246, 252, 0.10); stroke-width: 0.5; }
+.glass-ring .ring-track { fill: none; stroke: var(--glass-track); stroke-width: 3.5; }
+.glass-ring .ring-arc { fill: none; stroke-width: 3.5; stroke-linecap: round; filter: drop-shadow(0 0 1.6px rgba(77, 163, 255, 0.55)); }
+.glass-ring text { fill: var(--app-ink); font-weight: 700; font-variant-numeric: tabular-nums; font-family: var(--font-body); }
+
+.glass-dock {
+  background: linear-gradient(180deg, rgba(32, 38, 51, 0.72), rgba(19, 25, 38, 0.86));
+  box-shadow: inset 0 0.0625em 0 var(--glass-dock-top);
+  border-radius: 0 0 1.125em 1.125em;
+}
+
+.glass-scroll { scrollbar-width: thin; scrollbar-color: var(--glass-scroll) transparent; }
+.glass-scroll:hover { scrollbar-color: var(--glass-scroll-hover) transparent; }
+.glass-scroll::-webkit-scrollbar { width: 0.375em; height: 0.375em; }
+.glass-scroll::-webkit-scrollbar-thumb { border-radius: 1em; background: var(--glass-scroll); }
+.glass-scroll:hover::-webkit-scrollbar-thumb { background: var(--glass-scroll-hover); }
+.glass-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* Type, as the glass theme sets it. */
+.glass-title { font-weight: 600; letter-spacing: -0.025em; }   /* -0.4px at 16px */
+.glass-heading { letter-spacing: 0.019em; }                     /* +0.3px */
+.tnum { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-card, .glass-btn, .glass-nav > * { transition: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass-dock { background: var(--app-surface); }
+  .glass-seg { background: var(--app-bg); }
+  .glass-nav > .on::after, .glass-card::after { display: none; }
+}

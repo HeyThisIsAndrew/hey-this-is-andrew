@@ -1,7 +1,8 @@
 ---
 /**
  * LibraryGridScene: the Library as the app draws it (reelay/gui/cards.py,
- * chrome.py, download_page.py). An image-first grid with hover-scrub
+ * chrome.py, download_page.py), in its Spatial Glass theme: glass video cards
+ * in the recessed Library well. An image-first grid with hover-scrub
  * previews, a tile slider from Small (180) to XL (400), 24 / 48 / 96 / All
  * per page, and a Grid / List toggle. Interactive; it works without JS at
  * the defaults (Medium, 24, Grid).
@@ -46,15 +47,15 @@ const TOTAL = 213;
       <AppWindow title="Reelay: Library" label="Reelay's Library: a grid of video covers with hover-scrub previews, a tile size control, page size and a Grid or List toggle.">
         <div class="lbody">
           <div class="lhead">
-            <span class="lname">Library</span>
+            <span class="lname glass-title">Library</span>
             <span class="lsearch">Search captions, hashtags, your names and file names</span>
-            <span class="lcount" data-count>1–24 of {TOTAL}</span>
+            <span class="lcount tnum" data-count>1–24 of {TOTAL}</span>
           </div>
-          <ul class="lgrid" data-grid>
+          <ul class="lgrid glass-well" data-grid>
             {items.map((it) => (
-              <li class="ltile" data-tile>
+              <li class="ltile glass-card" data-tile>
                 <span class={`cover still still--${it.still}`} style="--scrub:0.5">
-                  <span class="len">{it.len}</span>
+                  <span class="len tnum">{it.len}</span>
                   <span class="scrubbar" aria-hidden="true"><i></i></span>
                 </span>
                 <span class="meta">
@@ -64,7 +65,7 @@ const TOTAL = 213;
               </li>
             ))}
           </ul>
-          <div class="lfoot"><span class="pbtn">Previous</span><span data-pages>Page 1 of 9</span><span class="pbtn">Next</span></div>
+          <div class="lfoot"><span class="pbtn glass-btn">Previous</span><span class="tnum" data-pages>Page 1 of 9</span><span class="pbtn glass-btn">Next</span></div>
         </div>
       </AppWindow>
     </div>
@@ -96,10 +97,10 @@ const TOTAL = 213;
 
   .scale-stage { container-type: inline-size; width: 100%; }
   .lscene { font-size: calc(100cqw / 64); }
-  .lbody { background: var(--app-bg); color: var(--app-ink); padding: 0.9em 1em; height: 34em; display: flex; flex-direction: column; }
+  .lbody { color: var(--app-ink); padding: 0.9em 1em; height: 34em; display: flex; flex-direction: column; }
   .lhead { display: flex; align-items: center; gap: 0.8em; margin-bottom: 0.9em; }
-  .lname { font-size: 1.15em; font-weight: 700; letter-spacing: -0.02em; }
-  .lsearch { flex: 1; height: 2.1em; display: flex; align-items: center; padding: 0 0.8em; border-radius: 0.6em; background: var(--app-raised); box-shadow: inset 0 0 0 0.0625em var(--app-border); font-size: 0.74em; color: var(--app-muted); white-space: nowrap; overflow: hidden; }
+  .lname { font-size: 1.15em; }
+  .lsearch { flex: 1; height: 2.1em; display: flex; align-items: center; padding: 0 0.8em; border-radius: 0.75em; background: rgba(11, 15, 23, 0.42); box-shadow: inset 0 0 0 0.0625em var(--glass-line); font-size: 0.74em; color: var(--app-muted); white-space: nowrap; overflow: hidden; }
   .lcount { font-size: 0.72em; color: var(--app-ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .lgrid {
     flex: 1;
@@ -112,8 +113,9 @@ const TOTAL = 213;
     grid-auto-rows: max-content;
     gap: 0.7em;
     align-content: start;
+    padding: 0.7em;
   }
-  .ltile { border-radius: 0.6em; overflow: hidden; background: var(--app-surface); box-shadow: 0 0 0 0.0625em var(--app-border); }
+  .ltile { overflow: hidden; }
   .cover {
     display: block;
     aspect-ratio: 4 / 5;
@@ -130,11 +132,14 @@ const TOTAL = 213;
   .s { font-size: 0.56em; color: var(--app-muted); }
   .s.ok { color: var(--app-ok); }
   .lfoot { display: flex; align-items: center; justify-content: center; gap: 1em; padding-top: 0.7em; font-size: 0.7em; color: var(--app-ink-2); }
-  .pbtn { padding: 0.35em 0.8em; border-radius: 0.5em; background: var(--app-raised); color: var(--app-ink); }
+  .pbtn { padding: 0.35em 0.85em; border-radius: 0.75em; }
 
   /* List view */
   .is-list .lgrid { grid-template-columns: 1fr; gap: 0; }
-  .is-list .ltile { display: grid; grid-template-columns: 2.2em minmax(0, 1fr); align-items: center; gap: 0.7em; padding: 0.3em 0.5em; border-radius: 0; box-shadow: inset 0 -0.0625em 0 var(--app-border); background: transparent; }
+  .is-list .lgrid { padding: 0.3em 0.7em; }
+  .is-list .ltile { display: grid; grid-template-columns: 2.2em minmax(0, 1fr); align-items: center; gap: 0.7em; padding: 0.3em 0.5em; border-radius: 0; box-shadow: inset 0 -0.0625em 0 var(--app-divider); background: transparent; }
+  .is-list .ltile:hover { background: var(--glass-nav-hover); }
+  .is-list .ltile::before, .is-list .ltile::after { display: none; }
   .is-list .cover { width: 2.2em; aspect-ratio: 3 / 4; border-radius: 0.3em; }
   .is-list .len, .is-list .scrubbar { display: none; }
   .is-list .meta { grid-template-columns: minmax(0, 1fr) 7em; align-items: center; padding: 0; }

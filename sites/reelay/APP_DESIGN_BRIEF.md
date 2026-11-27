@@ -15,7 +15,7 @@ The Reelay marketing site draws the app's screens in a cleaner, more spatial sty
 - **To run it locally** (needs Node 22 and pnpm), from that repo's root:
   `pnpm install && pnpm --filter reelay dev`
   Then open http://localhost:3000.
-- **Colours are already shared.** The renderings use `--app-*` tokens in `sites/reelay/src/styles/theme.css`, which were copied from this repo's `reelay/gui/theme.py` palettes. So the gap is layout, geometry and hierarchy, not colour.
+- **Colours are already shared.** The renderings use `--app-*` tokens in `sites/reelay/src/styles/theme.css`, copied from this repo's `reelay/gui/theme.py` palettes. The site now draws every rendering in the app's **Spatial Glass** theme (`THEMES["glass"]`), in both of the site's colour schemes; see "Spatial Glass on the site" below. The older Light and Dark `--app-*` blocks are still in `theme.css`, so the site can go back to them. The gap is layout, geometry and hierarchy, not colour.
 - **Every rendering is sized in `em`** inside `sites/reelay/src/components/ui/AppWindow.astro`. With the base size at about 16 px:
   - 1em ≈ 16 px;
   - 0.75em gaps ≈ 12 px;
@@ -35,6 +35,39 @@ The Reelay marketing site draws the app's screens in a cleaner, more spatial sty
 | `SearchScene.astro` | the Board's archive search |
 | `CaptionLab.astro`, `PublishSection.astro` | ticket copy and the hand-off (`post_panel.py`, `handoff_dialog.py`) |
 | `ui/AppWindow.astro` | the window chrome |
+
+## Spatial Glass on the site
+
+The renderings follow the app's Spatial Glass theme (Settings → Appearance → Spatial Glass). Where each part of the app is drawn:
+
+| App (`reelay/gui`) | Site |
+|---|---|
+| `theme.py` `THEMES["glass"]`, the `glass_*` Palette properties, `glass_tokens()` | `src/styles/theme.css`: the `--app-*` and `--glass-*` tokens in "The app: Spatial Glass" |
+| `styles/app.qss`, `cards.py` `draw_glass_frame()` / `finish_frame()`, `chrome.py` NavButton, `ticket_widgets.py` `ReadinessRing._paint_glass` | `src/styles/glass.css`: `.glass-canvas`, `-sidebar`, `-panel`, `-well`, `-card`, `-nav`, `-btn`, `-seg`, `-chip`, `-ring`, `-dock`, `-scroll` |
+
+The values the scenes use:
+- **Palette:** bg `#0b0f17` · surface `#131926` · raised `#1c2436` · hover `#253047` · border `#32415c` · divider `#1e2738`; ink `#f2f6fc` · ink-2 `#aebcd4` · muted `#8e9fbc`; accent `#4da3ff` · accent-hover `#70b6ff` · on-accent `#07111f` · accent-soft `#1b2c44` · accent-ring `#33659d`; ok `#5ad670` · bad `#ff8078` · warn `#f2b84b` · info `#58a6ff` · badge ink `#0b0f17`.
+- **Canvas:** a radial gradient from the top left (8% −10%, about 135%): `#141c39` → `#0f1526` 42% → `#0b0f17` 80% → `#131427`, plus a faint accent glow at the bottom right.
+- **Sidebar:** `rgba(32,38,51,.66)` → `rgba(19,25,38,.66)`, with a right edge of `rgba(242,246,252,.08)`.
+- **Panels:** `rgba(32,38,51,.88)` → `rgba(19,25,38,.84)` 35% → `rgba(19,25,38,.80)`, with a 1px `rgba(242,246,252,.10)` border, a `.26` top edge and an 18px radius.
+- **Wells:** `rgba(11,15,23,.42)` → `.29`, with the same border.
+- **Video cards** (14px radius):
+  - fill `#282e3b` → `#1c2436` 28% → `#181f2f`;
+  - rim `.22` → `.05` by 35%;
+  - a `#5f646f` catchlight on the top edge;
+  - a three-step ambient shadow;
+  - hover: a `#33659d` border and a `#66afff` bloom;
+  - selected: a 2px `#4da3ff` ring.
+- **Nav:** a frosted pill (17px radius, `.17` → `.10`, with a `.16` border) and no accent bar.
+- **Buttons:** `#2d3546` → `#1c2436`. Primary: `#70b6ff` → `#4da3ff`.
+- **Segmented controls:** the checked segment is `#545b69` → `#474e5e` with ink text.
+- **Chips:** a checked "Posting to" chip is accent-soft with a `#33659d` border.
+
+What the site needs from the app:
+- **Contrast.** `scripts/contrast.mjs` checks every layer composited over the canvas: ink ≥ 7:1, ink-2 ≥ 4.5:1, muted ≥ 3:1. Everything passes except one: ink on the checked segment (`#545b69`) is **6.29:1**. That clears AA for a control label but not the 7:1 ink target. If the app darkens that pill, change it in `theme.css` too.
+- **Accessibility settings.** The site honours *Reduce transparency* (every glass layer falls back to solid surface, raised or bg) and *Reduce motion* (no hover transitions). The app should do the same.
+- **Branding.** `BrandingScene` shows the **Custom** theme, built from a profile's colours. Only its window frame is glass; the inside keeps the brand colours, because Custom and Spatial Glass are separate theme modes. If the app combines the two, tell the site.
+- **Screenshots.** `public/screens/*@2x.png` are still the real Light and Dark captures, used as platform-review evidence. They aren't regenerated as glass.
 
 ## Ground rules
 
