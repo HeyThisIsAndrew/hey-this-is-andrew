@@ -1659,47 +1659,109 @@ const stateOf = (i: number, n: number) =>
         }
       });
 
-      const setOpen = (section: HTMLElement, open: boolean) => {
+      let toggleToken = 0;
+      let activeRaf = 0;
+      let userScrolled = false;
+      const stopCompensation = () => {
+        userScrolled = true;
+        if (activeRaf) {
+          cancelAnimationFrame(activeRaf);
+          activeRaf = 0;
+        }
+      };
+      on(window, 'wheel', stopCompensation, { passive: true });
+      on(window, 'touchmove', stopCompensation, { passive: true });
+      cleanup(() => {
+        toggleToken += 1;
+        if (activeRaf) {
+          cancelAnimationFrame(activeRaf);
+          activeRaf = 0;
+        }
+      });
+
+      const setOpen = (section: HTMLElement, open: boolean): Promise<boolean> => {
         const body = section.querySelector<HTMLElement>('.gear-accordion-body');
-        if (!body || (section.classList.contains('is-expanded') === open && body.inert === !open)) return;
+        if (!body || (section.classList.contains('is-expanded') === open && body.inert === !open)) {
+          return Promise.resolve(true);
+        }
         section.classList.toggle('is-expanded', open);
         section.classList.toggle('is-collapsed', !open);
         section.classList.remove('is-settled');
         section.classList.add('is-animating');
         section.querySelector('.gear-accordion-header')?.setAttribute('aria-expanded', String(open));
-        void setDisclosureOpen(body, open).then((settled) => {
-          if (!settled || section.classList.contains('is-expanded') !== open) return;
+        return setDisclosureOpen(body, open).then((settled) => {
+          if (!settled || section.classList.contains('is-expanded') !== open) return false;
           section.classList.remove('is-animating');
           section.classList.toggle('is-settled', open);
+          return true;
         });
       };
 
       /** Open one section and close the rest; or close it if it is open. */
-      function toggleSection(section: HTMLElement, force?: boolean) {
+      function toggleSection(section: HTMLElement, force?: boolean, scrollOnOpen = false) {
         const open = force ?? !section.classList.contains('is-expanded');
-        sections.forEach((s) => setOpen(s, open && s === section));
-        if (open) {
-          decks.get(section)?.refresh();
-          // Keep what was opened in view, and never under the fixed header:
-          // explicit math from the header's measured bottom, not
-          // scrollIntoView (which trusts a fixed scroll-padding). On a short
-          // screen (a phone on its side) the header and the hero cannot both
-          // fit, so the HERO (.deck-stage) is what gets brought into view.
-          requestAnimationFrame(() => {
-            const header = document.querySelector<HTMLElement>('.site-nav');
-            const headerBottom = header ? Math.max(0, header.getBoundingClientRect().bottom) : 88;
-            const behavior: ScrollBehavior = 'auto';
+        toggleToken += 1;
+        const token = toggleToken;
+        if (activeRaf) {
+          cancelAnimationFrame(activeRaf);
+          activeRaf = 0;
+        }
+        userScrolled = false;
+
+        if (!open) {
+          sections.forEach((s) => void setOpen(s, false));
+          return;
+        }
+
+        const targetIndex = sections.indexOf(section);
+        const closingAbove = sections.some((s, i) => i < targetIndex && s.classList.contains('is-expanded'));
+        const header = document.querySelector<HTMLElement>('.site-nav');
+        const headerBottom = header ? Math.max(0, header.getBoundingClientRect().bottom) : 88;
+        const anchorTop = Math.max(headerBottom + 16, section.getBoundingClientRect().top);
+
+        const pending = sections.map((s) => setOpen(s, s === section));
+        decks.get(section)?.refresh();
+
+        if (scrollOnOpen) {
+          // Deep-link or hashchange jump: once disclosures settle, bring the target into view.
+          void Promise.all(pending).then(() => {
+            if (token !== toggleToken || userScrolled) return;
+            const nav = document.querySelector<HTMLElement>('.site-nav');
+            const navBottom = nav ? Math.max(0, nav.getBoundingClientRect().bottom) : 88;
             const short = window.innerHeight < 560;
             const target = short ? section.querySelector<HTMLElement>('.deck-stage') : section;
             if (!target) return;
-            const want = headerBottom + (short ? 8 : 16);
+            const want = navBottom + (short ? 8 : 16);
             const top = target.getBoundingClientRect().top;
-            // Tall screens: move when the header is under the nav, or when the
-            // hero runs off the bottom (a phone opening a lower section).
-            const stage = section.querySelector<HTMLElement>('.deck-stage');
-            const heroCut = !!stage && stage.getBoundingClientRect().bottom > window.innerHeight;
-            const needs = short ? Math.abs(top - want) > 4 : top < want || heroCut;
-            if (needs) window.scrollTo({ top: Math.max(0, window.scrollY + top - want), behavior });
+            window.scrollTo({ top: Math.max(0, window.scrollY + top - want), behavior: 'instant' });
+          });
+          return;
+        }
+
+        // Only compensate upward when a section above the target is collapsing so
+        // the clicked header stays anchored instead of jumping down or off-screen.
+        if (closingAbove) {
+          let done = false;
+          const compensate = () => {
+            if (token !== toggleToken || userScrolled) return;
+            const delta = section.getBoundingClientRect().top - anchorTop;
+            if (delta < -0.5) {
+              window.scrollTo({ top: Math.max(0, window.scrollY + delta), behavior: 'instant' });
+            }
+            if (!done) {
+              activeRaf = requestAnimationFrame(compensate);
+            } else {
+              activeRaf = 0;
+            }
+          };
+          activeRaf = requestAnimationFrame(compensate);
+          void Promise.all(pending).then(() => {
+            done = true;
+            if (token !== toggleToken || userScrolled) return;
+            const delta = section.getBoundingClientRect().top - anchorTop;
+            if (delta < -0.5) {
+              window.scrollTo({ top: Math.max(0, window.scrollY + delta), behavior: 'instant' });
+            }
           });
         }
       }
@@ -2117,7 +2179,7 @@ const stateOf = (i: number, n: number) =>
           requestAnimationFrame(() => quiet.forEach((el) => el.style.removeProperty('transition')));
           decks.get(t.section)?.refresh();
         } else {
-          toggleSection(t.section, true);
+          toggleSection(t.section, true, true);
         }
         if (t.card) decks.get(t.section)?.show(Number(t.card.dataset.index));
       };

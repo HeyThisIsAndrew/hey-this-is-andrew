@@ -179,4 +179,70 @@ test.describe('Gear page', () => {
     await expect(page.locator('#gear-lighting')).toHaveClass(/is-expanded/);
     await expect(page.locator('#gear-lighting .deck-card.active')).toHaveAttribute('aria-label', 'Aputure Amaran 200d');
   });
+
+  test('expanding a section below Cameras never forcefully scrolls the user down and keeps the section in view', async ({ page }) => {
+    await page.goto('/hey-this-is-andrew/gear/');
+    await expect(page.locator('#gear-bodies')).toHaveClass(/is-expanded/);
+
+    // Case A: position Lenses cleanly in view (without Playwright's own pre-click scroll skewing scrollY),
+    // then expand Lenses below Cameras and assert the browser never forcefully scrolls down.
+    const lensesBar = page.locator('#gear-lenses .gear-accordion-header-bar');
+    await lensesBar.scrollIntoViewIfNeeded();
+    const scrollBeforeA = await page.evaluate(() => window.scrollY);
+    await lensesBar.click();
+    await expect(page.locator('#gear-lenses')).toHaveClass(/is-settled/);
+
+    const caseA = await page.evaluate(() => {
+      const nav = document.querySelector<HTMLElement>('.site-nav');
+      const headerBar = document.querySelector<HTMLElement>('#gear-lenses .gear-accordion-header-bar');
+      const activeCard = document.querySelector<HTMLElement>('#gear-lenses .deck-card.active');
+      const navBottom = nav ? nav.getBoundingClientRect().bottom : 0;
+      const barRect = headerBar?.getBoundingClientRect();
+      const cardRect = activeCard?.getBoundingClientRect();
+      return {
+        scrollY: window.scrollY,
+        barTop: barRect?.top ?? -1,
+        barBottom: barRect?.bottom ?? -1,
+        cardTop: cardRect?.top ?? -1,
+        navBottom,
+        vh: window.innerHeight,
+      };
+    });
+    expect(caseA.scrollY).toBeLessThanOrEqual(scrollBeforeA + 2);
+    expect(caseA.barTop).toBeGreaterThanOrEqual(caseA.navBottom - 2);
+    expect(caseA.barBottom).toBeLessThan(caseA.vh);
+    expect(caseA.cardTop).toBeLessThan(caseA.vh);
+
+    // Case B: scrolled down with Lenses open above, clicking Audio must never scroll down or pull Audio above the header.
+    await page.evaluate(() => {
+      const audio = document.getElementById('gear-audio');
+      const nav = document.querySelector<HTMLElement>('.site-nav');
+      const navBottom = nav ? nav.getBoundingClientRect().bottom : 80;
+      if (audio) {
+        const y = window.scrollY + audio.getBoundingClientRect().top - (navBottom + 24);
+        window.scrollTo({ top: Math.max(0, y), behavior: 'instant' });
+      }
+    });
+    const scrollBeforeB = await page.evaluate(() => window.scrollY);
+    expect(scrollBeforeB).toBeGreaterThan(0);
+    await page.locator('#gear-audio .gear-accordion-header-bar').click();
+    await expect(page.locator('#gear-audio')).toHaveClass(/is-settled/);
+
+    const caseB = await page.evaluate(() => {
+      const nav = document.querySelector<HTMLElement>('.site-nav');
+      const headerBar = document.querySelector<HTMLElement>('#gear-audio .gear-accordion-header-bar');
+      const navBottom = nav ? nav.getBoundingClientRect().bottom : 0;
+      const barRect = headerBar?.getBoundingClientRect();
+      return {
+        scrollY: window.scrollY,
+        barTop: barRect?.top ?? -1,
+        barBottom: barRect?.bottom ?? -1,
+        navBottom,
+        vh: window.innerHeight,
+      };
+    });
+    expect(caseB.scrollY).toBeLessThanOrEqual(scrollBeforeB + 2);
+    expect(caseB.barTop).toBeGreaterThanOrEqual(caseB.navBottom - 2);
+    expect(caseB.barBottom).toBeLessThan(caseB.vh);
+  });
 });
