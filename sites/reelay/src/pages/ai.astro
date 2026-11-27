@@ -41,6 +41,14 @@ const examples = [
     res: `{\n  "query": "gold",\n  "total": 1,\n  "results": [{\n    "spoken": true,\n    "snippet": "…it is completely «gold» right now.",\n    "video": { "id": 42, … }\n  }]\n}`,
     note: 'Full-text search of the archive, transcripts included, best results first.',
   },
+  {
+    id: 'brand-voice',
+    label: 'Brand voice',
+    req: `GET ${AGENT_API.url}/v1/brand-voice?profile=Juniper%20Lane\nAuthorization: Bearer $TOKEN`,
+    status: '200 OK',
+    res: `{\n  "profile": "Juniper Lane",\n  "tone": "Warm, unhurried, observational",\n  "avoid": ["insane", "must watch"],\n  "emoji_level": "light",\n  "hashtag_style": "3–5 lowercase tags",\n  "recurring_hashtags": ["#bigsur", "#slowtravel"]\n}`,
+    note: 'Returns the active profile’s Brand Voice rules so agents and MCP clients write in your voice.',
+  },
 ];
 
 const lifecycle = ['pending', 'approved', 'executed', 'failed', 'stale', 'rejected', 'expired'];
@@ -48,7 +56,7 @@ const lifecycle = ['pending', 'approved', 'executed', 'failed', 'stale', 'reject
 
 <BaseLayout
   title={`Agents and the Agent API: ${SITE.fullName}`}
-  description={`Reelay's local Agent API lets AI agents read the board, draft copy and ask to schedule. Anything that posts, archives or changes many videos waits for your approval. Writing help runs on a model on your own computer.`}
+  description={`Reelay's local Agent API, MCP server and reelay-mcp stdio bridge let AI agents read the board, Brand Voice, full transcripts and captions, draft copy and ask to schedule. Anything that posts, archives or changes many videos waits for your approval.`}
 >
   <PageHero eyebrow="Agents">
     <Fragment slot="title">Your agents can ask.<br /><span class="text-glow">You decide.</span></Fragment>
@@ -123,26 +131,33 @@ const lifecycle = ['pending', 'approved', 'executed', 'failed', 'stale', 'reject
       </div>
 
         </AccordionRow>
-        <AccordionRow id="writing-help" kicker="Writing help" title="AI that runs on your computer." navLabel="Writing help" size="md">
+        <AccordionRow id="writing-help" kicker="Repurpose AI & writing help" title="Bring your own brain. Or run offline." navLabel="Repurpose AI" size="md">
       <div class="row-wrap">
         <div class="split">
           <div>
-            <p class="lede">The Assist menu on every caption checks spelling and grammar, and rewrites through a small model on your own machine: <strong>Ollama, or llama.cpp with a .gguf file.</strong> Brand-voice profiles set the tone, words to avoid and default hashtags.</p>
-            <p class="lede mt-1">Rewrites are suggestions. They’re never saved by themselves, and never shortened to fit. <strong>No paid AI, no tokens.</strong></p>
+            <p class="lede">Under <strong>Settings → Repurpose AI</strong>, choose <strong>Meta Muse Spark</strong>, <strong>OpenRouter</strong>, <strong>OpenAI</strong>, <strong>Anthropic (Claude)</strong>, <strong>Google Gemini</strong>, <strong>Ollama</strong> (free, local on-device), <strong>Local CLI / External Agent</strong> (any local CLI/agent command), or a <strong>Custom OpenAI-compatible</strong> endpoint. API keys stay in your OS Keychain (never in SQLite), and local providers run offline without prompting for Cloud AI consent.</p>
+            <p class="lede mt-1">Repurpose and Batch Repurpose offer optional <strong>Apply &amp; Save</strong>, optional <strong>Remember Cloud AI consent</strong>, and <strong>transcript-grounded QA</strong> that flags <code>@handles</code> or <code>#hashtags</code> absent from the transcript or Brand Voice. Under <strong>Settings → Brand voice</strong>, <strong>Learn from Videos</strong> analyzes your imported transcripts and captions to draft your tone, words to avoid, emoji level, recurring hashtags, hashtag style, and recurring YouTube footer for review before saving.</p>
           </div>
           <ul class="wh-list">
-            <li><strong>Spelling and grammar</strong><span>Built in, or LanguageTool fully offline when installed</span></li>
-            <li><strong>Rewrites</strong><span>Ollama at 127.0.0.1:11434, or llama.cpp</span></li>
-            <li><strong>Brand voice</strong><span>Tone, words to avoid, hashtags, guidance</span></li>
+            <li><strong>Bring Your Own Brain</strong><span>Meta Muse Spark, OpenRouter, OpenAI, Anthropic, Gemini, Ollama, Local CLI, or Custom OpenAI-compatible</span></li>
+            <li><strong>Learn from Videos</strong><span>Auto-drafts Brand Voice tone, avoided words, emoji level, hashtags, and YouTube footer from your library</span></li>
+            <li><strong>Spelling, grammar &amp; local rewrites</strong><span>Built-in or offline LanguageTool; Assist rewrites with Ollama (127.0.0.1:11434) or llama.cpp</span></li>
             <li><strong>SEO suggestions</strong><span>From YouTube’s own search suggestions, with a score for the title and tags</span></li>
           </ul>
         </div>
       </div>
 
         </AccordionRow>
-        <AccordionRow id="mcp" kicker="Coming later" title="Model Context Protocol" navLabel="Model Context Protocol" size="md">
-      <div class="row-wrap center">
-        <p class="mt-1">An MCP endpoint is planned, built on the same approval boundary as the API so an MCP client gets exactly the same limits. It isn’t in the app yet; the Agent API is how agents connect today.</p>
+        <AccordionRow id="mcp" kicker="MCP & stdio bridge" title="Model Context Protocol" navLabel="Model Context Protocol" size="md">
+      <div class="row-wrap">
+        <div class="row-intro">
+          <p class="lede">Connect MCP clients such as Claude Desktop, Cursor, or Antigravity directly over the same approval boundary as the REST API. Use <strong>Pair AI Client…</strong> with <strong>Copy MCP Config</strong> in Settings → AI agents, or launch the stdio bridge with <code>python -m reelay.mcp_stdio</code> (<code>reelay-mcp</code>).</p>
+        </div>
+        <div class="feature-grid mt-4">
+          <div class="feature"><h3>Rich ticket context</h3><p><code>reelay_get_ticket</code> returns full transcripts, raw timestamped <code>.srt</code>/<code>.vtt</code> captions, <code>duration_ms</code>, <code>video_format</code>, <code>notes</code>, <code>source</code>, <code>published_links</code>, and <code>platform_limits</code>.</p></div>
+          <div class="feature"><h3>New discovery &amp; voice tools</h3><p>Includes <code>reelay_list_profiles</code>, <code>reelay_get_brand_voice</code> (plus <code>GET /v1/brand-voice</code>), <code>reelay_get_platform_limits</code>, <code>reelay_search_videos</code>, <code>reelay_fetch_transcript</code>, and <code>reelay_list_published</code>.</p></div>
+          <div class="feature"><h3>Stdio bridge &amp; one-click config</h3><p>Run <code>python -m reelay.mcp_stdio</code> (<code>reelay-mcp</code>) for local stdio MCP clients, or click <strong>Copy MCP Config</strong> inside <strong>Pair AI Client…</strong> to paste ready-to-use client JSON.</p></div>
+        </div>
       </div>
 
         </AccordionRow>
