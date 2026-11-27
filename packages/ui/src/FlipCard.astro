@@ -47,6 +47,7 @@ interface Props {
   imageSide?: 'front' | 'back';
   kickerFirst?: boolean;
   clickOnly?: boolean;
+  showTitleOnBack?: boolean;
 }
 
 const {
@@ -72,6 +73,7 @@ const {
   imageSide = 'front',
   kickerFirst = false,
   clickOnly = false,
+  showTitleOnBack = false,
 } = Astro.props;
 
 const backId = `${idPrefix}-${index}`;
@@ -196,6 +198,7 @@ const resolvedRel = resolvedTarget === '_blank' ? (actionRel ?? 'noopener') : ac
         </div>
       )}
       <div class="flip-card-back-content">
+        {showTitleOnBack && <span class="flip-back-title">{value}</span>}
         {isLogo && image && imageSide === 'back' && (
           <div class="flip-card-logo-lockup">
             {typeof image === 'string' ? (
@@ -643,7 +646,7 @@ const resolvedRel = resolvedTarget === '_blank' ? (actionRel ?? 'noopener') : ac
       --flip-value-size,
       clamp(calc(0.95 * var(--flip-rem)), calc(0.95 * var(--flip-rem) + 0.6vw), calc(1.4 * var(--flip-rem)))
     );
-    font-weight: 800;
+    font-weight: var(--flip-font-weight, 700);
     line-height: 1.25;
     color: var(--flip-value-color, var(--color-white, var(--ink, #ffffff)));
     margin-bottom: calc(0.4 * var(--flip-rem));
@@ -701,6 +704,18 @@ const resolvedRel = resolvedTarget === '_blank' ? (actionRel ?? 'noopener') : ac
     box-sizing: border-box;
     text-align: center;
     text-wrap: normal;
+  }
+
+  .flip-back-title {
+    display: block;
+    margin: 0 0 calc(0.25 * var(--flip-rem));
+    font-family: var(--flip-font-value, var(--font-display));
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--flip-accent-text, var(--ink));
+    font-size: clamp(0.9rem, 1.05vw, 1.05rem);
+    line-height: 1.2;
   }
 
   .flip-card--has-action .flip-card-back p {

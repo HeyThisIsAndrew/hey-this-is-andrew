@@ -170,6 +170,7 @@ const linkAttrs = (href?: string) =>
                 <p class="bacc-chips" aria-hidden="true">
                   <span class="bacc-chip bacc-chip--brand">{brand.name}</span>
                   {brand.kicker && <span class="bacc-chip bacc-chip--kicker">{brand.kicker}</span>}
+                  {brand.teaserTag && <span class="bacc-chip bacc-chip--status">{brand.teaserTag}</span>}
                 </p>
 
                 <div class="bacc-content" id={contentId} role="region" aria-labelledby={triggerId}>
@@ -328,6 +329,10 @@ const linkAttrs = (href?: string) =>
        screen, pixel for pixel. */
     overflow-x: clip;
   }
+  .bacc:has(.bacc-viewport.is-zoomed),
+  :global(html.bacc-view-open) .bacc {
+    z-index: 1000;
+  }
   .bacc-viewport {
     position: relative;
     width: 100%;
@@ -363,6 +368,7 @@ const linkAttrs = (href?: string) =>
   }
   .bacc-track {
     --strip: var(--acc-strip);
+    --logo-w: calc(var(--strip) - 10.24 * var(--u));
     /* HQ: the open panel takes what the strips leave; the track is 75% of
        the window less the nav and HQ's 36px pagination band, never under
        460px. */
@@ -403,8 +409,8 @@ const linkAttrs = (href?: string) =>
     --accordion-hover-rgb: 201, 169, 110;
   }
   .bacc-panel[data-accent="slate"] {
-    --accordion-hover-rgb: 130, 130, 160;
-    --accordion-tint-alpha: 0.2;
+    --accordion-hover-rgb: var(--bacc-hover-rgb, 130, 130, 160);
+    --accordion-tint-alpha: var(--bacc-tint-alpha, 0.2);
   }
   .bacc-panel:is([data-accent="be-red"], [data-accent="ccc-gold"], [data-accent="slate"]):hover {
     border-color: rgba(var(--accordion-hover-rgb), 0.65);
@@ -516,9 +522,9 @@ const linkAttrs = (href?: string) =>
     display: grid;
     place-items: center;
     background:
-      radial-gradient(ellipse 60% 70% at 70% 45%, rgba(255, 255, 255, 0.09), transparent 70%),
-      #0b0b0b;
-    color: rgba(245, 245, 245, 0.55);
+      radial-gradient(ellipse 65% 72% at 70% 45%, var(--bacc-teaser-glow, rgba(255, 255, 255, 0.1)), var(--bacc-teaser-glow-soft, rgba(255, 255, 255, 0.02)) 48%, transparent 74%),
+      var(--bacc-teaser-bg, #0b0b0b);
+    color: var(--bacc-teaser-accent, rgba(245, 245, 245, 0.72));
     overflow: hidden;
   }
   .bacc-teaser-art {
@@ -527,6 +533,8 @@ const linkAttrs = (href?: string) =>
     left: 70%;
     width: min(38%, 320px);
     transform: translate(-50%, -58%);
+    color: var(--bacc-teaser-accent, inherit);
+    filter: var(--bacc-teaser-shadow, none);
   }
   .bacc-teaser-art :global(svg) {
     display: block;
@@ -620,9 +628,12 @@ const linkAttrs = (href?: string) =>
     object-fit: contain;
   }
   .bacc-logo-word {
-    font: 800 1.35rem / 1 var(--font-display);
+    font-family: var(--bacc-font-display, var(--font-display));
+    font-weight: var(--bacc-font-weight, 700);
+    font-size: 1.35rem;
+    line-height: 1;
     letter-spacing: 0.08em;
-    color: rgba(245, 245, 245, 0.8);
+    color: var(--bacc-logo-color, rgba(245, 245, 245, 0.8));
   }
   .bacc-panel:not(.is-open):hover .bacc-logo {
     opacity: 1;
@@ -688,7 +699,15 @@ const linkAttrs = (href?: string) =>
     color: var(--ccc-gold, #c9a96e);
   }
   [data-accent="slate"] .bacc-chip--brand {
-    border-left-color: rgba(255, 255, 255, 0.6);
+    border-left-color: var(--bacc-chip-border, rgba(255, 255, 255, 0.6));
+  }
+  [data-brand-id="sip-the-magic"] .bacc-chip--brand {
+    border-left-color: var(--bacc-chip-border, #c9a96e);
+    color: var(--bacc-logo-color, #f5efe6);
+  }
+  [data-brand-id="sip-the-magic"] .bacc-chip--kicker,
+  [data-brand-id="sip-the-magic"] .bacc-chip--status {
+    color: var(--bacc-chip-accent, #c9a96e);
   }
   .bacc-preview-status {
     position: absolute;
@@ -748,15 +767,19 @@ const linkAttrs = (href?: string) =>
       transform var(--acc-duration) var(--acc-ease) calc(var(--acc-duration) * 0.25),
       visibility 0s linear 0s;
   }
-  /* HQ .acc-title-box + .acc-headline: 800, uppercase, at most four lines. */
+  /* HQ .acc-title-box + .acc-headline: uppercase, at most three lines. */
   .bacc-headline {
     margin: calc(2.56 * var(--u)) 0 calc(11.52 * var(--u));
-    font: 800 clamp(calc(17.92 * var(--u)), 2.15vw, calc(28.16 * var(--u))) / 1.06 var(--font-display);
+    font-family: var(--bacc-font-display, var(--font-display));
+    font-weight: var(--bacc-font-weight, 700);
+    font-size: clamp(calc(17.92 * var(--u)), 2.15vw, calc(28.16 * var(--u)));
+    line-height: 1.05;
     text-transform: uppercase;
     color: #ffffff;
-    text-wrap: pretty;
+    hyphens: none;
+    text-wrap: balance;
     display: -webkit-box;
-    -webkit-line-clamp: 4;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
@@ -1009,6 +1032,9 @@ const linkAttrs = (href?: string) =>
      So a resize is a new clip, never a repaint (HQ measured 637ms/s of
      raster without this). --open-w is the track less the strips and gaps. */
   @media (min-width: 768px) {
+    .bacc-panel.is-open .bacc-content {
+      width: min(calc(var(--open-w, 100%) - var(--logo-w, 170px) - 2.5rem), calc(870.4 * var(--u) + 2 * var(--pad)));
+    }
     .bacc-media > :global(img),
     .bacc-media > .bacc-teaser {
       position: absolute;
@@ -1100,14 +1126,17 @@ const linkAttrs = (href?: string) =>
       order: 2;
       width: 100%;
       max-width: none;
-      padding: 0 1rem 1.2rem;
+      padding: 0.75rem 1rem 1.2rem;
     }
     /* HQ clamps a phone headline to two lines; a brand's line is never cut
        ("WHERE NERD CULTURE GETS CINEMATIC." needs three at 390), so three. */
     .bacc-headline {
       -webkit-line-clamp: 3;
+      line-height: 1.05;
+      hyphens: none;
+      text-wrap: balance;
       margin: 0.2rem 0 0.9rem;
-      font-size: clamp(1.05rem, 4.5vw, 1.35rem);
+      font-size: clamp(1.15rem, 4.8vw, 1.45rem);
     }
     /* No stretched headline link on a phone any more: a tap on the art
        goes INTO the brand's view (Andrew, 2026-10-02), where the button to
@@ -1358,7 +1387,7 @@ const linkAttrs = (href?: string) =>
     pointer-events: none;
   }
   .bacc-viewport.is-fill .bacc-close {
-    top: calc((var(--view-band) - var(--tap-min, 44px)) / 2);
+    top: max(8px, calc((var(--view-band) - 46px) / 2));
     right: max(1rem, env(safe-area-inset-right, 0px));
   }
   /* A brand with no art yet (the teaser): filling a phone screen with it
@@ -1391,8 +1420,10 @@ const linkAttrs = (href?: string) =>
     z-index: 1100;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
-    min-height: var(--tap-min);
+    min-width: var(--tap-min, 44px);
+    min-height: var(--tap-min, 44px);
     padding: 0.5rem 0.85rem;
     background: rgba(18, 18, 18, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1401,9 +1432,14 @@ const linkAttrs = (href?: string) =>
     letter-spacing: 0.18em;
     text-transform: uppercase;
     cursor: pointer;
+    pointer-events: auto;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .bacc-close svg {
+    flex-shrink: 0;
+    display: block;
   }
   .bacc-close[hidden] {
     display: none;
@@ -1495,8 +1531,16 @@ const linkAttrs = (href?: string) =>
     grid-column: 1;
     grid-row: 1 / span 4;
     margin: 0;
-    font-size: clamp(1.3rem, 1.9vw, 2.2rem);
+    font-size: var(--fs-overlay, clamp(2rem, 1rem + 2.5vw, 4rem));
+    line-height: 1.0;
+    hyphens: none;
+    text-wrap: balance;
+    -webkit-line-clamp: 3;
     max-width: 22ch;
+  }
+  .bacc-viewport:not(.is-fill) .bacc-caption .bacc-headline {
+    font-size: clamp(1.3rem, 1.9vw, 2.2rem);
+    line-height: 1.05;
   }
   .bacc-caption .bacc-content > :not(.bacc-headline) {
     grid-column: 2;
@@ -1541,9 +1585,10 @@ const linkAttrs = (href?: string) =>
       '. .'
       'copy logo';
     column-gap: clamp(1.5rem, 4vw, 4rem);
+    row-gap: 1.25rem;
     padding: var(--fill-pad);
     background:
-      linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.62) 30%, rgba(0, 0, 0, 0) 60%),
+      linear-gradient(to top, rgba(0, 0, 0, 0.96) 0%, rgba(0, 0, 0, 0.85) 40%, rgba(0, 0, 0, 0) 70%),
       linear-gradient(to bottom, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0) 24%);
   }
   .bacc-viewport.is-fill .bacc-caption .bacc-chips {
@@ -1560,6 +1605,11 @@ const linkAttrs = (href?: string) =>
   .bacc-viewport.is-fill .bacc-caption .bacc-headline {
     max-width: 24ch;
     margin: 0 0 0.75rem;
+    font-size: var(--fs-overlay, clamp(2rem, 1rem + 2.5vw, 4rem));
+    line-height: 1.0;
+    hyphens: none;
+    text-wrap: balance;
+    -webkit-line-clamp: 3;
   }
   .bacc-viewport.is-fill .bacc-caption .bacc-cta {
     margin-top: 1.25rem;
@@ -1588,9 +1638,12 @@ const linkAttrs = (href?: string) =>
     object-position: right bottom;
   }
   .bacc-caption-logo .bacc-logo-word {
-    font: 800 clamp(1.4rem, 2.4vw, 2.2rem) / 1 var(--font-display);
+    font-family: var(--bacc-font-display, var(--font-display));
+    font-weight: var(--bacc-font-weight, 700);
+    font-size: clamp(1.4rem, 2.4vw, 2.2rem);
+    line-height: 1;
     letter-spacing: 0.08em;
-    color: #fff;
+    color: var(--bacc-logo-color, #fff);
   }
   /* Phones: one column. The logo sits on its own row over the stack, so a
      full-width stack never runs under it. */
@@ -1603,10 +1656,10 @@ const linkAttrs = (href?: string) =>
         'logo'
         'copy';
       grid-template-rows: auto minmax(0, 1fr) auto auto;
-      row-gap: 1rem;
+      row-gap: 1.25rem;
       padding: 1rem max(1.25rem, env(safe-area-inset-right, 0px)) calc(1.75rem + env(safe-area-inset-bottom, 0px)) max(1.25rem, env(safe-area-inset-left, 0px));
       background:
-        linear-gradient(to top, rgba(0, 0, 0, 0.94) 0%, rgba(0, 0, 0, 0.8) 42%, rgba(0, 0, 0, 0) 72%),
+        linear-gradient(to top, rgba(0, 0, 0, 0.96) 0%, rgba(0, 0, 0, 0.85) 48%, rgba(0, 0, 0, 0) 76%),
         linear-gradient(to bottom, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0) 20%);
     }
     .bacc-viewport.is-fill .bacc-caption .bacc-chips {
@@ -1628,8 +1681,11 @@ const linkAttrs = (href?: string) =>
     }
     .bacc-viewport.is-fill .bacc-caption .bacc-headline {
       max-width: none;
-      font-size: clamp(1.45rem, 6.6vw, 2rem);
-      -webkit-line-clamp: 4;
+      font-size: var(--fs-overlay, clamp(2rem, 1rem + 2.5vw, 4rem));
+      line-height: 1.0;
+      hyphens: none;
+      text-wrap: balance;
+      -webkit-line-clamp: 3;
     }
     .bacc-viewport.is-fill .bacc-caption .bacc-deck {
       letter-spacing: 0.08em;
@@ -1944,6 +2000,8 @@ const linkAttrs = (href?: string) =>
         clone.removeAttribute('role');
         clone.removeAttribute('aria-labelledby');
         caption.appendChild(clone);
+        if (panel.dataset.brandId) caption.dataset.brandId = panel.dataset.brandId;
+        else delete caption.dataset.brandId;
         if (panel.dataset.accent) caption.dataset.accent = panel.dataset.accent;
         else delete caption.dataset.accent;
         caption.hidden = false;
@@ -2153,6 +2211,8 @@ const linkAttrs = (href?: string) =>
         if (caption) {
           caption.hidden = true;
           caption.inert = false;
+          delete caption.dataset.brandId;
+          delete caption.dataset.accent;
           caption.replaceChildren();
         }
         if (focusOnly) stage.inert = false;

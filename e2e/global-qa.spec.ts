@@ -105,6 +105,17 @@ test.describe('Global QA', () => {
     await expect(bePrimaryBtn).toContainText('Explore');
     await expect(bePanel.locator('.bacc-actions')).toBeHidden();
 
+    const closeBtn = viewport.locator('[data-bacc-close]');
+    const assertCloseBtnWorks = async () => {
+      await expect(closeBtn).toBeVisible();
+      const box = await closeBtn.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.width).toBeGreaterThanOrEqual(43.5);
+      expect(box!.height).toBeGreaterThanOrEqual(43.5);
+      await closeBtn.click();
+      await expect(viewport).not.toHaveClass(/is-zoomed/);
+    };
+
     // Clicking the primary button opens brand view with all buttons in even size and zero duplicates
     await bePrimaryBtn.click();
     await expect(viewport).toHaveClass(/is-zoomed/);
@@ -121,16 +132,15 @@ test.describe('Global QA', () => {
     expect(Math.abs(beBtnWidths[0] - beBtnWidths[1])).toBeLessThanOrEqual(2);
     expect(Math.abs(beBtnWidths[1] - beBtnWidths[2])).toBeLessThanOrEqual(2);
 
-    await page.keyboard.press('Escape');
-    await expect(viewport).not.toHaveClass(/is-zoomed/);
+    await assertCloseBtnWorks();
 
-    // Clicking the image also opens brand view with even-sized buttons
+    // Clicking the image also opens brand view with even-sized buttons; Escape also closes
     await bePanel.locator('.bacc-media').click({ force: true });
     await expect(viewport).toHaveClass(/is-zoomed/);
     await page.keyboard.press('Escape');
     await expect(viewport).not.toHaveClass(/is-zoomed/);
 
-    // Panel 1 (CCC): primary button appears on resting panel, click opens brand view
+    // Panel 1 (CCC): primary button appears on resting panel, click opens brand view, .bacc-close closes
     const cccPanel = panels.nth(1);
     await cccPanel.locator('[data-bacc-trigger]').click();
     await expect(cccPanel).toHaveClass(/is-open/);
@@ -148,17 +158,15 @@ test.describe('Global QA', () => {
     expect(Math.abs(cccBtnWidths[0] - cccBtnWidths[1])).toBeLessThanOrEqual(2);
     expect(Math.abs(cccBtnWidths[1] - cccBtnWidths[2])).toBeLessThanOrEqual(2);
 
-    await page.keyboard.press('Escape');
-    await expect(viewport).not.toHaveClass(/is-zoomed/);
+    await assertCloseBtnWorks();
 
-    // Panel 2 (Sip the Magic)
+    // Panel 2 (Sip the Magic): media click opens brand view, .bacc-close closes
     const stmPanel = panels.nth(2);
     await stmPanel.locator('[data-bacc-trigger]').click();
     await expect(stmPanel).toHaveClass(/is-open/);
     await stmPanel.locator('.bacc-media').click({ force: true });
     await expect(viewport).toHaveClass(/is-zoomed/);
-    await page.keyboard.press('Escape');
-    await expect(viewport).not.toHaveClass(/is-zoomed/);
+    await assertCloseBtnWorks();
   });
 
   test('Latest filters: Video and Writing toggle, equal widths, deep links', async ({ page }) => {
