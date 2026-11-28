@@ -1090,9 +1090,16 @@ const hasCurrentSub = (item: NavItem) =>
   }
   .mobile-section-header {
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-    padding-bottom: 0.35rem;
+    padding-bottom: 0;
   }
   .mobile-main-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 44px;
+    padding: 0.5rem 0;
+    box-sizing: border-box;
     font-family: var(--font-display);
     font-size: 0.82rem;
     font-weight: 700;
@@ -1100,6 +1107,41 @@ const hasCurrentSub = (item: NavItem) =>
     text-transform: uppercase;
     color: #ffffff;
     text-decoration: none;
+    transition: color 0.25s ease, text-shadow 0.25s ease, opacity 0.15s ease;
+  }
+  .mobile-main-link:not(:has(:global(.nav-henna-underline)))::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--nav-underline, #f0f0f0);
+    box-shadow: var(--nav-underline-glow, none);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.2, 1);
+    pointer-events: none;
+  }
+  .mobile-main-link.active,
+  .mobile-main-link[aria-current="page"] {
+    color: var(--color-accent-text, #ffffff);
+    text-shadow: 0 0 12px rgba(240, 240, 240, 0.45);
+  }
+  .mobile-main-link:not(:has(:global(.nav-henna-underline))).active::after,
+  .mobile-main-link:not(:has(:global(.nav-henna-underline)))[aria-current="page"]::after {
+    transform: scaleX(1);
+  }
+  .mobile-main-link:focus-visible {
+    outline: 1px solid rgba(255, 255, 255, 0.75);
+    outline-offset: -2px;
+  }
+  .mobile-main-link:active {
+    color: var(--color-accent-text, #ffffff);
+    opacity: 0.72;
+  }
+  .mobile-main-link:not(:has(:global(.nav-henna-underline))):active::after {
+    transform: scaleX(1);
   }
   .mobile-sub-list {
     list-style: none;
@@ -1111,11 +1153,14 @@ const hasCurrentSub = (item: NavItem) =>
     gap: 0.3rem;
   }
   .mobile-sub-link {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 0.6rem;
+    width: 100%;
     min-height: 44px;
     padding: 0.25rem 0;
+    box-sizing: border-box;
     font-family: var(--font-display);
     font-size: 0.72rem;
     font-weight: 600;
@@ -1123,17 +1168,81 @@ const hasCurrentSub = (item: NavItem) =>
     text-transform: uppercase;
     color: rgba(245, 245, 245, 0.7);
     text-decoration: none;
-    transition: color 0.2s ease, padding-left 0.2s ease;
+    transition: color 0.2s ease, padding-left 0.2s ease, opacity 0.15s ease;
+  }
+  .mobile-sub-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0.35rem;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--nav-underline, #f0f0f0);
+    box-shadow: var(--nav-underline-glow, none);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.2, 1);
+    pointer-events: none;
   }
   .mobile-sub-kicker {
     font-size: 0.6rem;
     color: rgba(255, 255, 255, 0.35);
     min-width: 1.6rem;
   }
-  .mobile-sub-link:hover,
+  .mobile-sub-link.active,
+  .mobile-sub-link[aria-current="page"] {
+    color: var(--color-accent-text, #ffffff);
+  }
+  .mobile-sub-link.active .mobile-sub-kicker,
+  .mobile-sub-link[aria-current="page"] .mobile-sub-kicker {
+    color: var(--color-accent-text, #ffffff);
+    opacity: 0.75;
+  }
+  .mobile-sub-link.active::after,
+  .mobile-sub-link[aria-current="page"]::after {
+    transform: scaleX(1);
+  }
+  .mobile-sub-link:focus-visible {
+    outline: 1px solid rgba(255, 255, 255, 0.75);
+    outline-offset: -2px;
+  }
   .mobile-sub-link:active {
     color: var(--color-accent-text, #ffffff);
     padding-left: 0.25rem;
+    opacity: 0.75;
+  }
+  .mobile-sub-link:active::after {
+    transform: scaleX(1);
+  }
+  /* Mouse only so :hover does not stick after a tap on a phone. */
+  @media (hover: hover) and (pointer: fine) {
+    .mobile-main-link:hover {
+      color: var(--color-accent-text, #ffffff);
+      text-shadow: 0 0 12px rgba(240, 240, 240, 0.6);
+    }
+    .mobile-main-link:not(:has(:global(.nav-henna-underline))):hover::after {
+      transform: scaleX(1);
+    }
+    .mobile-sub-link:hover {
+      color: var(--color-accent-text, #ffffff);
+      padding-left: 0.25rem;
+    }
+    .mobile-sub-link:hover::after {
+      transform: scaleX(1);
+    }
+  }
+  @media (forced-colors: active) {
+    .mobile-main-link::after,
+    .mobile-sub-link::after {
+      background: LinkText;
+      box-shadow: none;
+    }
+    .mobile-main-link.active::after,
+    .mobile-main-link[aria-current="page"]::after,
+    .mobile-sub-link.active::after,
+    .mobile-sub-link[aria-current="page"]::after {
+      background: Highlight;
+    }
   }
 
   /* Phones, upright or on their side: the links fold into the Menu button.
