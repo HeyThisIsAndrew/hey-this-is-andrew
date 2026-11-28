@@ -391,7 +391,7 @@ const hasCurrentSub = (item: NavItem) =>
     const reduced = () => prefersReducedMotion();
     let closeTimer = 0;
 
-    const setOpen = (open: boolean) => {
+    const setOpen = (open: boolean, immediate = false) => {
       window.clearTimeout(closeTimer);
       menuBtn.setAttribute('aria-expanded', String(open));
       if (label) label.textContent = open ? menuLabels.close : menuLabels.menu;
@@ -410,7 +410,7 @@ const hasCurrentSub = (item: NavItem) =>
         if (menuLinks.length) menuLinks[0].focus();
       } else {
         mobileMenu.classList.remove('open');
-        if (reduced()) {
+        if (immediate || reduced()) {
           mobileMenu.hidden = true;
         } else {
           closeTimer = timeout(() => {
@@ -423,7 +423,7 @@ const hasCurrentSub = (item: NavItem) =>
     menuBtn.addEventListener('click', () => setOpen(!isOpen()));
     menuLinks.forEach((a) =>
       a.addEventListener('click', () => {
-        setOpen(false);
+        setOpen(false, true);
         (menuBtn as HTMLElement)?.focus();
       })
     );

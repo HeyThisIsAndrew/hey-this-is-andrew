@@ -303,13 +303,26 @@ test.describe('Global QA', () => {
     await expect(about.locator('.about-punchline')).toBeVisible();
     await expect(about.locator('.about-punchline')).toHaveText('BUILDING IN PUBLIC.');
 
-    // Streamlined Press kit: no subheaders, Past partnerships hidden, and a 3-button single row.
+    // Streamlined Press kit: no subheaders, Past partnerships hidden, and a 2-button single row.
     const press = page.locator('#press');
     await expect(press.locator('.press-partners')).toHaveCount(0);
     await expect(press.locator('.press-subhead')).toHaveCount(0);
+    await expect(press.locator('.contact-copy')).toHaveText(
+      'For brand partnerships, UGC, photography, or video, start with Work with me. For press, check out BE Unconventional HQ. For cocktail photography, check out Capture Create Caffeinate. Brand assets are below.'
+    );
+    await expect(press.locator('.contact-copy a', { hasText: 'BE Unconventional HQ' })).toHaveAttribute(
+      'href',
+      /\/brands\/be-unconventional-hq\/$/
+    );
+    await expect(press.locator('.contact-copy a', { hasText: 'Capture Create Caffeinate' })).toHaveAttribute(
+      'href',
+      /\/ccc\/$/
+    );
+    await expect(press.getByRole('link', { name: /Press contact/i })).toHaveCount(0);
+    await expect(press.locator('a[href^="mailto:"]')).toHaveCount(0);
     const pressButtons = press.locator('.press-contact-actions .btn');
-    await expect(pressButtons).toHaveCount(3);
-    await expect(pressButtons).toHaveText([/Press contact/i, /Brand assets/i, /Work with me/i]);
+    await expect(pressButtons).toHaveCount(2);
+    await expect(pressButtons).toHaveText([/Brand assets/i, /Work with me/i]);
     if (!isMobile) {
       const boxes = await pressButtons.evaluateAll((els) =>
         els.map((el) => {

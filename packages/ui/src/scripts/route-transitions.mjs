@@ -46,12 +46,31 @@ export function installPageTransitions(options, chooseDirection) {
   let generation = 0;
   document.addEventListener('astro:before-preparation', (event) => {
     generation++;
+    const current = generation;
     document.querySelectorAll('dialog[open]').forEach((dialog) => dialog.close());
+    const mobileMenu = document.getElementById('mobile-menu');
+    if (mobileMenu && !mobileMenu.hidden) {
+      mobileMenu.classList.remove('open');
+      mobileMenu.hidden = true;
+      const menuBtn = document.querySelector('.menu-btn');
+      if (menuBtn) {
+        menuBtn.setAttribute('aria-expanded', 'false');
+        const label = menuBtn.querySelector('.menu-btn-label');
+        if (label) label.textContent = menuBtn.getAttribute('data-menu-label') || 'Menu';
+      }
+    }
+    if (event.from?.href !== event.to?.href) {
+      document.documentElement.dataset.navPending = 'true';
+      setTimeout(() => {
+        if (current === generation) delete document.documentElement.dataset.navPending;
+      }, 8000);
+    }
     document.documentElement.dataset.pageTransition = chooseDirection(event.from, event.to, {
       ...options, navigationType: event.navigationType, direction: event.direction,
     });
   });
   document.addEventListener('astro:before-swap', (event) => {
+    delete event.newDocument.documentElement.dataset.navPending;
     const direction = document.documentElement.dataset.pageTransition;
     if (direction) event.newDocument.documentElement.dataset.pageTransition = direction;
     rowsPending = direction === 'page-rows';
@@ -62,8 +81,14 @@ export function installPageTransitions(options, chooseDirection) {
     if (event.newDocument.querySelector('[data-accordion-group]')) {
       event.newDocument.documentElement.classList.add('acc-js');
     }
+    if (window.matchMedia('(pointer: coarse)').matches) {
+      event.newDocument.querySelectorAll('.reveal, .sec-head, .section-header').forEach((el) => {
+        el.classList.add('is-in', 'is-revealed');
+      });
+    }
   });
   document.addEventListener('astro:after-swap', () => {
+    delete document.documentElement.dataset.navPending;
     if (!rowsPending) return;
     rowsPending = false;
     requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -73,6 +98,7 @@ export function installPageTransitions(options, chooseDirection) {
     }));
   });
   document.addEventListener('astro:page-load', () => {
+    delete document.documentElement.dataset.navPending;
     const current = generation;
     setTimeout(() => {
       if (current === generation) delete document.documentElement.dataset.pageTransition;

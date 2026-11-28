@@ -103,12 +103,50 @@ html[data-page-transition='none']::view-transition-new(page-main) {
   ::view-transition-new(page-main) {
     animation: none !important;
   }
+  html[data-nav-pending='true'] .site-nav::after {
+    animation: none !important;
+    opacity: 0.85;
+  }
 }
 
-
+@keyframes nav-pending-sweep {
+  0% { transform: scaleX(0.08); transform-origin: left; opacity: 0.7; }
+  50% { transform: scaleX(0.75); transform-origin: left; opacity: 0.95; }
+  100% { transform: scaleX(0.92); transform-origin: left; opacity: 0.85; }
+}
+html[data-nav-pending='true'] .site-nav::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--ink, #f0f0f0);
+  border-radius: 0;
+  pointer-events: none;
+  z-index: 2;
+  animation: nav-pending-sweep 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
 
 html[data-astro-transition] { scroll-behavior: auto !important; }
 ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
 .site-nav { view-transition-name: site-header; }
 .site-footer { view-transition-name: site-footer; }
 ::view-transition-group(site-header), ::view-transition-group(site-footer) { animation: none !important; }
+
+@media (pointer: coarse) {
+  html[data-page-transition='slide-forward']::view-transition-old(page-main),
+  html[data-page-transition='slide-backward']::view-transition-old(page-main),
+  html[data-page-transition='dive-down']::view-transition-old(page-main),
+  html[data-page-transition='dive-up']::view-transition-old(page-main),
+  html[data-page-transition='none']::view-transition-old(page-main) {
+    animation: page-fade-out 100ms ease-out both;
+  }
+  html[data-page-transition='slide-forward']::view-transition-new(page-main),
+  html[data-page-transition='slide-backward']::view-transition-new(page-main),
+  html[data-page-transition='dive-down']::view-transition-new(page-main),
+  html[data-page-transition='dive-up']::view-transition-new(page-main),
+  html[data-page-transition='none']::view-transition-new(page-main) {
+    animation: page-fade-in 140ms ease-out both;
+  }
+}
