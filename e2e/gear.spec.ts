@@ -8,7 +8,7 @@ import { test, expect, type Page } from '@playwright/test';
 
 const IDS = ['gear-bodies', 'gear-lenses', 'gear-lighting', 'gear-tools', 'gear-audio', 'gear-desk', 'brew', 'gear-gaming'];
 const CHIPS = ['cameras', 'lenses', 'lighting', 'support', 'audio', 'desk', 'cafe', 'gaming'];
-const COUNTS: Record<string, number> = { cameras: 5, lenses: 9, lighting: 2, support: 9, audio: 8, desk: 7, cafe: 13, gaming: 1 };
+const COUNTS: Record<string, number> = { cameras: 5, lenses: 9, lighting: 2, support: 10, audio: 9, desk: 8, cafe: 13, gaming: 3 };
 const count = (page: Page) => page.locator('[data-grid-count]');
 const toggle = (page: Page) => page.locator('[data-all-toggle]');
 const showAll = async (page: Page) => {
@@ -36,7 +36,7 @@ test.describe('Gear page', () => {
     await expect(page.locator('.gear-accordion-section.is-expanded')).toHaveCount(1);
     await expect(page.locator('#gear-bodies')).toHaveClass(/is-expanded/);
     await expect(page.locator('#gear-bodies .deck-card.active .card-title')).toHaveText('Sony a7IV');
-    await expect(count(page)).toHaveText('54 products');
+    await expect(count(page)).toHaveText('59 products');
 
     // The active thumbnail: a thin red outline; the rest dimmed.
     const active = page.locator('#gear-bodies .deck-thumb-tile.is-active');
@@ -104,6 +104,11 @@ test.describe('Gear page', () => {
       ['Apple Magic Keyboard for iPad Pro 13-inch (M4 and M5)', 'https://link.amazon/B03JskWrW'],
       ['Elgato 4K X Capture Card', 'https://link.amazon/B0aHqNl1N'],
       ['Elgato Cam Link 4K', 'https://link.amazon/B075xTDni'],
+      ['Hollyland Lark A1(2TX + USB-C RX), Wireless Microphone for iPhone & Android', 'https://link.amazon/B0gP08MlA'],
+      ['NEEWER Pro 100% Stainless Steel Heavy Duty C Stand with Boom Arm', 'https://link.amazon/B05oKW8rf'],
+      ['PlayStation DualSense Wireless Controller - for PS5, PC, MAC & Mobile', 'https://link.amazon/B0blNSk7B'],
+      ['PlayStation 5 Console 1TB Bundle with DualSense Wireless Controller for PS5, PC, MAC & Mobile', 'https://link.amazon/B09m4biw5'],
+      ['Logitech C920x HD Pro PC Webcam with Microphone, Full HD 1080p/30fps Video', 'https://link.amazon/B03btRHL5'],
     ];
     for (const [name, href] of expectedLinks) {
       const card = page.locator('.all-grid-card').filter({
@@ -140,7 +145,7 @@ test.describe('Gear page', () => {
     await expect(page.locator('#gear-empty-state')).toBeVisible();
     await expect(page.locator('.all-grid-section:visible')).toHaveCount(0);
     await page.locator('#gear-reset-btn').click();
-    await expect(count(page)).toHaveText('54 products');
+    await expect(count(page)).toHaveText('59 products');
     await expect(page.locator('.all-grid-section:visible')).toHaveCount(CHIPS.length);
 
     await select.selectOption('cafe');

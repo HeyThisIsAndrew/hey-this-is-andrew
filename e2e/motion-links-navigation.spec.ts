@@ -15,7 +15,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
     await page.goto(`${base}gear/`);
     await page.locator('[data-all-toggle]').click();
     await expect(page.locator('#gear-all-products')).toHaveAttribute('data-open', 'true');
-    await expect(page.locator('.all-grid-card:visible')).toHaveCount(54);
+    await expect(page.locator('.all-grid-card:visible')).toHaveCount(59);
     const issues = await page.locator('.all-grid-card').evaluateAll(cards => cards.flatMap(card => {
       const outer = card.getBoundingClientRect();
       return Array.from(card.querySelectorAll('.all-card-name, .all-card-spec, .all-card-type, .all-card-cta, .all-card-tag')).filter(el => { const r = el.getBoundingClientRect(); return r.left < outer.left - 1 || r.right > outer.right + 1 || r.bottom > outer.bottom + 1 || el.scrollWidth > el.clientWidth + 1; }).map(el => el.textContent);
